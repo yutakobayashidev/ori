@@ -1,4 +1,4 @@
-import type { Post, PostPage } from './types'
+import type { Post, PostPage, ThreadPage } from './types'
 
 export function flattenPostPages(pages: PostPage[]): Post[] {
   const seen = new Set<string>()
@@ -9,4 +9,18 @@ export function flattenPostPages(pages: PostPage[]): Post[] {
       return true
     }),
   )
+}
+
+export function focalPostFromPages(
+  pages: Array<PostPage | ThreadPage>,
+): Post | undefined {
+  const first = pages[0]
+  return first && 'focalPost' in first ? first.focalPost : undefined
+}
+
+export function flattenConversationPages(
+  pages: Array<PostPage | ThreadPage>,
+  focalPostId: string,
+): Post[] {
+  return flattenPostPages(pages).filter(({ id }) => id !== focalPostId)
 }

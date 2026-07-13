@@ -1,9 +1,13 @@
 import { createServerFn } from '@tanstack/react-start'
-import { searchPageInputSchema, userPageInputSchema } from './inputs'
-import { loadUserPage, searchPage } from './post-service'
-import type { LoadResult } from './types'
+import {
+  searchPageInputSchema,
+  threadPageInputSchema,
+  userPageInputSchema,
+} from './inputs'
+import { loadThreadPage, loadUserPage, searchPage } from './post-service'
+import type { LoadFailure } from './types'
 
-const configFailure = (diagnostic: unknown): LoadResult => {
+const configFailure = (diagnostic: unknown): LoadFailure => {
   console.error('Bird client configuration failed:', diagnostic)
   return {
     ok: false,
@@ -35,6 +39,16 @@ export const searchPosts = createServerFn({ method: 'GET' })
   .handler(async ({ data }) => {
     try {
       return await searchPage(await reader(), data)
+    } catch (error) {
+      return configFailure(error)
+    }
+  })
+
+export const loadThreadPosts = createServerFn({ method: 'GET' })
+  .validator(threadPageInputSchema)
+  .handler(async ({ data }) => {
+    try {
+      return await loadThreadPage(await reader(), data)
     } catch (error) {
       return configFailure(error)
     }

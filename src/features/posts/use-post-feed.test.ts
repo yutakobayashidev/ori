@@ -16,6 +16,15 @@ vi.mock('@tanstack/react-start', async (importOriginal) => {
   return { ...original, useServerFn }
 })
 
+type FeedLoaders = Parameters<typeof createPostFeedOptions>[1]
+
+const loaders = (overrides: Partial<FeedLoaders> = {}): FeedLoaders => ({
+  loadUser: vi.fn(),
+  search: vi.fn(),
+  thread: vi.fn(),
+  ...overrides,
+})
+
 describe('createPostFeedOptions', () => {
   it('forwards one user cursor in the server function payload', async () => {
     const loadUser = vi.fn().mockResolvedValue({
@@ -24,7 +33,7 @@ describe('createPostFeedOptions', () => {
     })
     const options = createPostFeedOptions(
       { kind: 'user', target: '@yuta' },
-      { loadUser, search: vi.fn() },
+      loaders({ loadUser }),
     )
 
     await options.queryFn({ pageParam: 'cursor' } as never)
@@ -38,7 +47,7 @@ describe('createPostFeedOptions', () => {
   it('does not retry requests automatically', () => {
     const options = createPostFeedOptions(
       { kind: 'user', target: 'yuta' },
-      { loadUser: vi.fn(), search: vi.fn() },
+      loaders(),
     )
 
     expect(options.retry).toBe(false)
@@ -47,7 +56,7 @@ describe('createPostFeedOptions', () => {
   it('does not refetch automatically when the window regains focus', () => {
     const options = createPostFeedOptions(
       { kind: 'user', target: 'yuta' },
-      { loadUser: vi.fn(), search: vi.fn() },
+      loaders(),
     )
 
     expect(options.refetchOnWindowFocus).toBe(false)
@@ -56,7 +65,7 @@ describe('createPostFeedOptions', () => {
   it('does not refetch automatically when the connection returns', () => {
     const options = createPostFeedOptions(
       { kind: 'user', target: 'yuta' },
-      { loadUser: vi.fn(), search: vi.fn() },
+      loaders(),
     )
 
     expect(options.refetchOnReconnect).toBe(false)
@@ -65,7 +74,7 @@ describe('createPostFeedOptions', () => {
   it('takes the next cursor only from the resolved page', () => {
     const options = createPostFeedOptions(
       { kind: 'user', target: 'yuta' },
-      { loadUser: vi.fn(), search: vi.fn() },
+      loaders(),
     )
 
     expect(
@@ -82,7 +91,7 @@ describe('createPostFeedOptions', () => {
         product: 'Top',
         following: true,
       },
-      { loadUser: vi.fn(), search: vi.fn() },
+      loaders(),
     )
 
     expect(options.queryKey).toEqual([
@@ -103,7 +112,7 @@ describe('createPostFeedOptions', () => {
         product: 'Top',
         following: true,
       },
-      { loadUser: vi.fn(), search },
+      loaders({ search }),
     )
 
     await options.queryFn({ pageParam: 'search-cursor' } as never)
@@ -119,6 +128,61 @@ describe('createPostFeedOptions', () => {
     })
   })
 
+  it('loads the initial thread and carries its root with the next cursor', async () => {
+    const thread = vi.fn().mockResolvedValue({
+      ok: true,
+      page: {
+        tweets: [],
+        focalPost: {
+          id: '123',
+          text: 'focal',
+          author: { username: 'focus', name: 'Focus' },
+        },
+        conversationId: '100',
+        nextCursor: 'thread-next',
+      },
+    })
+    const options = createPostFeedOptions(
+      { kind: 'thread', tweetId: '123' },
+      loaders({ thread }),
+    )
+
+    const page = await options.queryFn({ pageParam: undefined } as never)
+
+    expect(thread).toHaveBeenCalledWith({ data: { tweetId: '123' } })
+    expect(options.queryKey).toEqual([
+      'posts',
+      { kind: 'thread', tweetId: '123' },
+    ])
+    expect(options.getNextPageParam(page)).toEqual({
+      cursor: 'thread-next',
+      conversationId: '100',
+    })
+  })
+
+  it('forwards a thread continuation page parameter intact', async () => {
+    const thread = vi.fn().mockResolvedValue({
+      ok: true,
+      page: { tweets: [], conversationId: '100' },
+    })
+    const options = createPostFeedOptions(
+      { kind: 'thread', tweetId: '123' },
+      loaders({ thread }),
+    )
+
+    await options.queryFn({
+      pageParam: { cursor: 'thread-next', conversationId: '100' },
+    } as never)
+
+    expect(thread).toHaveBeenCalledWith({
+      data: {
+        tweetId: '123',
+        cursor: 'thread-next',
+        conversationId: '100',
+      },
+    })
+  })
+
   it('preserves a typed load failure for the feed', async () => {
     const error = {
       code: 'upstream' as const,
@@ -127,10 +191,9 @@ describe('createPostFeedOptions', () => {
     }
     const options = createPostFeedOptions(
       { kind: 'user', target: 'yuta' },
-      {
+      loaders({
         loadUser: vi.fn().mockResolvedValue({ ok: false, error }),
-        search: vi.fn(),
-      },
+      }),
     )
 
     const request = options.queryFn({ pageParam: undefined } as never)
