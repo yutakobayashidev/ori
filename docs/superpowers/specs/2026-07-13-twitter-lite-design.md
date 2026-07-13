@@ -10,14 +10,16 @@ Twitter Lite is a localhost-only reader for intentional access to X posts. It le
 
 - enter a handle or profile URL and read that user's posts;
 - search posts in popular or chronological order;
-- optionally restrict search to accounts followed by the authenticated relay profile; and
+- optionally restrict search to accounts followed by the authenticated relay profile;
+- follow a deliberate post link or manually enter a valid `/status/:tweetId` URL
+  to read its visible conversation; and
 - continue through results with infinite scrolling.
 
-The product reduces ambient discovery rather than limiting how far a deliberate search may scroll. It does not show content until the user enters a target or query.
+The product reduces ambient discovery rather than limiting how far a deliberate search may scroll. It shows content only after a submitted target or query, deliberate post-link navigation, or a manually entered valid `/status/:tweetId` URL.
 
 ## Product Principles
 
-1. **Intent before content.** The initial screen is empty. Every result begins with a typed handle, URL, or query.
+1. **Intent before content.** The initial screen is empty. Every result begins with a submitted target or query, deliberate post-link navigation, or a manually entered valid `/status/:tweetId` URL.
 2. **No ambient feed.** There is no home timeline, recommendation surface, trend list, notification screen, or recent-history list.
 3. **Reading only.** The app exposes no posting, reply, follow, like, repost, bookmark, or deletion operation.
 4. **No account directory.** Handles are unrestricted, but there is no autocomplete, suggested account list, or saved allowlist.
@@ -112,7 +114,7 @@ TanStack Start supplies the browser/server boundary. Bird is imported only by se
 
 The target, query, product, and following flag are validated typed search parameters. Cursor state is internal to TanStack Query because it is transport state rather than a user-controlled view setting.
 
-Route preloading never fetches posts. Data retrieval begins only when a valid submitted target or query is present.
+Route preloading never fetches posts. Data retrieval begins only when a valid submitted target or query is present or a valid `/status/:tweetId` route is reached through a deliberate post link or manually entered URL.
 
 ### Server Boundary
 
@@ -159,7 +161,7 @@ The status route and `loadThreadPosts` contract are specified in
 existing `getTweet()` and `getThreadPaged()` methods; they add no Bird or relay
 operation.
 
-Neither function exposes the Bird client, arbitrary method names, arbitrary relay URLs, or mutation operations.
+None of these functions exposes the Bird client, arbitrary method names, arbitrary relay URLs, or mutation operations.
 
 ### User Timeline Flow
 

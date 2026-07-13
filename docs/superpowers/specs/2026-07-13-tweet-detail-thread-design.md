@@ -12,10 +12,9 @@ visible conversation around it. Additional conversation pages load through the
 same intentional infinite-scroll behavior as the existing user and search
 feeds.
 
-This is an additive extension to
-`2026-07-13-twitter-lite-design.md`. Where that document lists only two routes
-and two server functions, this document adds one status route and one narrowly
-scoped read-only server function.
+This document originally extended `2026-07-13-twitter-lite-design.md` with the
+third route, `/status/:tweetId`, and the third narrowly scoped read-only server
+function, `loadThreadPosts`. The base design now incorporates both additions.
 
 ## Decisions
 
