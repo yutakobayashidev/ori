@@ -36,7 +36,7 @@ input {
 
 .brand {
   margin: 0;
-  color: #70858a;
+  color: #506970;
   font-size: 0.7rem;
   font-weight: 700;
   letter-spacing: 0.2em;
@@ -59,7 +59,7 @@ input {
   gap: 0.45rem;
   padding: 0.45rem 0.75rem;
   border-radius: 0.4rem;
-  color: #70858a;
+  color: #506970;
   font-size: 0.82rem;
   font-weight: 700;
   text-decoration: none;
@@ -81,7 +81,7 @@ input {
 .tabs a:focus-visible,
 button:focus-visible,
 input:focus-visible {
-  outline: 3px solid #70858a;
+  outline: 3px solid #506970;
   outline-offset: 2px;
 }
 
@@ -103,7 +103,7 @@ input:focus-visible {
 
 .intro {
   margin: 0.75rem 0 2rem;
-  color: #70858a;
+  color: #506970;
   line-height: 1.7;
 }
 
@@ -132,12 +132,12 @@ input:focus-visible {
 }
 
 .field input::placeholder {
-  color: #70858a;
+  color: #506970;
   font-weight: 400;
 }
 
 .field input[aria-invalid="true"] {
-  border-color: #70858a;
+  border-color: #506970;
 }
 
 .field-error {
