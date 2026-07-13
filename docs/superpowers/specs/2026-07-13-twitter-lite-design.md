@@ -33,6 +33,7 @@ The product reduces ambient discovery rather than limiting how far a deliberate 
 - raw X search syntax;
 - `Top` and `Latest` search products;
 - `filter:follows` search filtering;
+- deliberate post detail pages with cursor-paginated visible conversations;
 - photos, videos, animated GIFs, quoted posts, article previews, and engagement counts when supplied by Bird;
 - infinite cursor pagination;
 - explicit retry, empty, error, loading, and end states;
@@ -46,6 +47,7 @@ The product reduces ambient discovery rather than limiting how far a deliberate 
 - all X mutation operations;
 - user autocomplete and typeahead;
 - People and Media search products;
+- related-post feeds and automatic post discovery;
 - a generic relay proxy;
 - deployment beyond a personal localhost process.
 
@@ -105,6 +107,7 @@ TanStack Start supplies the browser/server boundary. Bird is imported only by se
 
 - `/user?target=<handle-or-url>` displays the User tab.
 - `/search?q=<query>&product=<Top|Latest>&following=<boolean>` displays the Search tab.
+- `/status/:tweetId` displays one selected post and its visible conversation.
 - `/` redirects to `/user` without a target.
 
 The target, query, product, and following flag are validated typed search parameters. Cursor state is internal to TanStack Query because it is transport state rather than a user-controlled view setting.
@@ -125,7 +128,7 @@ new TwitterClient({
 
 `TWITTER_RELAY_BASE_URL` is required. `BIRD_PROFILE_NAME` is optional but must be passed explicitly because the Bird library does not read that environment variable itself.
 
-Only two server functions are callable by the application:
+Only three server functions are callable by the application:
 
 ```ts
 type PostPage = {
@@ -144,7 +147,17 @@ searchPosts(input: {
   following: boolean
   cursor?: string
 }): Promise<PostPage>
+
+loadThreadPosts(input:
+  | { tweetId: string }
+  | { tweetId: string; conversationId: string; cursor: string }
+): Promise<ThreadPage>
 ```
+
+The status route and `loadThreadPosts` contract are specified in
+`2026-07-13-tweet-detail-thread-design.md`. Conversation reads compose Bird's
+existing `getTweet()` and `getThreadPaged()` methods; they add no Bird or relay
+operation.
 
 Neither function exposes the Bird client, arbitrary method names, arbitrary relay URLs, or mutation operations.
 
@@ -173,6 +186,10 @@ Each mode uses `useInfiniteQuery`. Its query key includes the mode and every use
 The first request fetches 20 posts. An IntersectionObserver sentinel near the list end calls `fetchNextPage()` when a cursor exists and no request is already in flight. There is no page count limit or periodic confirmation. Pagination stops only when Bird returns no next cursor.
 
 Flattened pages are deduplicated by post ID while preserving API order. A failed later page leaves all previously loaded posts visible and presents one explicit Retry control. Requests do not retry automatically.
+
+User and search pages preserve API order. Conversation pages preserve Bird's
+current order: chronological within a fetched page, with cursor pages appended
+in retrieval order.
 
 ## Interface Design
 

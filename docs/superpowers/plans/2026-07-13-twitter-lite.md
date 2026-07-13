@@ -2,6 +2,10 @@
 
 > **For agentic workers:** REQUIRED SUB-SKILL: Use superpowers:subagent-driven-development (recommended) or superpowers:executing-plans to implement this plan task-by-task. Steps use checkbox (`- [ ]`) syntax for tracking.
 
+> Subsequent extension: tweet detail and conversation loading are implemented
+> by `2026-07-13-tweet-detail-thread.md` and specified by
+> `../specs/2026-07-13-tweet-detail-thread-design.md`.
+
 **Goal:** Build a localhost-only TanStack Start reader that loads user timelines and Top/Latest searches through a read-only Bird server boundary.
 
 **Architecture:** First extend the sibling Bird repository with a typed search product option. Then build Twitter Lite as a TanStack Start application whose server functions call Bird, while TanStack Query owns cursor pagination and the browser renders the Mist Instrument interface.

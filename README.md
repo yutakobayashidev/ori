@@ -9,10 +9,15 @@ enter a user handle, profile URL, or search query.
 - Popular (`Top`) and chronological (`Latest`) search
 - Optional `filter:follows` search
 - Infinite cursor pagination with explicit retry
+- Deliberate post detail pages with the visible conversation
+- Infinite conversation loading with explicit continuation retry
 - Read-only cards for text, media, quotes, articles, and quiet engagement counts
 
 It intentionally has no home feed, recommendations, trends, notifications,
 history, account directory, or write actions.
+
+Post detail pages show only the selected post and its visible conversation;
+they do not add related-post recommendations or an account-discovery surface.
 
 ## Requirements and setup
 
@@ -72,3 +77,7 @@ only on a trusted network and obtain the Tailscale address with
 
 Bird uses X's internal GraphQL operations through the configured relay. Query
 IDs and response shapes can change without notice.
+
+Conversation pages use Bird's current per-page chronological ordering. Keeping
+X's original ranked branch order is deferred until Bird exposes that order
+without expanding the relay surface.
