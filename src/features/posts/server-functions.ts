@@ -3,14 +3,17 @@ import { searchPageInputSchema, userPageInputSchema } from './inputs'
 import { loadUserPage, searchPage } from './post-service'
 import type { LoadResult } from './types'
 
-const configFailure = (): LoadResult => ({
-  ok: false,
-  error: {
-    code: 'relay-config',
-    message: 'TWITTER_RELAY_BASE_URL を設定してください。',
-    retryable: false,
-  },
-})
+const configFailure = (diagnostic: unknown): LoadResult => {
+  console.error('Bird client configuration failed:', diagnostic)
+  return {
+    ok: false,
+    error: {
+      code: 'relay-config',
+      message: 'TWITTER_RELAY_BASE_URL を設定してください。',
+      retryable: false,
+    },
+  }
+}
 
 async function reader() {
   const { getBirdReader } = await import('./bird-client.server')
@@ -22,8 +25,8 @@ export const loadUserPosts = createServerFn({ method: 'GET' })
   .handler(async ({ data }) => {
     try {
       return await loadUserPage(await reader(), data)
-    } catch {
-      return configFailure()
+    } catch (error) {
+      return configFailure(error)
     }
   })
 
@@ -32,7 +35,7 @@ export const searchPosts = createServerFn({ method: 'GET' })
   .handler(async ({ data }) => {
     try {
       return await searchPage(await reader(), data)
-    } catch {
-      return configFailure()
+    } catch (error) {
+      return configFailure(error)
     }
   })

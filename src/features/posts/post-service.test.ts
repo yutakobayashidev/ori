@@ -118,4 +118,37 @@ describe('searchPage', () => {
       },
     })
   })
+
+  it('logs unexpected details without returning them', async () => {
+    const client = reader()
+    const privateDetail = 'TASK4_PRIVATE_RELAY_MARKER_9e0b'
+    const upstreamError = new Error(privateDetail)
+    vi.mocked(client.getAllSearchResults).mockRejectedValue(upstreamError)
+    const errorSpy = vi.spyOn(console, 'error').mockImplementation(() => {})
+
+    try {
+      const result = await searchPage(client, {
+        query: 'AI',
+        product: 'Latest',
+        following: false,
+      })
+
+      expect(errorSpy).toHaveBeenCalledTimes(1)
+      expect(errorSpy).toHaveBeenCalledWith(
+        'Unexpected Bird failure:',
+        upstreamError,
+      )
+      expect(result).toEqual({
+        ok: false,
+        error: {
+          code: 'upstream',
+          message: 'X から投稿を取得できませんでした。',
+          retryable: true,
+        },
+      })
+      expect(JSON.stringify(result)).not.toContain(privateDetail)
+    } finally {
+      errorSpy.mockRestore()
+    }
+  })
 })

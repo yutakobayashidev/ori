@@ -41,7 +41,13 @@ const failure = (
   retryable: boolean,
 ): LoadResult => ({ ok: false, error: { code, message, retryable } })
 
-function upstreamFailure(message = ''): LoadResult {
+function upstreamFailure(diagnostic: unknown = ''): LoadResult {
+  const message =
+    diagnostic instanceof Error
+      ? diagnostic.message
+      : typeof diagnostic === 'string'
+        ? diagnostic
+        : ''
   const lower = message.toLowerCase()
   if (lower.includes('timeout') || lower.includes('aborted')) {
     return failure('timeout', '取得がタイムアウトしました。', true)
@@ -56,6 +62,7 @@ function upstreamFailure(message = ''): LoadResult {
       false,
     )
   }
+  console.error('Unexpected Bird failure:', diagnostic)
   return failure('upstream', 'X から投稿を取得できませんでした。', true)
 }
 
@@ -104,7 +111,7 @@ export async function loadUserPage(
     if (error instanceof InputError) {
       return failure('invalid-input', error.message, false)
     }
-    return upstreamFailure(error instanceof Error ? error.message : '')
+    return upstreamFailure(error)
   }
 }
 
@@ -130,6 +137,6 @@ export async function searchPage(
     if (error instanceof InputError) {
       return failure('invalid-input', error.message, false)
     }
-    return upstreamFailure(error instanceof Error ? error.message : '')
+    return upstreamFailure(error)
   }
 }
