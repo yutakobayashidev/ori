@@ -1,4 +1,9 @@
 .superpowers/
 .worktrees/
+.env*
+!.env.example
 .output/
+dist/
 node_modules/
+playwright-report/
+test-results/

@@ -2861,28 +2861,36 @@ Create `playwright.config.ts`:
 ```ts
 import { defineConfig, devices } from '@playwright/test'
 
+const appPort = 4173
+const relayPort = 6911
+const chromiumExecutable = process.env.PLAYWRIGHT_CHROMIUM_EXECUTABLE
+
+if (!chromiumExecutable) {
+  throw new Error('Run E2E tests through `nix develop` to provide Chromium.')
+}
+
 export default defineConfig({
   testDir: './tests/e2e',
   fullyParallel: false,
+  workers: 1,
   use: {
-    baseURL: 'http://127.0.0.1:3000',
-    launchOptions: {
-      executablePath: process.env.PLAYWRIGHT_CHROMIUM_EXECUTABLE,
-    },
+    baseURL: `http://127.0.0.1:${appPort}`,
+    launchOptions: { executablePath: chromiumExecutable },
     screenshot: 'only-on-failure',
     trace: 'retain-on-failure',
   },
   webServer: [
     {
-      command: 'node tests/e2e/mock-relay.mjs',
-      port: 6901,
+      command: `TWITTER_LITE_MOCK_RELAY_PORT=${relayPort} node tests/e2e/mock-relay.mjs`,
+      port: relayPort,
       reuseExistingServer: false,
+      timeout: 120_000,
     },
     {
-      command:
-        'TWITTER_RELAY_BASE_URL=http://127.0.0.1:6901 BIRD_PROFILE_NAME=e2e pnpm dev',
-      url: 'http://127.0.0.1:3000/user?target=',
+      command: `TWITTER_RELAY_BASE_URL=http://127.0.0.1:${relayPort} BIRD_PROFILE_NAME=e2e pnpm exec vite dev --host 127.0.0.1 --port ${appPort} --strictPort`,
+      url: `http://127.0.0.1:${appPort}`,
       reuseExistingServer: false,
+      timeout: 120_000,
     },
   ],
   projects: [
@@ -2894,11 +2902,11 @@ export default defineConfig({
 
 - [ ] **Step 2: Create a deterministic read-only relay**
 
-Create `tests/e2e/mock-relay.mjs`:
+Create `tests/e2e/mock-relay.mjs`. The response-shape excerpt below is only
+part of the mock: the executable implementation must also enforce the request
+contract listed after it.
 
 ```js
-import { createServer } from 'node:http'
-
 const tweet = (id, text, username = 'yuta') => ({
   entryId: `tweet-${id}`,
   content: {
@@ -2934,88 +2942,21 @@ const cursor = (value) => ({
   entryId: 'cursor-bottom',
   content: { cursorType: 'Bottom', value },
 })
-
-const send = (response, payload, status = 200) => {
-  response.writeHead(status, { 'content-type': 'application/json' })
-  response.end(JSON.stringify(payload))
-}
-
-createServer((request, response) => {
-  if (request.headers['x-profile-name'] !== 'e2e') {
-    send(response, { errors: [{ message: 'missing profile' }] }, 403)
-    return
-  }
-  const url = new URL(request.url ?? '/', 'http://127.0.0.1:6901')
-  const variables = JSON.parse(url.searchParams.get('variables') ?? '{}')
-
-  if (url.pathname.endsWith('/UserByScreenName')) {
-    send(response, {
-      data: {
-        user: {
-          result: {
-            rest_id: '42',
-            legacy: { screen_name: variables.screen_name, name: 'Yuta' },
-          },
-        },
-      },
-    })
-    return
-  }
-
-  if (url.pathname.endsWith('/UserTweets')) {
-    const second = Boolean(variables.cursor)
-    send(response, {
-      data: {
-        user: {
-          result: {
-            timeline: {
-              timeline: {
-                instructions: [
-                  {
-                    entries: second
-                      ? [tweet('u2', 'user page 2')]
-                      : [tweet('u1', 'user page 1'), cursor('user-next')],
-                  },
-                ],
-              },
-            },
-          },
-        },
-      },
-    })
-    return
-  }
-
-  if (url.pathname.endsWith('/SearchTimeline')) {
-    const second = Boolean(variables.cursor)
-    const label = `${variables.product} · ${
-      String(variables.rawQuery).includes('filter:follows')
-        ? 'follows'
-        : 'all'
-    }`
-    send(response, {
-      data: {
-        search_by_raw_query: {
-          search_timeline: {
-            timeline: {
-              instructions: [
-                {
-                  entries: second
-                    ? [tweet('s2', `${label} page 2`)]
-                    : [tweet('s1', `${label} page 1`), cursor('search-next')],
-                },
-              ],
-            },
-          },
-        },
-      },
-    })
-    return
-  }
-
-  send(response, { errors: [{ message: 'unsupported read operation' }] }, 404)
-}).listen(6901, '127.0.0.1')
 ```
+
+Route by the operation-name suffix, never the query ID. Require
+`x-profile-name: e2e`; require GET for `UserByScreenName` and `UserTweets`; and
+require POST plus JSON `{ features, queryId }` for `SearchTimeline`, whose
+`variables` remain in the URL. Validate only the minimal fixture variables,
+not exact query IDs or complete feature bags. Return 405 for a wrong method,
+403 for a wrong profile, 400 for malformed supported input, and 501 for an
+unsupported operation. Never return 404 or make an outbound request.
+
+Key transient state by raw query. The first cursor request for each
+`retry-<project>` query returns 503 once, then succeeds on explicit retry. A
+`slow-<project>` cursor request is delayed long enough to observe the loading
+rail. Every page carrying a cursor also carries a parseable tweet, and page two
+omits the cursor.
 
 - [ ] **Step 3: Write failing end-to-end flows**
 
@@ -3023,6 +2964,23 @@ Create `tests/e2e/reader.spec.ts`:
 
 ```ts
 import { expect, test } from '@playwright/test'
+
+let consoleErrors: string[]
+let pageErrors: string[]
+
+test.beforeEach(async ({ page }) => {
+  consoleErrors = []
+  pageErrors = []
+  page.on('console', (message) => {
+    if (message.type() === 'error') consoleErrors.push(message.text())
+  })
+  page.on('pageerror', (error) => pageErrors.push(error.message))
+})
+
+test.afterEach(() => {
+  expect(consoleErrors).toEqual([])
+  expect(pageErrors).toEqual([])
+})
 
 test('requires intent and infinitely loads a user timeline', async ({ page }) => {
   await page.goto('/')
@@ -3061,6 +3019,14 @@ test('keeps discovery surfaces absent', async ({ page }) => {
 })
 ```
 
+Wait for the cold SSR page to hydrate before manipulating controlled fields.
+In addition to the excerpted happy paths, cover a later-page 503 that retains
+page one and succeeds only after Retry, the exact keyboard Tab order across
+both navigation links and all form controls, absent discovery/mutation links
+and controls, and a `slow-<project>` request under reduced motion whose loading
+rail pseudo-element has `animation-name: none`. Run every flow in both projects
+and let the slow request finish before teardown.
+
 Run:
 
 ```bash
@@ -3085,23 +3051,32 @@ Expected: the first run creates reviewed desktop and mobile `mist-user.png` snap
 Create `tests/live/relay.test.ts`:
 
 ```ts
+// @vitest-environment node
+
 import { TwitterClient } from '@yuta/bird'
 import { describe, expect, it } from 'vitest'
 
 describe.runIf(process.env.TWITTER_LITE_LIVE === '1')(
   'configured relay',
   () => {
-    it('reads one Top search result without a mutation', async () => {
-      const client = new TwitterClient({
-        relayBaseUrl: process.env.TWITTER_RELAY_BASE_URL,
-        profileName: process.env.BIRD_PROFILE_NAME,
-        timeoutMs: 20_000,
-      })
-
-      const result = await client.search('OpenAI', 1, { product: 'Top' })
-      expect(result.success).toBe(true)
-      if (result.success) expect(result.tweets.length).toBeGreaterThan(0)
-    })
+    it(
+      'performs one read-only Top search',
+      async () => {
+        const relayBaseUrl = process.env.TWITTER_RELAY_BASE_URL
+        if (!relayBaseUrl) {
+          throw new Error('TWITTER_RELAY_BASE_URL is required for the live test')
+        }
+        const client = new TwitterClient({
+          relayBaseUrl,
+          profileName: process.env.BIRD_PROFILE_NAME,
+          timeoutMs: 20_000,
+        })
+        const query = process.env.TWITTER_LITE_LIVE_QUERY ?? 'OpenAI'
+        const result = await client.search(query, 1, { product: 'Top' })
+        expect(result.success).toBe(true)
+      },
+      30_000,
+    )
   },
 )
 ```
@@ -3112,7 +3087,9 @@ Run:
 nix develop -c pnpm test:live
 ```
 
-Expected: one read-only Top search test passes using the configured relay.
+Expected: when relay/profile environment configuration is actually available,
+one read-only Top search test passes. Do not run this opt-in command
+unconditionally or log relay configuration, response bodies, or post content.
 
 - [ ] **Step 6: Document setup and intentional omissions**
 
@@ -3127,8 +3104,9 @@ Extend `.gitignore` to exactly:
 
 ```gitignore
 .superpowers/
-.env
-.env.local
+.worktrees/
+.env*
+!.env.example
 .output/
 dist/
 node_modules/
@@ -3141,8 +3119,8 @@ Create `README.md` with these sections and commands:
 ````md
 # Twitter Lite
 
-A localhost-only X reader that shows content only after a deliberate handle,
-profile URL, or search query.
+An intentional, read-only X reader that shows content only after a deliberate
+handle, profile URL, or search query.
 
 ## Features
 
@@ -3155,19 +3133,23 @@ profile URL, or search query.
 
 ## Setup
 
-Clone the modified Bird checkout beside this repository:
+Use Nix, or Node.js `>=22.12.0` with pnpm `11.9.0`. Obtain the supplied local
+Bird checkout beside this repository at unpublished commit
+`81921226f099e7f7a2107be15fc9783218a6f400`. A fresh remote clone alone does
+not contain that Top/Latest commit yet.
 
 ```bash
-git clone https://git.yutakobayashi.com/yuta/bird ../bird
 cd ../bird
+git rev-parse HEAD
 nix develop -c pnpm install --frozen-lockfile
 nix develop -c pnpm run build:dist
 cd ../twitter-lite
 nix develop -c pnpm install --frozen-lockfile
 ```
 
-Set `TWITTER_RELAY_BASE_URL` and, when the relay has multiple profiles,
-`BIRD_PROFILE_NAME`. Bird and both values remain in the server bundle.
+Set `TWITTER_RELAY_BASE_URL` at runtime and, when the relay has multiple
+profiles, `BIRD_PROFILE_NAME`. Bird and both values are read only by
+server-side code and never reach the browser.
 
 ## Commands
 
@@ -3181,8 +3163,11 @@ nix develop -c pnpm build
 nix develop -c pnpm start
 ```
 
-The default bind address is `127.0.0.1`. Use `dev:tailscale` only on a trusted
-tailnet.
+The default bind address is `127.0.0.1`. E2E runs through Nix with the system
+Chromium; the live command performs exactly one explicitly configured read.
+`dev:tailscale` binds `0.0.0.0`, including LAN interfaces as well as Tailscale,
+so use it only on a trusted network. Find the Tailscale address with
+`tailscale ip -4`.
 
 ## Reliability
 
@@ -3198,20 +3183,22 @@ From `../bird`:
 nix develop -c pnpm run build:dist
 nix develop -c pnpm run lint
 nix develop -c pnpm test
-git status --short
+git status --short --branch
+git rev-list --count origin/main..HEAD
+git log --oneline origin/main..HEAD
 ```
 
 From Twitter Lite:
 
 ```bash
 nix develop -c pnpm install --frozen-lockfile
-nix develop -c pnpm generate-routes
+nix develop -c pnpm check:routes
 nix develop -c pnpm lint
 nix develop -c pnpm typecheck
 nix develop -c pnpm test
-nix develop -c pnpm test:e2e
-nix develop -c pnpm test:live
 nix develop -c pnpm build
+nix develop -c pnpm test:e2e
+nix develop -c pnpm test:live # only with configured relay environment
 git diff --check
 ```
 
@@ -3220,7 +3207,9 @@ Expected:
 - Bird build, lint, and all non-live tests pass.
 - Twitter Lite lint, typecheck, unit tests, desktop/mobile browser tests, live read test, and production build pass.
 - Bird has one local feature commit and no remote push.
-- Browser bundles contain no relay environment value and expose no mutation endpoint.
+- Fresh `.output/public` scans contain no Bird/client or relay environment names;
+  source contains only the two intended server functions and no mutation/generic
+  proxy calls.
 - `README.md` and the design docs match the delivered commands and behavior.
 - `AGENTS.md` and `CLAUDE.md` remain absent because no agent-specific instruction changed.
 
@@ -3229,17 +3218,19 @@ Expected:
 ```bash
 git add \
   .env.example .gitignore README.md playwright.config.ts \
-  tests/e2e tests/live docs
+  src/routes/__root.tsx tests/e2e tests/live docs
 git commit -m "test: verify intentional reader flows"
 ```
 
 Run one fresh post-commit audit:
 
 ```bash
-git status --short
+git status --short --branch
 git log --oneline --decorate -8
 nix develop -c pnpm test
+nix develop -c pnpm test:e2e
 nix develop -c pnpm build
+git diff --check
 ```
 
 Expected: clean status, the planned commits are present, all unit tests pass, and the production build exits zero.

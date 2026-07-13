@@ -18,7 +18,13 @@ export const Route = createRootRouteWithContext<RouterContext>()({
       },
       { title: 'Twitter Lite' },
     ],
-    links: [{ rel: 'stylesheet', href: appCss }],
+    links: [
+      { rel: 'stylesheet', href: appCss },
+      {
+        rel: 'icon',
+        href: "data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 16 16'%3E%3Ccircle cx='8' cy='8' r='7' fill='%23255f6e'/%3E%3C/svg%3E",
+      },
+    ],
   }),
   shellComponent: RootDocument,
 })
