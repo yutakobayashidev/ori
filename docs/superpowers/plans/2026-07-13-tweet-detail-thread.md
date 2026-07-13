@@ -31,7 +31,7 @@
 - `src/features/posts/server-functions.ts` — expose only `loadThreadPosts` as the third read-only server function.
 - `src/features/posts/use-post-feed.ts` — carry `{ cursor, conversationId }` through TanStack infinite-query page parameters.
 - `src/features/posts/page.ts` — extract the focal post and remove it from the deduplicated conversation.
-- `src/features/posts/components/post-card.tsx` — add an intentional internal detail link and current-post state.
+- `src/features/posts/components/post-card.tsx` — add an intentional internal detail anchor and current-post state.
 - `src/features/posts/components/post-feed.tsx` — render the focal card above the reusable infinite conversation feed.
 - `src/components/app-shell.tsx` — support a third route with neither global tab selected.
 - `src/routes/status.$tweetId.tsx` — typed detail route and invalid-ID state.
@@ -841,25 +841,11 @@ git commit -m "feat: paginate tweet conversations"
 
 **Interfaces:**
 - Consumes: thread `FeedRequest`, `focalPostFromPages()`, and `flattenConversationPages()` from Task 2.
-- Produces: `/status/$tweetId`, internal `詳細・スレッド` links, neutral shell navigation, focal-card presentation, and a reusable thread feed with existing retry/observer behavior.
+- Produces: `/status/$tweetId`, internal `詳細・スレッド` anchors, neutral shell navigation, focal-card presentation, and a reusable thread feed with existing retry/observer behavior.
 
 - [ ] **Step 1: Write failing card behavior tests**
 
-At the top of both `src/features/posts/components/post-card.test.tsx` and `src/features/posts/components/post-feed.test.tsx`, import `type ReactNode` from React and add this focused Link mock so component tests do not require a full router:
-
-```ts
-vi.mock('@tanstack/react-router', () => ({
-  Link: ({
-    children,
-    params,
-  }: {
-    children: ReactNode
-    params: { tweetId: string }
-  }) => <a href={`/status/${params.tweetId}`}>{children}</a>,
-}))
-```
-
-Add `vi` to the card test imports and add to `post-card.test.tsx`:
+Add to `src/features/posts/components/post-card.test.tsx`:
 
 ```ts
 it('links deliberately to the internal detail page', () => {
@@ -988,7 +974,7 @@ Expected: FAIL because detail links, current state, and focal rendering do not e
 
 - [ ] **Step 4: Add intentional internal navigation to PostCard**
 
-In `src/features/posts/components/post-card.tsx`, import `Link` from `@tanstack/react-router`, add `current = false` to the props, and set:
+In `src/features/posts/components/post-card.tsx`, add `current = false` to the props and set:
 
 ```ts
     <article
@@ -1002,9 +988,9 @@ Within the non-quoted footer, keep the counts and external link and add:
 
 ```tsx
           {!current ? (
-            <Link params={{ tweetId: post.id }} to="/status/$tweetId">
+            <a href={`/status/${encodeURIComponent(post.id)}`}>
               詳細・スレッド
-            </Link>
+            </a>
           ) : null}
 ```
 
