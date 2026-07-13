@@ -1,5 +1,6 @@
 import { createFileRoute } from '@tanstack/react-router'
 import { AppShell } from '#/components/app-shell'
+import { PostFeed } from '#/features/posts/components/post-feed'
 import { UserForm } from '#/features/posts/components/user-form'
 import { userRouteSearchSchema } from '#/features/posts/inputs'
 
@@ -20,6 +21,7 @@ function UserRoute() {
         key={target}
         onSubmit={(nextTarget) => navigate({ search: { target: nextTarget } })}
       />
+      <PostFeed request={target ? { kind: 'user', target } : undefined} />
     </AppShell>
   )
 }

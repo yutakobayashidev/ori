@@ -1,5 +1,6 @@
 import { createFileRoute } from '@tanstack/react-router'
 import { AppShell } from '#/components/app-shell'
+import { PostFeed } from '#/features/posts/components/post-feed'
 import { SearchForm } from '#/features/posts/components/search-form'
 import { postSearchRouteSchema } from '#/features/posts/inputs'
 
@@ -21,6 +22,18 @@ function SearchRoute() {
         initialQuery={values.q}
         key={`${values.q}:${values.product}:${values.following}`}
         onSubmit={(search) => navigate({ search })}
+      />
+      <PostFeed
+        request={
+          values.q
+            ? {
+                kind: 'search',
+                query: values.q,
+                product: values.product,
+                following: values.following,
+              }
+            : undefined
+        }
       />
     </AppShell>
   )
