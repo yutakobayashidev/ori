@@ -62,6 +62,53 @@ test('requires intent and infinitely loads a user timeline', async ({
   })
 })
 
+test('opens a card detail and infinitely loads its conversation', async ({
+  page,
+}) => {
+  await openReader(page, '/user?target=yuta')
+  const sourceCard = page
+    .getByRole('article')
+    .filter({ hasText: 'user page 1' })
+  await sourceCard.getByRole('link', { name: '詳細・スレッド' }).click()
+
+  await expect(page).toHaveURL(/\/status\/1001$/)
+  await expect(page.getByRole('heading', { name: '会話' })).toBeVisible()
+  await expect(page.getByText('表示中の投稿')).toBeVisible()
+  await expect(page.getByText('user page 1')).toHaveCount(1)
+  await expect(page.getByText('thread root')).toBeVisible()
+  await expect(page.getByText('thread page 1')).toBeVisible()
+  await expect(page.getByText('thread page 2')).toBeVisible()
+  await expect(page.getByText('これ以上の投稿はありません。')).toBeVisible()
+  await expect(page).toHaveScreenshot('mist-thread.png', {
+    animations: 'disabled',
+    fullPage: true,
+  })
+})
+
+test('resolves a reply root and retries only the failed continuation', async ({
+  page,
+}) => {
+  await openReader(page, '/status/2001')
+
+  await expect(page.getByText('retry focal')).toHaveCount(1)
+  await expect(page.getByText('thread root')).toBeVisible()
+  await expect(page.getByText('thread page 1')).toBeVisible()
+  const alert = page
+    .getByRole('alert')
+    .filter({ hasText: '続きの投稿を取得できませんでした。' })
+  await expect(alert).toHaveCount(1)
+  await expect(page.getByText('retry focal')).toHaveCount(1)
+
+  await alert.getByRole('button', { name: '再試行' }).click()
+
+  await expect(page.getByText('thread page 2')).toBeVisible()
+  await expect(alert).toHaveCount(0)
+  await expect(page.getByText('これ以上の投稿はありません。')).toBeVisible()
+  await expect(
+    page.getByRole('button', { name: mutationControlNames }),
+  ).toHaveCount(0)
+})
+
 test('searches Top posts from followed accounts', async ({ page }) => {
   await openReader(page, '/search?q=&product=Latest&following=false')
   await expect(page.locator('article')).toHaveCount(0)

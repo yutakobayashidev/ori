@@ -8,34 +8,51 @@ if (!portValue || !Number.isInteger(port) || port < 1) {
 }
 
 const failedRetryQueries = new Set()
+const rootByTarget = new Map([
+  ['1001', '1000'],
+  ['2001', '2000'],
+])
+const targetByRoot = new Map([
+  ['1000', '1001'],
+  ['2000', '2001'],
+])
+const failedThreadRoots = new Set()
 
 const isRecord = (value) =>
   value !== null && typeof value === 'object' && !Array.isArray(value)
 
-const tweet = (id, text, username = 'yuta') => ({
+const tweetResult = (
+  id,
+  text,
+  username = 'yuta',
+  { conversationId = id, inReplyTo } = {},
+) => ({
+  rest_id: id,
+  legacy: {
+    full_text: text,
+    created_at: 'Mon Jul 13 00:00:00 +0000 2026',
+    reply_count: 1,
+    retweet_count: 2,
+    favorite_count: 3,
+    conversation_id_str: conversationId,
+    ...(inReplyTo ? { in_reply_to_status_id_str: inReplyTo } : {}),
+  },
+  core: {
+    user_results: {
+      result: {
+        rest_id: '42',
+        legacy: { screen_name: username, name: 'Yuta' },
+      },
+    },
+  },
+})
+
+const tweet = (id, text, username = 'yuta', options) => ({
   entryId: `tweet-${id}`,
   content: {
     itemContent: {
       tweet_results: {
-        result: {
-          rest_id: id,
-          legacy: {
-            full_text: text,
-            created_at: 'Mon Jul 13 00:00:00 +0000 2026',
-            reply_count: 1,
-            retweet_count: 2,
-            favorite_count: 3,
-            conversation_id_str: id,
-          },
-          core: {
-            user_results: {
-              result: {
-                rest_id: '42',
-                legacy: { screen_name: username, name: 'Yuta' },
-              },
-            },
-          },
-        },
+        result: tweetResult(id, text, username, options),
       },
     },
   },
@@ -80,9 +97,12 @@ const timeline = (entries) => ({ instructions: [{ entries }] })
 
 const server = createServer(async (request, response) => {
   const url = new URL(request.url ?? '/', `http://127.0.0.1:${port}`)
-  const operation = ['UserByScreenName', 'UserTweets', 'SearchTimeline'].find(
-    (name) => url.pathname.endsWith(`/${name}`),
-  )
+  const operation = [
+    'UserByScreenName',
+    'UserTweets',
+    'TweetDetail',
+    'SearchTimeline',
+  ].find((name) => url.pathname.endsWith(`/${name}`))
 
   if (!operation) {
     fail(response, 501, 'unsupported read operation')
@@ -143,13 +163,127 @@ const server = createServer(async (request, response) => {
     }
     const secondPage = variables.cursor === 'user-next'
     const entries = secondPage
-      ? [tweet('u2', 'user page 2')]
-      : [tweet('u1', 'user page 1'), cursor('user-next')]
+      ? [tweet('1010', 'user page 2')]
+      : [
+          tweet('1001', 'user page 1', 'yuta', {
+            conversationId: '1000',
+          }),
+          cursor('user-next'),
+        ]
     send(response, {
       data: {
         user: { result: { timeline: { timeline: timeline(entries) } } },
       },
     })
+    return
+  }
+
+  if (operation === 'TweetDetail') {
+    const focalTweetId = variables.focalTweetId
+    if (typeof focalTweetId !== 'string' || !/^\d+$/.test(focalTweetId)) {
+      fail(response, 400, 'invalid focalTweetId')
+      return
+    }
+    const features = url.searchParams.get('features')
+    const fieldToggles = url.searchParams.get('fieldToggles')
+    try {
+      if (!features || !isRecord(JSON.parse(features))) throw new Error()
+      if (!fieldToggles || !isRecord(JSON.parse(fieldToggles))) {
+        throw new Error()
+      }
+    } catch {
+      fail(response, 400, 'invalid TweetDetail feature locks')
+      return
+    }
+
+    const targetRoot = rootByTarget.get(focalTweetId)
+    if (targetRoot && variables.cursor === undefined) {
+      const text = focalTweetId === '1001' ? 'user page 1' : 'retry focal'
+      const result = tweetResult(focalTweetId, text, 'focus', {
+        conversationId: targetRoot,
+        inReplyTo: targetRoot,
+      })
+      send(response, {
+        data: {
+          tweetResult: { result },
+          threaded_conversation_with_injections_v2: {
+            instructions: [
+              {
+                entries: [
+                  tweet(focalTweetId, text, 'focus', {
+                    conversationId: targetRoot,
+                    inReplyTo: targetRoot,
+                  }),
+                ],
+              },
+            ],
+          },
+        },
+      })
+      return
+    }
+
+    const targetId = targetByRoot.get(focalTweetId)
+    if (!targetId) {
+      fail(response, 400, 'unsupported TweetDetail fixture')
+      return
+    }
+    const expectedCursor = `thread-next:${focalTweetId}`
+    if (variables.cursor !== undefined && variables.cursor !== expectedCursor) {
+      fail(response, 400, 'invalid thread cursor')
+      return
+    }
+    if (
+      variables.cursor &&
+      focalTweetId === '2000' &&
+      !failedThreadRoots.has(focalTweetId)
+    ) {
+      failedThreadRoots.add(focalTweetId)
+      fail(response, 503, 'transient thread fixture failure')
+      return
+    }
+
+    const entries = variables.cursor
+      ? [
+          tweet(`${focalTweetId}3`, 'thread page 2', 'reply2', {
+            conversationId: focalTweetId,
+            inReplyTo: targetId,
+          }),
+        ]
+      : [
+          tweet(focalTweetId, 'thread root', 'root', {
+            conversationId: focalTweetId,
+          }),
+          tweet(
+            targetId,
+            focalTweetId === '1000' ? 'user page 1' : 'retry focal',
+            'focus',
+            {
+              conversationId: focalTweetId,
+              inReplyTo: focalTweetId,
+            },
+          ),
+          tweet(`${focalTweetId}2`, 'thread page 1', 'reply1', {
+            conversationId: focalTweetId,
+            inReplyTo: targetId,
+          }),
+          cursor(expectedCursor),
+        ]
+    send(response, {
+      data: {
+        tweetResult: {
+          result: tweetResult(focalTweetId, 'thread root', 'root', {
+            conversationId: focalTweetId,
+          }),
+        },
+        threaded_conversation_with_injections_v2: {
+          instructions: [{ entries }],
+        },
+      },
+    })
+    if (variables.cursor && focalTweetId === '2000') {
+      failedThreadRoots.delete(focalTweetId)
+    }
     return
   }
 
