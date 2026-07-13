@@ -23,7 +23,7 @@
 - Load 20 posts per cursor page and continue automatically without a fixed page limit.
 - Use Mist Instrument tokens and no remote fonts; respect keyboard focus and `prefers-reduced-motion`.
 - Work test-first for every behavior change and run the pre-commit documentation check in both repositories.
-- Do not push Bird or publish `@yuta/bird` without separate user authorization.
+- Consume the separately authorized and published `@yuta/bird@0.10.0`; do not modify Bird from the app repository.
 
 ## File Map
 
@@ -385,7 +385,7 @@ git commit -m "feat: support ranked tweet search"
 - Create: `tests/setup.ts`
 
 **Interfaces:**
-- Consumes: local `@yuta/bird` through `link:../bird`.
+- Consumes: published `@yuta/bird@0.10.0` through Gitea Packages.
 - Produces: `getRouter()` with an SSR-aware QueryClient.
 - Produces: a buildable TanStack Start/Nitro application at `http://127.0.0.1:3000`.
 
@@ -422,6 +422,12 @@ Run `nix flake lock` to generate `flake.lock`.
 
 - [ ] **Step 2: Add pinned package and tool configuration**
 
+Create `.npmrc`:
+
+```ini
+@yuta:registry=https://git.yutakobayashi.com/api/packages/yuta/npm/
+```
+
 Create `package.json`:
 
 ```json
@@ -451,7 +457,7 @@ Create `package.json`:
     "@tanstack/react-router": "1.170.17",
     "@tanstack/react-router-ssr-query": "1.167.1",
     "@tanstack/react-start": "1.168.27",
-    "@yuta/bird": "link:../bird",
+    "@yuta/bird": "0.10.0",
     "nitro": "3.0.260610-beta",
     "react": "19.2.7",
     "react-dom": "19.2.7",
@@ -2855,7 +2861,7 @@ git commit -m "feat: apply mist instrument interface"
 - Verify: `docs/superpowers/specs/2026-07-13-twitter-lite-design.md`
 
 **Interfaces:**
-- Consumes: the complete app and local Bird build.
+- Consumes: the complete app and published Bird package.
 - Produces: deterministic desktop/mobile browser coverage and an opt-in read-only live smoke test.
 
 - [ ] **Step 1: Add the browser configuration**
@@ -3137,17 +3143,11 @@ handle, profile URL, or search query.
 
 ## Setup
 
-Use Nix, or Node.js `>=22.12.0` with pnpm `11.9.0`. Obtain the supplied local
-Bird checkout beside this repository at unpublished commit
-`81921226f099e7f7a2107be15fc9783218a6f400`. A fresh remote clone alone does
-not contain that Top/Latest commit yet.
+Use Nix, or Node.js `>=22.12.0` with pnpm `11.9.0`. The committed `.npmrc`
+routes `@yuta` packages to Gitea Packages, and `@yuta/bird@0.10.0` contains
+the required Top/Latest interface.
 
 ```bash
-cd ../bird
-git rev-parse HEAD
-nix develop -c pnpm install --frozen-lockfile
-nix develop -c pnpm run build:dist
-cd ../twitter-lite
 nix develop -c pnpm install --frozen-lockfile
 ```
 

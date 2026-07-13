@@ -6,11 +6,11 @@
 
 **Architecture:** Keep Bird unchanged and compose its existing `getTweet()` and `getThreadPaged()` methods behind one new TanStack Start GET server function. The first web page resolves the focal post to its conversation root and performs two Bird reads; continuation pages carry the root ID with the opaque cursor and perform one Bird read. Reuse the established TanStack Query pagination and PostCard rendering while keeping the focal post distinct and removing duplicates from the conversation list.
 
-**Tech Stack:** Node.js 22, pnpm 11.9.0, TanStack Start/Router/Query, React 19, Zod 4, linked `@yuta/bird`, Vitest, Testing Library, Playwright, Nix Chromium, hand-written CSS.
+**Tech Stack:** Node.js 22, pnpm 11.9.0, TanStack Start/Router/Query, React 19, Zod 4, published `@yuta/bird@0.10.0`, Vitest, Testing Library, Playwright, Nix Chromium, hand-written CSS.
 
 ## Global Constraints
 
-- Bird remains clean at `81921226f099e7f7a2107be15fc9783218a6f400`; do not edit, commit, push, or publish it.
+- Use the published `@yuta/bird@0.10.0` interface; do not modify Bird as part of this feature.
 - Use only Bird's existing `getTweet()` and `getThreadPaged()` methods and the existing `TweetDetail` relay operation.
 - Preserve the current Bird ordering: chronological within each fetched page, with cursor pages appended in retrieval order.
 - Do not add a dependency, database, cookie, history, recommendation, related-post feed, mutation control, generic Bird dispatcher, or generic relay proxy.
@@ -1668,24 +1668,23 @@ export const searchPosts = createServerFn({ method: 'GET' })
 export const loadThreadPosts = createServerFn({ method: 'GET' })
 ```
 
-- [ ] **Step 5: Verify Bird stayed unchanged and local**
+- [ ] **Step 5: Verify the published Bird dependency is self-contained**
 
-Run from `../bird`:
+Run from Twitter Lite:
 
 ```bash
-git rev-parse HEAD
-git status --short --branch
-git rev-list --count origin/main..HEAD
-git log --oneline origin/main..HEAD
+rg -n '"@yuta/bird": "0.10.0"' package.json
+rg -n '@yuta/bird@0.10.0' pnpm-lock.yaml
+rg -n 'link:../bird' package.json pnpm-lock.yaml
+readlink -f node_modules/@yuta/bird
 ```
 
 Expected:
 
 ```text
-81921226f099e7f7a2107be15fc9783218a6f400
-## main...origin/main [ahead 1]
-1
-8192122 feat: support ranked tweet search
+package.json and pnpm-lock.yaml pin 0.10.0
+the local-link scan has zero matches
+node_modules resolves inside the pnpm virtual store
 ```
 
 - [ ] **Step 6: Perform the pre-commit documentation check**

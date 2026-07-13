@@ -55,14 +55,12 @@ The product reduces ambient discovery rather than limiting how far a deliberate 
 
 ## Repositories and Delivery Sequence
 
-Work occurs in two repositories:
+Work spans two repositories and the Gitea package registry:
 
-1. Clone Bird from `https://git.yutakobayashi.com/yuta/bird` into the sibling path `../bird`.
-2. Extend Bird's public search interface and commit the change locally.
-3. Consume the local Bird checkout from Twitter Lite with the pnpm dependency `link:../bird`.
-4. Build and verify Twitter Lite against the linked Bird package.
-
-The Bird commit is not pushed and no package is published without separate user authorization. Once a compatible Bird version is published, replacing the local link with that version is a separate maintenance task.
+1. Extend Bird's public search interface in `https://git.yutakobayashi.com/yuta/bird`.
+2. Release the compatible interface as `@yuta/bird@0.10.0` in Gitea Packages.
+3. Route the `@yuta` scope through the committed `.npmrc` and pin Twitter Lite to `@yuta/bird@0.10.0`.
+4. Build and verify Twitter Lite against the published package without a sibling Bird checkout.
 
 ## Bird Library Change
 

@@ -22,21 +22,11 @@ they do not add related-post recommendations or an account-discovery surface.
 
 ## Requirements and setup
 
-Use Nix, or Node.js `>=22.12.0` with pnpm `11.9.0`. The package link also
-requires a local Bird checkout at `../bird`, exactly at unpublished commit
-`81921226f099e7f7a2107be15fc9783218a6f400`.
-
-A fresh clone of the remote Bird repository alone does **not** contain that
-local Top/Latest commit yet. Obtain the supplied checkout; do not assume the
-commit or a compatible package has been published.
+Use Nix, or Node.js `>=22.12.0` with pnpm `11.9.0`. The committed `.npmrc`
+routes the `@yuta` scope to the public Gitea Packages registry, where Bird
+`0.10.0` provides the required Top and Latest search interface.
 
 ```bash
-cd ../bird
-git rev-parse HEAD
-nix develop -c pnpm install --frozen-lockfile
-nix develop -c pnpm run build:dist
-
-cd ../twitter-lite
 nix develop -c pnpm install --frozen-lockfile
 cp .env.example .env.local
 ```
