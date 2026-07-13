@@ -30,6 +30,19 @@ describe('UserForm', () => {
 })
 
 describe('SearchForm', () => {
+  it('uses a labelled grouping for ranking controls', () => {
+    render(
+      <SearchForm
+        initialQuery=""
+        initialProduct="Latest"
+        initialFollowing={false}
+        onSubmit={vi.fn()}
+      />,
+    )
+
+    expect(screen.getByRole('group', { name: '並び順' })).toBeInTheDocument()
+  })
+
   it('submits the selected ranking and follows filter', () => {
     const onSubmit = vi.fn()
     render(

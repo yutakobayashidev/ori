@@ -75,6 +75,7 @@ describe('PostCard', () => {
     })
     expect(textLink).toHaveAttribute('target', '_blank')
     expect(textLink).toHaveAttribute('rel', 'noreferrer noopener')
+    expect(screen.queryByRole('link', { name: 'Yuta' })).not.toBeInTheDocument()
     expect(screen.getByText('Yuta').closest('a')).toBeNull()
     expect(screen.getByText('@yuta').closest('a')).toBeNull()
   })
