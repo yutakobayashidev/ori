@@ -7,6 +7,7 @@
   --accent: #255f6e;
   --accent-hover: #194d59;
   --border: #c1cfd2;
+  --control-border: #748b91;
   --error: #8a3034;
   color: var(--ink);
   background: var(--canvas);
@@ -141,7 +142,7 @@ a {
   min-width: 0;
   min-height: 2.75rem;
   padding: 0.7rem 0.85rem;
-  border: 1px solid var(--border);
+  border: 1px solid var(--control-border);
   border-radius: 0.55rem;
   background: var(--paper);
   color: var(--ink);
@@ -202,7 +203,7 @@ a {
   min-height: 2.75rem;
   align-items: center;
   padding: 0.55rem 0.75rem;
-  border: 1px solid var(--border);
+  border: 1px solid var(--control-border);
   border-radius: 0.55rem;
   background: var(--surface);
   cursor: pointer;
@@ -368,6 +369,9 @@ video.media {
 }
 
 .post-footer a {
+  display: inline-flex;
+  min-height: 1.5rem;
+  align-items: center;
   font-weight: 650;
 }
 
@@ -496,8 +500,7 @@ video.media {
   }
 }
 
-.quote .post-header time,
-.quote .post-footer {
+.quote .post-header time {
   display: none;
 }
 
