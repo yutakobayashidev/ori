@@ -88,4 +88,31 @@ describe('post feed route wiring', () => {
       }),
     )
   })
+
+  it('turns a decimal status path into a deliberate thread request', async () => {
+    await renderRoute('/status/123')
+
+    expect(await screen.findByRole('heading', { name: '会話' })).toBeVisible()
+    await waitFor(() =>
+      expect(usePostFeed).toHaveBeenCalledWith({
+        kind: 'thread',
+        tweetId: '123',
+      }),
+    )
+    expect(
+      screen.queryByRole('link', { name: 'ユーザー', current: 'page' }),
+    ).toBeNull()
+    expect(
+      screen.queryByRole('link', { name: '検索', current: 'page' }),
+    ).toBeNull()
+  })
+
+  it('keeps an invalid status path local and idle', async () => {
+    await renderRoute('/status/not-a-tweet')
+
+    expect(await screen.findByRole('alert')).toHaveTextContent(
+      '投稿 ID を確認してください。',
+    )
+    expect(usePostFeed).toHaveBeenCalledWith(undefined)
+  })
 })

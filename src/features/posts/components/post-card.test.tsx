@@ -80,6 +80,21 @@ describe('PostCard', () => {
     expect(screen.getByText('@yuta').closest('a')).toBeNull()
   })
 
+  it('links deliberately to the internal detail page', () => {
+    render(<PostCard post={richPost} />)
+
+    expect(
+      screen.getByRole('link', { name: '詳細・スレッド' }),
+    ).toHaveAttribute('href', '/status/123')
+  })
+
+  it('marks the focal post without linking to its current page', () => {
+    render(<PostCard current post={{ ...richPost, quotedTweet: undefined }} />)
+
+    expect(screen.queryByRole('link', { name: '詳細・スレッド' })).toBeNull()
+    expect(screen.getByRole('article')).toHaveClass('current-post')
+  })
+
   it('collapses a malformed optional timestamp without losing the post', () => {
     const { container } = render(
       <PostCard post={{ ...richPost, createdAt: 'not-a-date' }} />,

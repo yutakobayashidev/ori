@@ -12,6 +12,7 @@ import { Route as rootRouteImport } from './routes/__root'
 import { Route as UserRouteImport } from './routes/user'
 import { Route as SearchRouteImport } from './routes/search'
 import { Route as IndexRouteImport } from './routes/index'
+import { Route as StatusTweetIdRouteImport } from './routes/status.$tweetId'
 
 const UserRoute = UserRouteImport.update({
   id: '/user',
@@ -28,35 +29,44 @@ const IndexRoute = IndexRouteImport.update({
   path: '/',
   getParentRoute: () => rootRouteImport,
 } as any)
+const StatusTweetIdRoute = StatusTweetIdRouteImport.update({
+  id: '/status/$tweetId',
+  path: '/status/$tweetId',
+  getParentRoute: () => rootRouteImport,
+} as any)
 
 export interface FileRoutesByFullPath {
   '/': typeof IndexRoute
   '/search': typeof SearchRoute
   '/user': typeof UserRoute
+  '/status/$tweetId': typeof StatusTweetIdRoute
 }
 export interface FileRoutesByTo {
   '/': typeof IndexRoute
   '/search': typeof SearchRoute
   '/user': typeof UserRoute
+  '/status/$tweetId': typeof StatusTweetIdRoute
 }
 export interface FileRoutesById {
   __root__: typeof rootRouteImport
   '/': typeof IndexRoute
   '/search': typeof SearchRoute
   '/user': typeof UserRoute
+  '/status/$tweetId': typeof StatusTweetIdRoute
 }
 export interface FileRouteTypes {
   fileRoutesByFullPath: FileRoutesByFullPath
-  fullPaths: '/' | '/search' | '/user'
+  fullPaths: '/' | '/search' | '/user' | '/status/$tweetId'
   fileRoutesByTo: FileRoutesByTo
-  to: '/' | '/search' | '/user'
-  id: '__root__' | '/' | '/search' | '/user'
+  to: '/' | '/search' | '/user' | '/status/$tweetId'
+  id: '__root__' | '/' | '/search' | '/user' | '/status/$tweetId'
   fileRoutesById: FileRoutesById
 }
 export interface RootRouteChildren {
   IndexRoute: typeof IndexRoute
   SearchRoute: typeof SearchRoute
   UserRoute: typeof UserRoute
+  StatusTweetIdRoute: typeof StatusTweetIdRoute
 }
 
 declare module '@tanstack/react-router' {
@@ -82,6 +92,13 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof IndexRouteImport
       parentRoute: typeof rootRouteImport
     }
+    '/status/$tweetId': {
+      id: '/status/$tweetId'
+      path: '/status/$tweetId'
+      fullPath: '/status/$tweetId'
+      preLoaderRoute: typeof StatusTweetIdRouteImport
+      parentRoute: typeof rootRouteImport
+    }
   }
 }
 
@@ -89,6 +106,7 @@ const rootRouteChildren: RootRouteChildren = {
   IndexRoute: IndexRoute,
   SearchRoute: SearchRoute,
   UserRoute: UserRoute,
+  StatusTweetIdRoute: StatusTweetIdRoute,
 }
 export const routeTree = rootRouteImport
   ._addFileChildren(rootRouteChildren)

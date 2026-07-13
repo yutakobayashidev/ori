@@ -254,6 +254,20 @@ a {
   grid-column: 1 / -1;
 }
 
+.focal-post {
+  display: grid;
+  gap: 0.5rem;
+  margin-top: 1.4rem;
+}
+
+.focal-label {
+  margin: 0;
+  color: var(--accent);
+  font-size: 0.72rem;
+  font-weight: 750;
+  letter-spacing: 0.08em;
+}
+
 .feed {
   display: grid;
   gap: 0.85rem;
@@ -266,6 +280,11 @@ a {
   border: 1px solid var(--border);
   border-radius: 0.9rem;
   background: var(--paper);
+}
+
+.current-post {
+  border-color: var(--accent);
+  box-shadow: 0 0 0 1px color-mix(in srgb, var(--accent) 25%, transparent);
 }
 
 .post-header {
@@ -361,6 +380,7 @@ video.media {
 .post-footer {
   display: flex;
   flex-wrap: wrap;
+  align-items: center;
   justify-content: space-between;
   gap: 0.75rem 1rem;
   margin-top: 1rem;

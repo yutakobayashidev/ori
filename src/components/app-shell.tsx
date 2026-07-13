@@ -4,7 +4,7 @@ export function AppShell({
   active,
   children,
 }: {
-  active: 'user' | 'search'
+  active?: 'user' | 'search'
   children: React.ReactNode
 }) {
   return (

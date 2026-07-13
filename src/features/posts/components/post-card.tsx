@@ -41,15 +41,19 @@ function formattedTime(createdAt?: string): string | undefined {
 export function PostCard({
   post,
   quoted = false,
+  current = false,
 }: {
   post: Post
   quoted?: boolean
+  current?: boolean
 }) {
   const time = formattedTime(post.createdAt)
   const original = `https://x.com/${encodeURIComponent(post.author.username)}/status/${encodeURIComponent(post.id)}`
 
   return (
-    <article className={quoted ? 'post quote' : 'post'}>
+    <article
+      className={quoted ? 'post quote' : current ? 'post current-post' : 'post'}
+    >
       <header className="post-header">
         {post.author.profileImageUrl ? (
           <img
@@ -86,6 +90,11 @@ export function PostCard({
             返信 {post.replyCount ?? 0}　再投稿 {post.retweetCount ?? 0}　いいね{' '}
             {post.likeCount ?? 0}
           </span>
+          {!current ? (
+            <a href={`/status/${encodeURIComponent(post.id)}`}>
+              詳細・スレッド
+            </a>
+          ) : null}
           <a href={original} rel="noreferrer noopener" target="_blank">
             元の投稿を開く
           </a>

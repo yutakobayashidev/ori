@@ -154,6 +154,90 @@ describe('PostFeed', () => {
     expect(screen.queryByRole('alert')).not.toBeInTheDocument()
   })
 
+  it('renders the focal post once above its deduplicated conversation', () => {
+    usePostFeed.mockReturnValue({
+      ...queryResult(),
+      data: {
+        pages: [
+          {
+            focalPost: post('2'),
+            conversationId: '1',
+            nextCursor: 'next',
+            tweets: [post('1'), post('2')],
+          },
+          {
+            conversationId: '1',
+            tweets: [post('2'), post('3')],
+          },
+        ],
+        pageParams: [undefined, { cursor: 'next', conversationId: '1' }],
+      },
+    } as never)
+
+    const { container } = render(
+      <PostFeed request={{ kind: 'thread', tweetId: '2' }} />,
+    )
+
+    expect(screen.getByText('表示中の投稿')).toBeVisible()
+    expect(screen.getAllByText('post-2')).toHaveLength(1)
+    expect(screen.getAllByRole('article')).toHaveLength(3)
+    expect(container.querySelector('.current-post')).toBeInTheDocument()
+  })
+
+  it('keeps the focal post visible when there are no other posts', () => {
+    usePostFeed.mockReturnValue({
+      ...queryResult(),
+      data: {
+        pages: [
+          {
+            focalPost: post('2'),
+            conversationId: '1',
+            tweets: [post('2')],
+          },
+        ],
+        pageParams: [undefined],
+      },
+    } as never)
+
+    render(<PostFeed request={{ kind: 'thread', tweetId: '2' }} />)
+
+    expect(screen.getByText('post-2')).toBeVisible()
+    expect(screen.getByText('会話にほかの投稿はありません。')).toBeVisible()
+  })
+
+  it('keeps the focal post and conversation across a later-page error', () => {
+    usePostFeed.mockReturnValue({
+      ...queryResult(),
+      data: {
+        pages: [
+          {
+            focalPost: post('2'),
+            conversationId: '1',
+            nextCursor: 'next',
+            tweets: [post('1'), post('2')],
+          },
+        ],
+        pageParams: [undefined],
+      },
+      error: new PostLoadError({
+        code: 'upstream',
+        message: 'X から投稿を取得できませんでした。',
+        retryable: true,
+      }),
+      hasNextPage: true,
+      isError: true,
+      isFetchNextPageError: true,
+    } as never)
+
+    render(<PostFeed request={{ kind: 'thread', tweetId: '2' }} />)
+
+    expect(screen.getByText('post-2')).toBeVisible()
+    expect(screen.getByText('post-1')).toBeVisible()
+    expect(screen.getByRole('alert')).toHaveTextContent(
+      '続きの投稿を取得できませんでした。',
+    )
+  })
+
   it('retries an initial retryable error with refetch', () => {
     const refetch = vi.fn().mockResolvedValue(undefined)
     usePostFeed.mockReturnValue({
