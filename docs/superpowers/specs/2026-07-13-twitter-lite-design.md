@@ -258,6 +258,8 @@ External links open in a new tab with `rel="noreferrer noopener"`. The app never
 Server functions translate library failures into a small discriminated error model:
 
 - `invalid-input`;
+- `post-not-found`;
+- `post-unavailable`;
 - `user-not-found`;
 - `user-unavailable`;
 - `relay-config`;
@@ -335,7 +337,9 @@ Bird's README and changelog document the search product option. No AGENTS.md or 
 The work is complete when:
 
 1. Bird supports Top and Latest through its public library and CLI contracts while preserving Latest as the default.
-2. Twitter Lite shows no posts before an explicit user submission.
+2. Twitter Lite shows no posts before an explicit user action: submitting a
+   target or query, following a post detail link, or manually opening a valid
+   status URL.
 3. A valid handle or profile URL loads that user's posts.
 4. Search supports Top, Latest, and the follows filter.
 5. Infinite scrolling continues cursor pages without a fixed limit and without duplicate posts.

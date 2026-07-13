@@ -133,9 +133,13 @@ export async function loadThreadPage(
         return upstreamFailure(focal.error ?? 'Tweet not found', 'post')
       }
       focalPost = publicPost(focal.tweet)
-      conversationId = normalizeTweetId(
-        focal.tweet.conversationId ?? focal.tweet.id,
-      )
+      try {
+        conversationId = normalizeTweetId(
+          focal.tweet.conversationId ?? focal.tweet.id,
+        )
+      } catch (error) {
+        return upstreamFailure(error, 'post')
+      }
     }
 
     const result = await reader.getThreadPaged(conversationId, {

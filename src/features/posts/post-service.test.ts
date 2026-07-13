@@ -153,6 +153,49 @@ describe('loadThreadPage', () => {
     expect(client.getThreadPaged).not.toHaveBeenCalled()
   })
 
+  it('classifies malformed Bird conversation metadata as an upstream failure', async () => {
+    const client = reader()
+    const privateMetadata = 'FINAL_PRIVATE_CONVERSATION_MARKER_71c9'
+    vi.mocked(client.getTweet).mockResolvedValue({
+      success: true,
+      tweet: {
+        id: '123',
+        text: 'focal',
+        conversationId: privateMetadata,
+        author: { username: 'focus', name: 'Focus' },
+      },
+    })
+    const errorSpy = vi.spyOn(console, 'error').mockImplementation(() => {})
+
+    try {
+      const result = await loadThreadPage(client, { tweetId: '123' })
+
+      expect(result).toEqual({
+        ok: false,
+        error: {
+          code: 'upstream',
+          message: 'X から投稿を取得できませんでした。',
+          retryable: true,
+        },
+      })
+      expect(client.getTweet).toHaveBeenCalledWith('123')
+      expect(client.getThreadPaged).not.toHaveBeenCalled()
+      expect(errorSpy).toHaveBeenCalledTimes(1)
+      expect(errorSpy).toHaveBeenCalledWith(
+        'Unexpected Bird failure:',
+        expect.objectContaining({
+          message: '投稿 ID を確認してください。',
+        }),
+      )
+      expect(JSON.stringify(result)).not.toContain(privateMetadata)
+      expect(errorSpy.mock.calls.flat().join(' ')).not.toContain(
+        privateMetadata,
+      )
+    } finally {
+      errorSpy.mockRestore()
+    }
+  })
+
   it('rejects an invalid ID without a Bird call', async () => {
     const client = reader()
 

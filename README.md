@@ -1,7 +1,8 @@
 # Twitter Lite
 
-Twitter Lite is an intentional, read-only X reader. It stays empty until you
-enter a user handle, profile URL, or search query.
+Twitter Lite is an intentional, read-only X reader. It shows content only after
+you enter a user handle, profile URL, or search query, follow a deliberate post
+detail link, or manually open a valid `/status/:tweetId` URL.
 
 ## Scope
 
