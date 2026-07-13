@@ -1,6 +1,8 @@
 import type { SearchProduct, TweetData } from '@yuta/bird'
 
-export type Post = TweetData
+export type Post = Omit<TweetData, '_raw' | 'quotedTweet'> & {
+  quotedTweet?: Post
+}
 
 export type PostPage = {
   tweets: Post[]
