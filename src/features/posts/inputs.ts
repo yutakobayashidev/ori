@@ -2,8 +2,26 @@ import { z } from 'zod'
 
 const HANDLE = /^[A-Za-z0-9_]{1,15}$/
 const FOLLOWS = /(?:^|\s)filter:follows(?:\s|$)/i
+const TWEET_ID = /^\d{1,32}$/
+const tweetIdSchema = z
+  .string()
+  .trim()
+  .regex(TWEET_ID, '投稿 ID を確認してください。')
 
 export class InputError extends Error {}
+
+export const threadPageInputSchema = z.union([
+  z.object({
+    tweetId: tweetIdSchema,
+    conversationId: z.undefined().optional(),
+    cursor: z.undefined().optional(),
+  }),
+  z.object({
+    tweetId: tweetIdSchema,
+    conversationId: tweetIdSchema,
+    cursor: z.string().min(1),
+  }),
+])
 
 export const userPageInputSchema = z.object({
   target: z.string().trim().min(1).max(256),
@@ -26,6 +44,14 @@ export const postSearchRouteSchema = z.object({
   product: z.enum(['Top', 'Latest']).catch('Latest'),
   following: z.boolean().catch(false),
 })
+
+export function normalizeTweetId(raw: string): string {
+  const value = raw.trim()
+  if (!TWEET_ID.test(value)) {
+    throw new InputError('投稿 ID を確認してください。')
+  }
+  return value
+}
 
 function requireHandle(value: string): string {
   if (!HANDLE.test(value)) {

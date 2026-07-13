@@ -9,8 +9,15 @@ export type PostPage = {
   nextCursor?: string
 }
 
+export type ThreadPage = PostPage & {
+  focalPost?: Post
+  conversationId: string
+}
+
 export type LoadErrorCode =
   | 'invalid-input'
+  | 'post-not-found'
+  | 'post-unavailable'
   | 'user-not-found'
   | 'user-unavailable'
   | 'relay-config'
@@ -23,9 +30,25 @@ export type LoadError = {
   retryable: boolean
 }
 
-export type LoadResult =
-  | { ok: true; page: PostPage }
-  | { ok: false; error: LoadError }
+export type LoadFailure = { ok: false; error: LoadError }
+
+export type LoadResult<TPage extends PostPage = PostPage> =
+  | { ok: true; page: TPage }
+  | LoadFailure
+
+export type ThreadLoadResult = LoadResult<ThreadPage>
+
+export type ThreadPageInput =
+  | {
+      tweetId: string
+      conversationId?: never
+      cursor?: never
+    }
+  | {
+      tweetId: string
+      conversationId: string
+      cursor: string
+    }
 
 export type UserPageInput = {
   target: string

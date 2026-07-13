@@ -1,7 +1,33 @@
 import { describe, expect, it, vi } from 'vitest'
-import { type BirdReader, loadUserPage, searchPage } from './post-service'
+import {
+  type BirdReader,
+  loadThreadPage,
+  loadUserPage,
+  searchPage,
+} from './post-service'
 
 const reader = (): BirdReader => ({
+  getTweet: vi.fn().mockResolvedValue({
+    success: true,
+    tweet: {
+      id: '123',
+      text: 'focal',
+      conversationId: '100',
+      author: { username: 'focus', name: 'Focus' },
+    },
+  }),
+  getThreadPaged: vi.fn().mockResolvedValue({
+    success: true,
+    tweets: [
+      {
+        id: '100',
+        text: 'root',
+        conversationId: '100',
+        author: { username: 'root', name: 'Root' },
+      },
+    ],
+    nextCursor: 'thread-next',
+  }),
   getUserIdByUsername: vi
     .fn()
     .mockResolvedValue({ success: true, userId: '42' }),
@@ -17,6 +43,130 @@ const reader = (): BirdReader => ({
     tweets: [],
     nextCursor: 'search-next',
   }),
+})
+
+describe('loadThreadPage', () => {
+  it('resolves the focal post and fetches one root conversation page', async () => {
+    const client = reader()
+    const result = await loadThreadPage(client, { tweetId: '123' })
+
+    expect(client.getTweet).toHaveBeenCalledWith('123')
+    expect(client.getThreadPaged).toHaveBeenCalledWith('100', {
+      maxPages: 1,
+      pageDelayMs: 0,
+    })
+    expect(result).toEqual({
+      ok: true,
+      page: {
+        focalPost: {
+          id: '123',
+          text: 'focal',
+          conversationId: '100',
+          author: { username: 'focus', name: 'Focus' },
+        },
+        tweets: [
+          {
+            id: '100',
+            text: 'root',
+            conversationId: '100',
+            author: { username: 'root', name: 'Root' },
+          },
+        ],
+        conversationId: '100',
+        nextCursor: 'thread-next',
+      },
+    })
+  })
+
+  it('uses the carried root for exactly one continuation read', async () => {
+    const client = reader()
+    const result = await loadThreadPage(client, {
+      tweetId: '123',
+      conversationId: '100',
+      cursor: 'thread-next',
+    })
+
+    expect(client.getTweet).not.toHaveBeenCalled()
+    expect(client.getThreadPaged).toHaveBeenCalledOnce()
+    expect(client.getThreadPaged).toHaveBeenCalledWith('100', {
+      cursor: 'thread-next',
+      maxPages: 1,
+      pageDelayMs: 0,
+    })
+    expect(result).toMatchObject({
+      ok: true,
+      page: { conversationId: '100', focalPost: undefined },
+    })
+  })
+
+  it('removes raw data from focal, conversation, and quotes', async () => {
+    const client = reader()
+    vi.mocked(client.getTweet).mockResolvedValue({
+      success: true,
+      tweet: {
+        id: '123',
+        text: 'focal',
+        conversationId: '100',
+        author: { username: 'focus', name: 'Focus' },
+        quotedTweet: {
+          id: '90',
+          text: 'quote',
+          author: { username: 'quote', name: 'Quote' },
+          _raw: { rest_id: 'private-quote' },
+        },
+        _raw: { rest_id: 'private-focal' },
+      },
+    })
+    vi.mocked(client.getThreadPaged).mockResolvedValue({
+      success: true,
+      tweets: [
+        {
+          id: '100',
+          text: 'root',
+          conversationId: '100',
+          author: { username: 'root', name: 'Root' },
+          _raw: { rest_id: 'private-thread' },
+        },
+      ],
+    })
+
+    const result = await loadThreadPage(client, { tweetId: '123' })
+
+    expect(JSON.stringify(result)).not.toContain('private-')
+  })
+
+  it('returns a safe non-retryable missing-post error', async () => {
+    const client = reader()
+    vi.mocked(client.getTweet).mockResolvedValue({
+      success: false,
+      error: 'Tweet not found: private relay detail',
+    })
+
+    expect(await loadThreadPage(client, { tweetId: '404' })).toEqual({
+      ok: false,
+      error: {
+        code: 'post-not-found',
+        message: '投稿が見つかりませんでした。',
+        retryable: false,
+      },
+    })
+    expect(client.getThreadPaged).not.toHaveBeenCalled()
+  })
+
+  it('rejects an invalid ID without a Bird call', async () => {
+    const client = reader()
+
+    expect(await loadThreadPage(client, { tweetId: 'not-an-id' })).toEqual({
+      ok: false,
+      error: {
+        code: 'invalid-input',
+        message: '投稿 ID を確認してください。',
+        retryable: false,
+      },
+    })
+    expect(client.getTweet).not.toHaveBeenCalled()
+    expect(client.getThreadPaged).not.toHaveBeenCalled()
+  })
 })
 
 describe('loadUserPage', () => {
