@@ -6,9 +6,7 @@ import { PostCard } from './post-card'
 export function PostFeed({ request }: { request: FeedRequest | undefined }) {
   const query = usePostFeed(request)
   const sentinel = useRef<HTMLDivElement>(null)
-  const fetchingNextPage = useRef(query.isFetchingNextPage)
   const posts = query.data ? flattenPostPages(query.data.pages) : []
-  fetchingNextPage.current = query.isFetchingNextPage
 
   useEffect(() => {
     if (
@@ -20,10 +18,11 @@ export function PostFeed({ request }: { request: FeedRequest | undefined }) {
       return
     }
 
+    let requested = false
     const observer = new IntersectionObserver(
       ([entry]) => {
-        if (entry?.isIntersecting && !fetchingNextPage.current) {
-          fetchingNextPage.current = true
+        if (entry?.isIntersecting && !requested) {
+          requested = true
           void query.fetchNextPage()
         }
       },
