@@ -48,6 +48,7 @@ sent to the browser.
 ```bash
 nix develop -c pnpm dev
 nix develop -c pnpm dev:tailscale
+nix develop -c pnpm knip
 nix develop -c pnpm test
 nix develop -c pnpm test:e2e
 nix develop -c pnpm test:live

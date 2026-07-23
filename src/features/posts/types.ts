@@ -14,7 +14,7 @@ export type ThreadPage = PostPage & {
   conversationId: string
 }
 
-export type LoadErrorCode =
+type LoadErrorCode =
   | 'invalid-input'
   | 'post-not-found'
   | 'post-unavailable'
