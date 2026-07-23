@@ -64,6 +64,38 @@ Development binds to `127.0.0.1` by default. `dev:tailscale` binds to
 only on a trusted network and obtain the Tailscale address with
 `tailscale ip -4`.
 
+## NixOS service
+
+The flake provides both a production package and a NixOS module. Import the
+module and configure the relay:
+
+```nix
+{
+  inputs.twitter-lite.url =
+    "git+https://git.yutakobayashi.com/yuta/twitter-lite";
+
+  outputs = { nixpkgs, twitter-lite, ... }: {
+    nixosConfigurations.example = nixpkgs.lib.nixosSystem {
+      system = "x86_64-linux";
+      modules = [
+        twitter-lite.nixosModules.default
+        {
+          services.twitter-lite = {
+            enable = true;
+            relayBaseUrl = "http://127.0.0.1:6900";
+            # profileName = "default";
+          };
+        }
+      ];
+    };
+  };
+}
+```
+
+The service listens on `127.0.0.1:3000` by default. Set
+`services.twitter-lite.host` or `services.twitter-lite.port` to change the
+listener. The package can also be built directly with `nix build`.
+
 ## Reliability
 
 Bird uses X's internal GraphQL operations through the configured relay. Query
