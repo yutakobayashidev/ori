@@ -68,8 +68,10 @@ nix develop -c pnpm start
 ```
 
 `test:e2e` is intentionally Nix-only and uses the system Chromium supplied by
-the dev shell. `test:live` is an explicit, opt-in smoke test that performs
-exactly one read-only Top search using the configured relay.
+the dev shell. Browser tests are organized under `e2e/`: page object models
+and fixtures are shared by integration flows and Axe checks for WCAG 2.0/2.1
+A and AA. `test:live` is an explicit, opt-in smoke test that performs exactly
+one read-only Top search using the configured relay.
 
 Development binds to `127.0.0.1` by default. `dev:tailscale` binds to
 `0.0.0.0`, so it exposes the app on LAN interfaces as well as Tailscale. Use it
