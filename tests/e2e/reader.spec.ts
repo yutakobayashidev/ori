@@ -1,4 +1,4 @@
-import { expect, type Locator, test } from '@playwright/test'
+import { expect, test } from './fixtures'
 
 let consoleErrors: string[]
 let pageErrors: string[]
@@ -17,46 +17,22 @@ test.afterEach(() => {
   expect(pageErrors, 'uncaught browser errors').toEqual([])
 })
 
-const ambientLinkNames = /ホーム|おすすめ|トレンド|通知|履歴/
-const mutationControlNames = /投稿する|返信|いいね|再投稿|フォロー|ブックマーク/
-
-async function submitSearch(
-  page: import('@playwright/test').Page,
-  query: string,
-) {
-  await openReader(page, '/search?q=&product=Latest&following=false')
-  await expect(page.locator('article')).toHaveCount(0)
-  await page.getByLabel('検索語').fill(query)
-  await page.getByRole('button', { name: '検索' }).click()
-}
-
-async function openReader(page: import('@playwright/test').Page, path: string) {
-  await page.goto(path)
-  await page.waitForLoadState('networkidle')
-}
-
-async function tabTo(page: import('@playwright/test').Page, target: Locator) {
-  await page.keyboard.press('Tab')
-  await expect(target).toBeFocused()
-}
-
 test('requires intent and infinitely loads a user timeline', async ({
+  homePage,
   page,
+  userPage,
 }) => {
-  await openReader(page, '/')
+  await homePage.goTo()
   await expect(page).toHaveURL(/\/$/)
-  await expect(page.locator('article')).toHaveCount(0)
-  await expect(page.getByRole('link', { name: ambientLinkNames })).toHaveCount(
-    0,
-  )
+  await expect(homePage.articlesLocator).toHaveCount(0)
+  await expect(homePage.ambientLinksLocator).toHaveCount(0)
 
-  await page.getByLabel('ハンドルまたはプロフィール URL').fill('@yuta')
-  await page.getByRole('button', { name: '表示' }).click()
+  await homePage.displayUser('@yuta')
 
   await expect(page).toHaveURL(/\/yuta$/)
   await expect(page.getByText('user page 1')).toBeVisible()
   await expect(page.getByText('user page 2')).toBeVisible()
-  await expect(page.getByText('これ以上の投稿はありません。')).toBeVisible()
+  await expect(userPage.endOfFeedLocator).toBeVisible()
   await expect(page).toHaveScreenshot('mist-user.png', {
     animations: 'disabled',
     fullPage: true,
@@ -64,36 +40,36 @@ test('requires intent and infinitely loads a user timeline', async ({
 })
 
 test('selects an authenticated list and infinitely loads its timeline', async ({
+  listsPage,
   page,
 }) => {
-  await openReader(page, '/i/lists')
-  await expect(page.locator('article')).toHaveCount(0)
+  await listsPage.goTo()
+  await expect(listsPage.articlesLocator).toHaveCount(0)
 
-  await page.getByRole('link', { name: /My E2E List.*10 メンバー/ }).click()
+  await listsPage.openList(/My E2E List.*10 メンバー/)
 
   await expect(page).toHaveURL(/\/i\/lists\/1234567890$/)
   await expect(page.getByText('list page 1')).toBeVisible()
   await expect(page.getByText('list page 2')).toBeVisible()
-  await expect(page.getByText('これ以上の投稿はありません。')).toBeVisible()
+  await expect(listsPage.endOfFeedLocator).toBeVisible()
 })
 
 test('opens a card detail and infinitely loads its conversation', async ({
   page,
+  threadPage,
+  userPage,
 }) => {
-  await openReader(page, '/yuta')
-  const sourceCard = page
-    .getByRole('article')
-    .filter({ hasText: 'user page 1' })
-  await sourceCard.getByRole('link', { name: '詳細・スレッド' }).click()
+  await userPage.goTo('yuta')
+  await userPage.openPostDetails('user page 1')
 
   await expect(page).toHaveURL(/\/yuta\/status\/1001$/)
-  await expect(page.getByRole('heading', { name: '会話' })).toBeVisible()
-  await expect(page.getByText('表示中の投稿')).toBeVisible()
+  await expect(threadPage.headingLocator).toBeVisible()
+  await expect(threadPage.selectedPostLabelLocator).toBeVisible()
   await expect(page.getByText('user page 1')).toHaveCount(1)
   await expect(page.getByText('thread root')).toBeVisible()
   await expect(page.getByText('thread page 1')).toBeVisible()
   await expect(page.getByText('thread page 2')).toBeVisible()
-  await expect(page.getByText('これ以上の投稿はありません。')).toBeVisible()
+  await expect(threadPage.endOfFeedLocator).toBeVisible()
   await expect(page).toHaveScreenshot('mist-thread.png', {
     animations: 'disabled',
     fullPage: true,
@@ -102,96 +78,90 @@ test('opens a card detail and infinitely loads its conversation', async ({
 
 test('resolves a reply root and retries only the failed continuation', async ({
   page,
+  threadPage,
 }) => {
-  await openReader(page, '/yuta/status/2001')
+  await threadPage.goTo('yuta', '2001')
 
   await expect(page.getByText('retry focal')).toHaveCount(1)
   await expect(page.getByText('thread root')).toBeVisible()
   await expect(page.getByText('thread page 1')).toBeVisible()
-  const alert = page
-    .getByRole('alert')
-    .filter({ hasText: '続きの投稿を取得できませんでした。' })
-  await expect(alert).toHaveCount(1)
+  await expect(threadPage.continuationErrorLocator).toHaveCount(1)
   await expect(page.getByText('retry focal')).toHaveCount(1)
 
-  await alert.getByRole('button', { name: '再試行' }).click()
+  await threadPage.retryContinuation()
 
   await expect(page.getByText('thread page 2')).toBeVisible()
-  await expect(alert).toHaveCount(0)
-  await expect(page.getByText('これ以上の投稿はありません。')).toBeVisible()
-  await expect(
-    page.getByRole('button', { name: mutationControlNames }),
-  ).toHaveCount(0)
+  await expect(threadPage.continuationErrorLocator).toHaveCount(0)
+  await expect(threadPage.endOfFeedLocator).toBeVisible()
+  await expect(threadPage.mutationButtonsLocator).toHaveCount(0)
 })
 
-test('searches Top posts from followed accounts', async ({ page }) => {
-  await openReader(page, '/search?q=&product=Latest&following=false')
-  await expect(page.locator('article')).toHaveCount(0)
-  await page.getByLabel('検索語').fill('AI lang:ja')
-  await page.getByLabel('人気順').check()
-  await page.getByLabel('フォロー中のみ').check()
-  await expect(page.getByLabel('フォロー中のみ')).toBeChecked()
-  await page.getByRole('button', { name: '検索' }).click()
+test('searches Top posts from followed accounts', async ({
+  page,
+  searchPage,
+}) => {
+  await searchPage.goTo()
+  await expect(searchPage.articlesLocator).toHaveCount(0)
+  await searchPage.searchTopFromFollowing('AI lang:ja')
+  await expect(searchPage.followingOnlyLocator).toBeChecked()
 
   await expect(page).toHaveURL(/following=true/)
   await expect(page.getByText('Top · follows page 1')).toBeVisible()
   await expect(page.getByText('Top · follows page 2')).toBeVisible()
-  await expect(page.getByText('これ以上の投稿はありません。')).toBeVisible()
+  await expect(searchPage.endOfFeedLocator).toBeVisible()
 })
 
 test('retains the first page through a pagination error and retries explicitly', async ({
   page,
+  searchPage,
 }, testInfo) => {
-  await submitSearch(page, `retry-${testInfo.project.name}`)
+  await searchPage.goTo()
+  await expect(searchPage.articlesLocator).toHaveCount(0)
+  await searchPage.search(`retry-${testInfo.project.name}`)
 
   await expect(page.getByText('Latest · all page 1')).toBeVisible()
-  const laterPageAlert = page
-    .getByRole('alert')
-    .filter({ hasText: '続きの投稿を取得できませんでした。' })
-  await expect(laterPageAlert).toHaveCount(1)
+  await expect(searchPage.continuationErrorLocator).toHaveCount(1)
   await expect(page.getByText('Latest · all page 1')).toBeVisible()
   await expect(page.getByText('Latest · all page 2')).toHaveCount(0)
 
-  await laterPageAlert.getByRole('button', { name: '再試行' }).click()
+  await searchPage.retryContinuation()
 
   await expect(page.getByText('Latest · all page 2')).toBeVisible()
-  await expect(laterPageAlert).toHaveCount(0)
-  await expect(page.getByText('これ以上の投稿はありません。')).toBeVisible()
+  await expect(searchPage.continuationErrorLocator).toHaveCount(0)
+  await expect(searchPage.endOfFeedLocator).toBeVisible()
 })
 
 test('keeps keyboard focus intentional and discovery or mutation controls absent', async ({
-  page,
+  searchPage,
 }) => {
-  await openReader(page, '/search?q=&product=Latest&following=false')
+  await searchPage.goTo()
 
-  await tabTo(page, page.getByRole('link', { name: 'ユーザー' }))
-  await tabTo(page, page.getByRole('link', { name: '検索' }))
-  await tabTo(page, page.getByRole('link', { name: 'リスト' }))
-  await tabTo(page, page.getByLabel('検索語'))
-  const ranking = page.getByLabel('最新順')
-  await expect(ranking).toBeChecked()
-  await tabTo(page, ranking)
-  await tabTo(page, page.getByLabel('フォロー中のみ'))
-  await tabTo(page, page.getByRole('button', { name: '検索' }))
-
-  await expect(page.getByRole('link', { name: ambientLinkNames })).toHaveCount(
-    0,
+  await searchPage.tabTo(
+    searchPage.page.getByRole('link', { name: 'ユーザー' }),
   )
-  await expect(
-    page.getByRole('button', { name: mutationControlNames }),
-  ).toHaveCount(0)
-  await expect(
-    page.getByRole('link', { name: mutationControlNames }),
-  ).toHaveCount(0)
+  await searchPage.tabTo(searchPage.page.getByRole('link', { name: '検索' }))
+  await searchPage.tabTo(searchPage.page.getByRole('link', { name: 'リスト' }))
+  await searchPage.tabTo(searchPage.queryInputLocator)
+  await expect(searchPage.latestRankingLocator).toBeChecked()
+  await searchPage.tabTo(searchPage.latestRankingLocator)
+  await searchPage.tabTo(searchPage.followingOnlyLocator)
+  await searchPage.tabTo(searchPage.searchButtonLocator)
+
+  await expect(searchPage.ambientLinksLocator).toHaveCount(0)
+  await expect(searchPage.mutationButtonsLocator).toHaveCount(0)
+  await expect(searchPage.mutationLinksLocator).toHaveCount(0)
 })
 
 test('removes loading rail animation for reduced motion', async ({
   page,
+  searchPage,
 }, testInfo) => {
   await page.emulateMedia({ reducedMotion: 'reduce' })
-  await submitSearch(page, `slow-${testInfo.project.name}`)
+  await searchPage.goTo()
+  await expect(searchPage.articlesLocator).toHaveCount(0)
+  await searchPage.search(`slow-${testInfo.project.name}`)
 
-  const rail = page.locator('.loading-rail')
+  const rail = searchPage.loadingRailLocator
   await expect(rail).toBeVisible()
   await expect
     .poll(() =>
@@ -202,5 +172,5 @@ test('removes loading rail animation for reduced motion', async ({
     .toBe('none')
 
   await expect(page.getByText('Latest · all page 2')).toBeVisible()
-  await expect(page.getByText('これ以上の投稿はありません。')).toBeVisible()
+  await expect(searchPage.endOfFeedLocator).toBeVisible()
 })
