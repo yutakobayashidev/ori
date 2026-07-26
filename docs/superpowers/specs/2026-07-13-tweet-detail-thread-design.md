@@ -13,8 +13,9 @@ same intentional infinite-scroll behavior as the existing user and search
 feeds.
 
 This document originally extended `2026-07-13-twitter-lite-design.md` with the
-third route, `/status/:tweetId`, and the third narrowly scoped read-only server
-function, `loadThreadPosts`. The base design now incorporates both additions.
+post-detail route, now `/:handle/status/:tweetId`, and the narrowly scoped
+read-only server function, `loadThreadPosts`. The base design now incorporates
+both additions.
 
 ## Decisions
 
@@ -38,11 +39,13 @@ function, `loadThreadPosts`. The base design now incorporates both additions.
 Add the typed route:
 
 ```text
-/status/:tweetId
+/:handle/status/:tweetId
 ```
 
-`tweetId` is a non-empty decimal X post ID. Invalid IDs render a non-retryable
-input error and make no relay request.
+Generated links use the focal post author's normalized `handle`, and `tweetId`
+is a non-empty decimal X post ID. Both path parameters are validated, while the
+tweet lookup remains ID-based. Invalid parameters render a non-retryable input
+error and make no relay request.
 
 Every non-quoted post card gains an internal `詳細・スレッド` link in its
 footer. The existing external `元の投稿を開く` link remains available. The
@@ -50,9 +53,9 @@ whole card is not clickable because cards can contain text links and media
 controls. Quoted cards retain their current compact presentation.
 
 The status route uses the existing application shell. Neither `ユーザー` nor
-`検索` receives `aria-current` on this third route. The status page adds no
-third global navigation tab; it is reachable only from a deliberate post link
-or a manually entered URL.
+`検索` receives `aria-current` on the post-detail route. The status page adds
+no global navigation tab; it is reachable only from a deliberate post link or
+a manually entered URL.
 
 ## Bird and Relay Boundary
 

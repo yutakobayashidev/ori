@@ -44,7 +44,7 @@ test('requires intent and infinitely loads a user timeline', async ({
   page,
 }) => {
   await openReader(page, '/')
-  await expect(page).toHaveURL(/\/user\?target=$/)
+  await expect(page).toHaveURL(/\/$/)
   await expect(page.locator('article')).toHaveCount(0)
   await expect(page.getByRole('link', { name: ambientLinkNames })).toHaveCount(
     0,
@@ -53,6 +53,7 @@ test('requires intent and infinitely loads a user timeline', async ({
   await page.getByLabel('ハンドルまたはプロフィール URL').fill('@yuta')
   await page.getByRole('button', { name: '表示' }).click()
 
+  await expect(page).toHaveURL(/\/yuta$/)
   await expect(page.getByText('user page 1')).toBeVisible()
   await expect(page.getByText('user page 2')).toBeVisible()
   await expect(page.getByText('これ以上の投稿はありません。')).toBeVisible()
@@ -65,12 +66,12 @@ test('requires intent and infinitely loads a user timeline', async ({
 test('selects an authenticated list and infinitely loads its timeline', async ({
   page,
 }) => {
-  await openReader(page, '/list?target=')
+  await openReader(page, '/i/lists')
   await expect(page.locator('article')).toHaveCount(0)
 
   await page.getByRole('link', { name: /My E2E List.*10 メンバー/ }).click()
 
-  await expect(page).toHaveURL(/\/list\?target=(?:%22)?1234567890/)
+  await expect(page).toHaveURL(/\/i\/lists\/1234567890$/)
   await expect(page.getByText('list page 1')).toBeVisible()
   await expect(page.getByText('list page 2')).toBeVisible()
   await expect(page.getByText('これ以上の投稿はありません。')).toBeVisible()
@@ -79,13 +80,13 @@ test('selects an authenticated list and infinitely loads its timeline', async ({
 test('opens a card detail and infinitely loads its conversation', async ({
   page,
 }) => {
-  await openReader(page, '/user?target=yuta')
+  await openReader(page, '/yuta')
   const sourceCard = page
     .getByRole('article')
     .filter({ hasText: 'user page 1' })
   await sourceCard.getByRole('link', { name: '詳細・スレッド' }).click()
 
-  await expect(page).toHaveURL(/\/status\/1001$/)
+  await expect(page).toHaveURL(/\/yuta\/status\/1001$/)
   await expect(page.getByRole('heading', { name: '会話' })).toBeVisible()
   await expect(page.getByText('表示中の投稿')).toBeVisible()
   await expect(page.getByText('user page 1')).toHaveCount(1)
@@ -102,7 +103,7 @@ test('opens a card detail and infinitely loads its conversation', async ({
 test('resolves a reply root and retries only the failed continuation', async ({
   page,
 }) => {
-  await openReader(page, '/status/2001')
+  await openReader(page, '/yuta/status/2001')
 
   await expect(page.getByText('retry focal')).toHaveCount(1)
   await expect(page.getByText('thread root')).toBeVisible()

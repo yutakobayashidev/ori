@@ -91,7 +91,9 @@ export function PostCard({
             {post.likeCount ?? 0}
           </span>
           {!current ? (
-            <a href={`/status/${encodeURIComponent(post.id)}`}>
+            <a
+              href={`/${encodeURIComponent(post.author.username)}/status/${encodeURIComponent(post.id)}`}
+            >
               詳細・スレッド
             </a>
           ) : null}

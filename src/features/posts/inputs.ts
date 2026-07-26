@@ -43,15 +43,6 @@ export const searchPageInputSchema = z.object({
   cursor: z.string().min(1).optional(),
 })
 
-export const userRouteSearchSchema = z.object({
-  target: z.string().catch(''),
-})
-
-export const listRouteSearchSchema = z.object({
-  // List IDs are numeric, and the router JSON-parses numeric search values.
-  target: z.coerce.string().catch(''),
-})
-
 export const postSearchRouteSchema = z.object({
   q: z.string().catch(''),
   product: z.enum(['Top', 'Latest']).catch('Latest'),

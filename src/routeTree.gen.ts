@@ -9,25 +9,21 @@
 // Additionally, you should also exclude this file from your linter and/or formatter to prevent it from being checked or modified.
 
 import { Route as rootRouteImport } from './routes/__root'
-import { Route as UserRouteImport } from './routes/user'
 import { Route as SearchRouteImport } from './routes/search'
-import { Route as ListRouteImport } from './routes/list'
+import { Route as HandleRouteImport } from './routes/$handle'
 import { Route as IndexRouteImport } from './routes/index'
-import { Route as StatusTweetIdRouteImport } from './routes/status.$tweetId'
+import { Route as IListsRouteImport } from './routes/i.lists'
+import { Route as IListsListIdRouteImport } from './routes/i.lists_.$listId'
+import { Route as HandleStatusTweetIdRouteImport } from './routes/$handle_.status.$tweetId'
 
-const UserRoute = UserRouteImport.update({
-  id: '/user',
-  path: '/user',
-  getParentRoute: () => rootRouteImport,
-} as any)
 const SearchRoute = SearchRouteImport.update({
   id: '/search',
   path: '/search',
   getParentRoute: () => rootRouteImport,
 } as any)
-const ListRoute = ListRouteImport.update({
-  id: '/list',
-  path: '/list',
+const HandleRoute = HandleRouteImport.update({
+  id: '/$handle',
+  path: '/$handle',
   getParentRoute: () => rootRouteImport,
 } as any)
 const IndexRoute = IndexRouteImport.update({
@@ -35,59 +31,85 @@ const IndexRoute = IndexRouteImport.update({
   path: '/',
   getParentRoute: () => rootRouteImport,
 } as any)
-const StatusTweetIdRoute = StatusTweetIdRouteImport.update({
-  id: '/status/$tweetId',
-  path: '/status/$tweetId',
+const IListsRoute = IListsRouteImport.update({
+  id: '/i/lists',
+  path: '/i/lists',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const IListsListIdRoute = IListsListIdRouteImport.update({
+  id: '/i/lists_/$listId',
+  path: '/i/lists/$listId',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const HandleStatusTweetIdRoute = HandleStatusTweetIdRouteImport.update({
+  id: '/$handle_/status/$tweetId',
+  path: '/$handle/status/$tweetId',
   getParentRoute: () => rootRouteImport,
 } as any)
 
 export interface FileRoutesByFullPath {
   '/': typeof IndexRoute
-  '/list': typeof ListRoute
+  '/$handle': typeof HandleRoute
   '/search': typeof SearchRoute
-  '/user': typeof UserRoute
-  '/status/$tweetId': typeof StatusTweetIdRoute
+  '/i/lists': typeof IListsRoute
+  '/$handle/status/$tweetId': typeof HandleStatusTweetIdRoute
+  '/i/lists/$listId': typeof IListsListIdRoute
 }
 export interface FileRoutesByTo {
   '/': typeof IndexRoute
-  '/list': typeof ListRoute
+  '/$handle': typeof HandleRoute
   '/search': typeof SearchRoute
-  '/user': typeof UserRoute
-  '/status/$tweetId': typeof StatusTweetIdRoute
+  '/i/lists': typeof IListsRoute
+  '/$handle/status/$tweetId': typeof HandleStatusTweetIdRoute
+  '/i/lists/$listId': typeof IListsListIdRoute
 }
 export interface FileRoutesById {
   __root__: typeof rootRouteImport
   '/': typeof IndexRoute
-  '/list': typeof ListRoute
+  '/$handle': typeof HandleRoute
   '/search': typeof SearchRoute
-  '/user': typeof UserRoute
-  '/status/$tweetId': typeof StatusTweetIdRoute
+  '/i/lists': typeof IListsRoute
+  '/$handle_/status/$tweetId': typeof HandleStatusTweetIdRoute
+  '/i/lists_/$listId': typeof IListsListIdRoute
 }
 export interface FileRouteTypes {
   fileRoutesByFullPath: FileRoutesByFullPath
-  fullPaths: '/' | '/list' | '/search' | '/user' | '/status/$tweetId'
+  fullPaths:
+    | '/'
+    | '/$handle'
+    | '/search'
+    | '/i/lists'
+    | '/$handle/status/$tweetId'
+    | '/i/lists/$listId'
   fileRoutesByTo: FileRoutesByTo
-  to: '/' | '/list' | '/search' | '/user' | '/status/$tweetId'
-  id: '__root__' | '/' | '/list' | '/search' | '/user' | '/status/$tweetId'
+  to:
+    | '/'
+    | '/$handle'
+    | '/search'
+    | '/i/lists'
+    | '/$handle/status/$tweetId'
+    | '/i/lists/$listId'
+  id:
+    | '__root__'
+    | '/'
+    | '/$handle'
+    | '/search'
+    | '/i/lists'
+    | '/$handle_/status/$tweetId'
+    | '/i/lists_/$listId'
   fileRoutesById: FileRoutesById
 }
 export interface RootRouteChildren {
   IndexRoute: typeof IndexRoute
-  ListRoute: typeof ListRoute
+  HandleRoute: typeof HandleRoute
   SearchRoute: typeof SearchRoute
-  UserRoute: typeof UserRoute
-  StatusTweetIdRoute: typeof StatusTweetIdRoute
+  IListsRoute: typeof IListsRoute
+  HandleStatusTweetIdRoute: typeof HandleStatusTweetIdRoute
+  IListsListIdRoute: typeof IListsListIdRoute
 }
 
 declare module '@tanstack/react-router' {
   interface FileRoutesByPath {
-    '/user': {
-      id: '/user'
-      path: '/user'
-      fullPath: '/user'
-      preLoaderRoute: typeof UserRouteImport
-      parentRoute: typeof rootRouteImport
-    }
     '/search': {
       id: '/search'
       path: '/search'
@@ -95,11 +117,11 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof SearchRouteImport
       parentRoute: typeof rootRouteImport
     }
-    '/list': {
-      id: '/list'
-      path: '/list'
-      fullPath: '/list'
-      preLoaderRoute: typeof ListRouteImport
+    '/$handle': {
+      id: '/$handle'
+      path: '/$handle'
+      fullPath: '/$handle'
+      preLoaderRoute: typeof HandleRouteImport
       parentRoute: typeof rootRouteImport
     }
     '/': {
@@ -109,11 +131,25 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof IndexRouteImport
       parentRoute: typeof rootRouteImport
     }
-    '/status/$tweetId': {
-      id: '/status/$tweetId'
-      path: '/status/$tweetId'
-      fullPath: '/status/$tweetId'
-      preLoaderRoute: typeof StatusTweetIdRouteImport
+    '/i/lists': {
+      id: '/i/lists'
+      path: '/i/lists'
+      fullPath: '/i/lists'
+      preLoaderRoute: typeof IListsRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/i/lists_/$listId': {
+      id: '/i/lists_/$listId'
+      path: '/i/lists/$listId'
+      fullPath: '/i/lists/$listId'
+      preLoaderRoute: typeof IListsListIdRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/$handle_/status/$tweetId': {
+      id: '/$handle_/status/$tweetId'
+      path: '/$handle/status/$tweetId'
+      fullPath: '/$handle/status/$tweetId'
+      preLoaderRoute: typeof HandleStatusTweetIdRouteImport
       parentRoute: typeof rootRouteImport
     }
   }
@@ -121,10 +157,11 @@ declare module '@tanstack/react-router' {
 
 const rootRouteChildren: RootRouteChildren = {
   IndexRoute: IndexRoute,
-  ListRoute: ListRoute,
+  HandleRoute: HandleRoute,
   SearchRoute: SearchRoute,
-  UserRoute: UserRoute,
-  StatusTweetIdRoute: StatusTweetIdRoute,
+  IListsRoute: IListsRoute,
+  HandleStatusTweetIdRoute: HandleStatusTweetIdRoute,
+  IListsListIdRoute: IListsListIdRoute,
 }
 export const routeTree = rootRouteImport
   ._addFileChildren(rootRouteChildren)

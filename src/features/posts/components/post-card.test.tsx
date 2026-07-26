@@ -85,7 +85,7 @@ describe('PostCard', () => {
 
     expect(
       screen.getByRole('link', { name: '詳細・スレッド' }),
-    ).toHaveAttribute('href', '/status/123')
+    ).toHaveAttribute('href', '/yuta/status/123')
   })
 
   it('marks the focal post without linking to its current page', () => {

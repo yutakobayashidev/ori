@@ -2,7 +2,8 @@
 
 Twitter Lite is an intentional, read-only X reader. It shows content only after
 you enter a user handle, profile URL, search query, or list URL, follow a
-deliberate post detail link, or manually open a valid `/status/:tweetId` URL.
+deliberate post detail link, or manually open a valid
+`/:handle/status/:tweetId` URL.
 
 ## Scope
 
@@ -20,6 +21,15 @@ history, account directory, or write actions.
 
 Post detail pages show only the selected post and its visible conversation;
 they do not add related-post recommendations or an account-discovery surface.
+
+## Routes
+
+- `/` shows the empty user input.
+- `/:handle` shows a user timeline.
+- `/search?q=<query>&product=<Top|Latest>&following=<boolean>` shows search results.
+- `/i/lists` shows the authenticated account's lists.
+- `/i/lists/:listId` shows a list timeline.
+- `/:handle/status/:tweetId` shows one selected post and its visible conversation.
 
 ## Requirements and setup
 

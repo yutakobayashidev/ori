@@ -1,7 +1,6 @@
 import { describe, expect, it } from 'vitest'
 import {
   buildSearchQuery,
-  listRouteSearchSchema,
   normalizeListTarget,
   normalizeTweetId,
   normalizeUserTarget,
@@ -88,14 +87,6 @@ describe('normalizeListTarget', () => {
     'https://x.com/i/lists/not-a-list',
   ])('rejects %s', (input) => {
     expect(() => normalizeListTarget(input)).toThrow()
-  })
-})
-
-describe('listRouteSearchSchema', () => {
-  it('keeps a numeric list target from a hand-entered URL', () => {
-    expect(listRouteSearchSchema.parse({ target: 1234567890 })).toEqual({
-      target: '1234567890',
-    })
   })
 })
 

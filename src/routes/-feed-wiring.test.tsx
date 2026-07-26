@@ -72,7 +72,7 @@ describe('post feed route wiring', () => {
   afterEach(() => vi.unstubAllGlobals())
 
   it('keeps an empty user URL disabled', async () => {
-    await renderRoute('/user?target=')
+    await renderRoute('/')
 
     expect(
       await screen.findByRole('heading', { name: '誰の投稿を見ますか？' }),
@@ -81,7 +81,7 @@ describe('post feed route wiring', () => {
   })
 
   it('turns a manually entered user URL into a deliberate request', async () => {
-    await renderRoute('/user?target=yuta')
+    await renderRoute('/yuta')
 
     await waitFor(() =>
       expect(usePostFeed).toHaveBeenCalledWith({
@@ -91,8 +91,17 @@ describe('post feed route wiring', () => {
     )
   })
 
+  it('keeps an invalid user path local and idle', async () => {
+    await renderRoute('/not-a-handle')
+
+    expect(await screen.findByRole('alert')).toHaveTextContent(
+      'ハンドルは英数字とアンダースコアで入力してください。',
+    )
+    expect(usePostFeed).toHaveBeenCalledWith(undefined)
+  })
+
   it('keeps an empty list URL disabled', async () => {
-    await renderRoute('/list?target=')
+    await renderRoute('/i/lists')
 
     expect(
       await screen.findByRole('heading', { name: 'どのリストを読みますか？' }),
@@ -101,7 +110,7 @@ describe('post feed route wiring', () => {
   })
 
   it('turns a manually entered list URL into a deliberate request', async () => {
-    await renderRoute('/list?target=1234567890')
+    await renderRoute('/i/lists/1234567890')
 
     await waitFor(() =>
       expect(usePostFeed).toHaveBeenCalledWith({
@@ -114,8 +123,17 @@ describe('post feed route wiring', () => {
     ).toBeVisible()
   })
 
+  it('keeps an invalid list path local and idle', async () => {
+    await renderRoute('/i/lists/not-a-list')
+
+    expect(await screen.findByRole('alert')).toHaveTextContent(
+      'リスト ID は数字で入力してください。',
+    )
+    expect(usePostFeed).toHaveBeenCalledWith(undefined)
+  })
+
   it('turns a selected authenticated list into a deliberate request', async () => {
-    await renderRoute('/list?target=')
+    await renderRoute('/i/lists')
 
     fireEvent.click(
       await screen.findByRole('link', { name: /My List.*10 メンバー/ }),
@@ -143,7 +161,7 @@ describe('post feed route wiring', () => {
   })
 
   it('turns a decimal status path into a deliberate thread request', async () => {
-    await renderRoute('/status/123')
+    await renderRoute('/yuta/status/123')
 
     expect(await screen.findByRole('heading', { name: '会話' })).toBeVisible()
     await waitFor(() =>
@@ -160,11 +178,20 @@ describe('post feed route wiring', () => {
     ).toBeNull()
   })
 
-  it('keeps an invalid status path local and idle', async () => {
-    await renderRoute('/status/not-a-tweet')
+  it('keeps an invalid tweet path local and idle', async () => {
+    await renderRoute('/yuta/status/not-a-tweet')
 
     expect(await screen.findByRole('alert')).toHaveTextContent(
       '投稿 ID を確認してください。',
+    )
+    expect(usePostFeed).toHaveBeenCalledWith(undefined)
+  })
+
+  it('keeps an invalid status handle local and idle', async () => {
+    await renderRoute('/not-a-handle/status/123')
+
+    expect(await screen.findByRole('alert')).toHaveTextContent(
+      'ハンドルは英数字とアンダースコアで入力してください。',
     )
     expect(usePostFeed).toHaveBeenCalledWith(undefined)
   })

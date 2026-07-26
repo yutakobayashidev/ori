@@ -12,11 +12,7 @@ export function AppShell({
       <header className="app-header">
         <p className="brand">TWITTER LITE</p>
         <nav aria-label="閲覧方法" className="tabs">
-          <Link
-            aria-current={active === 'user' ? 'page' : undefined}
-            search={{ target: '' }}
-            to="/user"
-          >
+          <Link aria-current={active === 'user' ? 'page' : undefined} to="/">
             ユーザー
           </Link>
           <Link
@@ -28,8 +24,7 @@ export function AppShell({
           </Link>
           <Link
             aria-current={active === 'list' ? 'page' : undefined}
-            search={{ target: '' }}
-            to="/list"
+            to="/i/lists"
           >
             リスト
           </Link>

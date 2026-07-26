@@ -46,8 +46,8 @@ export function ListPicker({ selectedId }: { selectedId?: string }) {
             <li key={list.id}>
               <Link
                 aria-current={selectedId === list.id ? 'page' : undefined}
-                search={{ target: list.id }}
-                to="/list"
+                params={{ listId: list.id }}
+                to="/i/lists/$listId"
               >
                 <span>{list.name}</span>
                 <small>

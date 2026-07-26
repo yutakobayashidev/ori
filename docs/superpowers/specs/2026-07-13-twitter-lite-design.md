@@ -11,15 +11,15 @@ Twitter Lite is a localhost-only reader for intentional access to X posts. It le
 - enter a handle or profile URL and read that user's posts;
 - search posts in popular or chronological order;
 - optionally restrict search to accounts followed by the authenticated relay profile;
-- follow a deliberate post link or manually enter a valid `/status/:tweetId` URL
+- follow a deliberate post link or manually enter a valid `/:handle/status/:tweetId` URL
   to read its visible conversation; and
 - continue through results with infinite scrolling.
 
-The product reduces ambient discovery rather than limiting how far a deliberate search may scroll. It shows content only after a submitted target or query, deliberate post-link navigation, or a manually entered valid `/status/:tweetId` URL.
+The product reduces ambient discovery rather than limiting how far a deliberate search may scroll. It shows content only after a submitted target or query, deliberate list navigation, deliberate post-link navigation, or a manually entered valid `/:handle/status/:tweetId` URL.
 
 ## Product Principles
 
-1. **Intent before content.** The initial screen is empty. Every result begins with a submitted target or query, deliberate post-link navigation, or a manually entered valid `/status/:tweetId` URL.
+1. **Intent before content.** The initial screen is empty. Every result begins with a submitted target or query, deliberate list navigation, deliberate post-link navigation, or a manually entered valid `/:handle/status/:tweetId` URL.
 2. **No ambient feed.** There is no home timeline, recommendation surface, trend list, notification screen, or recent-history list.
 3. **Reading only.** The app exposes no posting, reply, follow, like, repost, bookmark, or deletion operation.
 4. **No account directory.** Handles are unrestricted, but there is no autocomplete, suggested account list, or saved allowlist.
@@ -35,6 +35,7 @@ The product reduces ambient discovery rather than limiting how far a deliberate 
 - raw X search syntax;
 - `Top` and `Latest` search products;
 - `filter:follows` search filtering;
+- authenticated account list selection and list timelines;
 - deliberate post detail pages with cursor-paginated visible conversations;
 - photos, videos, animated GIFs, quoted posts, article previews, and engagement counts when supplied by Bird;
 - infinite cursor pagination;
@@ -45,7 +46,7 @@ The product reduces ambient discovery rather than limiting how far a deliberate 
 
 - authentication and multi-user accounts;
 - databases, cookies, saved preferences, viewing history, and analytics;
-- home, notifications, trends, lists, bookmarks, and likes;
+- home, notifications, trends, bookmarks, and likes;
 - all X mutation operations;
 - user autocomplete and typeahead;
 - People and Media search products;
@@ -105,14 +106,16 @@ TanStack Start supplies the browser/server boundary. Bird is imported only by se
 
 ### Routes and URL State
 
-- `/user?target=<handle-or-url>` displays the User tab.
+- `/` displays the empty User tab without fetching posts.
+- `/:handle` displays the User tab for the normalized handle.
 - `/search?q=<query>&product=<Top|Latest>&following=<boolean>` displays the Search tab.
-- `/status/:tweetId` displays one selected post and its visible conversation.
-- `/` redirects to `/user` without a target.
+- `/i/lists` displays the authenticated account's lists.
+- `/i/lists/:listId` displays one selected list timeline.
+- `/:handle/status/:tweetId` displays one selected post and its visible conversation.
 
-The target, query, product, and following flag are validated typed search parameters. Cursor state is internal to TanStack Query because it is transport state rather than a user-controlled view setting.
+The handle, list ID, and tweet ID are validated typed path parameters. The query, product, and following flag are validated typed search parameters. Cursor state is internal to TanStack Query because it is transport state rather than a user-controlled view setting.
 
-Route preloading never fetches posts. Data retrieval begins only when a valid submitted target or query is present or a valid `/status/:tweetId` route is reached through a deliberate post link or manually entered URL.
+Route preloading never fetches posts. Data retrieval begins only when a valid submitted handle or query is present, a list is deliberately selected, or a valid `/:handle/status/:tweetId` route is reached through a deliberate post link or manually entered URL.
 
 ### Server Boundary
 
@@ -206,7 +209,9 @@ The selected layout is **Focused Tabs**:
 
 The User tab contains one target input and a Display button. The Search tab contains a query input, a Popular/Latest segmented control, a Following only checkbox, and a Search button.
 
-Submitting updates the route's typed search parameters. Changing tabs does not preserve or surface the other tab's previous value.
+Submitting a user target normalizes it to a handle and navigates to `/:handle`.
+Submitting a search updates the route's typed search parameters. Changing tabs
+does not preserve or surface the other tab's previous value.
 
 ### Visual Direction
 

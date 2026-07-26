@@ -1,24 +1,27 @@
 import { createFileRoute } from '@tanstack/react-router'
 import { AppShell } from '#/components/app-shell'
 import { PostFeed } from '#/features/posts/components/post-feed'
-import { InputError, normalizeTweetId } from '#/features/posts/inputs'
+import {
+  InputError,
+  normalizeTweetId,
+  normalizeUserTarget,
+} from '#/features/posts/inputs'
 
-export const Route = createFileRoute('/status/$tweetId')({
+export const Route = createFileRoute('/$handle_/status/$tweetId')({
   component: StatusRoute,
 })
 
 function StatusRoute() {
-  const { tweetId: rawTweetId } = Route.useParams()
+  const { handle: rawHandle, tweetId: rawTweetId } = Route.useParams()
   let tweetId: string | undefined
   let error: string | undefined
 
   try {
+    normalizeUserTarget(rawHandle)
     tweetId = normalizeTweetId(rawTweetId)
   } catch (cause) {
     error =
-      cause instanceof InputError
-        ? cause.message
-        : '投稿 ID を確認してください。'
+      cause instanceof InputError ? cause.message : 'URL を確認してください。'
   }
 
   return (
