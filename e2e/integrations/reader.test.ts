@@ -152,10 +152,10 @@ test('keeps keyboard focus intentional and discovery or mutation controls absent
 }) => {
   await searchPage.goTo()
 
+  await searchPage.tabTo(searchPage.page.getByRole('link', { name: '検索' }))
   await searchPage.tabTo(
     searchPage.page.getByRole('link', { name: 'ユーザー' }),
   )
-  await searchPage.tabTo(searchPage.page.getByRole('link', { name: '検索' }))
   await searchPage.tabTo(searchPage.page.getByRole('link', { name: 'リスト' }))
   await searchPage.tabTo(searchPage.queryInputLocator)
   await expect(searchPage.latestRankingLocator).toBeChecked()
