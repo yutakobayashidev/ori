@@ -1,5 +1,6 @@
 import { fireEvent, render, screen } from '@testing-library/react'
 import { describe, expect, it, vi } from 'vitest'
+import { ListForm } from './list-form'
 import { SearchForm } from './search-form'
 import { UserForm } from './user-form'
 
@@ -24,6 +25,32 @@ describe('UserForm', () => {
 
     expect(screen.getByRole('alert')).toHaveTextContent(
       'ハンドルまたはプロフィール URL を入力してください。',
+    )
+    expect(onSubmit).not.toHaveBeenCalled()
+  })
+})
+
+describe('ListForm', () => {
+  it('submits the list ID from a pasted list URL', () => {
+    const onSubmit = vi.fn()
+    render(<ListForm initialTarget="" onSubmit={onSubmit} />)
+
+    fireEvent.change(screen.getByLabelText('リスト URL または ID'), {
+      target: { value: 'https://x.com/i/lists/1234567890' },
+    })
+    fireEvent.click(screen.getByRole('button', { name: '表示' }))
+
+    expect(onSubmit).toHaveBeenCalledWith('1234567890')
+  })
+
+  it('explains invalid input beside the field', () => {
+    const onSubmit = vi.fn()
+    render(<ListForm initialTarget="" onSubmit={onSubmit} />)
+
+    fireEvent.click(screen.getByRole('button', { name: '表示' }))
+
+    expect(screen.getByRole('alert')).toHaveTextContent(
+      'リストの URL または ID を入力してください。',
     )
     expect(onSubmit).not.toHaveBeenCalled()
   })

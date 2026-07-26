@@ -62,6 +62,20 @@ test('requires intent and infinitely loads a user timeline', async ({
   })
 })
 
+test('selects an authenticated list and infinitely loads its timeline', async ({
+  page,
+}) => {
+  await openReader(page, '/list?target=')
+  await expect(page.locator('article')).toHaveCount(0)
+
+  await page.getByRole('link', { name: /My E2E List.*10 メンバー/ }).click()
+
+  await expect(page).toHaveURL(/\/list\?target=(?:%22)?1234567890/)
+  await expect(page.getByText('list page 1')).toBeVisible()
+  await expect(page.getByText('list page 2')).toBeVisible()
+  await expect(page.getByText('これ以上の投稿はありません。')).toBeVisible()
+})
+
 test('opens a card detail and infinitely loads its conversation', async ({
   page,
 }) => {
@@ -151,6 +165,7 @@ test('keeps keyboard focus intentional and discovery or mutation controls absent
 
   await tabTo(page, page.getByRole('link', { name: 'ユーザー' }))
   await tabTo(page, page.getByRole('link', { name: '検索' }))
+  await tabTo(page, page.getByRole('link', { name: 'リスト' }))
   await tabTo(page, page.getByLabel('検索語'))
   const ranking = page.getByLabel('最新順')
   await expect(ranking).toBeChecked()

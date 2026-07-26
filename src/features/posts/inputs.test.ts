@@ -1,6 +1,8 @@
 import { describe, expect, it } from 'vitest'
 import {
   buildSearchQuery,
+  listRouteSearchSchema,
+  normalizeListTarget,
   normalizeTweetId,
   normalizeUserTarget,
   threadPageInputSchema,
@@ -64,6 +66,36 @@ describe('normalizeUserTarget', () => {
     'https://x.com/tan_stack/status/1',
   ])('rejects %s', (input) => {
     expect(() => normalizeUserTarget(input)).toThrow()
+  })
+})
+
+describe('normalizeListTarget', () => {
+  it.each([
+    ['1234567890', '1234567890'],
+    [' https://x.com/i/lists/1234567890 ', '1234567890'],
+    ['https://twitter.com/i/lists/1234567890/', '1234567890'],
+  ])('normalizes %s', (input, expected) => {
+    expect(normalizeListTarget(input)).toBe(expected)
+  })
+
+  it.each([
+    '',
+    'not-a-list',
+    '１２３４５',
+    'https://example.com/i/lists/1234567890',
+    'https://x.com/tan_stack/lists',
+    'https://x.com/i/lists/1234567890/members',
+    'https://x.com/i/lists/not-a-list',
+  ])('rejects %s', (input) => {
+    expect(() => normalizeListTarget(input)).toThrow()
+  })
+})
+
+describe('listRouteSearchSchema', () => {
+  it('keeps a numeric list target from a hand-entered URL', () => {
+    expect(listRouteSearchSchema.parse({ target: 1234567890 })).toEqual({
+      target: '1234567890',
+    })
   })
 })
 

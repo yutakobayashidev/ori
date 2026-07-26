@@ -4,16 +4,23 @@ import {
   createRouter,
   RouterProvider,
 } from '@tanstack/react-router'
-import { render, screen, waitFor } from '@testing-library/react'
+import { fireEvent, render, screen, waitFor } from '@testing-library/react'
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest'
 import { routeTree } from '../routeTree.gen'
 
 const usePostFeed = vi.hoisted(() => vi.fn())
+const useListChoices = vi.hoisted(() => vi.fn())
 
 vi.mock('../features/posts/use-post-feed', async (importOriginal) => {
   const original =
     await importOriginal<typeof import('../features/posts/use-post-feed')>()
   return { ...original, usePostFeed }
+})
+
+vi.mock('../features/posts/use-list-choices', async (importOriginal) => {
+  const original =
+    await importOriginal<typeof import('../features/posts/use-list-choices')>()
+  return { ...original, useListChoices }
 })
 
 vi.mock('./__root', async () => {
@@ -41,6 +48,7 @@ describe('post feed route wiring', () => {
   beforeEach(() => {
     vi.stubGlobal('scrollTo', vi.fn())
     usePostFeed.mockReset()
+    useListChoices.mockReset()
     usePostFeed.mockReturnValue({
       data: undefined,
       error: null,
@@ -49,6 +57,13 @@ describe('post feed route wiring', () => {
       isError: false,
       isFetchNextPageError: false,
       isFetchingNextPage: false,
+      isPending: false,
+      refetch: vi.fn(),
+    } as never)
+    useListChoices.mockReturnValue({
+      data: [{ id: '1234567890', name: 'My List', memberCount: 10 }],
+      error: null,
+      isError: false,
       isPending: false,
       refetch: vi.fn(),
     } as never)
@@ -72,6 +87,44 @@ describe('post feed route wiring', () => {
       expect(usePostFeed).toHaveBeenCalledWith({
         kind: 'user',
         target: 'yuta',
+      }),
+    )
+  })
+
+  it('keeps an empty list URL disabled', async () => {
+    await renderRoute('/list?target=')
+
+    expect(
+      await screen.findByRole('heading', { name: 'どのリストを読みますか？' }),
+    ).toBeVisible()
+    expect(usePostFeed).toHaveBeenCalledWith(undefined)
+  })
+
+  it('turns a manually entered list URL into a deliberate request', async () => {
+    await renderRoute('/list?target=1234567890')
+
+    await waitFor(() =>
+      expect(usePostFeed).toHaveBeenCalledWith({
+        kind: 'list',
+        target: '1234567890',
+      }),
+    )
+    expect(
+      await screen.findByRole('link', { name: 'リスト', current: 'page' }),
+    ).toBeVisible()
+  })
+
+  it('turns a selected authenticated list into a deliberate request', async () => {
+    await renderRoute('/list?target=')
+
+    fireEvent.click(
+      await screen.findByRole('link', { name: /My List.*10 メンバー/ }),
+    )
+
+    await waitFor(() =>
+      expect(usePostFeed).toHaveBeenCalledWith({
+        kind: 'list',
+        target: '1234567890',
       }),
     )
   })

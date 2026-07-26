@@ -1,8 +1,14 @@
 import { useInfiniteQuery } from '@tanstack/react-query'
 import { useServerFn } from '@tanstack/react-start'
 import type { SearchProduct } from '@yuta/bird'
-import { loadThreadPosts, loadUserPosts, searchPosts } from './server-functions'
+import {
+  loadListPosts,
+  loadThreadPosts,
+  loadUserPosts,
+  searchPosts,
+} from './server-functions'
 import type {
+  ListPageInput,
   LoadError,
   LoadResult,
   PostPage,
@@ -15,6 +21,7 @@ import type {
 
 export type FeedRequest =
   | { kind: 'user'; target: string }
+  | { kind: 'list'; target: string }
   | {
       kind: 'search'
       query: string
@@ -32,6 +39,7 @@ type FeedPageParam = string | ThreadPageParam | undefined
 
 type Loaders = {
   loadUser: (options: { data: UserPageInput }) => Promise<LoadResult>
+  loadList: (options: { data: ListPageInput }) => Promise<LoadResult>
   search: (options: { data: SearchPageInput }) => Promise<LoadResult>
   thread: (options: { data: ThreadPageInput }) => Promise<ThreadLoadResult>
 }
@@ -58,6 +66,16 @@ export function createPostFeedOptions(request: FeedRequest, loaders: Loaders) {
       if (request.kind === 'user') {
         return unwrap(
           await loaders.loadUser({
+            data: {
+              target: request.target,
+              cursor: typeof pageParam === 'string' ? pageParam : undefined,
+            },
+          }),
+        )
+      }
+      if (request.kind === 'list') {
+        return unwrap(
+          await loaders.loadList({
             data: {
               target: request.target,
               cursor: typeof pageParam === 'string' ? pageParam : undefined,
@@ -104,6 +122,7 @@ export function createPostFeedOptions(request: FeedRequest, loaders: Loaders) {
 
 export function usePostFeed(request: FeedRequest | undefined) {
   const loadUser = useServerFn(loadUserPosts)
+  const loadList = useServerFn(loadListPosts)
   const search = useServerFn(searchPosts)
   const thread = useServerFn(loadThreadPosts)
   const disabled = {
@@ -114,6 +133,7 @@ export function usePostFeed(request: FeedRequest | undefined) {
   return useInfiniteQuery({
     ...createPostFeedOptions(request ?? disabled, {
       loadUser,
+      loadList,
       search,
       thread,
     }),

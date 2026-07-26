@@ -11,6 +11,7 @@
 import { Route as rootRouteImport } from './routes/__root'
 import { Route as UserRouteImport } from './routes/user'
 import { Route as SearchRouteImport } from './routes/search'
+import { Route as ListRouteImport } from './routes/list'
 import { Route as IndexRouteImport } from './routes/index'
 import { Route as StatusTweetIdRouteImport } from './routes/status.$tweetId'
 
@@ -22,6 +23,11 @@ const UserRoute = UserRouteImport.update({
 const SearchRoute = SearchRouteImport.update({
   id: '/search',
   path: '/search',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const ListRoute = ListRouteImport.update({
+  id: '/list',
+  path: '/list',
   getParentRoute: () => rootRouteImport,
 } as any)
 const IndexRoute = IndexRouteImport.update({
@@ -37,12 +43,14 @@ const StatusTweetIdRoute = StatusTweetIdRouteImport.update({
 
 export interface FileRoutesByFullPath {
   '/': typeof IndexRoute
+  '/list': typeof ListRoute
   '/search': typeof SearchRoute
   '/user': typeof UserRoute
   '/status/$tweetId': typeof StatusTweetIdRoute
 }
 export interface FileRoutesByTo {
   '/': typeof IndexRoute
+  '/list': typeof ListRoute
   '/search': typeof SearchRoute
   '/user': typeof UserRoute
   '/status/$tweetId': typeof StatusTweetIdRoute
@@ -50,20 +58,22 @@ export interface FileRoutesByTo {
 export interface FileRoutesById {
   __root__: typeof rootRouteImport
   '/': typeof IndexRoute
+  '/list': typeof ListRoute
   '/search': typeof SearchRoute
   '/user': typeof UserRoute
   '/status/$tweetId': typeof StatusTweetIdRoute
 }
 export interface FileRouteTypes {
   fileRoutesByFullPath: FileRoutesByFullPath
-  fullPaths: '/' | '/search' | '/user' | '/status/$tweetId'
+  fullPaths: '/' | '/list' | '/search' | '/user' | '/status/$tweetId'
   fileRoutesByTo: FileRoutesByTo
-  to: '/' | '/search' | '/user' | '/status/$tweetId'
-  id: '__root__' | '/' | '/search' | '/user' | '/status/$tweetId'
+  to: '/' | '/list' | '/search' | '/user' | '/status/$tweetId'
+  id: '__root__' | '/' | '/list' | '/search' | '/user' | '/status/$tweetId'
   fileRoutesById: FileRoutesById
 }
 export interface RootRouteChildren {
   IndexRoute: typeof IndexRoute
+  ListRoute: typeof ListRoute
   SearchRoute: typeof SearchRoute
   UserRoute: typeof UserRoute
   StatusTweetIdRoute: typeof StatusTweetIdRoute
@@ -85,6 +95,13 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof SearchRouteImport
       parentRoute: typeof rootRouteImport
     }
+    '/list': {
+      id: '/list'
+      path: '/list'
+      fullPath: '/list'
+      preLoaderRoute: typeof ListRouteImport
+      parentRoute: typeof rootRouteImport
+    }
     '/': {
       id: '/'
       path: '/'
@@ -104,6 +121,7 @@ declare module '@tanstack/react-router' {
 
 const rootRouteChildren: RootRouteChildren = {
   IndexRoute: IndexRoute,
+  ListRoute: ListRoute,
   SearchRoute: SearchRoute,
   UserRoute: UserRoute,
   StatusTweetIdRoute: StatusTweetIdRoute,

@@ -1,10 +1,18 @@
 import { createServerFn } from '@tanstack/react-start'
 import {
+  listChoicesInputSchema,
+  listPageInputSchema,
   searchPageInputSchema,
   threadPageInputSchema,
   userPageInputSchema,
 } from './inputs'
-import { loadThreadPage, loadUserPage, searchPage } from './post-service'
+import {
+  loadListChoices,
+  loadListPage,
+  loadThreadPage,
+  loadUserPage,
+  searchPage,
+} from './post-service'
 import type { LoadFailure } from './types'
 
 const configFailure = (diagnostic: unknown): LoadFailure => {
@@ -29,6 +37,26 @@ export const loadUserPosts = createServerFn({ method: 'GET' })
   .handler(async ({ data }) => {
     try {
       return await loadUserPage(await reader(), data)
+    } catch (error) {
+      return configFailure(error)
+    }
+  })
+
+export const loadListPosts = createServerFn({ method: 'GET' })
+  .validator(listPageInputSchema)
+  .handler(async ({ data }) => {
+    try {
+      return await loadListPage(await reader(), data)
+    } catch (error) {
+      return configFailure(error)
+    }
+  })
+
+export const loadLists = createServerFn({ method: 'GET' })
+  .validator(listChoicesInputSchema)
+  .handler(async () => {
+    try {
+      return await loadListChoices(await reader())
     } catch (error) {
       return configFailure(error)
     }

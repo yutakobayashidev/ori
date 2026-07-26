@@ -1,14 +1,15 @@
 # Twitter Lite
 
 Twitter Lite is an intentional, read-only X reader. It shows content only after
-you enter a user handle, profile URL, or search query, follow a deliberate post
-detail link, or manually open a valid `/status/:tweetId` URL.
+you enter a user handle, profile URL, search query, or list URL, follow a
+deliberate post detail link, or manually open a valid `/status/:tweetId` URL.
 
 ## Scope
 
 - User timelines and raw X search syntax
 - Popular (`Top`) and chronological (`Latest`) search
 - Optional `filter:follows` search
+- Authenticated account list selection and list timelines from a deliberate URL or ID
 - Infinite cursor pagination with explicit retry
 - Deliberate post detail pages with the visible conversation
 - Infinite conversation loading with explicit continuation retry

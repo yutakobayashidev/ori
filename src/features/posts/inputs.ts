@@ -3,6 +3,7 @@ import { z } from 'zod'
 const HANDLE = /^[A-Za-z0-9_]{1,15}$/
 const FOLLOWS = /(?:^|\s)filter:follows(?:\s|$)/i
 const TWEET_ID = /^\d{1,32}$/
+const LIST_ID = /^\d{1,32}$/
 const tweetIdSchema = z
   .string()
   .trim()
@@ -28,6 +29,13 @@ export const userPageInputSchema = z.object({
   cursor: z.string().min(1).optional(),
 })
 
+export const listPageInputSchema = z.object({
+  target: z.string().trim().min(1).max(256),
+  cursor: z.string().min(1).optional(),
+})
+
+export const listChoicesInputSchema = z.object({})
+
 export const searchPageInputSchema = z.object({
   query: z.string().trim().min(1).max(512),
   product: z.enum(['Top', 'Latest']),
@@ -37,6 +45,11 @@ export const searchPageInputSchema = z.object({
 
 export const userRouteSearchSchema = z.object({
   target: z.string().catch(''),
+})
+
+export const listRouteSearchSchema = z.object({
+  // List IDs are numeric, and the router JSON-parses numeric search values.
+  target: z.coerce.string().catch(''),
 })
 
 export const postSearchRouteSchema = z.object({
@@ -86,6 +99,38 @@ export function normalizeUserTarget(raw: string): string {
     throw new InputError('プロフィール URL を入力してください。')
   }
   return requireHandle(segments[0] ?? '')
+}
+
+function requireListId(value: string): string {
+  if (!LIST_ID.test(value)) {
+    throw new InputError('リスト ID は数字で入力してください。')
+  }
+  return value
+}
+
+export function normalizeListTarget(raw: string): string {
+  const value = raw.trim()
+  if (!value) {
+    throw new InputError('リストの URL または ID を入力してください。')
+  }
+  if (!value.includes('://')) {
+    return requireListId(value)
+  }
+
+  let url: URL
+  try {
+    url = new URL(value)
+  } catch {
+    throw new InputError('リスト URL の形式を確認してください。')
+  }
+  if (!['x.com', 'twitter.com'].includes(url.hostname.toLowerCase())) {
+    throw new InputError('x.com または twitter.com の URL を入力してください。')
+  }
+  const segments = url.pathname.split('/').filter(Boolean)
+  if (segments.length !== 3 || segments[0] !== 'i' || segments[1] !== 'lists') {
+    throw new InputError('リストの URL を入力してください。')
+  }
+  return requireListId(segments[2] ?? '')
 }
 
 export function buildSearchQuery(raw: string, following: boolean): string {

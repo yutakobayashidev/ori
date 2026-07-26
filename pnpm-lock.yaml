@@ -21,8 +21,8 @@ importers:
         specifier: 1.168.27
         version: 1.168.27(crossws@0.4.10(srvx@0.11.22))(react-dom@19.2.7(react@19.2.7))(react@19.2.7)(rolldown@1.1.5)(vite@8.1.4(@types/node@26.1.1)(jiti@2.7.0)(yaml@2.9.0))
       '@yuta/bird':
-        specifier: 0.10.0
-        version: 0.10.0
+        specifier: 0.10.1
+        version: 0.10.1
       nitro:
         specifier: 3.0.260610-beta
         version: 3.0.260610-beta(chokidar@5.0.0)(jiti@2.7.0)(lru-cache@11.5.2)(vite@8.1.4(@types/node@26.1.1)(jiti@2.7.0)(yaml@2.9.0))
@@ -1044,8 +1044,8 @@ packages:
   '@vitest/utils@4.1.10':
     resolution: {integrity: sha512-fy9am/HWxbaGt/Sawrp90vt6Y6jQwf1RX77cz3uwoJwJVMli/e1IEwRPnMNJ7vKfPTwo0diXifkpPvwH9v7nGA==}
 
-  '@yuta/bird@0.10.0':
-    resolution: {integrity: sha512-qU/zveaouKVEvEGsXxK4f1djgY7BLhi//NvyCMobEE93T+kzVFHD3wLbW9Yiz1hVqnsRIad5RtCYXeYz8gVMgg==, tarball: https://git.yutakobayashi.com/api/packages/yuta/npm/%40yuta%2Fbird/-/0.10.0/bird-0.10.0.tgz}
+  '@yuta/bird@0.10.1':
+    resolution: {integrity: sha512-WS6rI6P3ilwmTH6V9ANEp4pb1zxhnYAlKW1oDKsTwz7wJrh+toZ/bsAYaxbN/5+2wOdZEyWxSC5J8m8/goinBA==, tarball: https://git.yutakobayashi.com/api/packages/yuta/npm/%40yuta%2Fbird/-/0.10.1/bird-0.10.1.tgz}
     hasBin: true
 
   ansi-regex@5.0.1:
@@ -2821,7 +2821,7 @@ snapshots:
       convert-source-map: 2.0.0
       tinyrainbow: 3.1.0
 
-  '@yuta/bird@0.10.0':
+  '@yuta/bird@0.10.1':
     dependencies:
       commander: 14.0.3
       json5: 2.2.3

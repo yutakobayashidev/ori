@@ -4,7 +4,7 @@ export function AppShell({
   active,
   children,
 }: {
-  active?: 'user' | 'search'
+  active?: 'user' | 'search' | 'list'
   children: React.ReactNode
 }) {
   return (
@@ -25,6 +25,13 @@ export function AppShell({
             to="/search"
           >
             検索
+          </Link>
+          <Link
+            aria-current={active === 'list' ? 'page' : undefined}
+            search={{ target: '' }}
+            to="/list"
+          >
+            リスト
           </Link>
         </nav>
       </header>

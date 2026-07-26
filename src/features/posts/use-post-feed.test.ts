@@ -20,6 +20,7 @@ type FeedLoaders = Parameters<typeof createPostFeedOptions>[1]
 
 const loaders = (overrides: Partial<FeedLoaders> = {}): FeedLoaders => ({
   loadUser: vi.fn(),
+  loadList: vi.fn(),
   search: vi.fn(),
   thread: vi.fn(),
   ...overrides,
@@ -42,6 +43,28 @@ describe('createPostFeedOptions', () => {
     expect(loadUser).toHaveBeenCalledWith({
       data: { target: '@yuta', cursor: 'cursor' },
     })
+  })
+
+  it('forwards one list cursor in the server function payload', async () => {
+    const loadList = vi.fn().mockResolvedValue({
+      ok: true,
+      page: { tweets: [], nextCursor: 'next' },
+    })
+    const options = createPostFeedOptions(
+      { kind: 'list', target: '1234567890' },
+      loaders({ loadList }),
+    )
+
+    await options.queryFn({ pageParam: 'cursor' } as never)
+
+    expect(loadList).toHaveBeenCalledOnce()
+    expect(loadList).toHaveBeenCalledWith({
+      data: { target: '1234567890', cursor: 'cursor' },
+    })
+    expect(options.queryKey).toEqual([
+      'posts',
+      { kind: 'list', target: '1234567890' },
+    ])
   })
 
   it('does not retry requests automatically', () => {

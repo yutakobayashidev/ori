@@ -7,10 +7,13 @@ import type {
 import {
   buildSearchQuery,
   InputError,
+  normalizeListTarget,
   normalizeTweetId,
   normalizeUserTarget,
 } from './inputs'
 import type {
+  ListChoicesResult,
+  ListPageInput,
   LoadError,
   LoadFailure,
   LoadResult,
@@ -27,7 +30,21 @@ type UserLookupResult = {
   error?: string
 }
 
+type BirdListsResult =
+  | {
+      success: true
+      lists?: Array<{
+        id: string
+        name: string
+        description?: string
+        memberCount?: number
+        isPrivate?: boolean
+      }>
+    }
+  | { success: false; error?: string }
+
 export interface BirdReader {
+  getLists(count?: number): Promise<BirdListsResult>
   getTweet(tweetId: string): Promise<GetTweetResult>
   getThreadPaged(
     tweetId: string,
@@ -55,6 +72,13 @@ export interface BirdReader {
       maxPages: number
     },
   ): Promise<SearchResult>
+  getAllListTimeline(
+    listId: string,
+    options: {
+      cursor?: string
+      maxPages: number
+    },
+  ): Promise<SearchResult>
 }
 
 const failure = (
@@ -63,9 +87,27 @@ const failure = (
   retryable: boolean,
 ): LoadFailure => ({ ok: false, error: { code, message, retryable } })
 
+type FailureSubject = 'user' | 'post' | 'list'
+
+const notFoundFailure: Record<FailureSubject, () => LoadFailure> = {
+  user: () =>
+    failure('user-not-found', 'ユーザーが見つかりませんでした。', false),
+  post: () => failure('post-not-found', '投稿が見つかりませんでした。', false),
+  list: () =>
+    failure('list-not-found', 'リストが見つかりませんでした。', false),
+}
+
+const unavailableFailure: Record<FailureSubject, () => LoadFailure> = {
+  user: () =>
+    failure('user-unavailable', 'このユーザーの投稿は取得できません。', false),
+  post: () => failure('post-unavailable', 'この投稿は取得できません。', false),
+  list: () =>
+    failure('list-unavailable', 'このリストは取得できません。', false),
+}
+
 function upstreamFailure(
   diagnostic: unknown = '',
-  subject: 'user' | 'post' = 'user',
+  subject: FailureSubject = 'user',
 ): LoadFailure {
   const message =
     diagnostic instanceof Error
@@ -78,18 +120,10 @@ function upstreamFailure(
     return failure('timeout', '取得がタイムアウトしました。', true)
   }
   if (lower.includes('not found')) {
-    return subject === 'post'
-      ? failure('post-not-found', '投稿が見つかりませんでした。', false)
-      : failure('user-not-found', 'ユーザーが見つかりませんでした。', false)
+    return notFoundFailure[subject]()
   }
   if (lower.includes('suspended') || lower.includes('protected')) {
-    return subject === 'post'
-      ? failure('post-unavailable', 'この投稿は取得できません。', false)
-      : failure(
-          'user-unavailable',
-          'このユーザーの投稿は取得できません。',
-          false,
-        )
+    return unavailableFailure[subject]()
   }
   console.error('Unexpected Bird failure:', diagnostic)
   return failure('upstream', 'X から投稿を取得できませんでした。', true)
@@ -104,7 +138,38 @@ function publicPost(tweet: TweetData): Post {
   return post
 }
 
-function resultPage(result: SearchResult): LoadResult {
+export async function loadListChoices(
+  reader: BirdReader,
+): Promise<ListChoicesResult> {
+  try {
+    const result = await reader.getLists(100)
+    if (!result.success) {
+      return upstreamFailure(result.error, 'list')
+    }
+    return {
+      ok: true,
+      lists: (result.lists ?? []).map((list) => ({
+        id: list.id,
+        name: list.name,
+        ...(list.description ? { description: list.description } : {}),
+        ...(list.memberCount === undefined
+          ? {}
+          : { memberCount: list.memberCount }),
+        ...(list.isPrivate === undefined ? {} : { isPrivate: list.isPrivate }),
+      })),
+    }
+  } catch (error) {
+    if (error instanceof Error && error.name === 'AbortError') {
+      return failure('timeout', '取得がタイムアウトしました。', true)
+    }
+    return upstreamFailure(error, 'list')
+  }
+}
+
+function resultPage(
+  result: SearchResult,
+  subject: FailureSubject = 'user',
+): LoadResult {
   return result.success
     ? {
         ok: true,
@@ -113,7 +178,7 @@ function resultPage(result: SearchResult): LoadResult {
           nextCursor: result.nextCursor,
         },
       }
-    : upstreamFailure(result.error)
+    : upstreamFailure(result.error, subject)
 }
 
 export async function loadThreadPage(
@@ -193,6 +258,30 @@ export async function loadUserPage(
       return failure('invalid-input', error.message, false)
     }
     return upstreamFailure(error)
+  }
+}
+
+export async function loadListPage(
+  reader: BirdReader,
+  input: ListPageInput,
+): Promise<LoadResult> {
+  try {
+    const listId = normalizeListTarget(input.target)
+    return resultPage(
+      await reader.getAllListTimeline(listId, {
+        cursor: input.cursor,
+        maxPages: 1,
+      }),
+      'list',
+    )
+  } catch (error) {
+    if (error instanceof Error && error.name === 'AbortError') {
+      return failure('timeout', '取得がタイムアウトしました。', true)
+    }
+    if (error instanceof InputError) {
+      return failure('invalid-input', error.message, false)
+    }
+    return upstreamFailure(error, 'list')
   }
 }
 

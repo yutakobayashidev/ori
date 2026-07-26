@@ -102,6 +102,8 @@ const server = createServer(async (request, response) => {
     'UserTweets',
     'TweetDetail',
     'SearchTimeline',
+    'ListsManagementPageTimeline',
+    'ListLatestTweetsTimeline',
   ].find((name) => url.pathname.endsWith(`/${name}`))
 
   if (!operation) {
@@ -173,6 +175,94 @@ const server = createServer(async (request, response) => {
     send(response, {
       data: {
         user: { result: { timeline: { timeline: timeline(entries) } } },
+      },
+    })
+    return
+  }
+
+  if (operation === 'ListsManagementPageTimeline') {
+    if (variables.count !== 100) {
+      fail(response, 400, 'invalid lists management variables')
+      return
+    }
+    const features = url.searchParams.get('features')
+    try {
+      if (!features || !isRecord(JSON.parse(features))) throw new Error()
+    } catch {
+      fail(response, 400, 'invalid lists management feature lock')
+      return
+    }
+    send(response, {
+      data: {
+        viewer: {
+          list_management_timeline: {
+            timeline: {
+              instructions: [
+                {
+                  entries: [
+                    {
+                      content: {
+                        clientEventInfo: {
+                          component: 'suggest_owned_subscribed_list',
+                        },
+                        items: [
+                          {
+                            item: {
+                              itemContent: {
+                                list: {
+                                  id_str: '1234567890',
+                                  name: 'My E2E List',
+                                  description: 'Accounts selected for testing',
+                                  member_count: 10,
+                                  mode: 'Public',
+                                  created_at: 1_704_067_200_000,
+                                  user_results: {
+                                    result: {
+                                      rest_id: '42',
+                                      core: {
+                                        screen_name: 'yuta',
+                                        name: 'Yuta',
+                                      },
+                                    },
+                                  },
+                                },
+                              },
+                            },
+                          },
+                        ],
+                      },
+                    },
+                  ],
+                },
+              ],
+            },
+          },
+        },
+      },
+      errors: [{ message: 'optional banner field failed' }],
+    })
+    return
+  }
+
+  if (operation === 'ListLatestTweetsTimeline') {
+    const expectedCursor =
+      variables.cursor === undefined || variables.cursor === 'list-next'
+    if (
+      typeof variables.listId !== 'string' ||
+      !/^\d+$/.test(variables.listId) ||
+      variables.count !== 20 ||
+      !expectedCursor
+    ) {
+      fail(response, 400, 'invalid list timeline variables')
+      return
+    }
+    const secondPage = variables.cursor === 'list-next'
+    const entries = secondPage
+      ? [tweet('3010', 'list page 2', 'listed')]
+      : [tweet('3001', 'list page 1', 'listed'), cursor('list-next')]
+    send(response, {
+      data: {
+        list: { tweets_timeline: { timeline: timeline(entries) } },
       },
     })
     return
