@@ -1,0 +1,9 @@
+{
+  "date": "2026-07-26",
+  "font_stack": "Inter / Noto Sans JP / system sans declared in src/styles.css",
+  "palette": "CSS custom properties with muted teal hex values",
+  "motion": "motion-cut; no motion library",
+  "spacing": "no named scale",
+  "framework": "React 19 + TanStack Start + Vite 8",
+  "preserve": ["routes", "information architecture", "read-only behavior"]
+}

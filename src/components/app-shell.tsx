@@ -10,7 +10,7 @@ export function AppShell({
   return (
     <main className="app">
       <header className="app-header">
-        <p className="brand">TWITTER LITE</p>
+        <p className="brand">Twitter Lite</p>
         <nav aria-label="閲覧方法" className="tabs">
           <Link aria-current={active === 'user' ? 'page' : undefined} to="/">
             ユーザー

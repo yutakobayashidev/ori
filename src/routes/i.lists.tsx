@@ -31,7 +31,7 @@ export function ListPage({ listId = '' }: { listId?: string }) {
 
   return (
     <AppShell active="list">
-      <h1>どのリストを読みますか？</h1>
+      <h1 className="reader-title-long">どのリストを読みますか？</h1>
       <p className="intro">
         自分のリストを選ぶか、リストURLを入力してください。
       </p>
