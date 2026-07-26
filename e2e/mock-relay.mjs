@@ -11,10 +11,12 @@ const failedRetryQueries = new Set()
 const rootByTarget = new Map([
   ['1001', '1000'],
   ['2001', '2000'],
+  ['3001', '3000'],
 ])
 const targetByRoot = new Map([
   ['1000', '1001'],
   ['2000', '2001'],
+  ['3000', '3001'],
 ])
 const failedThreadRoots = new Set()
 
@@ -25,13 +27,13 @@ const tweetResult = (
   id,
   text,
   username = 'yuta',
-  { conversationId = id, inReplyTo } = {},
+  { conversationId = id, inReplyTo, replyCount = 1 } = {},
 ) => ({
   rest_id: id,
   legacy: {
     full_text: text,
     created_at: 'Mon Jul 13 00:00:00 +0000 2026',
-    reply_count: 1,
+    reply_count: replyCount,
     retweet_count: 2,
     favorite_count: 3,
     conversation_id_str: conversationId,
@@ -288,10 +290,16 @@ const server = createServer(async (request, response) => {
 
     const targetRoot = rootByTarget.get(focalTweetId)
     if (targetRoot && variables.cursor === undefined) {
-      const text = focalTweetId === '1001' ? 'user page 1' : 'retry focal'
+      const noReplies = focalTweetId === '3001'
+      const text = noReplies
+        ? 'no replies'
+        : focalTweetId === '1001'
+          ? 'user page 1'
+          : 'retry focal'
       const result = tweetResult(focalTweetId, text, 'focus', {
         conversationId: targetRoot,
         inReplyTo: targetRoot,
+        replyCount: noReplies ? 0 : 1,
       })
       send(response, {
         data: {
@@ -303,6 +311,7 @@ const server = createServer(async (request, response) => {
                   tweet(focalTweetId, text, 'focus', {
                     conversationId: targetRoot,
                     inReplyTo: targetRoot,
+                    replyCount: noReplies ? 0 : 1,
                   }),
                 ],
               },
@@ -323,6 +332,10 @@ const server = createServer(async (request, response) => {
       fail(response, 400, 'invalid thread cursor')
       return
     }
+    if (variables.cursor && focalTweetId === '3000') {
+      fail(response, 500, 'zero-reply thread must not request a continuation')
+      return
+    }
     if (
       variables.cursor &&
       focalTweetId === '2000' &&
@@ -340,25 +353,37 @@ const server = createServer(async (request, response) => {
             inReplyTo: targetId,
           }),
         ]
-      : [
-          tweet(focalTweetId, 'thread root', 'root', {
-            conversationId: focalTweetId,
-          }),
-          tweet(
-            targetId,
-            focalTweetId === '1000' ? 'user page 1' : 'retry focal',
-            'focus',
-            {
+      : focalTweetId === '3000'
+        ? [
+            tweet(focalTweetId, 'thread root', 'root', {
+              conversationId: focalTweetId,
+            }),
+            tweet(targetId, 'no replies', 'focus', {
               conversationId: focalTweetId,
               inReplyTo: focalTweetId,
-            },
-          ),
-          tweet(`${focalTweetId}2`, 'thread page 1', 'reply1', {
-            conversationId: focalTweetId,
-            inReplyTo: targetId,
-          }),
-          cursor(expectedCursor),
-        ]
+              replyCount: 0,
+            }),
+            cursor(expectedCursor),
+          ]
+        : [
+            tweet(focalTweetId, 'thread root', 'root', {
+              conversationId: focalTweetId,
+            }),
+            tweet(
+              targetId,
+              focalTweetId === '1000' ? 'user page 1' : 'retry focal',
+              'focus',
+              {
+                conversationId: focalTweetId,
+                inReplyTo: focalTweetId,
+              },
+            ),
+            tweet(`${focalTweetId}2`, 'thread page 1', 'reply1', {
+              conversationId: focalTweetId,
+              inReplyTo: targetId,
+            }),
+            cursor(expectedCursor),
+          ]
     send(response, {
       data: {
         tweetResult: {

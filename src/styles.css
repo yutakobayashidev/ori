@@ -1023,6 +1023,15 @@ button[data-state="success"] {
   white-space: nowrap;
 }
 
+.post-actions {
+  display: flex;
+  width: 100%;
+  flex-wrap: wrap;
+  justify-content: flex-end;
+  gap: var(--space-sm) var(--space-lg);
+  margin-inline-start: auto;
+}
+
 .state {
   margin: var(--space-xl) 0 0;
   padding: var(--space-lg);
@@ -1110,6 +1119,10 @@ button[data-state="success"] {
   .post-footer {
     align-items: center;
     flex-direction: row;
+  }
+
+  .post-actions {
+    width: auto;
   }
 }
 

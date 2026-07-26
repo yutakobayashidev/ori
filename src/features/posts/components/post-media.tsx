@@ -7,30 +7,34 @@ export function PostMedia({ media }: { media: Media[] }) {
 
   return (
     <div className="media-grid">
-      {media.map((item) =>
-        item.type === 'photo' ? (
-          <img
-            alt="投稿画像"
-            className="media"
-            height={item.height}
-            key={item.url}
-            loading="lazy"
-            src={item.url}
-            width={item.width}
-          />
-        ) : (
+      {media.map((item) => {
+        if (item.type === 'photo' || !item.videoUrl) {
+          return (
+            <img
+              alt={item.type === 'photo' ? '投稿画像' : '動画のプレビュー'}
+              className="media"
+              height={item.height}
+              key={item.url}
+              loading="lazy"
+              src={item.previewUrl ?? item.url}
+              width={item.width}
+            />
+          )
+        }
+
+        return (
           // biome-ignore lint/a11y/useMediaCaption: Bird does not provide caption track URLs.
           <video
             className="media"
             controls
-            key={item.videoUrl ?? item.url}
+            key={item.videoUrl}
             loop={item.type === 'animated_gif'}
             poster={item.previewUrl ?? item.url}
             preload="metadata"
-            src={item.videoUrl ?? item.url}
+            src={item.videoUrl}
           />
-        ),
-      )}
+        )
+      })}
     </div>
   )
 }

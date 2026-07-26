@@ -24,6 +24,10 @@ test('requires intent and infinitely loads a user timeline', async ({
 }) => {
   await homePage.goTo()
   await expect(page).toHaveURL(/\/$/)
+  await expect(page.locator('meta[name="referrer"]')).toHaveAttribute(
+    'content',
+    'no-referrer',
+  )
   await expect(homePage.articlesLocator).toHaveCount(0)
   await expect(homePage.ambientLinksLocator).toHaveCount(0)
 
@@ -94,6 +98,18 @@ test('resolves a reply root and retries only the failed continuation', async ({
   await expect(threadPage.continuationErrorLocator).toHaveCount(0)
   await expect(threadPage.endOfFeedLocator).toBeVisible()
   await expect(threadPage.mutationButtonsLocator).toHaveCount(0)
+})
+
+test('ends a thread without loading a continuation when there are no replies', async ({
+  page,
+  threadPage,
+}) => {
+  await threadPage.goTo('yuta', '3001')
+
+  await expect(page.getByText('no replies')).toHaveCount(1)
+  await expect(page.getByText('thread root')).toBeVisible()
+  await expect(threadPage.endOfFeedLocator).toBeVisible()
+  await expect(threadPage.continuationErrorLocator).toHaveCount(0)
 })
 
 test('searches Top posts from followed accounts', async ({

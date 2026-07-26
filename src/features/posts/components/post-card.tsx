@@ -3,19 +3,39 @@ import type { Post } from '../types'
 import { PostMedia } from './post-media'
 
 const URL = /(https?:\/\/[^\s]+)/g
+const HTML_ENTITY = /&(?:#(\d+)|#x([\da-f]+)|amp|apos|gt|lt|quot);/gi
+const NAMED_ENTITIES: Record<string, string> = {
+  '&amp;': '&',
+  '&apos;': "'",
+  '&gt;': '>',
+  '&lt;': '<',
+  '&quot;': '"',
+}
 const dateFormatter = new Intl.DateTimeFormat('ja-JP', {
   dateStyle: 'medium',
   timeStyle: 'short',
   timeZone: 'Asia/Tokyo',
 })
 
+function decodeHtmlEntities(text: string): string {
+  return text.replace(HTML_ENTITY, (entity, decimal, hexadecimal) => {
+    if (!decimal && !hexadecimal) {
+      return NAMED_ENTITIES[entity.toLowerCase()] ?? entity
+    }
+
+    const codePoint = Number.parseInt(decimal ?? hexadecimal, decimal ? 10 : 16)
+    return codePoint <= 0x10ffff ? String.fromCodePoint(codePoint) : entity
+  })
+}
+
 function linkedText(text: string): ReactNode[] {
+  const decoded = decodeHtmlEntities(text)
   const parts: ReactNode[] = []
   let cursor = 0
-  for (const match of text.matchAll(URL)) {
+  for (const match of decoded.matchAll(URL)) {
     const href = match[0]
     const start = match.index
-    if (start > cursor) parts.push(text.slice(cursor, start))
+    if (start > cursor) parts.push(decoded.slice(cursor, start))
     parts.push(
       <a
         href={href}
@@ -28,7 +48,7 @@ function linkedText(text: string): ReactNode[] {
     )
     cursor = start + href.length
   }
-  if (cursor < text.length) parts.push(text.slice(cursor))
+  if (cursor < decoded.length) parts.push(decoded.slice(cursor))
   return parts
 }
 
@@ -90,16 +110,18 @@ export function PostCard({
             返信 {post.replyCount ?? 0}　再投稿 {post.retweetCount ?? 0}　いいね{' '}
             {post.likeCount ?? 0}
           </span>
-          {!current ? (
-            <a
-              href={`/${encodeURIComponent(post.author.username)}/status/${encodeURIComponent(post.id)}`}
-            >
-              詳細・スレッド
+          <span className="post-actions">
+            {!current ? (
+              <a
+                href={`/${encodeURIComponent(post.author.username)}/status/${encodeURIComponent(post.id)}`}
+              >
+                詳細・スレッド
+              </a>
+            ) : null}
+            <a href={original} rel="noreferrer noopener" target="_blank">
+              元の投稿を開く
             </a>
-          ) : null}
-          <a href={original} rel="noreferrer noopener" target="_blank">
-            元の投稿を開く
-          </a>
+          </span>
         </footer>
       ) : null}
     </article>

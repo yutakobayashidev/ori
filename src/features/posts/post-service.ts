@@ -215,14 +215,22 @@ export async function loadThreadPage(
     if (!result.success) {
       return upstreamFailure(result.error, 'post')
     }
+    const tweets = result.tweets ?? []
+    const nextCursor =
+      result.nextCursor &&
+      tweets.length > 0 &&
+      result.nextCursor !== input.cursor &&
+      focalPost?.replyCount !== 0
+        ? result.nextCursor
+        : undefined
 
     return {
       ok: true,
       page: {
-        tweets: (result.tweets ?? []).map(publicPost),
+        tweets: tweets.map(publicPost),
         focalPost,
         conversationId,
-        nextCursor: result.nextCursor,
+        nextCursor,
       },
     }
   } catch (error) {

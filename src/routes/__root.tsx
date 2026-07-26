@@ -16,6 +16,7 @@ export const Route = createRootRouteWithContext<RouterContext>()({
         name: 'viewport',
         content: 'width=device-width, initial-scale=1',
       },
+      { name: 'referrer', content: 'no-referrer' },
       { title: 'Twitter Lite' },
     ],
     links: [

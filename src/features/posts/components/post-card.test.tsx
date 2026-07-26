@@ -55,6 +55,10 @@ describe('PostCard', () => {
     expect(container.querySelectorAll('video')).toHaveLength(2)
     expect(container.querySelectorAll('video')[0]).toHaveAttribute('controls')
     expect(container.querySelectorAll('video')[1]).toHaveAttribute('loop')
+    expect(container.querySelectorAll('video')[0]).toHaveAttribute(
+      'src',
+      'https://media.invalid/video.mp4',
+    )
     expect(screen.getByText('Article title')).toBeInTheDocument()
     expect(screen.getByText('Preview')).toBeInTheDocument()
     expect(screen.getByText('quoted')).toBeInTheDocument()
@@ -80,12 +84,39 @@ describe('PostCard', () => {
     expect(screen.getByText('@yuta').closest('a')).toBeNull()
   })
 
+  it('decodes HTML entities in the post body before linking URLs', () => {
+    render(
+      <PostCard
+        post={{
+          ...richPost,
+          text: 'A &gt; B &amp; C &#39;D&#39; https://example.com/?a=1&amp;b=2',
+        }}
+      />,
+    )
+
+    expect(
+      screen.getByText((_, element) =>
+        Boolean(
+          element?.classList.contains('post-text') &&
+            element.textContent ===
+              "A > B & C 'D' https://example.com/?a=1&b=2",
+        ),
+      ),
+    ).toBeInTheDocument()
+    expect(
+      screen.getByRole('link', { name: 'https://example.com/?a=1&b=2' }),
+    ).toHaveAttribute('href', 'https://example.com/?a=1&b=2')
+  })
+
   it('links deliberately to the internal detail page', () => {
     render(<PostCard post={richPost} />)
 
+    const detail = screen.getByRole('link', { name: '詳細・スレッド' })
+    expect(detail).toHaveAttribute('href', '/yuta/status/123')
+    expect(detail.parentElement).toHaveClass('post-actions')
     expect(
-      screen.getByRole('link', { name: '詳細・スレッド' }),
-    ).toHaveAttribute('href', '/yuta/status/123')
+      screen.getByRole('link', { name: '元の投稿を開く' }).parentElement,
+    ).toBe(detail.parentElement)
   })
 
   it('marks the focal post without linking to its current page', () => {
@@ -102,5 +133,27 @@ describe('PostCard', () => {
 
     expect(screen.getByText('Yuta')).toBeInTheDocument()
     expect(container.querySelector('time')).not.toBeInTheDocument()
+  })
+
+  it('does not try to play a poster image when Bird has no video URL', () => {
+    const { container } = render(
+      <PostCard
+        post={{
+          ...richPost,
+          media: [
+            {
+              type: 'video',
+              url: 'https://media.invalid/video-poster.jpg',
+              previewUrl: 'https://media.invalid/video-preview.jpg',
+            },
+          ],
+        }}
+      />,
+    )
+
+    expect(container.querySelector('video')).not.toBeInTheDocument()
+    expect(
+      screen.getByRole('img', { name: '動画のプレビュー' }),
+    ).toHaveAttribute('src', 'https://media.invalid/video-preview.jpg')
   })
 })

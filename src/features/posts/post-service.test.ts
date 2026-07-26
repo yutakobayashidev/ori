@@ -168,6 +168,64 @@ describe('loadThreadPage', () => {
     })
   })
 
+  it('does not expose a continuation when the focal post has no replies', async () => {
+    const client = reader()
+    vi.mocked(client.getTweet).mockResolvedValue({
+      success: true,
+      tweet: {
+        id: '123',
+        text: 'focal',
+        conversationId: '100',
+        replyCount: 0,
+        author: { username: 'focus', name: 'Focus' },
+      },
+    })
+
+    const result = await loadThreadPage(client, { tweetId: '123' })
+
+    expect(result).toMatchObject({
+      ok: true,
+      page: { nextCursor: undefined },
+    })
+  })
+
+  it.each([
+    {
+      name: 'an empty final page',
+      tweets: [],
+      returnedCursor: 'thread-final',
+    },
+    {
+      name: 'the same cursor again',
+      tweets: [
+        {
+          id: '101',
+          text: 'last reply',
+          author: { username: 'reply', name: 'Reply' },
+        },
+      ],
+      returnedCursor: 'thread-next',
+    },
+  ])('stops after $name', async ({ tweets, returnedCursor }) => {
+    const client = reader()
+    vi.mocked(client.getThreadPaged).mockResolvedValue({
+      success: true,
+      tweets,
+      nextCursor: returnedCursor,
+    })
+
+    const result = await loadThreadPage(client, {
+      tweetId: '123',
+      conversationId: '100',
+      cursor: 'thread-next',
+    })
+
+    expect(result).toMatchObject({
+      ok: true,
+      page: { nextCursor: undefined },
+    })
+  })
+
   it('removes raw data from focal, conversation, and quotes', async () => {
     const client = reader()
     vi.mocked(client.getTweet).mockResolvedValue({
