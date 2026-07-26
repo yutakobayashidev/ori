@@ -42,6 +42,9 @@ nix develop -c pnpm install --frozen-lockfile
 cp .env.example .env.local
 ```
 
+The Nix development shell installs Hallmark's agent skill for the supported
+local agent targets.
+
 Set `TWITTER_RELAY_BASE_URL` in `.env.local` for Vite development, and set
 `BIRD_PROFILE_NAME` when the relay has multiple profiles. Export the same
 values in the process environment before `start` or `test:live`:

@@ -2,8 +2,13 @@
   description = "Intentional X reader";
 
   inputs.nixpkgs.url = "github:NixOS/nixpkgs/nixos-unstable";
+  inputs.agent-skills-nix.url = "github:Kyure-A/agent-skills-nix";
+  inputs.hallmark = {
+    url = "github:Nutlope/hallmark";
+    flake = false;
+  };
 
-  outputs = { self, nixpkgs, ... }:
+  outputs = inputs@{ self, nixpkgs, ... }:
     let
       systems = [ "x86_64-linux" "aarch64-linux" ];
       forAllSystems = nixpkgs.lib.genAttrs systems;
@@ -55,10 +60,34 @@
         });
 
       devShells = forAllSystems (system:
-        let pkgs = import nixpkgs { inherit system; };
+        let
+          pkgs = import nixpkgs { inherit system; };
+          agentLib = inputs.agent-skills-nix.lib.agent-skills;
+          sources.hallmark = {
+            path = inputs.hallmark;
+            subdir = "skills";
+          };
+          catalog = agentLib.discoverCatalog sources;
+          allowlist = agentLib.allowlistFor {
+            inherit catalog sources;
+            enableAll = true;
+          };
+          selection = agentLib.selectSkills {
+            inherit catalog allowlist sources;
+            skills = { };
+          };
+          bundle = agentLib.mkBundle { inherit pkgs selection; };
+          localTargets = builtins.mapAttrs (_: target:
+            target // {
+              enable = true;
+            }) agentLib.defaultLocalTargets;
         in {
           default = pkgs.mkShell {
             packages = with pkgs; [ nodejs_22 pnpm chromium ];
+            shellHook = agentLib.mkShellHook {
+              inherit pkgs bundle;
+              targets = localTargets;
+            };
             PLAYWRIGHT_SKIP_BROWSER_DOWNLOAD = "1";
             PLAYWRIGHT_CHROMIUM_EXECUTABLE =
               "${pkgs.chromium}/bin/chromium";
