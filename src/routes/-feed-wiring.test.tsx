@@ -23,6 +23,10 @@ vi.mock('../features/posts/use-list-choices', async (importOriginal) => {
   return { ...original, useListChoices }
 })
 
+vi.mock('../features/profiles/profile-switcher', () => ({
+  ProfileSwitcher: () => null,
+}))
+
 vi.mock('./__root', async () => {
   const { createRootRouteWithContext, Outlet } = await import(
     '@tanstack/react-router'

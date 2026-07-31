@@ -43,6 +43,39 @@ test('requires intent and infinitely loads a user timeline', async ({
   })
 })
 
+test('switches the relay profile and reloads visible content', async ({
+  homePage,
+  page,
+}) => {
+  await homePage.goTo()
+
+  const profile = page.getByLabel('プロファイル')
+  await expect(profile).toHaveValue('e2e')
+  await homePage.displayUser('@yuta')
+  await expect(page.getByText('user page 1')).toBeVisible()
+
+  await profile.selectOption('alternate')
+  await expect(page.getByRole('status')).toHaveText('切り替えました。')
+
+  await expect(page.getByText('alternate profile page 1')).toBeVisible()
+})
+
+test('keeps the profile selector within narrow viewports', async ({
+  homePage,
+  page,
+}) => {
+  for (const width of [320, 375, 414, 768]) {
+    await page.setViewportSize({ width, height: 900 })
+    await homePage.goTo()
+    await expect(page.getByLabel('プロファイル')).toBeVisible()
+    expect(
+      await page.evaluate(
+        () => document.documentElement.scrollWidth > window.innerWidth,
+      ),
+    ).toBe(false)
+  }
+})
+
 test('selects an authenticated list and infinitely loads its timeline', async ({
   listsPage,
   page,
@@ -152,6 +185,9 @@ test('keeps keyboard focus intentional and discovery or mutation controls absent
 }) => {
   await searchPage.goTo()
 
+  await searchPage.tabTo(
+    searchPage.page.getByRole('combobox', { name: 'プロファイル' }),
+  )
   await searchPage.tabTo(searchPage.page.getByRole('link', { name: '検索' }))
   await searchPage.tabTo(
     searchPage.page.getByRole('link', { name: 'ユーザー' }),

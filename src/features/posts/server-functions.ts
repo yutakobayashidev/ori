@@ -28,8 +28,11 @@ const configFailure = (diagnostic: unknown): LoadFailure => {
 }
 
 async function reader() {
-  const { getBirdReader } = await import('./bird-client.server')
-  return getBirdReader()
+  const [{ getBirdReader }, { getSelectedProfileName }] = await Promise.all([
+    import('./bird-client.server'),
+    import('../profiles/profile-service.server'),
+  ])
+  return getBirdReader(getSelectedProfileName())
 }
 
 export const loadUserPosts = createServerFn({ method: 'GET' })

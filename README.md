@@ -11,6 +11,7 @@ deliberate post detail link, or manually open a valid
 - Popular (`Top`) and chronological (`Latest`) search
 - Optional `filter:follows` search
 - Authenticated account list selection and list timelines from a deliberate URL or ID
+- Relay profile switching from the profiles exposed by the relay
 - Infinite cursor pagination with explicit retry
 - Deliberate post detail pages with the visible conversation
 - Infinite conversation loading with explicit continuation retry
@@ -45,9 +46,11 @@ cp .env.example .env.local
 The Nix development shell installs Hallmark's agent skill for the supported
 local agent targets.
 
-Set `TWITTER_RELAY_BASE_URL` in `.env.local` for Vite development, and set
-`BIRD_PROFILE_NAME` when the relay has multiple profiles. Export the same
-values in the process environment before `start` or `test:live`:
+Set `TWITTER_RELAY_BASE_URL` in `.env.local` for Vite development.
+`BIRD_PROFILE_NAME` optionally selects the initial relay profile; the header
+selector can switch between the profiles returned by the relay's `/profiles`
+endpoint. Export the same values in the process environment before `start` or
+`test:live`:
 
 ```bash
 export TWITTER_RELAY_BASE_URL=http://127.0.0.1:6900

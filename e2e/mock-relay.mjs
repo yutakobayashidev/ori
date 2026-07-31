@@ -99,6 +99,11 @@ const timeline = (entries) => ({ instructions: [{ entries }] })
 
 const server = createServer(async (request, response) => {
   const url = new URL(request.url ?? '/', `http://127.0.0.1:${port}`)
+  if (request.method === 'GET' && url.pathname === '/profiles') {
+    send(response, { profiles: ['e2e', 'alternate'] })
+    return
+  }
+
   const operation = [
     'UserByScreenName',
     'UserTweets',
@@ -120,7 +125,8 @@ const server = createServer(async (request, response) => {
     })
     return
   }
-  if (request.headers['x-profile-name'] !== 'e2e') {
+  const profileName = request.headers['x-profile-name']
+  if (profileName !== 'e2e' && profileName !== 'alternate') {
     fail(response, 403, 'invalid profile')
     return
   }
@@ -166,10 +172,12 @@ const server = createServer(async (request, response) => {
       return
     }
     const secondPage = variables.cursor === 'user-next'
+    const firstPageText =
+      profileName === 'alternate' ? 'alternate profile page 1' : 'user page 1'
     const entries = secondPage
       ? [tweet('1010', 'user page 2')]
       : [
-          tweet('1001', 'user page 1', 'yuta', {
+          tweet('1001', firstPageText, 'yuta', {
             conversationId: '1000',
           }),
           cursor('user-next'),

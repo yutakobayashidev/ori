@@ -1,4 +1,5 @@
 import { Link } from '@tanstack/react-router'
+import { ProfileSwitcher } from '#/features/profiles/profile-switcher'
 
 export function AppShell({
   active,
@@ -11,6 +12,7 @@ export function AppShell({
     <main className="app">
       <header className="app-header">
         <p className="brand">Twitter Lite</p>
+        <ProfileSwitcher />
         <nav aria-label="閲覧方法" className="tabs">
           <Link
             aria-current={active === 'search' ? 'page' : undefined}

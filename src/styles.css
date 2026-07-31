@@ -639,8 +639,9 @@ video.media {
 
 .app-header {
   display: grid;
+  grid-template-columns: minmax(0, 1fr) minmax(8rem, 9.5rem);
   align-items: start;
-  gap: var(--space-lg);
+  gap: var(--space-lg) var(--space-md);
   padding: var(--space-lg) var(--space-md) 0;
   border-bottom: var(--rule-hairline) solid var(--border);
   background: var(--paper);
@@ -665,6 +666,7 @@ video.media {
 
 .tabs {
   display: grid;
+  grid-column: 1 / -1;
   grid-template-columns: repeat(3, minmax(0, 1fr));
   gap: 0;
 }
@@ -687,6 +689,72 @@ video.media {
   border-bottom-color: var(--accent);
   color: var(--accent);
   font-weight: 700;
+}
+
+/* Hallmark · component: select · genre: editorial · theme: Garden
+ * states: default · hover · focus · active · disabled · loading · error · success
+ * contrast: pass
+ */
+.profile-switcher {
+  position: relative;
+  display: grid;
+  width: 100%;
+  min-width: 0;
+  gap: var(--space-2xs);
+}
+
+.profile-switcher label {
+  color: var(--secondary);
+  font-size: var(--text-xs);
+  font-weight: 700;
+  line-height: 1;
+  white-space: nowrap;
+}
+
+.profile-switcher select {
+  width: 100%;
+  min-height: 2.75rem;
+  padding: var(--space-xs) 1.8rem var(--space-xs) var(--space-sm);
+  border: var(--rule-hairline) solid var(--control-border);
+  border-radius: var(--radius-sm);
+  outline: var(--rule-active) solid transparent;
+  outline-offset: var(--space-3xs);
+  background: var(--paper);
+  color: var(--ink);
+  cursor: pointer;
+  font: inherit;
+  font-size: var(--text-sm);
+  text-overflow: ellipsis;
+}
+
+.profile-switcher select:active {
+  background: var(--color-paper-3);
+}
+
+.profile-switcher select:disabled {
+  cursor: not-allowed;
+  opacity: 0.55;
+}
+
+.profile-switcher[data-state="error"] select {
+  border-color: var(--error);
+}
+
+.profile-switcher[data-state="success"] select {
+  border-color: var(--color-success);
+}
+
+.profile-switcher-status {
+  position: absolute;
+  inset-block-start: 100%;
+  inset-inline-end: 0;
+  color: var(--error);
+  font-size: var(--text-xs);
+  white-space: nowrap;
+}
+
+.profile-switcher[data-state="success"] .profile-switcher-status {
+  color: var(--color-success);
 }
 
 .reader {
@@ -1055,6 +1123,10 @@ button[data-state="success"] {
     color: var(--accent-hover);
   }
 
+  .profile-switcher select:not(:disabled):hover {
+    background: var(--color-paper-2);
+  }
+
   .field input:hover {
     background: var(--surface);
   }
@@ -1146,6 +1218,7 @@ button[data-state="success"] {
   .app-header {
     position: sticky;
     top: var(--space-lg);
+    grid-template-columns: minmax(0, 1fr);
     grid-row: 1;
     grid-column: 1;
     align-self: start;
@@ -1157,6 +1230,7 @@ button[data-state="success"] {
   }
 
   .tabs {
+    grid-column: 1;
     grid-template-columns: minmax(0, 1fr);
   }
 
