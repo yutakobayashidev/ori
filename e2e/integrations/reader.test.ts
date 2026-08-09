@@ -194,6 +194,18 @@ test('keeps keyboard focus intentional and discovery or mutation controls absent
   )
   await searchPage.tabTo(searchPage.page.getByRole('link', { name: 'リスト' }))
   await searchPage.tabTo(searchPage.queryInputLocator)
+  await searchPage.tabTo(
+    searchPage.page.getByRole('button', { name: '投稿者' }),
+  )
+  await searchPage.tabTo(searchPage.page.getByRole('button', { name: '期間' }))
+  await searchPage.tabTo(searchPage.page.getByRole('button', { name: '言語' }))
+  await searchPage.tabTo(
+    searchPage.page.getByRole('button', { name: '投稿の種類' }),
+  )
+  await searchPage.tabTo(searchPage.page.getByRole('button', { name: '除外' }))
+  await searchPage.tabTo(
+    searchPage.page.getByText('検索式を確認', { exact: true }),
+  )
   await expect(searchPage.latestRankingLocator).toBeChecked()
   await searchPage.tabTo(searchPage.latestRankingLocator)
   await searchPage.tabTo(searchPage.followingOnlyLocator)

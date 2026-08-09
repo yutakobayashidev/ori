@@ -1,9 +1,12 @@
 import { describe, expect, it } from 'vitest'
 import {
+  buildAdvancedSearchQuery,
+  buildFilteredSearchQuery,
   buildSearchQuery,
   normalizeListTarget,
   normalizeTweetId,
   normalizeUserTarget,
+  postSearchRouteSchema,
   threadPageInputSchema,
 } from './inputs'
 
@@ -106,5 +109,136 @@ describe('buildSearchQuery', () => {
 
   it('rejects an empty query', () => {
     expect(() => buildSearchQuery('   ', false)).toThrow()
+  })
+})
+
+describe('buildAdvancedSearchQuery', () => {
+  it('builds a query from button-friendly filters', () => {
+    expect(
+      buildAdvancedSearchQuery({
+        q: 'TypeScript',
+        from: '@tan_stack',
+        since: '2026-08-04',
+        until: '2026-08-11',
+        lang: 'ja',
+        content: 'images',
+        excludeReplies: true,
+        excludeReposts: true,
+      }),
+    ).toBe(
+      'TypeScript from:tan_stack since:2026-08-04 until:2026-08-11 lang:ja filter:images -filter:replies -filter:retweets',
+    )
+  })
+
+  it('allows an author search without keywords', () => {
+    expect(
+      buildAdvancedSearchQuery({
+        q: '',
+        from: 'tan_stack',
+        since: '',
+        until: '',
+        lang: 'all',
+        content: 'all',
+        excludeReplies: false,
+        excludeReposts: false,
+      }),
+    ).toBe('from:tan_stack')
+  })
+
+  it('rejects filters that have no keyword or author', () => {
+    expect(() =>
+      buildAdvancedSearchQuery({
+        q: '',
+        from: '',
+        since: '2026-08-04',
+        until: '',
+        lang: 'ja',
+        content: 'all',
+        excludeReplies: false,
+        excludeReposts: false,
+      }),
+    ).toThrow('検索語または投稿者を入力してください。')
+  })
+
+  it('rejects an invalid author and reversed dates', () => {
+    const base = {
+      q: 'TypeScript',
+      from: '',
+      since: '',
+      until: '',
+      lang: 'all' as const,
+      content: 'all' as const,
+      excludeReplies: false,
+      excludeReposts: false,
+    }
+
+    expect(() =>
+      buildAdvancedSearchQuery({ ...base, from: 'not-valid!' }),
+    ).toThrow('投稿者のハンドルを確認してください。')
+    expect(() =>
+      buildAdvancedSearchQuery({
+        ...base,
+        since: '2026-08-11',
+        until: '2026-08-10',
+      }),
+    ).toThrow('終了日は開始日より後の日付を選んでください。')
+  })
+
+  it('rejects nonexistent dates and a compiled query over 512 characters', () => {
+    const base = {
+      q: 'TypeScript',
+      from: '',
+      since: '',
+      until: '',
+      lang: 'all' as const,
+      content: 'all' as const,
+      excludeReplies: false,
+      excludeReposts: false,
+    }
+
+    expect(() =>
+      buildAdvancedSearchQuery({ ...base, since: '2026-02-30' }),
+    ).toThrow('開始日を確認してください。')
+    expect(() =>
+      buildAdvancedSearchQuery({ ...base, q: 'a'.repeat(510), lang: 'ja' }),
+    ).toThrow('検索語は 512 文字以内で入力してください。')
+  })
+})
+
+describe('buildFilteredSearchQuery', () => {
+  it('includes the follows filter in the final query and enforces its length', () => {
+    const input = {
+      q: 'TypeScript',
+      from: '',
+      since: '',
+      until: '',
+      lang: 'ja' as const,
+      content: 'all' as const,
+      excludeReplies: false,
+      excludeReposts: false,
+    }
+
+    expect(buildFilteredSearchQuery(input, true)).toBe(
+      'TypeScript lang:ja filter:follows',
+    )
+    expect(() =>
+      buildFilteredSearchQuery({ ...input, q: 'a'.repeat(498) }, true),
+    ).toThrow('検索語は 512 文字以内で入力してください。')
+  })
+})
+
+describe('postSearchRouteSchema', () => {
+  it('keeps omitted filter parameters optional', () => {
+    expect(
+      postSearchRouteSchema.parse({
+        q: 'AI',
+        product: 'Latest',
+        following: false,
+      }),
+    ).toEqual({
+      q: 'AI',
+      product: 'Latest',
+      following: false,
+    })
   })
 })

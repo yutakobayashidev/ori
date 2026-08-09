@@ -175,10 +175,14 @@ None of these functions exposes the Bird client, arbitrary method names, arbitra
 
 ### Search Flow
 
-1. Trim and validate the raw query.
-2. Append `filter:follows` when the following toggle is enabled and the operator is not already present.
-3. Fetch one page with `getAllSearchResults(query, { product, cursor, maxPages: 1 })`.
-4. Return normalized tweets and the next cursor.
+1. Keep the raw query and structured author, period, language, content, and
+   exclusion controls in typed URL search parameters.
+2. Compile selected controls into a deterministic advanced search expression
+   using `from:`, `since:`, `until:`, `lang:`, and `filter:` operators.
+3. Trim and validate the compiled query, including its 512-character limit.
+4. Append `filter:follows` when the following toggle is enabled and the operator is not already present.
+5. Fetch one page with `getAllSearchResults(query, { product, cursor, maxPages: 1 })`.
+6. Return normalized tweets and the next cursor.
 
 Advanced X search grammar remains available because the raw query is otherwise passed unchanged.
 
@@ -207,7 +211,11 @@ The selected layout is **Focused Tabs**:
 - no content on first load;
 - results directly below the submitted controls.
 
-The User tab contains one target input and a Display button. The Search tab contains a query input, a Popular/Latest segmented control, a Following only checkbox, and a Search button.
+The User tab contains one target input and a Display button. The Search tab
+contains a query input; buttons that open inline author, period, language,
+content-type, and exclusion controls; removable active-condition chips; a
+collapsible compiled-query preview; a Popular/Latest segmented control; a
+Following only checkbox; and a Search button.
 
 Submitting a user target normalizes it to a handle and navigates to `/:handle`.
 Submitting a search updates the route's typed search parameters. Changing tabs
@@ -344,7 +352,9 @@ The work is complete when:
    target or query, following a post detail link, or manually opening a valid
    status URL.
 3. A valid handle or profile URL loads that user's posts.
-4. Search supports Top, Latest, and the follows filter.
+4. Search supports Top, Latest, the follows filter, and button-driven author,
+   period, language, content-type, reply, and repost conditions while preserving
+   raw advanced search syntax.
 5. Infinite scrolling continues cursor pages without a fixed limit and without duplicate posts.
 6. Relay credentials and Bird remain server-only.
 7. No excluded discovery or mutation feature is reachable.

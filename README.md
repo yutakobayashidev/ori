@@ -8,6 +8,7 @@ deliberate post detail link, or manually open a valid
 ## Scope
 
 - User timelines and raw X search syntax
+- Button-driven search filters for author, period, language, content type, replies, and reposts
 - Popular (`Top`) and chronological (`Latest`) search
 - Optional `filter:follows` search
 - Authenticated account list selection and list timelines from a deliberate URL or ID
@@ -27,7 +28,9 @@ they do not add related-post recommendations or an account-discovery surface.
 
 - `/` shows the empty user input.
 - `/:handle` shows a user timeline.
-- `/search?q=<query>&product=<Top|Latest>&following=<boolean>` shows search results.
+- `/search` shows search results. Its typed query parameters preserve the query,
+  author, period, language, content type, exclusions, ranking, and follows filter
+  so filtered searches can be reloaded or shared.
 - `/i/lists` shows the authenticated account's lists.
 - `/i/lists/:listId` shows a list timeline.
 - `/:handle/status/:tweetId` shows one selected post and its visible conversation.

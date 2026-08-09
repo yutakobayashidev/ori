@@ -157,11 +157,40 @@ describe('post feed route wiring', () => {
     await waitFor(() =>
       expect(usePostFeed).toHaveBeenCalledWith({
         kind: 'search',
-        query: 'AI lang:ja',
+        query: 'AI lang:ja filter:follows',
         product: 'Top',
         following: true,
       }),
     )
+  })
+
+  it('compiles button-selected search conditions from the URL', async () => {
+    await renderRoute(
+      '/search?q=TypeScript&from=%40tan_stack&since=2026-08-04&until=2026-08-11&lang=ja&content=images&excludeReplies=true&excludeReposts=true&product=Latest&following=false',
+    )
+
+    await waitFor(() =>
+      expect(usePostFeed).toHaveBeenCalledWith({
+        kind: 'search',
+        query:
+          'TypeScript from:tan_stack since:2026-08-04 until:2026-08-11 lang:ja filter:images -filter:replies -filter:retweets',
+        product: 'Latest',
+        following: false,
+      }),
+    )
+    expect(
+      screen.getByRole('button', { name: '投稿者 @tan_stack を解除' }),
+    ).toBeVisible()
+  })
+
+  it('keeps contradictory date parameters local and idle', async () => {
+    await renderRoute(
+      '/search?q=TypeScript&since=2026-08-11&until=2026-08-10&product=Latest&following=false',
+    )
+
+    fireEvent.click(screen.getByRole('button', { name: '期間' }))
+    expect(await screen.findByLabelText('開始日')).toHaveValue('2026-08-11')
+    expect(usePostFeed).toHaveBeenCalledWith(undefined)
   })
 
   it('turns a decimal status path into a deliberate thread request', async () => {

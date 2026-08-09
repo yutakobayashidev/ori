@@ -805,6 +805,7 @@ video.media {
   letter-spacing: 0;
 }
 
+.field > label:first-child,
 .field > span:first-child {
   margin-bottom: var(--space-xs);
 }
@@ -943,6 +944,175 @@ button[data-state="success"] {
   color: var(--ink);
   font-size: var(--text-sm);
   white-space: nowrap;
+}
+
+/* Hallmark · component: search filter builder · genre: editorial · theme: Garden
+ * states: default · hover · focus · active · disabled · loading · error · success
+ * contrast: pass (40–41)
+ */
+.search-query,
+.search-filter-buttons,
+.search-filter-panel,
+.active-filters,
+.search-query-preview,
+.search-error {
+  grid-column: 1 / -1;
+}
+
+.field-help {
+  min-height: 1lh;
+  margin-top: var(--space-2xs);
+  color: var(--secondary);
+  font-size: var(--text-sm);
+  font-weight: 400;
+}
+
+.search-filter-buttons,
+.active-filters {
+  display: flex;
+  flex-wrap: wrap;
+  gap: var(--space-xs);
+}
+
+.search-filter-buttons {
+  min-width: 0;
+  margin: 0;
+  padding: 0;
+  border: 0;
+}
+
+.search-filter-buttons legend,
+.search-filter-panel > legend {
+  width: 100%;
+  margin-bottom: var(--space-xs);
+  color: var(--secondary);
+  font-size: var(--text-sm);
+  font-weight: 700;
+}
+
+.search-filter-buttons .filter-button,
+.active-filters button,
+.search-filter-options > button {
+  min-height: 2.75rem;
+  padding: var(--space-xs) var(--space-sm);
+  border-color: var(--control-border);
+  background: var(--paper);
+  color: var(--ink);
+  font-size: var(--text-sm);
+}
+
+.search-filter-buttons .filter-button {
+  display: inline-flex;
+  align-items: center;
+  gap: var(--space-xs);
+}
+
+.search-filter-buttons .filter-button span {
+  color: var(--accent);
+  font-size: var(--text-xs);
+}
+
+.search-filter-buttons .filter-button[aria-expanded="true"],
+.search-filter-buttons .filter-button[data-active="true"],
+.active-filters button {
+  border-color: var(--accent);
+}
+
+.search-filter-panel {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr);
+  gap: var(--space-md);
+  min-width: 0;
+  margin: 0;
+  padding: var(--space-md);
+  border-block: var(--rule-hairline) solid var(--border);
+  background: var(--color-paper-3);
+  color: var(--ink);
+}
+
+.search-filter-panel .field input,
+.search-filter-panel .segmented label,
+.search-filter-panel button {
+  background: var(--paper);
+}
+
+.compact-field {
+  width: 100%;
+}
+
+.date-fields {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr);
+  gap: var(--space-md);
+  min-width: 0;
+}
+
+.search-filter-options,
+.search-exclusions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: var(--space-xs);
+  min-width: 0;
+  margin: 0;
+  padding: 0;
+  border: 0;
+}
+
+.search-filter-options legend,
+.search-exclusions legend {
+  width: 100%;
+  margin-bottom: var(--space-xs);
+  color: var(--secondary);
+  font-size: var(--text-sm);
+  font-weight: 700;
+}
+
+.active-filters {
+  min-height: 0;
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+
+.active-filters:empty {
+  display: none;
+}
+
+.active-filters button {
+  color: var(--accent);
+}
+
+.search-query-preview {
+  min-width: 0;
+  color: var(--secondary);
+  font-size: var(--text-sm);
+}
+
+.search-query-preview summary {
+  min-height: 2.75rem;
+  width: fit-content;
+  padding-block: var(--space-sm);
+  cursor: pointer;
+  color: var(--accent);
+  font-weight: 700;
+  white-space: nowrap;
+}
+
+.search-query-preview code {
+  display: block;
+  max-width: 100%;
+  padding: var(--space-sm) var(--space-md);
+  overflow-wrap: anywhere;
+  border-left: var(--rule-active) solid var(--border);
+  background: var(--paper);
+  color: var(--ink);
+  font-family: var(--font-mono);
+  font-size: var(--text-sm);
+  line-height: 1.6;
+}
+
+.search-error {
+  margin: 0;
 }
 
 .list-picker {
@@ -1150,6 +1320,18 @@ button[data-state="success"] {
     color: var(--color-accent-ink);
   }
 
+  .search-filter-buttons .filter-button:hover,
+  .active-filters button:hover,
+  .search-filter-options > button:hover {
+    border-color: var(--accent);
+    background: var(--surface);
+    color: var(--ink);
+  }
+
+  .active-filters button:hover {
+    color: var(--accent-hover);
+  }
+
   .list-choices a:hover {
     border-color: var(--border);
     background: var(--color-paper-3);
@@ -1168,6 +1350,14 @@ button[data-state="success"] {
 
   .intent-form:has(.segmented) .field {
     grid-column: 1 / -1;
+  }
+
+  .search-form .compact-field {
+    grid-column: auto;
+  }
+
+  .date-fields {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
   }
 
   .intent-form:not(:has(.segmented)) > button {

@@ -22,6 +22,7 @@
     "YuMincho", "Hiragino Mincho ProN", "Noto Serif JP", ui-serif, serif;
   --font-body:
     "Hiragino Sans", "Yu Gothic UI", "Noto Sans JP", ui-sans-serif, sans-serif;
+  --font-mono: ui-monospace, "SFMono-Regular", Consolas, monospace;
 
   --space-3xs: 0.125rem;
   --space-2xs: 0.25rem;
