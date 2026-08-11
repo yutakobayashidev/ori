@@ -22,7 +22,7 @@ export default defineConfig({
   },
   webServer: [
     {
-      command: `TWITTER_LITE_MOCK_RELAY_PORT=${relayPort} node e2e/mock-relay.mjs`,
+      command: `TWITTER_LITE_MOCK_RELAY_PORT=${relayPort} pnpm exec tsx e2e/mock-relay.mjs`,
       port: relayPort,
       reuseExistingServer: false,
       timeout: 120_000,

@@ -1,4 +1,5 @@
 import { createServer } from 'node:http'
+import { tweetLegacyFixture } from './fixtures/twitter.ts'
 
 const portValue = process.env.TWITTER_LITE_MOCK_RELAY_PORT
 const port = Number(portValue)
@@ -30,15 +31,11 @@ const tweetResult = (
   { conversationId = id, inReplyTo, replyCount = 1 } = {},
 ) => ({
   rest_id: id,
-  legacy: {
-    full_text: text,
-    created_at: 'Mon Jul 13 00:00:00 +0000 2026',
-    reply_count: replyCount,
-    retweet_count: 2,
-    favorite_count: 3,
-    conversation_id_str: conversationId,
-    ...(inReplyTo ? { in_reply_to_status_id_str: inReplyTo } : {}),
-  },
+  legacy: tweetLegacyFixture(id, text, {
+    conversationId,
+    inReplyTo,
+    replyCount,
+  }),
   core: {
     user_results: {
       result: {

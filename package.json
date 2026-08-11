@@ -6,12 +6,18 @@
   "engines": {
     "node": ">=22.12.0"
   },
+  "knip": {
+    "ignore": [
+      "e2e/generated/**"
+    ]
+  },
   "imports": {
     "#/*": "./src/*"
   },
   "scripts": {
     "dev": "vite dev --host 127.0.0.1 --port 3000",
     "dev:tailscale": "vite dev --host 0.0.0.0 --port 3000",
+    "generate:e2e-openapi": "orval --config orval.config.ts --formatter biome --fail-on-warnings",
     "generate-routes": "node scripts/generate-routes.mjs",
     "check:routes": "pnpm generate-routes && git diff --exit-code -- src/routeTree.gen.ts",
     "build": "vite build",
@@ -49,6 +55,8 @@
     "@vitejs/plugin-react": "6.0.3",
     "jsdom": "29.1.1",
     "knip": "6.27.0",
+    "orval": "8.24.0",
+    "tsx": "4.23.12",
     "typescript": "7.0.2",
     "vite": "8.1.4",
     "vitest": "4.1.10"

@@ -68,6 +68,7 @@ sent to the browser.
 ```bash
 nix develop -c pnpm dev
 nix develop -c pnpm dev:tailscale
+nix develop -c pnpm generate:e2e-openapi
 nix develop -c pnpm knip
 nix develop -c pnpm test
 nix develop -c pnpm test:e2e
@@ -79,8 +80,19 @@ nix develop -c pnpm start
 `test:e2e` is intentionally Nix-only and uses the system Chromium supplied by
 the dev shell. Browser tests are organized under `e2e/`: page object models
 and fixtures are shared by integration flows and Axe checks for WCAG 2.0/2.1
-A and AA. `test:live` is an explicit, opt-in smoke test that performs exactly
-one read-only Top search using the configured relay.
+A and AA. The tests keep a standalone HTTP relay so TanStack Start server
+functions and SSR requests exercise the same network boundary as production.
+The API client and fixture types are generated with Orval from a pinned
+[twitter-openapi specification](https://github.com/fa0311/twitter-openapi/commit/590dae5c9f8575abc91d3774946bfe6f23960aba);
+run `generate:e2e-openapi` only when updating that pin or the selected
+operations. Generated files are committed, so normal E2E runs do not require
+network access. E2E fixtures use the generated response types but stay
+deterministic. Runtime requests continue through Bird because its transport
+differs from the upstream OpenAPI client. Relay-only endpoints, request
+transport differences, cursors, and stateful failure scenarios remain in the
+handwritten mock server.
+`test:live` is an explicit, opt-in smoke test that performs exactly one
+read-only Top search using the configured relay.
 
 Development binds to `127.0.0.1` by default. `dev:tailscale` binds to
 `0.0.0.0`, so it exposes the app on LAN interfaces as well as Tailscale. Use it
