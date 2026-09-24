@@ -17,6 +17,7 @@ deliberate post detail link, or manually open a valid
 - Deliberate post detail pages with the visible conversation
 - Infinite conversation loading with explicit continuation retry
 - Read-only cards for text, media, quotes, articles, and quiet engagement counts
+- Experimental WebMCP tools for search, loaded-post reading, and continuation
 
 It intentionally has no home feed, recommendations, trends, notifications,
 history, account directory, or write actions.
@@ -93,6 +94,26 @@ transport differences, cursors, and stateful failure scenarios remain in the
 handwritten mock server.
 `test:live` is an explicit, opt-in smoke test that performs exactly one
 read-only Top search using the configured relay.
+
+## WebMCP prototype
+
+In a WebMCP-enabled browser, `search_posts` searches and updates the page,
+`get_loaded_posts` reads a bounded slice of the active feed, and
+`load_more_posts` appends a continuation and returns the new posts. The tools
+share the reader's query cache and active relay profile. They do not publish
+posts or change profiles.
+
+Enable `chrome://flags/#enable-webmcp-testing`, restart Chrome, and open the
+app on `http://localhost:3000` or `http://127.0.0.1:3000`. Use the
+[Model Context Tool Inspector](https://developer.chrome.com/docs/ai/webmcp#imitate_agent_chat_with_the_inspector_extension)
+to list and invoke tools. Try `search_posts` with
+`{"q":"TypeScript","lang":"ja","product":"Latest"}`.
+
+This prototype uses native `document.modelContext` through `usewebmcp`; it
+does not initialize a polyfill or provide an external MCP transport. Browsers
+without the API keep the regular reader UI. Public deployment requires the
+appropriate browser support/origin trial and a secure context. See
+[tool contracts and verification](docs/webmcp-prototype.md) for details.
 
 Development binds to `127.0.0.1` by default. `dev:tailscale` binds to
 `0.0.0.0`, so it exposes the app on LAN interfaces as well as Tailscale. Use it

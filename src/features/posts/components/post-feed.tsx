@@ -6,6 +6,7 @@ import {
 } from '../page'
 import type { Post } from '../types'
 import { type FeedRequest, PostLoadError, usePostFeed } from '../use-post-feed'
+import { useFeedTools } from '../webmcp-tools'
 import { PostCard } from './post-card'
 
 function FocalPost({ post }: { post: Post }) {
@@ -21,6 +22,7 @@ function FocalPost({ post }: { post: Post }) {
 
 export function PostFeed({ request }: { request: FeedRequest | undefined }) {
   const query = usePostFeed(request)
+  useFeedTools(request, query)
   const sentinel = useRef<HTMLDivElement>(null)
   const pages = query.data?.pages ?? []
   const focalPost =
@@ -44,7 +46,7 @@ export function PostFeed({ request }: { request: FeedRequest | undefined }) {
       ([entry]) => {
         if (entry?.isIntersecting && !requested) {
           requested = true
-          void query.fetchNextPage()
+          void query.fetchNextPage({ cancelRefetch: false })
         }
       },
       { rootMargin: '600px 0px' },

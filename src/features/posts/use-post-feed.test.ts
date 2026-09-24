@@ -4,6 +4,7 @@ import { createElement, type ReactNode } from 'react'
 import { beforeEach, describe, expect, it, vi } from 'vitest'
 import {
   createPostFeedOptions,
+  getPostFeedData,
   PostLoadError,
   usePostFeed,
 } from './use-post-feed'
@@ -226,6 +227,97 @@ describe('createPostFeedOptions', () => {
       detail: error,
       message: error.message,
     })
+  })
+})
+
+describe('getPostFeedData', () => {
+  it('reuses the visible feed without fetching a second copy', async () => {
+    const loadUser = vi
+      .fn()
+      .mockResolvedValue({ ok: true, page: { tweets: [] } })
+    const options = createPostFeedOptions(
+      { kind: 'user', target: 'yuta' },
+      loaders({ loadUser }),
+    )
+    const client = new QueryClient()
+    const visible = await client.fetchInfiniteQuery(options)
+
+    expect(await getPostFeedData(client, options)).toEqual(visible)
+    expect(loadUser).toHaveBeenCalledOnce()
+    client.clear()
+  })
+
+  it('waits for the active profile refresh instead of returning old cached posts', async () => {
+    let release = () => {}
+    const gate = new Promise<void>((resolve) => {
+      release = resolve
+    })
+    const freshPage = {
+      tweets: [
+        {
+          id: 'new-profile',
+          text: 'fresh',
+          author: { username: 'new', name: 'New' },
+        },
+      ],
+    }
+    const loadUser = vi.fn(async () => {
+      await gate
+      return { ok: true as const, page: freshPage }
+    })
+    const options = createPostFeedOptions(
+      { kind: 'user', target: 'yuta' },
+      loaders({ loadUser }),
+    )
+    const client = new QueryClient()
+    client.setQueryData(options.queryKey, {
+      pages: [{ tweets: [] }],
+      pageParams: [undefined],
+    })
+    await client.invalidateQueries({
+      queryKey: options.queryKey,
+      refetchType: 'none',
+    })
+    const refresh = client.fetchInfiniteQuery(options)
+    const resolved = vi.fn()
+    const tool = getPostFeedData(client, options).then(resolved)
+    await Promise.resolve()
+
+    expect(resolved).not.toHaveBeenCalled()
+    release()
+    await Promise.all([refresh, tool])
+    expect(resolved).toHaveBeenCalledWith({
+      pages: [freshPage],
+      pageParams: [undefined],
+    })
+    expect(loadUser).toHaveBeenCalledOnce()
+    client.clear()
+  })
+
+  it('refreshes invalidated cached data before returning it', async () => {
+    const loadUser = vi.fn().mockResolvedValue({
+      ok: true,
+      page: { tweets: [], nextCursor: 'fresh' },
+    })
+    const options = createPostFeedOptions(
+      { kind: 'user', target: 'yuta' },
+      loaders({ loadUser }),
+    )
+    const client = new QueryClient()
+    client.setQueryData(options.queryKey, {
+      pages: [{ tweets: [] }],
+      pageParams: [undefined],
+    })
+    await client.invalidateQueries({
+      queryKey: options.queryKey,
+      refetchType: 'none',
+    })
+
+    expect((await getPostFeedData(client, options)).pages[0]?.nextCursor).toBe(
+      'fresh',
+    )
+    expect(loadUser).toHaveBeenCalledOnce()
+    client.clear()
   })
 })
 

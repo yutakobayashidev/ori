@@ -1,4 +1,4 @@
-import { useInfiniteQuery } from '@tanstack/react-query'
+import { type QueryClient, useInfiniteQuery } from '@tanstack/react-query'
 import { useServerFn } from '@tanstack/react-start'
 import type { SearchProduct } from '@yuta/bird'
 import {
@@ -120,23 +120,41 @@ export function createPostFeedOptions(request: FeedRequest, loaders: Loaders) {
   }
 }
 
-export function usePostFeed(request: FeedRequest | undefined) {
+export function usePostFeedOptions() {
   const loadUser = useServerFn(loadUserPosts)
   const loadList = useServerFn(loadListPosts)
   const search = useServerFn(searchPosts)
   const thread = useServerFn(loadThreadPosts)
+  return (request: FeedRequest) =>
+    createPostFeedOptions(request, {
+      loadUser,
+      loadList,
+      search,
+      thread,
+    })
+}
+
+export function getPostFeedData(
+  client: QueryClient,
+  options: ReturnType<typeof createPostFeedOptions>,
+) {
+  const state = client.getQueryState(options.queryKey)
+  // Profile changes invalidate and refresh an existing feed. Wait for that
+  // refresh instead of returning the previous profile's cached posts.
+  return state?.fetchStatus === 'fetching' || state?.isInvalidated
+    ? client.fetchInfiniteQuery(options)
+    : client.ensureInfiniteQueryData(options)
+}
+
+export function usePostFeed(request: FeedRequest | undefined) {
+  const options = usePostFeedOptions()
   const disabled = {
     kind: 'user',
     target: '',
   } satisfies FeedRequest
 
   return useInfiniteQuery({
-    ...createPostFeedOptions(request ?? disabled, {
-      loadUser,
-      loadList,
-      search,
-      thread,
-    }),
+    ...options(request ?? disabled),
     enabled: request !== undefined,
   })
 }
