@@ -2,7 +2,7 @@ import { QueryClient, QueryClientProvider } from '@tanstack/react-query'
 import { act, fireEvent, render, screen, waitFor } from '@testing-library/react'
 import { afterEach, beforeEach, expect, it, vi } from 'vitest'
 import type { Connection } from '../connections/model'
-import type { ResearchRun } from './model'
+import type { ResearchHistoryEntry, ResearchRun } from './model'
 import { ResearchPanel } from './research-panel'
 
 const actions = vi.hoisted(() => ({
@@ -10,6 +10,7 @@ const actions = vi.hoisted(() => ({
   start: vi.fn(),
   cancel: vi.fn(),
   reset: vi.fn(),
+  select: vi.fn(),
 }))
 vi.mock('@tanstack/react-start', () => ({ useServerFn: (fn: unknown) => fn }))
 vi.mock('./server-functions', () => ({
@@ -17,6 +18,7 @@ vi.mock('./server-functions', () => ({
   startResearch: actions.start,
   cancelResearch: actions.cancel,
   resetResearch: actions.reset,
+  selectResearch: actions.select,
 }))
 
 const connection: Connection = {
@@ -38,7 +40,11 @@ const running: ResearchRun = {
   messages: [{ id: 'u1', role: 'user', text: 'WebMCPの反応' }],
   deck: { id: 'plan', title: 'WebMCP調査', columns: [] },
 }
-let current: { configured: boolean; run: ResearchRun | null }
+let current: {
+  configured: boolean
+  run: ResearchRun | null
+  history?: ResearchHistoryEntry[]
+}
 const clients: QueryClient[] = []
 class MockEventSource {
   static instances: MockEventSource[] = []
@@ -146,7 +152,7 @@ it('restores the latest plan automatically on reload and permits manual activati
   current = { configured: true, run: running }
   const view = show()
   await waitFor(() =>
-    expect(view.onOpenDeck).toHaveBeenCalledWith(running.deck, false),
+    expect(view.onOpenDeck).toHaveBeenCalledWith(running.deck, true),
   )
   fireEvent.click(
     await screen.findByRole('button', { name: '一時デッキで開く' }),
@@ -215,7 +221,7 @@ it('waits for the workspace before restoring a completed plan from the stream', 
   expect(view.onOpenDeck).not.toHaveBeenCalled()
   view.rerender(view.ui(true))
   await waitFor(() =>
-    expect(view.onOpenDeck).toHaveBeenCalledWith(running.deck, false),
+    expect(view.onOpenDeck).toHaveBeenCalledWith(running.deck, true),
   )
 })
 
@@ -514,4 +520,167 @@ it('renders assistant Markdown and forwards its citation with the current eviden
     'https://x.com/author/status/123',
     citations,
   )
+})
+
+it('opens a saved chat with its context deck and selected accounts, preserving local choices on updates', async () => {
+  const contextDeck = { id: 'past-deck', title: '以前のデッキ', columns: [] }
+  const saved: ResearchRun = {
+    ...running,
+    id: 'saved',
+    status: 'interrupted',
+    threadId: 'saved-thread',
+    connectionIds: ['second'],
+    contextDeck,
+    deck: undefined,
+    deckVersion: 0,
+    messages: [
+      {
+        id: 'past',
+        role: 'assistant',
+        text: '保存した会話\n\n[前回の引用](https://x.com/author/status/123)',
+      },
+    ],
+    citations: [
+      {
+        column: {
+          id: 'source',
+          title: '投稿元',
+          connectionId: 'second',
+          source: { platform: 'twitter', kind: 'user', target: 'author' },
+        },
+        post: {
+          key: 'twitter:123',
+          platform: 'twitter',
+          nativeId: '123',
+          url: 'https://x.com/author/status/123',
+          text: '前回の投稿',
+          author: { name: 'Author', handle: 'author' },
+        },
+      },
+    ],
+  }
+  const history: ResearchHistoryEntry[] = [
+    {
+      id: saved.id,
+      title: '以前の調査',
+      status: saved.status,
+      updatedAt: 1000,
+    },
+  ]
+  current = { configured: true, run: null, history }
+  actions.select.mockResolvedValue({ ...current, run: saved })
+  const view = show([
+    connection,
+    { ...connection, id: 'second', displayName: 'account2' },
+  ])
+  await screen.findByLabelText('チャット履歴')
+  fireEvent.change(screen.getByLabelText('メッセージ'), {
+    target: { value: '別の下書き' },
+  })
+  fireEvent.change(screen.getByLabelText('チャット履歴'), {
+    target: { value: saved.id },
+  })
+  expect(await screen.findByText('保存した会話')).toBeVisible()
+  fireEvent.click(screen.getByRole('link', { name: '前回の引用' }))
+  expect(view.onNavigateCitation).toHaveBeenCalledWith(
+    'https://x.com/author/status/123',
+    saved.citations,
+  )
+  expect(actions.select).toHaveBeenCalledWith({
+    data: { id: saved.id, currentId: null },
+  })
+  await waitFor(() =>
+    expect(view.onOpenDeck).toHaveBeenCalledWith(contextDeck, true),
+  )
+  expect(screen.getByLabelText('メッセージ')).toHaveValue('')
+  expect(screen.getByText('中断しました・続きから再開できます')).toBeVisible()
+  fireEvent.click(screen.getByText('接続アカウント · 1件'))
+  expect(screen.getByLabelText('調査用アカウント · Twitter')).not.toBeChecked()
+  expect(screen.getByLabelText('account2 · Twitter')).toBeChecked()
+  fireEvent.click(screen.getByLabelText('調査用アカウント · Twitter'))
+  act(() =>
+    MockEventSource.instances[0]?.onmessage?.({
+      data: JSON.stringify({
+        configured: true,
+        run: { ...saved, message: '更新' },
+        history,
+      }),
+    }),
+  )
+  await waitFor(() =>
+    expect(view.client.getQueryData(['research-status'])).toMatchObject({
+      run: { message: '更新' },
+    }),
+  )
+  expect(screen.getByLabelText('調査用アカウント · Twitter')).toBeChecked()
+  expect(view.onOpenDeck).toHaveBeenCalledOnce()
+  fireEvent.change(screen.getByLabelText('メッセージ'), {
+    target: { value: '続きを調べて' },
+  })
+  fireEvent.click(screen.getByRole('button', { name: '送信' }))
+  await waitFor(() =>
+    expect(actions.start).toHaveBeenCalledWith({
+      data: expect.objectContaining({
+        runId: saved.id,
+        connectionIds: ['second', 'first'],
+      }),
+    }),
+  )
+  expect(view.client.getQueryData(['research-status'])).toMatchObject({
+    history,
+  })
+})
+
+it('restores a context-only chat on reload and prevents switching during a running turn', async () => {
+  const contextDeck = { id: 'context', title: '前回の手動デッキ', columns: [] }
+  current = {
+    configured: true,
+    run: { ...running, deck: undefined, contextDeck },
+    history: [
+      {
+        id: running.id,
+        title: running.topic,
+        status: running.status,
+        updatedAt: 1000,
+      },
+    ],
+  }
+  const view = show()
+  await waitFor(() =>
+    expect(view.onOpenDeck).toHaveBeenCalledWith(contextDeck, true),
+  )
+  expect(screen.getByLabelText('チャット履歴')).toBeDisabled()
+})
+
+it('keeps newer streamed history when a chat selection response arrives late', async () => {
+  const saved = { ...running, id: 'saved', status: 'complete' as const }
+  const history: ResearchHistoryEntry[] = [
+    {
+      id: saved.id,
+      title: '保存した調査',
+      status: saved.status,
+      updatedAt: 1000,
+    },
+  ]
+  current = { configured: true, run: null, history }
+  let finish!: (snapshot: typeof current) => void
+  actions.select.mockImplementation(
+    () =>
+      new Promise<typeof current>((resolve) => {
+        finish = resolve
+      }),
+  )
+  const view = show()
+  fireEvent.change(await screen.findByLabelText('チャット履歴'), {
+    target: { value: saved.id },
+  })
+  const newer = { configured: true, run: { ...running, id: 'remote' }, history }
+  act(() =>
+    MockEventSource.instances[0]?.onmessage?.({ data: JSON.stringify(newer) }),
+  )
+  await waitFor(() =>
+    expect(view.client.getQueryData(['research-status'])).toEqual(newer),
+  )
+  await act(async () => finish({ configured: true, run: saved, history }))
+  expect(view.client.getQueryData(['research-status'])).toEqual(newer)
 })

@@ -6,6 +6,7 @@ import {
 import { PostLoadError } from '#/features/posts/use-post-feed'
 import { citationUrlKey } from '#/features/research/citation-url'
 import type { CitationTarget } from '#/features/research/use-citation-navigation'
+import { PlatformIcon } from '../platforms/platform-icon'
 import { type ColumnRegistry, useRegisterColumn } from './column-tools'
 import type { DeckColumn } from './model'
 import { ResearchPostCard } from './research-post-card'
@@ -50,7 +51,7 @@ export function ResearchColumn({
     <section className="deck-column" aria-labelledby={headingId}>
       <header className="deck-column-header">
         <div className="deck-column-title">
-          <Icon name={column.source.kind} />
+          <PlatformIcon platform={column.source.platform} />
           <h2 id={headingId}>{column.title}</h2>
           <button
             className="icon-button"
@@ -117,7 +118,10 @@ export function ResearchColumn({
           >
             {connectionLabel ?? '接続が見つかりません'}
           </span>
-          <span>{sourceDescription.label}</span>
+          <span className="deck-source-label">
+            <Icon name={column.source.kind} />
+            {sourceDescription.label}
+          </span>
         </div>
         <p className="deck-query">{sourceDescription.query}</p>
         <p className="deck-column-status" role="status">

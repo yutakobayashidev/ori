@@ -19,9 +19,18 @@ export const startResearchInput = z
 export type ResearchRun = {
   id: string
   topic: string
-  status: 'starting' | 'running' | 'complete' | 'failed' | 'cancelled'
+  status:
+    | 'starting'
+    | 'running'
+    | 'complete'
+    | 'failed'
+    | 'cancelled'
+    | 'interrupted'
   startedAt: number
   threadId?: string
+  turnId?: string
+  connectionIds?: string[]
+  contextDeck?: Deck
   deck?: Deck
   deckVersion: number
   message: string
@@ -29,6 +38,19 @@ export type ResearchRun = {
   citations: ResearchCitation[]
   reportPath?: string
   error?: string
+}
+
+export type ResearchHistoryEntry = {
+  id: string
+  title: string
+  status: ResearchRun['status']
+  updatedAt: number
+}
+
+export type ResearchSnapshot = {
+  configured: boolean
+  run: ResearchRun | null
+  history: ResearchHistoryEntry[]
 }
 
 export type ResearchCitation = { column: DeckColumn; post: ResearchPost }

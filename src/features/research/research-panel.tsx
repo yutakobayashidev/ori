@@ -7,12 +7,14 @@ import {
   isResearchActive,
   type ResearchCitation,
   type ResearchRun,
+  type ResearchSnapshot,
 } from './model'
 import { ResearchMarkdown } from './research-markdown'
 import {
   cancelResearch,
   loadResearchStatus,
   resetResearch,
+  selectResearch,
   startResearch,
 } from './server-functions'
 import './research-panel.css'
@@ -23,6 +25,7 @@ const statusNames: Record<ResearchRun['status'], string> = {
   complete: '完了',
   failed: '失敗',
   cancelled: '中止しました',
+  interrupted: '中断しました・続きから再開できます',
 }
 type ResearchInput = { topic: string; connectionIds: string[] }
 
@@ -43,6 +46,7 @@ export function ResearchPanel({
   const start = useServerFn(startResearch)
   const cancel = useServerFn(cancelResearch)
   const reset = useServerFn(resetResearch)
+  const select = useServerFn(selectResearch)
   const client = useQueryClient()
   const status = useQuery({
     queryKey: ['research-status'],
@@ -55,6 +59,7 @@ export function ResearchPanel({
   const [reconnecting, setReconnecting] = useState(false)
   const [draftResetVersion, setDraftResetVersion] = useState(0)
   const previousRunId = useRef<string | null>(null)
+  const syncedRunId = useRef<string | null>(null)
   const attemptedVersion = useRef<string | null>(null)
   const pendingTurn = useRef<{
     runId?: string
@@ -73,7 +78,7 @@ export function ResearchPanel({
   const request = useRef<{ signature: string; id: string } | null>(null)
 
   useEffect(() => {
-    if (!run && previousRunId.current) {
+    if (previousRunId.current && previousRunId.current !== run?.id) {
       setDraftResetVersion((value) => value + 1)
       request.current = null
       pendingTurn.current = null
@@ -87,10 +92,7 @@ export function ResearchPanel({
     events.onerror = () => setReconnecting(true)
     events.onmessage = (event) => {
       try {
-        const next = JSON.parse(event.data) as {
-          configured: boolean
-          run: ResearchRun | null
-        }
+        const next = JSON.parse(event.data) as ResearchSnapshot
         void client
           .cancelQueries({ queryKey: ['research-status'] })
           .then(() => {
@@ -105,17 +107,27 @@ export function ResearchPanel({
   }, [client])
 
   useEffect(() => {
-    if (!ready || !run?.deck) return
+    if (!run) {
+      syncedRunId.current = null
+      attemptedVersion.current = null
+      return
+    }
+    if (!ready) return
+    const switched = syncedRunId.current !== run.id
+    const deck = run.deck ?? (switched ? run.contextDeck : undefined)
+    if (!deck) return
+    syncedRunId.current = run.id
     const version = `${run.id}:${run.deckVersion}`
     if (attemptedVersion.current === version) return
     attemptedVersion.current = version
-    const deck = run.deck
     const turn = pendingTurn.current
     const activate =
-      !!turn &&
-      run.deckVersion > turn.version &&
-      (turn.runId ? run.id === turn.runId : run.id !== turn.previousRunId)
-    if (activate) pendingTurn.current = null
+      switched ||
+      (!!turn &&
+        run.deckVersion > turn.version &&
+        (turn.runId ? run.id === turn.runId : run.id !== turn.previousRunId))
+    if (activate && run.deck && turn && run.deckVersion > turn.version)
+      pendingTurn.current = null
     void syncDeck(deck, activate).catch(() => {
       setError(
         '調査デッキを同期できませんでした。「一時デッキで開く」から再試行できます。',
@@ -145,10 +157,10 @@ export function ResearchPanel({
         data: { ...payload, requestId: request.current.id },
       })
       request.current = null
-      client.setQueryData<{ configured: boolean; run: ResearchRun | null }>(
-        ['research-status'],
-        (existing) =>
-          existing !== beforeStart ? existing : { configured: true, run: next },
+      client.setQueryData<ResearchSnapshot>(['research-status'], (existing) =>
+        existing !== beforeStart
+          ? existing
+          : { configured: true, run: next, history: existing?.history ?? [] },
       )
       return true
     } catch {
@@ -174,6 +186,7 @@ export function ResearchPanel({
           ? {
               configured: status.data?.configured ?? true,
               run: next,
+              history: status.data?.history ?? [],
             }
           : existing,
       )
@@ -200,6 +213,25 @@ export function ResearchPanel({
     } catch {
       setError(
         '新しいチャットを開始できませんでした。会話と入力内容は残っています。もう一度お試しください。',
+      )
+    } finally {
+      setBusy(false)
+    }
+  }
+
+  async function selectChat(id: string) {
+    if (!id || id === run?.id || isResearchActive(run)) return
+    const beforeSelect = client.getQueryData(['research-status'])
+    setBusy(true)
+    setError(undefined)
+    try {
+      const next = await select({ data: { id, currentId: run?.id ?? null } })
+      client.setQueryData(['research-status'], (existing: unknown) =>
+        existing === beforeSelect ? next : existing,
+      )
+    } catch {
+      setError(
+        'チャットを開けませんでした。入力内容は残っています。もう一度お試しください。',
       )
     } finally {
       setBusy(false)
@@ -236,7 +268,25 @@ export function ResearchPanel({
         >
           新しいチャット
         </button>
-        <p>会話に合わせて右のデッキが変わります。</p>
+        {(status.data?.history?.length ?? 0) > 0 && (
+          <label className="research-history">
+            <span>チャット履歴</span>
+            <select
+              value={run?.id ?? ''}
+              disabled={busy || isResearchActive(run)}
+              onChange={(event) => void selectChat(event.target.value)}
+            >
+              <option value="" disabled>
+                新しいチャット
+              </option>
+              {status.data?.history?.map((entry) => (
+                <option key={entry.id} value={entry.id}>
+                  {entry.title}
+                </option>
+              ))}
+            </select>
+          </label>
+        )}
       </header>
       {reconnecting && (
         <p className="deck-save-status" role="status">
@@ -262,6 +312,7 @@ export function ResearchPanel({
         <p role="status">自宅のCodexへの接続が設定されていません。</p>
       ) : null}
       <ResearchConversation
+        key={`conversation:${run?.id ?? 'new'}`}
         messages={run?.messages ?? []}
         citations={run?.citations ?? []}
         onNavigateCitation={onNavigateCitation}
@@ -275,6 +326,8 @@ export function ResearchPanel({
         />
       )}
       <ResearchComposer
+        key={run?.id ?? 'new'}
+        initialConnectionIds={run?.connectionIds}
         resetVersion={draftResetVersion}
         connections={connections}
         contextTitle={contextDeck.title}
@@ -347,12 +400,14 @@ function ResearchConversation({
 }
 
 function ResearchComposer({
+  initialConnectionIds,
   resetVersion,
   connections,
   contextTitle,
   disabled,
   onSend,
 }: {
+  initialConnectionIds?: string[]
   resetVersion: number
   connections: Connection[]
   contextTitle: string
@@ -366,7 +421,9 @@ function ResearchComposer({
   useEffect(() => {
     if (resetVersion > 0) setTopic('')
   }, [resetVersion])
-  const [selected, setSelected] = useState<string[] | null>(null)
+  const [selected, setSelected] = useState<string[] | null>(
+    initialConnectionIds ?? null,
+  )
   const selectedIds =
     selected ?? available.slice(0, 6).map((connection) => connection.id)
   const id = useId()
@@ -458,6 +515,7 @@ function ResearchRunStatus({
   onCancel: () => void
   onOpenDeck: (deck: Deck) => void
 }) {
+  const deck = run.deck ?? run.contextDeck
   return (
     <section className="research-run" aria-label="調査状況">
       <p role="status">{statusNames[run.status]}</p>
@@ -479,11 +537,11 @@ function ResearchRunStatus({
             調査を中止
           </button>
         )}
-        {run.deck && (
+        {deck && (
           <button
             type="button"
             onClick={() => {
-              if (run.deck) onOpenDeck(run.deck)
+              onOpenDeck(deck)
             }}
           >
             一時デッキで開く

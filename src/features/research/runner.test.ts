@@ -6,7 +6,10 @@ import { join } from 'node:path'
 import { afterEach, beforeEach, expect, it, vi } from 'vitest'
 import type { Connection } from '../connections/model'
 import type { Deck } from '../decks/model'
+import { type AppDatabase, openDatabase } from '../storage/database.server'
 import { createResearchTools } from './agent-tools.server'
+import type { ResearchRun } from './model'
+import { createResearchStore, type ResearchStore } from './repository.server'
 import { createResearchService } from './runner.server'
 
 class FakeClient {
@@ -71,12 +74,25 @@ let service: ReturnType<typeof createResearchService>
 let clients: FakeClient[]
 let setupClient: (client: FakeClient) => void
 let fetchedText: string
+let databases: AppDatabase[]
+let store: ResearchStore
+let executedTool: ReturnType<
+  typeof vi.fn<ReturnType<typeof createResearchTools>['execute']>
+>
 beforeEach(async () => {
   directory = await mkdtemp(join(tmpdir(), 'research-runner-'))
   clients = []
   setupClient = () => {}
   fetchedText = 'WebMCP discussion'
-  service = createResearchService({
+  databases = []
+  service = restart()
+})
+function restart() {
+  const database = openDatabase(join(directory, 'research.db'))
+  databases.push(database)
+  store = createResearchStore(database)
+  return createResearchService({
+    store,
     config: () => ({
       url: 'ws://127.0.0.1:4500',
       reportRoot: directory,
@@ -96,8 +112,8 @@ beforeEach(async () => {
       clients.push(client)
       return client
     },
-    tools: (connections, onDeck, _load, options) =>
-      createResearchTools(
+    tools: (connections, onDeck, _load, options) => {
+      const tools = createResearchTools(
         connections,
         onDeck,
         async () => ({
@@ -113,12 +129,17 @@ beforeEach(async () => {
           ],
         }),
         options,
-      ),
+      )
+      executedTool = vi.fn(tools.execute)
+      return { ...tools, execute: executedTool }
+    },
   })
-})
+}
 afterEach(async () => {
   const run = service.status().run
-  if (run) await service.cancel(run.id)
+  if (run && clients.length) await service.cancel(run.id).catch(() => {})
+  for (const database of databases) database.$client.close()
+  vi.restoreAllMocks()
   await rm(directory, { recursive: true, force: true })
 })
 async function running() {
@@ -377,7 +398,7 @@ it('resumes the same conversation with fresh deck context and preserves prior me
   const client = await running()
   expect(client.calls).toHaveBeenCalledWith(
     'thread/resume',
-    expect.objectContaining({ threadId: old.threadId, excludeTurns: true }),
+    expect.objectContaining({ threadId: old.threadId }),
   )
   expect(client.calls).not.toHaveBeenCalledWith(
     'thread/start',
@@ -500,8 +521,10 @@ it('resets a completed conversation for every viewer and starts a fresh thread w
   await vi.waitFor(() => expect(service.status().run?.status).toBe('complete'))
   const listener = vi.fn()
   service.subscribe(listener)
-  expect(service.reset(first.id)).toEqual({ configured: true, run: null })
-  expect(listener).toHaveBeenLastCalledWith({ configured: true, run: null })
+  expect(service.reset(first.id)).toMatchObject({ configured: true, run: null })
+  expect(listener).toHaveBeenLastCalledWith(
+    expect.objectContaining({ configured: true, run: null }),
+  )
   expect(service.reset(first.id).run).toBeNull()
   expect(await readFile(reportPath, 'utf8')).toBe('# Saved research')
   expect(() => service.start({ ...input(), runId: first.id })).toThrow(
@@ -562,7 +585,11 @@ it('keeps the generated deck identity across turns while advancing its version',
 it('unsubscribes without stopping research and sends current state on reconnect', async () => {
   const listener = vi.fn()
   const unsubscribe = service.subscribe(listener)
-  expect(listener).toHaveBeenLastCalledWith({ configured: true, run: null })
+  expect(listener).toHaveBeenLastCalledWith({
+    configured: true,
+    run: null,
+    history: [],
+  })
   const run = service.start(input())
   const client = await running()
   unsubscribe()
@@ -604,4 +631,280 @@ it('detaches throwing listeners and isolates subscriber snapshots', async () => 
       run: expect.objectContaining({ topic: 'WebMCP', status: 'running' }),
     }),
   )
+})
+
+it('restores completed history and resumes its Codex thread with saved evidence and context', async () => {
+  const first = service.start(input())
+  const old = await running()
+  await old.callTool('open_temporary_deck', deckInput)
+  await old.callTool('fetch_column_posts', { columnId: 'column' })
+  old.notify('item/completed', {
+    threadId: old.threadId,
+    item: { id: 'saved-reply', type: 'agentMessage', text: '調査結果' },
+  })
+  old.completed()
+  await vi.waitFor(() => expect(service.status().run?.status).toBe('complete'))
+  const saved = service.status().run
+  service = restart()
+  expect(service.status().run).toEqual(saved)
+  expect(service.status().history).toEqual([
+    expect.objectContaining({
+      id: first.id,
+      title: 'WebMCP',
+      status: 'complete',
+    }),
+  ])
+  service.start({
+    ...input(),
+    runId: first.id,
+    topic: '続けて',
+    contextDeck: saved?.deck,
+  })
+  const current = await running()
+  expect(current.calls).toHaveBeenCalledWith(
+    'thread/resume',
+    expect.objectContaining({ threadId: old.threadId }),
+  )
+  expect(service.status().run?.citations).toEqual(saved?.citations)
+  expect(service.status().run?.messages).toEqual(
+    expect.arrayContaining(saved?.messages ?? []),
+  )
+  expect(service.status().run?.connectionIds).toEqual([account.id])
+  expect(service.status().run?.contextDeck).toEqual(saved?.deck)
+  expect(service.status().history[0]?.title).toBe('WebMCP')
+  expect(
+    await current.callTool('fetch_column_posts', { columnId: 'column' }),
+  ).toMatchObject({ success: true })
+})
+
+it('persists a blank new chat and lets all viewers reopen the retained conversation', async () => {
+  const first = service.start(input())
+  const client = await running()
+  client.completed()
+  await vi.waitFor(() => expect(service.status().run?.status).toBe('complete'))
+  service.reset(first.id)
+  service = restart()
+  expect(service.status().run).toBeNull()
+  expect(service.status().history).toHaveLength(1)
+  const listener = vi.fn()
+  service.subscribe(listener)
+  service.select(first.id, null)
+  expect(listener).toHaveBeenLastCalledWith(
+    expect.objectContaining({ run: expect.objectContaining({ id: first.id }) }),
+  )
+  expect(restart().status().run?.id).toBe(first.id)
+})
+
+it('rejects switching conversations while running or from a stale viewer', async () => {
+  const first = service.start(input())
+  const client = await running()
+  expect(() => service.select(first.id, first.id)).toThrow('調査中')
+  client.completed()
+  await vi.waitFor(() => expect(service.status().run?.status).toBe('complete'))
+  expect(() => service.select(first.id, null)).toThrow('別のチャット')
+  expect(() => service.select(randomUUID(), first.id)).toThrow('見つかりません')
+  expect(service.status().run?.id).toBe(first.id)
+})
+
+it('does not launch Codex when the initial conversation write fails', () => {
+  vi.spyOn(store, 'save').mockImplementation(() => {
+    throw new Error('disk full')
+  })
+  expect(() => service.start(input())).toThrow('disk full')
+  expect(clients).toHaveLength(0)
+  expect(service.status().run).toBeNull()
+})
+
+it('stops a running turn when saving streamed messages fails', async () => {
+  service.start(input())
+  const client = await running()
+  vi.spyOn(store, 'save').mockImplementation(() => {
+    throw new Error('disk full')
+  })
+  client.notify('item/agentMessage/delta', {
+    threadId: client.threadId,
+    itemId: 'reply',
+    delta: 'new text',
+  })
+  expect(service.status().run).toMatchObject({
+    status: 'failed',
+    error: expect.stringContaining('保存できません'),
+  })
+  await vi.waitFor(() => expect(client.close).toHaveBeenCalledTimes(1))
+  expect(client.calls).toHaveBeenCalledWith('turn/interrupt', {
+    threadId: client.threadId,
+    turnId: client.turnId,
+  })
+  expect(
+    store.loadActive()?.messages.some((message) => message.id === 'reply'),
+  ).toBe(false)
+})
+
+function orphanedRun(): ResearchRun {
+  return {
+    id: randomUUID(),
+    topic: 'WebMCP',
+    status: 'running',
+    startedAt: 100,
+    threadId: 'orphan-thread',
+    turnId: 'orphan-turn',
+    connectionIds: [account.id],
+    deckVersion: 0,
+    message: '調査中',
+    citations: [],
+    messages: [{ id: 'original', role: 'user', text: 'WebMCP' }],
+  }
+}
+
+it('marks an unfinished persisted turn interrupted after service restart', () => {
+  const interrupted = orphanedRun()
+  store.save(interrupted)
+  service = restart()
+  expect(service.status().run).toMatchObject({
+    ...interrupted,
+    status: 'interrupted',
+    error: expect.stringContaining('再起動'),
+  })
+  expect(store.loadActive()?.status).toBe('interrupted')
+  expect(clients).toHaveLength(0)
+})
+
+it('interrupts an orphan turn before continuing and ignores old events and tools during recovery', async () => {
+  const interrupted = orphanedRun()
+  store.save(interrupted)
+  service = restart()
+  let recoveredTool: Promise<unknown> | undefined
+  setupClient = (client) => {
+    client.calls.mockImplementation(async (method) => {
+      if (method === 'thread/resume') {
+        client.threadId = 'orphan-thread'
+        return {
+          thread: {
+            id: client.threadId,
+            turns: [{ id: 'orphan-turn', status: 'inProgress' }],
+          },
+        }
+      }
+      if (method === 'turn/interrupt') {
+        client.notify('turn/completed', {
+          threadId: client.threadId,
+          turn: { id: 'orphan-turn', status: 'interrupted' },
+        })
+        client.notify('item/completed', {
+          threadId: client.threadId,
+          item: { id: 'old-message', type: 'agentMessage', text: 'old output' },
+        })
+        recoveredTool = expect(
+          client.callTool('open_temporary_deck', deckInput),
+        ).rejects.toThrow('inactive')
+      }
+      if (method === 'turn/start') return { turn: { id: client.turnId } }
+      return {}
+    })
+  }
+  service.start({ ...input(), runId: interrupted.id })
+  const client = await running()
+  await recoveredTool
+  expect(client.calls.mock.calls.map(([method]) => method)).toEqual([
+    'thread/resume',
+    'turn/interrupt',
+    'turn/start',
+  ])
+  expect(client.calls).toHaveBeenCalledWith('turn/interrupt', {
+    threadId: 'orphan-thread',
+    turnId: 'orphan-turn',
+  })
+  expect(
+    service
+      .status()
+      .run?.messages.some((message) => message.id === 'old-message'),
+  ).toBe(false)
+  expect(service.status().run?.deck).toBeUndefined()
+  client.notify('turn/completed', {
+    threadId: client.threadId,
+    turn: { id: 'orphan-turn', status: 'interrupted' },
+  })
+  client.notify('item/agentMessage/delta', {
+    threadId: client.threadId,
+    turnId: 'orphan-turn',
+    itemId: 'late-orphan',
+    delta: 'late old output',
+  })
+  client.notify('item/completed', {
+    threadId: client.threadId,
+    turnId: 'orphan-turn',
+    item: { id: 'late-orphan', type: 'agentMessage', text: 'late old output' },
+  })
+  expect(service.status().run?.status).toBe('running')
+  expect(
+    service
+      .status()
+      .run?.messages.some((message) => message.id === 'late-orphan'),
+  ).toBe(false)
+  client.completed()
+  await vi.waitFor(() => expect(service.status().run?.status).toBe('complete'))
+})
+
+it('does not execute a requested tool when its initial activity cannot be saved', async () => {
+  service.start(input())
+  const client = await running()
+  vi.spyOn(store, 'save').mockImplementation(() => {
+    throw new Error('disk full')
+  })
+  await expect(
+    client.callTool('open_temporary_deck', deckInput),
+  ).rejects.toThrow('inactive')
+  expect(executedTool).not.toHaveBeenCalled()
+  expect(service.status().run?.status).toBe('failed')
+  expect(service.status().run?.deck).toBeUndefined()
+  await vi.waitFor(() => expect(client.close).toHaveBeenCalledTimes(1))
+})
+
+it.each([
+  { status: 'completed', continues: true },
+  { status: 'inProgress', continues: false },
+])('rechecks an orphan after a failed interrupt: $status', async ({
+  status,
+  continues,
+}) => {
+  const interrupted = orphanedRun()
+  store.save(interrupted)
+  service = restart()
+  setupClient = (client) => {
+    client.calls.mockImplementation(async (method) => {
+      if (method === 'thread/resume') {
+        client.threadId = interrupted.threadId as string
+        return {
+          thread: {
+            id: client.threadId,
+            turns: [{ id: 'orphan-turn', status: 'inProgress' }],
+          },
+        }
+      }
+      if (method === 'turn/interrupt')
+        throw new Error('turn is not interruptible')
+      if (method === 'thread/read')
+        return {
+          thread: {
+            id: client.threadId,
+            turns: [{ id: 'orphan-turn', status }],
+          },
+        }
+      if (method === 'turn/start') return { turn: { id: client.turnId } }
+      return {}
+    })
+  }
+  service.start({ ...input(), runId: interrupted.id })
+  await vi.waitFor(() =>
+    expect(service.status().run?.status).toBe(continues ? 'running' : 'failed'),
+  )
+  const client = clients[0]
+  expect.assert.isDefined(client)
+  expect(client.calls).toHaveBeenCalledWith('thread/read', {
+    threadId: interrupted.threadId,
+    includeTurns: true,
+  })
+  expect(
+    client.calls.mock.calls.some(([method]) => method === 'turn/start'),
+  ).toBe(continues)
 })

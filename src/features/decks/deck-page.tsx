@@ -214,11 +214,6 @@ export function DeckPage() {
           </button>
         </div>
       </div>
-      {!deck.persisted && ready ? (
-        <p className="deck-save-status">
-          一時ビューです。再読み込みやタブを閉じると失われます。
-        </p>
-      ) : null}
       {saving ? (
         <p className="deck-save-status" role="status">
           保存しています…

@@ -12,6 +12,7 @@ bound to a connection account, so platforms and multiple accounts work side by s
 - Native X search syntax, Top/Latest ranking, and optional `filter:follows`
 - List discovery for the profile selected in the column editor
 - Column editing, ordering, deletion/undo, manual refresh, and cursor pagination
+- Platform logos in column headers distinguish Twitter and Mastodon at a glance
 - SQLite-backed shared decks, revision conflicts, and device-local active selection
 - Temporary views for AI exploration, with explicit save and temporary copies
 - Server-only encrypted Mastodon credentials and Tailscale owner access
@@ -19,6 +20,8 @@ bound to a connection account, so platforms and multiple accounts work side by s
 - Experimental WebMCP tools to manage decks and read or paginate their columns
 - Prototype: chat with a resident home Codex beside a live deck, reuse existing
   decks and write cited Markdown research reports on the host
+- Saved chat history with deck, account and citation restoration across devices
+  and backend restarts
 
 Both `/` and `/deck` open the deck workspace. The separate reader, search,
 list, user-profile, and conversation routes have been removed. Original-post
@@ -104,10 +107,12 @@ accounts' lists before planning new searches, then read relevant list columns
 for evidence. Follow-ups can reuse catalogs already fetched in the conversation.
 Manual deck creation and column editing remain
 available. The backend handles tools even when the browser is closed.
-Use **新しいチャット** to clear the current conversation and start a fresh Codex
+Use **新しいチャット** to leave the current conversation and start a fresh Codex
 thread with your next message. The open deck and host reports remain available.
 If a turn is running, stop it first. The conversation reset is shared across
-open devices; previous conversations are not listed in this prototype.
+open devices. **チャット履歴** reopens saved conversations with their account
+selection, deck and citations; the next message resumes the same Codex thread.
+SQLite stores conversation snapshots and the active conversation selection.
 Each turn is limited to 6 columns, 12 upstream requests shared between list
 discovery and post retrieval (at most 20 posts per fetch), and 15 minutes.
 The prototype accepts up to 100 messages per backend process.
@@ -120,8 +125,8 @@ with matching source and account settings, creating a temporary citation deck
 when needed. These captured posts are labeled and do not change feed pagination
 or reveal sensitive content automatically. Other links still open externally;
 Ctrl/Cmd-click on a citation also opens the original site.
-Citation metadata stays with the in-memory conversation across reconnects and
-follow-up messages. It is not saved in SQLite. Markdown HTML is not executed and
+Citation metadata stays with the saved conversation across reconnects,
+follow-up messages and server restarts. Markdown HTML is not executed and
 Markdown images are rendered as links.
 Reopening the page receives the latest state and restores the temporary deck.
 Later updates modify the same temporary view; they do not overwrite saved decks
@@ -131,15 +136,16 @@ to persist a deck. The agent and visible columns currently fetch posts separatel
 Codex writes `<report root>/<run ID>/report.md` using its workspace file tools.
 The UI displays its host path after validating the file. A conversation or deck
 edit can finish without producing a report. Citation quality is model output,
-not independently verified. No research-history or snapshot tables are added;
-report contents are not stored in the app DB. Only the latest conversation is shown.
+not independently verified. Report contents remain on the host filesystem;
+the app DB stores the conversation, thread ID, deck context and citation metadata.
 
 Browser disconnection does not cancel research; reconnecting restores the latest
 state through `/api/research/events`, under the same owner access checks as the
-rest of the app. The app keeps run state in
-memory; backend/process restart recovery is not implemented. A backend failure
-can leave Codex work unfinished and dynamic tools unavailable; files already
-written remain. Cancellation is explicit. The launcher and report directory must
+rest of the app. After a backend restart, unfinished turns appear as interrupted;
+sending another message resumes the same thread. Before starting that message,
+the backend checks the resumed thread and interrupts any orphaned active turn.
+It does not automatically rerun interrupted requests. Files already written remain.
+Cancellation is explicit. The launcher and report directory must
 run under a user able to write those files. NixOS DynamicUser service integration
 and dedicated service credentials are outside this prototype.
 
@@ -173,9 +179,10 @@ visible. Conflicting revisions are rejected. Only the active deck is rendered
 and fetched; posts and cursors are not archived. The active selection stays
 local to the device.
 
-AI-created decks start as temporary views in the current tab. Save a view to
-share it across devices, or make a temporary copy of a saved deck to experiment.
-Temporary views disappear on reload or navigation, including OAuth redirects.
+AI-created decks open as temporary views reconstructed from their saved chat
+on another device or after reload. Save a view to add it to the independent deck
+library, or make a temporary copy of a saved deck to experiment.
+Other unsaved temporary edits disappear on reload or navigation, including OAuth redirects.
 Existing version-2 browser decks have an explicit import action; invalid older
 data is left untouched. See [the deck model and persistence contract](docs/research-decks.md).
 

@@ -23,17 +23,35 @@
   margin: 0;
   font-size: 1rem;
 }
-.research-heading p {
-  width: 100%;
-}
 .research-heading button {
   font-size: 0.75rem;
 }
-.research-heading p,
 .research-context {
   margin: 0.5rem 0 0;
   color: var(--secondary);
   font-size: 0.75rem;
+}
+.research-history {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+  width: 100%;
+  min-width: 0;
+  font-size: 0.75rem;
+  color: var(--secondary);
+}
+.research-history span {
+  flex-shrink: 0;
+}
+.research-history select {
+  flex: 1;
+  min-width: 0;
+  font-size: 0.75rem;
+  color: var(--ink);
+  background: var(--canvas);
+  border: 1px solid var(--control-border);
+  border-radius: 0.25rem;
+  padding: 0.4rem;
 }
 .research-panel > p {
   padding: 0.5rem 1rem;
@@ -194,9 +212,6 @@
   .research-heading {
     padding: 0.5rem 0.75rem;
   }
-  .research-heading p {
-    display: none;
-  }
   .research-conversation {
     flex: 1 0 80px;
     min-height: 80px;
@@ -206,9 +221,6 @@
   }
   .research-run {
     flex-shrink: 0;
-  }
-  .deck-toolbar .brand {
-    display: none;
   }
   .deck-toolbar > button:last-child {
     width: 100%;

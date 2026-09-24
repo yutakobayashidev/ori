@@ -7,9 +7,10 @@ sources, opens a temporary deck, reads posts and writes a cited Markdown report
 on the host. Twitter Lite provides the connected-account and deck tools; the
 agent owns research and report writing.
 
-Do not add research-history, snapshot or report tables. Existing SQLite storage
-continues to own saved deck definitions and account credentials. Saving a
-temporary deck remains an explicit user action.
+SQLite stores conversation snapshots and the selected conversation alongside
+saved deck definitions and account credentials. Reports remain host Markdown;
+their contents are not copied into the DB. Adding a temporary deck to the saved
+deck library remains an explicit user action.
 
 ## Proposed first implementation
 
@@ -17,7 +18,7 @@ temporary deck remains an explicit user action.
 2. Start one home Codex task with a dedicated output directory.
 3. Supply tools for connection discovery, temporary deck creation and bounded
    post retrieval using the existing validators and platform services.
-4. Keep execution status and the latest generated deck in process memory. SSE
+4. Save conversation state and the latest generated deck in SQLite. SSE
    sends the current snapshot on connection and pushes subsequent changes.
    Reopened pages restore the temporary view; later definitions update the same
    view. Closing that view does not delete the report or stop the agent.
@@ -42,9 +43,10 @@ is necessary.
 - Configure a dedicated report root and Codex authentication store. Preserve
   refreshed authentication for the service; do not put credentials in prompts
   or copy application secrets into the child environment.
-- Keep manual execution bounded and cancellable. Process restarts end in-memory
-  tasks; completed Markdown files remain on disk. No durable queue or automatic
-  restart is required.
+- Keep manual execution bounded and cancellable. After restart, unfinished
+  conversations restore as interrupted. The next user message resumes the same
+  Codex thread after stopping any surviving orphan turn. No automatic rerun or
+  durable job queue is added.
 
 ## Conversation workspace
 
@@ -85,8 +87,18 @@ The chat header can reset an idle conversation. The next message starts a new
 Codex thread while retaining the browser's current deck as context. Reset pushes
 an empty conversation to every subscriber, preserves host reports and does not
 delete deck definitions. Active turns must be stopped first; a stale reset must
-not clear a newer conversation started on another device. This does not add a
-conversation-history UI.
+not clear a newer conversation started on another device. The history selector
+can reopen previous conversations while idle, restoring the generated deck (or
+last supplied deck context), selected accounts and citations. Selection is shared
+through SSE. Stale selections are rejected just like stale resets.
+
+`research_sessions` stores the full public conversation snapshot and summary
+metadata; `research_state` stores the selected conversation, including an explicit
+blank selection for new chat. State is written before starting Codex and before
+publishing updates. DB write failures stop research and surface a save error.
+On restore, formerly active sessions become interrupted. `thread/resume` restores
+Codex's persisted dynamic tools. Recovery suppresses old turn notifications and
+tool calls, interrupts a still-running old turn, then starts the new message.
 
 ## Markdown and source navigation
 
@@ -96,9 +108,9 @@ regular click on a known post navigates within the deck, while modified clicks
 and unrelated URLs retain external navigation.
 
 Successful agent post fetches capture the exact column definition and a public
-post projection in the in-memory conversation. The projection excludes raw
+post projection in the saved conversation. The projection excludes raw
 provider responses, HTML, media and account credentials. References are retained
-across turns, updated per source/account/post identity and cleared by new chat.
+across turns, updated per source/account/post identity and retained in chat history.
 The agent is instructed to cite exact returned post URLs in Markdown.
 
 Navigation prefers a loaded card, then a workspace column with the same source
@@ -259,3 +271,18 @@ be handled by the backend so research can continue without the initiating tab.
   Closing and reopening the page preserved working citation navigation.
 - react-markdown 10.1.0 and remark-gfm 4.0.1 were added with the user's approval.
   The pnpm dependency hash was updated and the x86_64-linux Nix package built.
+
+## Conversation persistence verification
+
+- SQLite repository tests reopen file-backed databases and verify conversation,
+  deck, account, citation and active-selection restoration, plus transaction rollback.
+- Runner tests recreate the service against the same database, resume its thread,
+  reject stale history switches, interrupt orphan turns and reject late orphan
+  events. Failed writes prevent new execution or stop further tool calls.
+- 52 desktop/mobile E2E cases passed. The final focused research suite passed
+  120 tests; typecheck, lint, knip and Nix packaging passed.
+- An actual Codex run captured 20 Twitter posts. A fresh Node process restored
+  that conversation and used the same Codex thread and dynamic tools to add a
+  second column, retaining all citations. Separate desktop/mobile browser
+  contexts restored the saved chat, navigated citations, shared history selection
+  through SSE and retained blank-new-chat selection across reload.

@@ -115,9 +115,6 @@
   align-items: center;
   gap: var(--space-xs);
 }
-.deck-column-title > svg {
-  color: var(--accent);
-}
 .deck-column h2 {
   flex: 1;
   min-width: 0;
@@ -139,6 +136,15 @@
 .deck-column-label span {
   min-width: 0;
   overflow-wrap: anywhere;
+}
+.deck-source-label {
+  display: inline-flex;
+  align-items: center;
+  gap: var(--space-2xs);
+}
+.deck-source-label svg {
+  width: 14px;
+  height: 14px;
 }
 .deck-query {
   margin: var(--space-2xs) 0;

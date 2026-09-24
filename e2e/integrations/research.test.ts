@@ -28,8 +28,8 @@ test('pushes the current research snapshot on each SSE connection', async ({
     return [await connect(), await connect()]
   })
   expect(snapshots).toEqual([
-    { configured: false, run: null },
-    { configured: false, run: null },
+    { configured: false, run: null, history: [] },
+    { configured: false, run: null, history: [] },
   ])
 })
 

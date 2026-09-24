@@ -84,6 +84,12 @@ content. Temporary views disappear on reload or navigation, including OAuth
 redirects. Only definitions are saved: posts, cursors, and scroll positions
 are not archived.
 
+Research chats separately retain the agent-generated deck and last supplied
+deck context. Reopening a saved chat reconstructs a temporary view, including
+on another device or after a server restart. Chat citations retain a limited
+post projection for source navigation; this does not persist the deck's feed
+cache, pagination cursors, scroll positions or unsent manual edits.
+
 The UI offers an explicit, one-time import of valid version-2 data from
 `twitter-lite-research-deck` in localStorage. It resolves old relay profile
 names to connection IDs and creates new saved deck IDs transactionally. A

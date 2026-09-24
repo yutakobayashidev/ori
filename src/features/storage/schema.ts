@@ -7,6 +7,7 @@ import {
   text,
   uniqueIndex,
 } from 'drizzle-orm/sqlite-core'
+import type { ResearchRun } from '../research/model'
 
 const timestamps = {
   createdAt: integer('created_at').notNull(),
@@ -125,3 +126,23 @@ export const legacyImports = sqliteTable('legacy_imports', {
   deckIds: text('deck_ids', { mode: 'json' }).$type<string[]>().notNull(),
   createdAt: integer('created_at').notNull(),
 })
+
+export const researchSessions = sqliteTable('research_sessions', {
+  id: text('id').primaryKey(),
+  title: text('title').notNull(),
+  status: text('status').$type<ResearchRun['status']>().notNull(),
+  updatedAt: integer('updated_at').notNull(),
+  snapshot: text('snapshot', { mode: 'json' }).$type<ResearchRun>().notNull(),
+})
+
+export const researchState = sqliteTable(
+  'research_state',
+  {
+    id: integer('id').primaryKey(),
+    activeSessionId: text('active_session_id').references(
+      () => researchSessions.id,
+      { onDelete: 'set null' },
+    ),
+  },
+  (table) => [check('research_state_singleton', sql`${table.id} = 1`)],
+)

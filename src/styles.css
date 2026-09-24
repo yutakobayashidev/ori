@@ -66,24 +66,7 @@ a:active {
   border-right: var(--rule-hairline) solid var(--border);
   overflow-y: auto;
 }
-.brand {
-  display: flex;
-  align-items: center;
-  gap: var(--space-xs);
-  margin: 0;
-  color: var(--ink);
-  font-family: var(--font-display);
-  font-size: var(--text-md);
-  font-weight: 750;
-  letter-spacing: -0.035em;
-  text-decoration: none;
-  white-space: nowrap;
-}
 svg {
-  flex-shrink: 0;
-}
-.brand svg {
-  color: var(--accent);
   flex-shrink: 0;
 }
 .sidebar-note {
@@ -133,10 +116,6 @@ h1 {
     border-right: 0;
     border-bottom: var(--rule-hairline) solid var(--border);
   }
-  .brand {
-    font-size: var(--text-sm);
-  }
-  .brand span,
   .sidebar-note {
     display: none;
   }

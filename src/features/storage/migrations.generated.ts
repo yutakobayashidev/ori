@@ -33,4 +33,13 @@ export const migrations = [
     folderMillis: 1790234736939,
     hash: 'b5e37346de551e36b3803ce756f9fb449c451ad9e120bdfa584b7db34037f805',
   },
+  {
+    sql: [
+      'CREATE TABLE `research_sessions` (\n\t`id` text PRIMARY KEY NOT NULL,\n\t`title` text NOT NULL,\n\t`status` text NOT NULL,\n\t`updated_at` integer NOT NULL,\n\t`snapshot` text NOT NULL\n);\n',
+      '\nCREATE TABLE `research_state` (\n\t`id` integer PRIMARY KEY NOT NULL,\n\t`active_session_id` text,\n\tFOREIGN KEY (`active_session_id`) REFERENCES `research_sessions`(`id`) ON UPDATE no action ON DELETE set null,\n\tCONSTRAINT "research_state_singleton" CHECK("research_state"."id" = 1)\n);\n',
+    ],
+    bps: true,
+    folderMillis: 1790242505709,
+    hash: '5b74e60a806df54dc3c6897aa84305b80a3b097dd70cd6cf1feebcfd3b72a135',
+  },
 ]

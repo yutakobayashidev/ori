@@ -1,5 +1,3 @@
-import { Icon } from './icon'
-
 export function AppShell({
   sidebar,
   researchChat,
@@ -14,9 +12,6 @@ export function AppShell({
       {researchChat}
       <section className="reader">
         <section className="deck-toolbar" aria-label="デッキ管理">
-          <p className="brand" title="Twitter Lite">
-            <Icon name="columns" />
-          </p>
           {sidebar}
         </section>
         {children}
