@@ -103,6 +103,10 @@ accounts' lists before planning new searches, then read relevant list columns
 for evidence. Follow-ups can reuse catalogs already fetched in the conversation.
 Manual deck creation and column editing remain
 available. The backend handles tools even when the browser is closed.
+Use **新しいチャット** to clear the current conversation and start a fresh Codex
+thread with your next message. The open deck and host reports remain available.
+If a turn is running, stop it first. The conversation reset is shared across
+open devices; previous conversations are not listed in this prototype.
 Each turn is limited to 6 columns, 12 upstream requests shared between list
 discovery and post retrieval (at most 20 posts per fetch), and 15 minutes.
 The prototype accepts up to 100 messages per backend process.

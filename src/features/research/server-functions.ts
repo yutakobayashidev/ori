@@ -20,3 +20,10 @@ export const cancelResearch = createServerFn({ method: 'POST' })
     const { researchService } = await import('./runner.server')
     return researchService().cancel(data.id)
   })
+
+export const resetResearch = createServerFn({ method: 'POST' })
+  .validator(z.object({ id: z.string().uuid() }).strict())
+  .handler(async ({ data }) => {
+    const { researchService } = await import('./runner.server')
+    return researchService().reset(data.id)
+  })

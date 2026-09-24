@@ -339,6 +339,20 @@ export function createResearchService(
 
   return {
     status: snapshot,
+    reset(id: string) {
+      if (isResearchActive(run) || state?.stopping)
+        throw new Error(
+          '調査中です。中止してから新しいチャットを開始してください。',
+        )
+      if (run && run.id !== id)
+        throw new Error(
+          '別のチャットが開かれています。最新の状態を確認してください。',
+        )
+      run = null
+      state = undefined
+      emit()
+      return snapshot()
+    },
     subscribe(listener: (snapshot: ResearchSnapshot) => void) {
       listeners.add(listener)
       publish(listener)

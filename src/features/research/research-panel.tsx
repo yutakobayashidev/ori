@@ -7,6 +7,7 @@ import { isResearchActive, type ResearchRun } from './model'
 import {
   cancelResearch,
   loadResearchStatus,
+  resetResearch,
   startResearch,
 } from './server-functions'
 import './research-panel.css'
@@ -34,6 +35,7 @@ export function ResearchPanel({
   const fetchStatus = useServerFn(loadResearchStatus)
   const start = useServerFn(startResearch)
   const cancel = useServerFn(cancelResearch)
+  const reset = useServerFn(resetResearch)
   const client = useQueryClient()
   const status = useQuery({
     queryKey: ['research-status'],
@@ -44,6 +46,8 @@ export function ResearchPanel({
   const [busy, setBusy] = useState(false)
   const [error, setError] = useState<string>()
   const [reconnecting, setReconnecting] = useState(false)
+  const [draftResetVersion, setDraftResetVersion] = useState(0)
+  const previousRunId = useRef<string | null>(null)
   const attemptedVersion = useRef<string | null>(null)
   const pendingTurn = useRef<{
     runId?: string
@@ -60,6 +64,15 @@ export function ResearchPanel({
     [onOpenDeck],
   )
   const request = useRef<{ signature: string; id: string } | null>(null)
+
+  useEffect(() => {
+    if (!run && previousRunId.current) {
+      setDraftResetVersion((value) => value + 1)
+      request.current = null
+      pendingTurn.current = null
+    }
+    previousRunId.current = run?.id ?? null
+  }, [run])
 
   useEffect(() => {
     const events = new EventSource('/api/research/events')
@@ -128,9 +141,7 @@ export function ResearchPanel({
       client.setQueryData<{ configured: boolean; run: ResearchRun | null }>(
         ['research-status'],
         (existing) =>
-          existing !== beforeStart && existing?.run?.id === next.id
-            ? existing
-            : { configured: true, run: next },
+          existing !== beforeStart ? existing : { configured: true, run: next },
       )
       return true
     } catch {
@@ -146,16 +157,43 @@ export function ResearchPanel({
 
   async function stop() {
     if (!run) return
+    const beforeCancel = client.getQueryData(['research-status'])
     setBusy(true)
     setError(undefined)
     try {
       const next = await cancel({ data: { id: run.id } })
-      client.setQueryData(['research-status'], {
-        configured: status.data?.configured ?? true,
-        run: next,
-      })
+      client.setQueryData(['research-status'], (existing: unknown) =>
+        existing === beforeCancel
+          ? {
+              configured: status.data?.configured ?? true,
+              run: next,
+            }
+          : existing,
+      )
     } catch {
       setError('調査を中止できませんでした。もう一度お試しください。')
+    } finally {
+      setBusy(false)
+    }
+  }
+
+  async function newChat() {
+    if (!run || isResearchActive(run)) return
+    const beforeReset = client.getQueryData(['research-status'])
+    setBusy(true)
+    setError(undefined)
+    try {
+      const next = await reset({ data: { id: run.id } })
+      client.setQueryData(['research-status'], (existing: unknown) =>
+        existing === beforeReset ? next : existing,
+      )
+      request.current = null
+      pendingTurn.current = null
+      setDraftResetVersion((value) => value + 1)
+    } catch {
+      setError(
+        '新しいチャットを開始できませんでした。会話と入力内容は残っています。もう一度お試しください。',
+      )
     } finally {
       setBusy(false)
     }
@@ -179,6 +217,18 @@ export function ResearchPanel({
     <aside className="research-panel" aria-label="調査チャット">
       <header className="research-heading">
         <h2>調査チャット</h2>
+        <button
+          type="button"
+          disabled={busy || !run || isResearchActive(run)}
+          title={
+            isResearchActive(run)
+              ? '調査を中止してから新しいチャットを開始できます'
+              : undefined
+          }
+          onClick={() => void newChat()}
+        >
+          新しいチャット
+        </button>
         <p>会話に合わせて右のデッキが変わります。</p>
       </header>
       {reconnecting && (
@@ -214,6 +264,7 @@ export function ResearchPanel({
         />
       )}
       <ResearchComposer
+        resetVersion={draftResetVersion}
         connections={connections}
         contextTitle={contextDeck.title}
         disabled={
@@ -272,11 +323,13 @@ function ResearchConversation({
 }
 
 function ResearchComposer({
+  resetVersion,
   connections,
   contextTitle,
   disabled,
   onSend,
 }: {
+  resetVersion: number
   connections: Connection[]
   contextTitle: string
   disabled: boolean
@@ -286,6 +339,9 @@ function ResearchComposer({
     (connection) => connection.status === 'connected',
   )
   const [topic, setTopic] = useState('')
+  useEffect(() => {
+    if (resetVersion > 0) setTopic('')
+  }, [resetVersion])
   const [selected, setSelected] = useState<string[] | null>(null)
   const selectedIds =
     selected ?? available.slice(0, 6).map((connection) => connection.id)

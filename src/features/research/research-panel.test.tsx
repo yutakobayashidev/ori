@@ -9,12 +9,14 @@ const actions = vi.hoisted(() => ({
   status: vi.fn(),
   start: vi.fn(),
   cancel: vi.fn(),
+  reset: vi.fn(),
 }))
 vi.mock('@tanstack/react-start', () => ({ useServerFn: (fn: unknown) => fn }))
 vi.mock('./server-functions', () => ({
   loadResearchStatus: actions.status,
   startResearch: actions.start,
   cancelResearch: actions.cancel,
+  resetResearch: actions.reset,
 }))
 
 const connection: Connection = {
@@ -373,4 +375,92 @@ it('selects newly loaded connected accounts until the user changes their selecti
     target: { value: '調べて' },
   })
   expect(screen.getByRole('button', { name: '送信' })).toBeEnabled()
+})
+
+it('starts a new chat without changing the deck and clears the draft only after success', async () => {
+  current = {
+    configured: true,
+    run: { ...running, status: 'complete', threadId: 'old-thread' },
+  }
+  actions.reset
+    .mockRejectedValueOnce(new Error('offline'))
+    .mockResolvedValue({ configured: true, run: null })
+  const view = show()
+  await waitFor(() =>
+    expect(
+      screen.getByRole('button', { name: '新しいチャット' }),
+    ).toBeEnabled(),
+  )
+  fireEvent.change(screen.getByLabelText('メッセージ'), {
+    target: { value: '下書き' },
+  })
+  fireEvent.click(screen.getByRole('button', { name: '新しいチャット' }))
+  expect(await screen.findByRole('alert')).toHaveTextContent(
+    '会話と入力内容は残っています',
+  )
+  expect(screen.getByLabelText('メッセージ')).toHaveValue('下書き')
+  const callsBeforeReset = view.onOpenDeck.mock.calls.length
+  fireEvent.click(screen.getByRole('button', { name: '新しいチャット' }))
+  await waitFor(() =>
+    expect(screen.getByLabelText('メッセージ')).toHaveValue(''),
+  )
+  expect(screen.queryByText('WebMCPの反応')).toBeNull()
+  expect(view.onOpenDeck).toHaveBeenCalledTimes(callsBeforeReset)
+  expect(screen.getByText('手動デッキ')).toBeVisible()
+  fireEvent.change(screen.getByLabelText('メッセージ'), {
+    target: { value: '新しい話題' },
+  })
+  fireEvent.click(screen.getByRole('button', { name: '送信' }))
+  await waitFor(() => expect(actions.start).toHaveBeenCalledOnce())
+  expect(actions.start.mock.calls[0]?.[0].data).not.toHaveProperty('runId')
+  expect(actions.reset).toHaveBeenCalledWith({ data: { id: running.id } })
+})
+
+it('disables new chat during a running turn and receives another device reset over SSE', async () => {
+  current = { configured: true, run: running }
+  const view = show()
+  await screen.findByText('WebMCPの反応')
+  expect(screen.getByRole('button', { name: '新しいチャット' })).toBeDisabled()
+  const callsBeforeReset = view.onOpenDeck.mock.calls.length
+  act(() =>
+    MockEventSource.instances[0]?.onmessage?.({
+      data: JSON.stringify({ configured: true, run: null }),
+    }),
+  )
+  await waitFor(() => expect(screen.queryByText('WebMCPの反応')).toBeNull())
+  expect(view.onOpenDeck).toHaveBeenCalledTimes(callsBeforeReset)
+  expect(actions.reset).not.toHaveBeenCalled()
+})
+
+it('does not let a late reset response erase a newer streamed conversation', async () => {
+  current = { configured: true, run: { ...running, status: 'complete' } }
+  let finish!: (snapshot: typeof current) => void
+  actions.reset.mockImplementation(
+    () =>
+      new Promise<typeof current>((resolve) => {
+        finish = resolve
+      }),
+  )
+  const view = show()
+  await waitFor(() =>
+    expect(
+      screen.getByRole('button', { name: '新しいチャット' }),
+    ).toBeEnabled(),
+  )
+  fireEvent.click(screen.getByRole('button', { name: '新しいチャット' }))
+  const newer = {
+    configured: true,
+    run: {
+      ...running,
+      id: 'new-run',
+      messages: [{ id: 'new-user', role: 'user', text: '別端末の新しい話題' }],
+    },
+  }
+  act(() =>
+    MockEventSource.instances[0]?.onmessage?.({ data: JSON.stringify(newer) }),
+  )
+  await screen.findByText('別端末の新しい話題')
+  await act(async () => finish({ configured: true, run: null }))
+  expect(view.client.getQueryData(['research-status'])).toEqual(newer)
+  expect(screen.getByText('別端末の新しい話題')).toBeVisible()
 })

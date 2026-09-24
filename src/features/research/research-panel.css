@@ -11,12 +11,23 @@
   overflow: hidden;
 }
 .research-heading {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  flex-wrap: wrap;
+  gap: 0.5rem;
   padding: 1rem;
   border-bottom: 1px solid var(--border);
 }
 .research-heading h2 {
   margin: 0;
   font-size: 1rem;
+}
+.research-heading p {
+  width: 100%;
+}
+.research-heading button {
+  font-size: 0.75rem;
 }
 .research-heading p,
 .research-context {

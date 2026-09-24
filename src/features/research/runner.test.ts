@@ -1,6 +1,6 @@
 // @vitest-environment node
 import { randomUUID } from 'node:crypto'
-import { mkdtemp, rm, writeFile } from 'node:fs/promises'
+import { mkdtemp, readFile, rm, writeFile } from 'node:fs/promises'
 import { tmpdir } from 'node:os'
 import { join } from 'node:path'
 import { afterEach, beforeEach, expect, it, vi } from 'vitest'
@@ -416,6 +416,45 @@ it('rejects unknown continuation IDs', () => {
   expect(() => service.start({ ...input(), runId: randomUUID() })).toThrow(
     '続ける会話が見つかりません',
   )
+})
+
+it('resets a completed conversation for every viewer and starts a fresh thread without deleting its report', async () => {
+  const first = service.start(input())
+  const old = await running()
+  const reportPath = join(directory, first.id, 'report.md')
+  await writeFile(reportPath, '# Saved research')
+  old.completed()
+  await vi.waitFor(() => expect(service.status().run?.status).toBe('complete'))
+  const listener = vi.fn()
+  service.subscribe(listener)
+  expect(service.reset(first.id)).toEqual({ configured: true, run: null })
+  expect(listener).toHaveBeenLastCalledWith({ configured: true, run: null })
+  expect(service.reset(first.id).run).toBeNull()
+  expect(await readFile(reportPath, 'utf8')).toBe('# Saved research')
+  expect(() => service.start({ ...input(), runId: first.id })).toThrow(
+    '続ける会話が見つかりません',
+  )
+  const next = service.start(input())
+  const current = await running()
+  expect(next.id).not.toBe(first.id)
+  expect(current.calls).toHaveBeenCalledWith('thread/start', expect.anything())
+  expect(current.calls).not.toHaveBeenCalledWith(
+    'thread/resume',
+    expect.anything(),
+  )
+  expect(service.status().run?.messages).toHaveLength(1)
+  old.completed()
+  expect(service.status().run?.id).toBe(next.id)
+})
+
+it('requires an active turn to stop before resetting and rejects a stale reset from another viewer', async () => {
+  const first = service.start(input())
+  await running()
+  expect(() => service.reset(first.id)).toThrow('中止してから')
+  await service.cancel(first.id)
+  expect(() => service.reset(randomUUID())).toThrow('別のチャット')
+  expect(service.status().run?.id).toBe(first.id)
+  expect(service.reset(first.id).run).toBeNull()
 })
 
 it('keeps the generated deck identity across turns while advancing its version', async () => {

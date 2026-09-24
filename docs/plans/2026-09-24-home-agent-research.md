@@ -75,6 +75,13 @@ editing a deck is a valid completed turn. Reports, when requested, remain host
 Markdown files. SSE snapshots include the conversation and latest generated
 deck so reopening a page restores both without restarting work or polling.
 
+The chat header can reset an idle conversation. The next message starts a new
+Codex thread while retaining the browser's current deck as context. Reset pushes
+an empty conversation to every subscriber, preserves host reports and does not
+delete deck definitions. Active turns must be stopped first; a stale reset must
+not clear a newer conversation started on another device. This does not add a
+conversation-history UI.
+
 ## Verification
 
 - Protocol tests for dynamic-tool requests, failures, cancellation and process
@@ -202,3 +209,13 @@ be handled by the backend so research can continue without the initiating tab.
   an upstream `Dependency: Unspecified` error; a direct retry through the same
   Bird catalog API returned three lists. A follow-up message in the same Codex
   conversation then retried `list_lists` successfully and also reported three.
+
+## New-chat verification
+
+- 284 unit/component tests and eight desktop/mobile research E2E cases passed,
+  along with typecheck, lint and production build.
+- A real Codex check on a separate development server reset a completed chat
+  across two browser pages, cleared the draft and retained the current deck.
+  The next message used a different thread ID, contained only the new user
+  message and received the current deck context. The separate server avoided
+  interrupting research already running in the public workspace.
