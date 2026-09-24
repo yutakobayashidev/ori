@@ -378,16 +378,17 @@ export function DeckPage() {
       {ready && deck.columns.length === 0 && editing === null ? (
         <div className="deck-empty">
           <Icon name="columns" />
-          <h2>調査のカラムを並べましょう</h2>
+          <h2>調べたいことから、デッキを作りましょう</h2>
           <p>
-            検索、ユーザー投稿、リスト。読みたい情報を選んで、ここに追加できます。
+            チャットでAIに調べたいことを伝えると、調査に合ったカラムを作成します。
+            検索・ユーザー投稿・リストのカラムを手動で追加することもできます。
           </p>
           <button
             className="deck-primary"
             type="button"
             onClick={() => setEditing('new')}
           >
-            最初のカラムを作る
+            手動でカラムを追加
           </button>
         </div>
       ) : null}
