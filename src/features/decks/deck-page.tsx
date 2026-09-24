@@ -7,6 +7,8 @@ import { Dialog } from '#/components/dialog'
 import { Icon } from '#/components/icon'
 import { ConnectionManager } from '#/features/connections/connection-manager'
 import { loadConnections } from '#/features/connections/server-functions'
+import { syncResearchDeck } from '#/features/research/research-deck-sync'
+import { ResearchPanel } from '#/features/research/research-panel'
 import { ColumnEditor } from './column-editor'
 import { type ColumnRegistry, useColumnTools } from './column-tools'
 import { ResearchColumn } from './deck-column'
@@ -22,6 +24,7 @@ export function DeckPage() {
       new URLSearchParams(location.searchStr).get('mastodon'),
   })
   const registry = useRef<ColumnRegistry>(new Map()).current
+  const researchDeckBindings = useRef(new Map<string, string>()).current
   const [editing, setEditing] = useState<{ id: string } | 'new' | null>(null)
   const [renaming, setRenaming] = useState(false)
   const [managingConnections, setManagingConnections] = useState(false)
@@ -91,6 +94,26 @@ export function DeckPage() {
 
   return (
     <AppShell
+      researchChat={
+        <ResearchPanel
+          ready={ready}
+          contextDeck={{
+            id: deck.id,
+            title: deck.title,
+            columns: deck.columns,
+          }}
+          connections={profiles.data?.connections ?? []}
+          onOpenDeck={async (plan, activate = false) => {
+            await syncResearchDeck(plan, activate, researchDeckBindings, {
+              getWorkspace,
+              createTemporary,
+              save,
+              select,
+            })
+            if (activate) clearEditors()
+          }}
+        />
+      }
       sidebar={
         <>
           <DeckSwitcher

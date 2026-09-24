@@ -36,7 +36,7 @@ export default defineConfig({
       timeout: 120_000,
     },
     {
-      command: `TWITTER_LITE_MASTODON_ORIGINS= TWITTER_LITE_CREDENTIAL_KEY_FILE= TWITTER_LITE_DB_PATH=${databasePath} TWITTER_LITE_ORIGIN=http://127.0.0.1:${appPort} TWITTER_LITE_ALLOWED_LOGIN=owner@twitter-lite.invalid TWITTER_RELAY_BASE_URL=http://127.0.0.1:${relayPort} BIRD_PROFILE_NAME=e2e pnpm exec vite dev --host 127.0.0.1 --port ${appPort} --strictPort`,
+      command: `TWITTER_LITE_CODEX_URL= TWITTER_LITE_REPORT_ROOT= TWITTER_LITE_CODEX_MODEL= TWITTER_LITE_MASTODON_ORIGINS= TWITTER_LITE_CREDENTIAL_KEY_FILE= TWITTER_LITE_DB_PATH=${databasePath} TWITTER_LITE_ORIGIN=http://127.0.0.1:${appPort} TWITTER_LITE_ALLOWED_LOGIN=owner@twitter-lite.invalid TWITTER_RELAY_BASE_URL=http://127.0.0.1:${relayPort} BIRD_PROFILE_NAME=e2e pnpm exec vite dev --host 127.0.0.1 --port ${appPort} --strictPort`,
       port: appPort,
       reuseExistingServer: false,
       timeout: 120_000,

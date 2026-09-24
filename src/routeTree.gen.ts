@@ -12,6 +12,7 @@ import { Route as rootRouteImport } from './routes/__root'
 import { Route as DeckRouteImport } from './routes/deck'
 import { Route as IndexRouteImport } from './routes/index'
 import { Route as OauthMastodonCallbackRouteImport } from './routes/oauth/mastodon/callback'
+import { Route as ApiResearchEventsRouteImport } from './routes/api/research/events'
 
 const DeckRoute = DeckRouteImport.update({
   id: '/deck',
@@ -28,34 +29,48 @@ const OauthMastodonCallbackRoute = OauthMastodonCallbackRouteImport.update({
   path: '/oauth/mastodon/callback',
   getParentRoute: () => rootRouteImport,
 } as any)
+const ApiResearchEventsRoute = ApiResearchEventsRouteImport.update({
+  id: '/api/research/events',
+  path: '/api/research/events',
+  getParentRoute: () => rootRouteImport,
+} as any)
 
 export interface FileRoutesByFullPath {
   '/': typeof IndexRoute
   '/deck': typeof DeckRoute
+  '/api/research/events': typeof ApiResearchEventsRoute
   '/oauth/mastodon/callback': typeof OauthMastodonCallbackRoute
 }
 export interface FileRoutesByTo {
   '/': typeof IndexRoute
   '/deck': typeof DeckRoute
+  '/api/research/events': typeof ApiResearchEventsRoute
   '/oauth/mastodon/callback': typeof OauthMastodonCallbackRoute
 }
 export interface FileRoutesById {
   __root__: typeof rootRouteImport
   '/': typeof IndexRoute
   '/deck': typeof DeckRoute
+  '/api/research/events': typeof ApiResearchEventsRoute
   '/oauth/mastodon/callback': typeof OauthMastodonCallbackRoute
 }
 export interface FileRouteTypes {
   fileRoutesByFullPath: FileRoutesByFullPath
-  fullPaths: '/' | '/deck' | '/oauth/mastodon/callback'
+  fullPaths: '/' | '/deck' | '/api/research/events' | '/oauth/mastodon/callback'
   fileRoutesByTo: FileRoutesByTo
-  to: '/' | '/deck' | '/oauth/mastodon/callback'
-  id: '__root__' | '/' | '/deck' | '/oauth/mastodon/callback'
+  to: '/' | '/deck' | '/api/research/events' | '/oauth/mastodon/callback'
+  id:
+    | '__root__'
+    | '/'
+    | '/deck'
+    | '/api/research/events'
+    | '/oauth/mastodon/callback'
   fileRoutesById: FileRoutesById
 }
 export interface RootRouteChildren {
   IndexRoute: typeof IndexRoute
   DeckRoute: typeof DeckRoute
+  ApiResearchEventsRoute: typeof ApiResearchEventsRoute
   OauthMastodonCallbackRoute: typeof OauthMastodonCallbackRoute
 }
 
@@ -82,12 +97,20 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof OauthMastodonCallbackRouteImport
       parentRoute: typeof rootRouteImport
     }
+    '/api/research/events': {
+      id: '/api/research/events'
+      path: '/api/research/events'
+      fullPath: '/api/research/events'
+      preLoaderRoute: typeof ApiResearchEventsRouteImport
+      parentRoute: typeof rootRouteImport
+    }
   }
 }
 
 const rootRouteChildren: RootRouteChildren = {
   IndexRoute: IndexRoute,
   DeckRoute: DeckRoute,
+  ApiResearchEventsRoute: ApiResearchEventsRoute,
   OauthMastodonCallbackRoute: OauthMastodonCallbackRoute,
 }
 export const routeTree = rootRouteImport

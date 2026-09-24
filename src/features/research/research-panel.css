@@ -1,0 +1,220 @@
+.app.app-deck {
+  grid-template-columns: 340px minmax(0, 1fr);
+}
+.research-panel {
+  display: flex;
+  flex-direction: column;
+  min-height: 0;
+  min-width: 0;
+  border-right: 1px solid var(--border);
+  background: var(--paper);
+  overflow: hidden;
+}
+.research-heading {
+  padding: 1rem;
+  border-bottom: 1px solid var(--border);
+}
+.research-heading h2 {
+  margin: 0;
+  font-size: 1rem;
+}
+.research-heading p,
+.research-context {
+  margin: 0.5rem 0 0;
+  color: var(--secondary);
+  font-size: 0.75rem;
+}
+.research-panel > p {
+  padding: 0.5rem 1rem;
+  margin: 0;
+  font-size: 0.8rem;
+}
+.research-conversation {
+  flex: 1;
+  min-height: 80px;
+  overflow-y: auto;
+  overscroll-behavior: contain;
+  padding: 1rem;
+}
+.research-empty {
+  color: var(--secondary);
+  font-size: 0.85rem;
+  line-height: 1.8;
+}
+.research-message {
+  margin-bottom: 1.25rem;
+  font-size: 0.875rem;
+  line-height: 1.65;
+  overflow-wrap: anywhere;
+}
+.research-message strong {
+  font-size: 0.7rem;
+  color: var(--secondary);
+}
+.research-message p {
+  margin: 0.35rem 0 0;
+  white-space: pre-wrap;
+}
+.research-message-user {
+  border-left: 2px solid var(--accent);
+  padding-left: 0.75rem;
+}
+.research-message-tool {
+  color: var(--secondary);
+  font-size: 0.75rem;
+}
+.research-start-form {
+  padding: 0.75rem;
+  border-top: 1px solid var(--border);
+}
+.research-context {
+  margin: 0 0 0.75rem;
+  overflow-wrap: anywhere;
+}
+.research-start-form > fieldset {
+  border: 0;
+  margin: 0;
+  padding: 0;
+  display: grid;
+  gap: 0.5rem;
+  min-width: 0;
+}
+.research-start-form label {
+  font-size: 0.8rem;
+}
+.research-start-form textarea {
+  width: 100%;
+  resize: vertical;
+  color: var(--ink);
+  background: var(--canvas);
+  border: 1px solid var(--control-border);
+  border-radius: 0.25rem;
+  padding: 0.6rem;
+}
+.research-account-picker {
+  font-size: 0.75rem;
+}
+.research-account-picker summary {
+  cursor: pointer;
+}
+.research-accounts {
+  display: grid;
+  gap: 0.5rem;
+  border: 1px solid var(--border);
+  padding: 0.75rem;
+  min-width: 0;
+  max-height: 160px;
+  overflow: auto;
+}
+.research-accounts label {
+  display: flex;
+  gap: 0.5rem;
+  align-items: center;
+  overflow-wrap: anywhere;
+}
+.research-accounts input {
+  width: auto;
+}
+.research-run {
+  border-top: 1px solid var(--border);
+  padding: 0.5rem 0.75rem;
+  font-size: 0.75rem;
+  max-height: 180px;
+  overflow-y: auto;
+}
+.research-run p {
+  margin: 0 0 0.5rem;
+  overflow-wrap: anywhere;
+}
+.research-report-path {
+  overflow-wrap: anywhere;
+  font-size: 0.75rem;
+}
+.deck-toolbar {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 0.4rem;
+  padding: 0.5rem;
+  border-bottom: 1px solid var(--border);
+  flex-shrink: 0;
+}
+.deck-toolbar .deck-workspaces {
+  flex: 1;
+}
+.deck-toolbar .deck-workspaces > .deck-actions {
+  flex-wrap: nowrap;
+}
+.deck-toolbar .deck-workspaces > .deck-actions > label {
+  position: absolute;
+  width: 1px;
+  height: 1px;
+  overflow: hidden;
+  clip-path: inset(50%);
+}
+.deck-toolbar .deck-workspaces > .deck-actions > select {
+  flex: 1;
+  width: 0;
+}
+.deck-toolbar .deck-workspaces > .deck-actions > button {
+  flex: none;
+  width: 36px;
+  padding: 0.25rem;
+}
+.deck-toolbar .workspace-create span,
+.deck-toolbar .workspace-delete span,
+.deck-toolbar .sidebar-add span,
+.deck-toolbar .sidebar-note {
+  display: none;
+}
+.app-deck .deck-toolbar .sidebar-add {
+  width: 36px;
+}
+.deck-toolbar .sidebar-columns {
+  flex-direction: row;
+  order: 10;
+  width: 100%;
+  max-height: 36px;
+  overflow-x: auto;
+  overflow-y: hidden;
+}
+.deck-toolbar .sidebar-columns:empty {
+  display: none;
+}
+.app-deck .deck-toolbar .sidebar-columns button {
+  width: auto;
+}
+@media (max-width: 767px) {
+  .app.app-deck {
+    grid-template-columns: minmax(0, 1fr);
+    grid-template-rows: 44dvh minmax(0, 1fr);
+  }
+  .research-panel {
+    border-right: 0;
+    border-bottom: 1px solid var(--border);
+    overflow-y: auto;
+  }
+  .research-heading {
+    padding: 0.5rem 0.75rem;
+  }
+  .research-heading p {
+    display: none;
+  }
+  .research-conversation {
+    flex: 1 0 80px;
+    min-height: 80px;
+  }
+  .research-start-form {
+    padding: 0.5rem 0.75rem;
+  }
+  .research-run {
+    flex-shrink: 0;
+  }
+  .deck-toolbar .brand,
+  .deck-toolbar .sidebar-columns {
+    display: none;
+  }
+  .deck-toolbar > button:last-child {
+    width: 100%;
+  }
+}

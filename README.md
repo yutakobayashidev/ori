@@ -17,13 +17,15 @@ bound to a connection account, so platforms and multiple accounts work side by s
 - Server-only encrypted Mastodon credentials and Tailscale owner access
 - Read-only cards with original-post links, text, media, and quotes
 - Experimental WebMCP tools to manage decks and read or paginate their columns
+- Prototype: chat with a resident home Codex beside a live deck, reuse existing
+  decks and write cited Markdown research reports on the host
 
 Both `/` and `/deck` open the deck workspace. The separate reader, search,
 list, user-profile, and conversation routes have been removed. Original-post
 links open their source site; conversations are not rendered inside the app.
 
-Built-in AI planning, summaries, and Bluesky/Threads/Nostr connectors are not
-implemented yet. An external browser agent can create and read decks through WebMCP.
+Bluesky/Threads/Nostr connectors are not implemented yet. An external browser
+agent can also create and read decks through WebMCP.
 
 ## Requirements and setup
 
@@ -67,7 +69,64 @@ nix develop -c pnpm test:live
 nix develop -c pnpm build
 nix develop -c pnpm start
 nix develop -c pnpm db:generate
+nix develop -c pnpm codex:serve
 ```
+
+## Home Codex research prototype
+
+Run `codex login` as the host user, then keep `pnpm codex:serve` running separately
+from the web server. It starts a resident app-server at `ws://127.0.0.1:4500`
+using that user's existing Codex login. The launcher passes a small environment
+allowlist, without the app's database, relay or SNS secret settings. Configured
+MCP servers are disabled for this process without changing the user's settings.
+The prototype was developed against Codex CLI 0.156.1; its WebSocket and dynamic
+tool APIs are experimental.
+
+Configure the web app with these values in `.env.local` (absolute report path):
+
+```dotenv
+TWITTER_LITE_CODEX_URL=ws://127.0.0.1:4500
+TWITTER_LITE_CODEX_MODEL=gpt-6-astra
+TWITTER_LITE_REPORT_ROOT=/absolute/path/to/twitter-lite/.data/research
+```
+
+Use the chat on the left while browsing horizontally scrollable deck columns on
+the right. Messages continue the same Codex thread and include the currently
+open deck as context. The account selector controls which connections Codex can
+use. It can inspect saved deck definitions and reuse them as temporary views,
+as well as create new views. `list_lists(connectionId)` discovers existing
+Twitter and Mastodon lists for a selected connected account; returned list IDs
+can be reused in list columns. It uses the same catalog as the manual editor
+(Twitter requests up to 100 lists; list discovery is not paginated).
+The default prompt asks Codex to inspect existing decks and the selected
+accounts' lists before planning new searches, then read relevant list columns
+for evidence. Follow-ups can reuse catalogs already fetched in the conversation.
+Manual deck creation and column editing remain
+available. The backend handles tools even when the browser is closed.
+Each turn is limited to 6 columns, 12 upstream requests shared between list
+discovery and post retrieval (at most 20 posts per fetch), and 15 minutes.
+The prototype accepts up to 100 messages per backend process.
+SSE pushes conversation messages, tool activity and generated deck updates to
+open browsers, without polling.
+Reopening the page receives the latest state and restores the temporary deck.
+Later updates modify the same temporary view; they do not overwrite saved decks
+or switch away from another deck you are reading. Use the existing save button
+to persist a deck. The agent and visible columns currently fetch posts separately.
+
+Codex writes `<report root>/<run ID>/report.md` using its workspace file tools.
+The UI displays its host path after validating the file. A conversation or deck
+edit can finish without producing a report. Citation quality is model output,
+not independently verified. No research-history or snapshot tables are added;
+report contents are not stored in the app DB. Only the latest conversation is shown.
+
+Browser disconnection does not cancel research; reconnecting restores the latest
+state through `/api/research/events`, under the same owner access checks as the
+rest of the app. The app keeps run state in
+memory; backend/process restart recovery is not implemented. A backend failure
+can leave Codex work unfinished and dynamic tools unavailable; files already
+written remain. Cancellation is explicit. The launcher and report directory must
+run under a user able to write those files. NixOS DynamicUser service integration
+and dedicated service credentials are outside this prototype.
 
 `test:e2e` uses the system Chromium supplied by the Nix dev shell. Playwright
 integration and Axe accessibility tests live under `e2e/`. A standalone mock

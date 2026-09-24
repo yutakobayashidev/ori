@@ -38,7 +38,9 @@ async function addColumn(
 
 test.beforeEach(async ({ page }) => {
   await page.goto('/')
-  await page.waitForLoadState('networkidle')
+  await expect(
+    page.getByRole('button', { name: 'デッキとして保存', exact: true }),
+  ).toBeEnabled()
   await page
     .getByRole('button', { name: 'デッキとして保存', exact: true })
     .click()
