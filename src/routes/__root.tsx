@@ -5,7 +5,6 @@ import {
   Outlet,
   Scripts,
 } from '@tanstack/react-router'
-import { SearchTool } from '#/features/posts/webmcp-tools'
 import appCss from '../styles.css?url'
 
 type RouterContext = { queryClient: QueryClient }
@@ -34,12 +33,7 @@ export const Route = createRootRouteWithContext<RouterContext>()({
 })
 
 function RootContent() {
-  return (
-    <>
-      <SearchTool />
-      <Outlet />
-    </>
-  )
+  return <Outlet />
 }
 
 function RootDocument({ children }: { children: React.ReactNode }) {

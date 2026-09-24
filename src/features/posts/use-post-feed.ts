@@ -1,25 +1,17 @@
-import { type QueryClient, useInfiniteQuery } from '@tanstack/react-query'
+import { useInfiniteQuery } from '@tanstack/react-query'
 import { useServerFn } from '@tanstack/react-start'
 import type { SearchProduct } from '@yuta/bird'
-import {
-  loadListPosts,
-  loadThreadPosts,
-  loadUserPosts,
-  searchPosts,
-} from './server-functions'
+import { loadListPosts, loadUserPosts, searchPosts } from './server-functions'
 import type {
   ListPageInput,
   LoadError,
   LoadResult,
   PostPage,
   SearchPageInput,
-  ThreadLoadResult,
-  ThreadPage,
-  ThreadPageInput,
   UserPageInput,
 } from './types'
 
-export type FeedRequest =
+export type FeedRequest = { profileName: string } & (
   | { kind: 'user'; target: string }
   | { kind: 'list'; target: string }
   | {
@@ -28,20 +20,12 @@ export type FeedRequest =
       product: SearchProduct
       following: boolean
     }
-  | { kind: 'thread'; tweetId: string }
-
-type ThreadPageParam = {
-  cursor: string
-  conversationId: string
-}
-
-type FeedPageParam = string | ThreadPageParam | undefined
+)
 
 type Loaders = {
   loadUser: (options: { data: UserPageInput }) => Promise<LoadResult>
   loadList: (options: { data: ListPageInput }) => Promise<LoadResult>
   search: (options: { data: SearchPageInput }) => Promise<LoadResult>
-  thread: (options: { data: ThreadPageInput }) => Promise<ThreadLoadResult>
 }
 
 export class PostLoadError extends Error {
@@ -58,17 +42,18 @@ function unwrap<TPage extends PostPage>(result: LoadResult<TPage>): TPage {
 export function createPostFeedOptions(request: FeedRequest, loaders: Loaders) {
   return {
     queryKey: ['posts', request] as const,
-    initialPageParam: undefined as FeedPageParam,
+    initialPageParam: undefined as string | undefined,
     retry: false as const,
     refetchOnWindowFocus: false as const,
     refetchOnReconnect: false as const,
-    queryFn: async ({ pageParam }: { pageParam: FeedPageParam }) => {
+    queryFn: async ({ pageParam }: { pageParam: string | undefined }) => {
       if (request.kind === 'user') {
         return unwrap(
           await loaders.loadUser({
             data: {
+              profileName: request.profileName,
               target: request.target,
-              cursor: typeof pageParam === 'string' ? pageParam : undefined,
+              cursor: pageParam,
             },
           }),
         )
@@ -77,73 +62,39 @@ export function createPostFeedOptions(request: FeedRequest, loaders: Loaders) {
         return unwrap(
           await loaders.loadList({
             data: {
+              profileName: request.profileName,
               target: request.target,
-              cursor: typeof pageParam === 'string' ? pageParam : undefined,
-            },
-          }),
-        )
-      }
-      if (request.kind === 'search') {
-        return unwrap(
-          await loaders.search({
-            data: {
-              query: request.query,
-              product: request.product,
-              following: request.following,
-              cursor: typeof pageParam === 'string' ? pageParam : undefined,
+              cursor: pageParam,
             },
           }),
         )
       }
       return unwrap(
-        await loaders.thread({
-          data:
-            typeof pageParam === 'object'
-              ? {
-                  tweetId: request.tweetId,
-                  cursor: pageParam.cursor,
-                  conversationId: pageParam.conversationId,
-                }
-              : { tweetId: request.tweetId },
+        await loaders.search({
+          data: {
+            profileName: request.profileName,
+            query: request.query,
+            product: request.product,
+            following: request.following,
+            cursor: pageParam,
+          },
         }),
       )
     },
-    getNextPageParam: (page: PostPage | ThreadPage) => {
-      if (!page.nextCursor) return undefined
-      return request.kind === 'thread' && 'conversationId' in page
-        ? {
-            cursor: page.nextCursor,
-            conversationId: page.conversationId,
-          }
-        : page.nextCursor
-    },
+    getNextPageParam: (page: PostPage) => page.nextCursor,
   }
 }
 
-export function usePostFeedOptions() {
+function usePostFeedOptions() {
   const loadUser = useServerFn(loadUserPosts)
   const loadList = useServerFn(loadListPosts)
   const search = useServerFn(searchPosts)
-  const thread = useServerFn(loadThreadPosts)
   return (request: FeedRequest) =>
     createPostFeedOptions(request, {
       loadUser,
       loadList,
       search,
-      thread,
     })
-}
-
-export function getPostFeedData(
-  client: QueryClient,
-  options: ReturnType<typeof createPostFeedOptions>,
-) {
-  const state = client.getQueryState(options.queryKey)
-  // Profile changes invalidate and refresh an existing feed. Wait for that
-  // refresh instead of returning the previous profile's cached posts.
-  return state?.fetchStatus === 'fetching' || state?.isInvalidated
-    ? client.fetchInfiniteQuery(options)
-    : client.ensureInfiniteQueryData(options)
 }
 
 export function usePostFeed(request: FeedRequest | undefined) {
@@ -151,6 +102,7 @@ export function usePostFeed(request: FeedRequest | undefined) {
   const disabled = {
     kind: 'user',
     target: '',
+    profileName: '',
   } satisfies FeedRequest
 
   return useInfiniteQuery({

@@ -1,14 +1,8 @@
-import type {
-  GetTweetResult,
-  SearchProduct,
-  SearchResult,
-  TweetData,
-} from '@yuta/bird'
+import type { SearchProduct, SearchResult, TweetData } from '@yuta/bird'
 import {
   buildSearchQuery,
   InputError,
   normalizeListTarget,
-  normalizeTweetId,
   normalizeUserTarget,
 } from './inputs'
 import type {
@@ -19,8 +13,6 @@ import type {
   LoadResult,
   Post,
   SearchPageInput,
-  ThreadLoadResult,
-  ThreadPageInput,
   UserPageInput,
 } from './types'
 
@@ -45,15 +37,6 @@ type BirdListsResult =
 
 export interface BirdReader {
   getLists(count?: number): Promise<BirdListsResult>
-  getTweet(tweetId: string): Promise<GetTweetResult>
-  getThreadPaged(
-    tweetId: string,
-    options: {
-      cursor?: string
-      maxPages: number
-      pageDelayMs: number
-    },
-  ): Promise<SearchResult>
   getUserIdByUsername(username: string): Promise<UserLookupResult>
   getUserTweetsPaged(
     userId: string,
@@ -87,12 +70,11 @@ const failure = (
   retryable: boolean,
 ): LoadFailure => ({ ok: false, error: { code, message, retryable } })
 
-type FailureSubject = 'user' | 'post' | 'list'
+type FailureSubject = 'user' | 'list'
 
 const notFoundFailure: Record<FailureSubject, () => LoadFailure> = {
   user: () =>
     failure('user-not-found', 'ユーザーが見つかりませんでした。', false),
-  post: () => failure('post-not-found', '投稿が見つかりませんでした。', false),
   list: () =>
     failure('list-not-found', 'リストが見つかりませんでした。', false),
 }
@@ -100,7 +82,6 @@ const notFoundFailure: Record<FailureSubject, () => LoadFailure> = {
 const unavailableFailure: Record<FailureSubject, () => LoadFailure> = {
   user: () =>
     failure('user-unavailable', 'このユーザーの投稿は取得できません。', false),
-  post: () => failure('post-unavailable', 'この投稿は取得できません。', false),
   list: () =>
     failure('list-unavailable', 'このリストは取得できません。', false),
 }
@@ -181,69 +162,9 @@ function resultPage(
     : upstreamFailure(result.error, subject)
 }
 
-export async function loadThreadPage(
-  reader: BirdReader,
-  input: ThreadPageInput,
-): Promise<ThreadLoadResult> {
-  try {
-    const tweetId = normalizeTweetId(input.tweetId)
-    let focalPost: Post | undefined
-    let conversationId: string
-
-    if (input.cursor && input.conversationId) {
-      conversationId = normalizeTweetId(input.conversationId)
-    } else {
-      const focal = await reader.getTweet(tweetId)
-      if (!focal.success || !focal.tweet) {
-        return upstreamFailure(focal.error ?? 'Tweet not found', 'post')
-      }
-      focalPost = publicPost(focal.tweet)
-      try {
-        conversationId = normalizeTweetId(
-          focal.tweet.conversationId ?? focal.tweet.id,
-        )
-      } catch (error) {
-        return upstreamFailure(error, 'post')
-      }
-    }
-
-    const result = await reader.getThreadPaged(conversationId, {
-      ...(input.cursor ? { cursor: input.cursor } : {}),
-      maxPages: 1,
-      pageDelayMs: 0,
-    })
-    if (!result.success) {
-      return upstreamFailure(result.error, 'post')
-    }
-    const tweets = result.tweets ?? []
-    const nextCursor =
-      result.nextCursor &&
-      tweets.length > 0 &&
-      result.nextCursor !== input.cursor &&
-      focalPost?.replyCount !== 0
-        ? result.nextCursor
-        : undefined
-
-    return {
-      ok: true,
-      page: {
-        tweets: tweets.map(publicPost),
-        focalPost,
-        conversationId,
-        nextCursor,
-      },
-    }
-  } catch (error) {
-    if (error instanceof InputError) {
-      return failure('invalid-input', error.message, false)
-    }
-    return upstreamFailure(error, 'post')
-  }
-}
-
 export async function loadUserPage(
   reader: BirdReader,
-  input: UserPageInput,
+  input: Omit<UserPageInput, 'profileName'>,
 ): Promise<LoadResult> {
   try {
     const handle = normalizeUserTarget(input.target)
@@ -271,7 +192,7 @@ export async function loadUserPage(
 
 export async function loadListPage(
   reader: BirdReader,
-  input: ListPageInput,
+  input: Omit<ListPageInput, 'profileName'>,
 ): Promise<LoadResult> {
   try {
     const listId = normalizeListTarget(input.target)
@@ -295,7 +216,7 @@ export async function loadListPage(
 
 export async function searchPage(
   reader: BirdReader,
-  input: SearchPageInput,
+  input: Omit<SearchPageInput, 'profileName'>,
 ): Promise<LoadResult> {
   try {
     return resultPage(

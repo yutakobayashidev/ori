@@ -1,50 +1,32 @@
 # Twitter Lite
 
-Twitter Lite is an intentional, read-only X reader. It shows content only after
-you enter a user handle, profile URL, search query, or list URL, follow a
-deliberate post detail link, or manually open a valid
-`/:handle/status/:tweetId` URL.
+Twitter Lite is a read-only research deck for X. Create multiple named decks,
+and arrange up to six columns per deck for searches, user timelines, and lists.
+Each column is bound to an explicit relay profile, so different accounts can
+be used side by side.
 
 ## Scope
 
-- User timelines and raw X search syntax
-- Button-driven search filters for author, period, language, content type, replies, and reposts
-- Popular (`Top`) and chronological (`Latest`) search
-- Optional `filter:follows` search
-- Authenticated account list selection and list timelines from a deliberate URL or ID
-- Relay profile switching from the profiles exposed by the relay
-- Infinite cursor pagination with explicit retry
-- Deliberate post detail pages with the visible conversation
-- Infinite conversation loading with explicit continuation retry
-- Read-only cards for text, media, quotes, articles, and quiet engagement counts
-- Experimental WebMCP tools for search, loaded-post reading, and continuation
-- Deck WebMCP tools to inspect or create/replace up to six columns at once
-- Research deck with named Twitter search columns, independent pagination,
-  editing, ordering, and browser-local condition persistence
+- Multiple deck profiles with creation, selection, renaming, and deletion
+- Search, user timeline, and list columns with independent relay profiles
+- Native X search syntax, Top/Latest ranking, and optional `filter:follows`
+- List discovery for the profile selected in the column editor
+- Column editing, ordering, deletion/undo, manual refresh, and cursor pagination
+- Browser-local persistence of deck definitions and the active deck
+- Read-only cards with original-post links, text, media, and quotes
+- Experimental WebMCP tools to manage decks and read or paginate their columns
 
-It intentionally has no home feed, recommendations, trends, notifications,
-history, account directory, or write actions.
+Both `/` and `/deck` open the deck workspace. The separate reader, search,
+list, user-profile, and conversation routes have been removed. Original-post
+links open X; conversations are not rendered inside the app.
 
-Post detail pages show only the selected post and its visible conversation;
-they do not add related-post recommendations or an account-discovery surface.
-
-## Routes
-
-- `/` shows the empty user input.
-- `/deck` opens the research deck (up to six search columns).
-- `/:handle` shows a user timeline.
-- `/search` shows search results. Its typed query parameters preserve the query,
-  author, period, language, content type, exclusions, ranking, and follows filter
-  so filtered searches can be reloaded or shared.
-- `/i/lists` shows the authenticated account's lists.
-- `/i/lists/:listId` shows a list timeline.
-- `/:handle/status/:tweetId` shows one selected post and its visible conversation.
+Built-in AI planning, summaries, and the Mastodon/Bluesky/Threads/Nostr
+connectors are not implemented yet. Twitter is the only supported platform.
 
 ## Requirements and setup
 
 Use Nix, or Node.js `>=22.12.0` with pnpm `11.9.0`. The committed `.npmrc`
-routes the `@yuta` scope to the public Gitea Packages registry, where Bird
-`0.10.0` provides the required Top and Latest search interface.
+routes the `@yuta` scope to the public Gitea Packages registry.
 
 ```bash
 nix develop -c pnpm install --frozen-lockfile
@@ -52,21 +34,19 @@ cp .env.example .env.local
 ```
 
 The Nix development shell installs Hallmark's agent skill for the supported
-local agent targets.
-
-Set `TWITTER_RELAY_BASE_URL` in `.env.local` for Vite development.
-`BIRD_PROFILE_NAME` optionally selects the initial relay profile; the header
-selector can switch between the profiles returned by the relay's `/profiles`
-endpoint. Export the same values in the process environment before `start` or
-`test:live`:
+local agent targets. Set `TWITTER_RELAY_BASE_URL` in `.env.local` for Vite
+development, or export it before running the production server:
 
 ```bash
 export TWITTER_RELAY_BASE_URL=http://127.0.0.1:6900
-export BIRD_PROFILE_NAME=
 ```
 
-Both values are read by server-only code at runtime; neither value nor Bird is
-sent to the browser.
+The app discovers available account profiles through the relay's `/profiles`
+endpoint. Select a profile for each column. There is no global account selector,
+profile cookie, or application-level `BIRD_PROFILE_NAME` default. Requests
+validate that the bound profile still exists before fetching posts or lists.
+Bird and relay credentials stay on the server; saved deck definitions include
+the selected profile names.
 
 ## Commands
 
@@ -82,68 +62,64 @@ nix develop -c pnpm build
 nix develop -c pnpm start
 ```
 
-`test:e2e` is intentionally Nix-only and uses the system Chromium supplied by
-the dev shell. Browser tests are organized under `e2e/`: page object models
-and fixtures are shared by integration flows and Axe checks for WCAG 2.0/2.1
-A and AA. The tests keep a standalone HTTP relay so TanStack Start server
-functions and SSR requests exercise the same network boundary as production.
-The API client and fixture types are generated with Orval from a pinned
-[twitter-openapi specification](https://github.com/fa0311/twitter-openapi/commit/590dae5c9f8575abc91d3774946bfe6f23960aba);
-run `generate:e2e-openapi` only when updating that pin or the selected
-operations. Generated files are committed, so normal E2E runs do not require
-network access. E2E fixtures use the generated response types but stay
-deterministic. Runtime requests continue through Bird because its transport
-differs from the upstream OpenAPI client. Relay-only endpoints, request
-transport differences, cursors, and stateful failure scenarios remain in the
-handwritten mock server.
-`test:live` is an explicit, opt-in smoke test that performs exactly one
-read-only Top search using the configured relay.
+`test:e2e` uses the system Chromium supplied by the Nix dev shell. Playwright
+integration and Axe accessibility tests live under `e2e/`. A standalone mock
+HTTP relay exercises the production server-function boundary without contacting
+X or a personal relay. Orval generates API fixture types from a pinned
+[twitter-openapi specification](https://github.com/fa0311/twitter-openapi/commit/590dae5c9f8575abc91d3774946bfe6f23960aba).
+Generated files are committed; run `generate:e2e-openapi` only when changing
+the pin or selected operations. Runtime requests use Bird.
 
-## Research deck
+`test:live` is an explicit, opt-in smoke test that performs one read-only Top
+search. For this standalone probe only, `BIRD_PROFILE_NAME` selects the account
+and `TWITTER_LITE_LIVE_QUERY` overrides the search text.
 
-Open **デッキ** in the navigation, name the investigation, and add a column
-for each perspective. Each column has a title, native Twitter search query,
-Top/Latest ordering, and an optional follows filter. Update or paginate a
-column independently, edit its conditions, move it left/right, or undo a
-removal. All columns use the currently selected relay profile.
+## Deck workspace
 
-One deck's conditions are stored in this browser's localStorage. Reloading
-fetches the first page again; collected posts are not archived or synced
-between devices. Other open tabs are not synchronized. A WebMCP-capable agent
-can use `get_deck` and `set_deck` on `/deck` to create or edit the whole deck.
-Built-in AI planning, summaries, and the Mastodon/Bluesky/Threads/Nostr connectors
-are not implemented yet. Only Twitter can currently be selected. See
-[the platform boundary and next steps](docs/research-decks.md).
+The interface uses a full-height, dark TweetDeck-style workbench: a deck sidebar,
+compact column headers, and independently scrolling post columns. On narrow
+screens, the sidebar becomes a compact top bar. Add/edit forms open in native
+dialogs; Escape closes them and returns focus. Column menus contain editing,
+ordering, and deletion; refresh stays available directly in each header.
 
-## WebMCP prototype
+Create a deck for an investigation, then add columns for each perspective.
+Choose a relay profile and a source: search, user timeline, or list. Profile
+changes affect only the edited column. Matching source conditions and profiles
+share the query cache; different profiles never share posts or cursors.
 
-In a WebMCP-enabled browser, `search_posts` searches and updates the page,
-`get_loaded_posts` reads a bounded slice of the active feed, and
-`load_more_posts` appends a continuation and returns the new posts. The tools
-share the reader's query cache and active relay profile. They do not publish
-posts or change profiles.
+The workspace saves multiple decks and the active selection in localStorage.
+Only the active deck is rendered and fetched. Posts and cursors are not saved;
+reloading fetches first pages. Devices and tabs do not synchronize edits.
+
+Old single-deck data is not migrated automatically because it has no explicit
+column profile binding. Invalid or older saved data remains untouched while
+the app shows an empty workspace and an explanation. Saving a new edit replaces
+that saved data. See [the deck model and persistence contract](docs/research-decks.md).
+
+## WebMCP
+
+A WebMCP-enabled browser exposes `list_decks`, `get_deck`, `set_deck`,
+`select_deck`, `delete_deck`, `get_column_posts`, and `load_more_column` on
+both deck routes. Start with `list_decks` to discover deck IDs and available
+relay profiles. `set_deck` creates a new deck when `deckId` is omitted; supply
+an existing ID to replace that deck's complete ordered columns and activate it.
 
 Enable `chrome://flags/#enable-webmcp-testing`, restart Chrome, and open the
-app on `http://localhost:3000` or `http://127.0.0.1:3000`. Use the
+local app. Use the
 [Model Context Tool Inspector](https://developer.chrome.com/docs/ai/webmcp#imitate_agent_chat_with_the_inspector_extension)
-to list and invoke tools. Try `search_posts` with
-`{"q":"TypeScript","lang":"ja","product":"Latest"}`.
-
-This prototype uses native `document.modelContext` through `usewebmcp`; it
-does not initialize a polyfill or provide an external MCP transport. Browsers
-without the API keep the regular reader UI. Public deployment requires the
-appropriate browser support/origin trial and a secure context. See
-[tool contracts and verification](docs/webmcp-prototype.md) for details.
+to invoke tools. Registration uses native `document.modelContext` through
+`usewebmcp`; there is no polyfill or external MCP transport. Unsupported
+browsers retain the manual deck UI. See [tool contracts and verification](docs/webmcp-prototype.md).
 
 Development binds to `127.0.0.1` by default. `dev:tailscale` binds to
-`0.0.0.0`, so it exposes the app on LAN interfaces as well as Tailscale. Use it
-only on a trusted network and obtain the Tailscale address with
-`tailscale ip -4`.
+`0.0.0.0`, including LAN interfaces. Native WebMCP needs a secure context;
+use a Tailscale Serve HTTPS origin for remote access, and allow its exact
+hostname through `__VITE_ADDITIONAL_SERVER_ALLOWED_HOSTS` in the Vite process
+environment. HTTP and HTTPS origins have separate localStorage.
 
 ## NixOS service
 
-The flake provides both a production package and a NixOS module. Import the
-module and configure the relay:
+The flake provides a production package and a NixOS module:
 
 ```nix
 {
@@ -159,7 +135,6 @@ module and configure the relay:
           services.twitter-lite = {
             enable = true;
             relayBaseUrl = "http://127.0.0.1:6900";
-            # profileName = "default";
           };
         }
       ];
@@ -170,13 +145,10 @@ module and configure the relay:
 
 The service listens on `127.0.0.1:3000` by default. Set
 `services.twitter-lite.host` or `services.twitter-lite.port` to change the
-listener. The package can also be built directly with `nix build`.
+listener. Profiles are selected in column definitions, not service options.
+The package can also be built directly with `nix build`.
 
 ## Reliability
 
 Bird uses X's internal GraphQL operations through the configured relay. Query
 IDs and response shapes can change without notice.
-
-Conversation pages use Bird's current per-page chronological ordering. Keeping
-X's original ranked branch order is deferred until Bird exposes that order
-without expanding the relay surface.

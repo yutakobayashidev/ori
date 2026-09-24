@@ -1,10 +1,6 @@
 import { describe, expect, it } from 'vitest'
-import {
-  flattenConversationPages,
-  flattenPostPages,
-  focalPostFromPages,
-} from './page'
-import type { Post, PostPage, ThreadPage } from './types'
+import { flattenPostPages } from './page'
+import type { Post, PostPage } from './types'
 
 const post = (id: string): Post => ({
   id,
@@ -20,31 +16,5 @@ describe('flattenPostPages', () => {
     ]
 
     expect(flattenPostPages(pages).map(({ id }) => id)).toEqual(['1', '2', '3'])
-  })
-})
-
-describe('thread page helpers', () => {
-  const focal = post('2')
-  const pages: ThreadPage[] = [
-    {
-      focalPost: focal,
-      conversationId: '1',
-      nextCursor: 'next',
-      tweets: [post('1'), focal],
-    },
-    {
-      conversationId: '1',
-      tweets: [focal, post('3')],
-    },
-  ]
-
-  it('takes the focal post from the first page', () => {
-    expect(focalPostFromPages(pages)).toEqual(focal)
-  })
-
-  it('deduplicates the conversation and removes the focal post', () => {
-    expect(
-      flattenConversationPages(pages, focal.id).map(({ id }) => id),
-    ).toEqual(['1', '3'])
   })
 })

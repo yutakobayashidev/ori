@@ -1,63 +1,137 @@
-import { useRef } from 'react'
 import { useWebMCP } from 'usewebmcp'
-import { emptyToolInput, toolResult } from '#/features/posts/webmcp-contracts'
-import { useWebMCPSupported } from '#/features/posts/webmcp-tools'
-import type { Deck } from './model'
-import { prepareDeck, setDeckInput } from './webmcp-contracts'
+import type { Deck, Workspace } from './model'
+import { useWebMCPSupported } from './use-webmcp-supported'
+import {
+  deckIdInput,
+  emptyToolInput,
+  getDeckInput,
+  prepareDeck,
+  setDeckInput,
+  toolResult,
+} from './webmcp-contracts'
 
 export function useDeckTools({
-  deck,
   ready,
   storageError,
   save,
+  select,
+  remove,
+  getWorkspace,
+  profiles,
   onApplied,
 }: {
-  deck: Deck
   ready: boolean
   storageError?: string
   save: (deck: Deck) => boolean
+  select: (id: string) => boolean
+  remove: (id: string) => boolean
+  getWorkspace: () => Workspace
+  profiles: string[] | undefined
   onApplied: () => void
 }) {
   const supported = useWebMCPSupported()
-  const current = useRef({ deck, storageError })
-  current.current = { deck, storageError }
-
+  const enabled = supported && ready
+  function applied(persisted: boolean) {
+    onApplied()
+    if (!persisted)
+      throw new Error(
+        'The deck was applied in this tab but could not be saved. Reloading will lose these changes.',
+      )
+  }
   useWebMCP({
-    name: 'get_deck',
+    name: 'list_decks',
     description:
-      'Read the current research deck: title and ordered columns with IDs and native Twitter search conditions. No post fetch. Use this before editing with set_deck. Available on /deck only.',
+      'List saved decks and their columns, activeDeckId and available relay profile names. Conditions are stored in this browser only; posts are not included.',
     inputSchema: emptyToolInput,
-    enabled: supported && ready,
+    enabled,
     annotations: { readOnlyHint: true, untrustedContentHint: true },
     execute: (input) =>
       toolResult(() => {
         emptyToolInput.parse(input)
+        const workspace = getWorkspace()
         return {
-          deck: current.current.deck,
-          storageError: current.current.storageError ?? null,
+          decks: workspace.decks,
+          activeDeckId: workspace.activeDeckId,
+          profiles: profiles ?? null,
+          storageError: storageError ?? null,
         }
       }),
   })
-
+  useWebMCP({
+    name: 'get_deck',
+    description:
+      'Read one saved deck with column IDs, bound relay profiles and source definitions. Omit deckId for the active deck. No post fetch.',
+    inputSchema: getDeckInput,
+    enabled,
+    annotations: { readOnlyHint: true, untrustedContentHint: true },
+    execute: (input) =>
+      toolResult(() => {
+        const { deckId } = getDeckInput.parse(input)
+        const workspace = getWorkspace()
+        const deck = workspace.decks.find(
+          (deck) => deck.id === (deckId ?? workspace.activeDeckId),
+        )
+        if (!deck) throw new Error('Deck not found.')
+        return { deck, storageError: storageError ?? null }
+      }),
+  })
   useWebMCP({
     name: 'set_deck',
     description:
-      'Create or replace the entire visible research deck and save its conditions in this browser. Supply a title and up to six ordered Twitter search columns. Keep existing column IDs to edit them; omitted columns are removed. Closes unsaved editor forms. Only Twitter is connected. Returns the applied definition immediately; posts load asynchronously and may fail independently. Available on /deck only.',
+      'Create a saved deck when deckId is omitted, or replace an existing deck by ID, then activate it. Up to six ordered columns: search, user timeline or list, each with an explicit relay profile from list_decks. Omitted columns are removed. Closes unsaved forms. Posts load asynchronously and can fail independently.',
     inputSchema: setDeckInput,
-    enabled: supported && ready,
+    enabled,
     annotations: { readOnlyHint: false, untrustedContentHint: true },
     execute: (input) =>
       toolResult(() => {
-        // Validate the whole definition before modifying either storage or UI.
-        const next = prepareDeck(input)
-        const persisted = save(next)
-        onApplied()
-        const error = persisted
-          ? undefined
-          : 'The deck was applied in this tab but could not be saved. Reloading will lose these changes.'
-        current.current = { deck: next, storageError: error }
-        if (error) throw new Error(error)
+        const parsed = setDeckInput.parse(input)
+        if (
+          parsed.deckId &&
+          !getWorkspace().decks.some((deck) => deck.id === parsed.deckId)
+        )
+          throw new Error('Deck not found.')
+        if (!profiles) throw new Error('Relay profiles are not available yet.')
+        const next = prepareDeck(parsed, profiles)
+        applied(save(next))
         return { deck: next, persisted: true, posts: 'loading-asynchronously' }
+      }),
+  })
+  useWebMCP({
+    name: 'select_deck',
+    description:
+      'Activate a saved deck by ID and save the selection in this browser. Closes unsaved forms; its columns load asynchronously.',
+    inputSchema: deckIdInput,
+    enabled,
+    annotations: { readOnlyHint: false },
+    execute: (input) =>
+      toolResult(() => {
+        const { deckId } = deckIdInput.parse(input)
+        applied(select(deckId))
+        const workspace = getWorkspace()
+        return {
+          decks: workspace.decks,
+          activeDeckId: workspace.activeDeckId,
+          persisted: true,
+        }
+      }),
+  })
+  useWebMCP({
+    name: 'delete_deck',
+    description:
+      'Permanently delete one saved deck and its column definitions from this browser. The last remaining deck cannot be deleted. Deleting the active deck selects the first remaining deck.',
+    inputSchema: deckIdInput,
+    enabled,
+    annotations: { readOnlyHint: false, destructiveHint: true },
+    execute: (input) =>
+      toolResult(() => {
+        const { deckId } = deckIdInput.parse(input)
+        applied(remove(deckId))
+        const workspace = getWorkspace()
+        return {
+          decks: workspace.decks,
+          activeDeckId: workspace.activeDeckId,
+          persisted: true,
+        }
       }),
   })
 }

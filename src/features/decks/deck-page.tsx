@@ -1,32 +1,62 @@
-import { useState } from 'react'
+import { useQuery } from '@tanstack/react-query'
+import { useServerFn } from '@tanstack/react-start'
+import { useRef, useState } from 'react'
 import { AppShell } from '#/components/app-shell'
+import { Dialog } from '#/components/dialog'
+import { Icon } from '#/components/icon'
+import { loadProfiles } from '#/features/profiles/server-functions'
 import { ColumnEditor } from './column-editor'
+import { type ColumnRegistry, useColumnTools } from './column-tools'
 import { ResearchColumn } from './deck-column'
+import { DeckSwitcher } from './deck-switcher'
 import { type DeckColumn, MAX_COLUMNS, moveColumn } from './model'
 import { useDeck } from './use-deck'
 import { useDeckTools } from './webmcp-tools'
 import './decks.css'
 
 export function DeckPage() {
-  const { deck, ready, storageError, save } = useDeck()
+  const registry = useRef<ColumnRegistry>(new Map()).current
+  const {
+    deck,
+    workspace,
+    ready,
+    storageError,
+    save,
+    create,
+    select,
+    remove,
+    getWorkspace,
+  } = useDeck()
+  const fetchProfiles = useServerFn(loadProfiles)
+  const profiles = useQuery({
+    queryKey: ['profiles'],
+    queryFn: () => fetchProfiles(),
+    retry: false,
+  })
   const [editing, setEditing] = useState<{ id: string } | 'new' | null>(null)
   const [renaming, setRenaming] = useState(false)
+  useColumnTools(registry, ready)
   const [removed, setRemoved] = useState<{
     column: DeckColumn
     index: number
   }>()
 
   useDeckTools({
-    deck,
     ready,
     storageError,
     save,
-    onApplied: () => {
-      setEditing(null)
-      setRenaming(false)
-      setRemoved(undefined)
-    },
+    select,
+    remove,
+    getWorkspace,
+    profiles: profiles.data?.profiles,
+    onApplied: clearEditors,
   })
+
+  function clearEditors() {
+    setEditing(null)
+    setRenaming(false)
+    setRemoved(undefined)
+  }
 
   function saveColumn(column: DeckColumn) {
     save({
@@ -42,83 +72,148 @@ export function DeckPage() {
   }
 
   return (
-    <AppShell active="deck">
+    <AppShell
+      sidebar={
+        <>
+          <DeckSwitcher
+            key={deck.id}
+            decks={workspace.decks}
+            activeId={deck.id}
+            ready={ready}
+            onSelect={(id) => {
+              select(id)
+              clearEditors()
+            }}
+            onCreate={(title) => {
+              create(title)
+              clearEditors()
+            }}
+            onDelete={() => {
+              remove(deck.id)
+              clearEditors()
+            }}
+          />
+          <button
+            className="deck-primary sidebar-add"
+            aria-label="カラムを追加"
+            title="カラムを追加"
+            type="button"
+            disabled={!ready || deck.columns.length >= MAX_COLUMNS}
+            onClick={() => setEditing('new')}
+          >
+            <Icon name="plus" />
+            <span>カラムを追加</span>
+          </button>
+          <nav className="sidebar-columns" aria-label="カラム一覧">
+            {deck.columns.map((column) => (
+              <button
+                key={column.id}
+                type="button"
+                title={column.title}
+                onClick={() => {
+                  const element = document.getElementById(`column-${column.id}`)
+                  element?.scrollIntoView({ block: 'nearest', inline: 'start' })
+                  element
+                    ?.closest('.deck-column')
+                    ?.querySelector<HTMLElement>('.deck-column-results')
+                    ?.focus({ preventScroll: true })
+                }}
+              >
+                <Icon name={column.source.kind} />
+                <span>{column.title}</span>
+              </button>
+            ))}
+          </nav>
+          <p className="sidebar-note">このブラウザに保存</p>
+        </>
+      }
+    >
       <div className="deck-heading">
         <div>
           <h1>{deck.title}</h1>
-          <p className="deck-help">
-            観点ごとに検索を並べて、投稿を読み比べる。
-          </p>
+          <span className="deck-count">
+            {deck.columns.length} / {MAX_COLUMNS} カラム
+          </span>
         </div>
         <div className="deck-actions">
           <button
+            className="icon-button"
+            aria-label="名前を変更"
+            title="名前を変更"
             type="button"
             disabled={!ready}
             onClick={() => setRenaming(!renaming)}
           >
-            名前を変更
-          </button>
-          <button
-            className="deck-primary"
-            type="button"
-            disabled={
-              !ready || deck.columns.length >= MAX_COLUMNS || editing !== null
-            }
-            onClick={() => setEditing('new')}
-          >
-            カラムを追加
+            <Icon name="edit" />
           </button>
         </div>
       </div>
-      <p className="deck-save-status">
-        {!ready
-          ? 'デッキを読み込んでいます…'
-          : storageError
-            ? 'デッキの保存状態を確認してください。'
-            : `このブラウザにデッキの条件を保存 · ${deck.columns.length} / ${MAX_COLUMNS} カラム`}
-      </p>
+      {!ready ? (
+        <p className="deck-save-status" role="status">
+          デッキを読み込んでいます…
+        </p>
+      ) : null}
+      {profiles.isError ? (
+        <p role="alert" className="deck-error">
+          接続プロファイルを取得できませんでした。
+          <button type="button" onClick={() => void profiles.refetch()}>
+            再試行
+          </button>
+        </p>
+      ) : null}
+      {profiles.isPending ? (
+        <p role="status">接続プロファイルを取得しています…</p>
+      ) : null}
       {storageError ? (
         <p className="deck-error" role="alert">
           {storageError}
         </p>
       ) : null}
       {renaming ? (
-        <form
-          className="deck-rename"
-          onSubmit={(event) => {
-            event.preventDefault()
-            const title = String(
-              new FormData(event.currentTarget).get('title') ?? '',
-            ).trim()
-            if (!title) return
-            save({ ...deck, title })
-            setRenaming(false)
-          }}
-        >
-          <label htmlFor="deck-title">
-            調査テーマ・デッキ名
-            <input
-              id="deck-title"
-              name="title"
-              defaultValue={deck.title}
-              maxLength={120}
-              required
-            />
-          </label>
-          <button type="submit">名前を保存</button>
-        </form>
+        <Dialog title="デッキ名を変更" onClose={() => setRenaming(false)}>
+          <form
+            className="deck-rename"
+            onSubmit={(event) => {
+              event.preventDefault()
+              const title = String(
+                new FormData(event.currentTarget).get('title') ?? '',
+              ).trim()
+              if (!title) return
+              save({ ...deck, title })
+              setRenaming(false)
+            }}
+          >
+            <label htmlFor="deck-title">
+              調査テーマ・デッキ名
+              <input
+                id="deck-title"
+                name="title"
+                defaultValue={deck.title}
+                maxLength={120}
+                required
+              />
+            </label>
+            <button type="submit">名前を保存</button>
+          </form>
+        </Dialog>
       ) : null}
       {editing !== null ? (
-        <ColumnEditor
-          key={editing === 'new' ? 'new' : editing.id}
-          column={
-            editing === 'new'
-              ? undefined
-              : deck.columns.find((column) => column.id === editing.id)
-          }
-          onSave={saveColumn}
-          onCancel={() => setEditing(null)}
-        />
+        <Dialog
+          title={editing === 'new' ? 'カラムを追加' : 'カラムを編集'}
+          onClose={() => setEditing(null)}
+        >
+          <ColumnEditor
+            key={`${deck.id}-${editing === 'new' ? 'new' : editing.id}-${profiles.data?.profiles.join(',')}`}
+            profiles={profiles.data?.profiles ?? []}
+            column={
+              editing === 'new'
+                ? undefined
+                : deck.columns.find((column) => column.id === editing.id)
+            }
+            onSave={saveColumn}
+            onCancel={() => setEditing(null)}
+          />
+        </Dialog>
       ) : null}
       {removed ? (
         <div className="deck-undo" role="status">
@@ -139,9 +234,10 @@ export function DeckPage() {
       ) : null}
       {ready && deck.columns.length === 0 && editing === null ? (
         <div className="deck-empty">
-          <h2>最初の観点を追加しましょう。</h2>
+          <Icon name="columns" />
+          <h2>調査のカラムを並べましょう</h2>
           <p>
-            「日本語での反応」「発表元の投稿」など、調べたい切り口に名前と検索条件を付けてください。
+            検索、ユーザー投稿、リスト。読みたい情報を選んで、ここに追加できます。
           </p>
           <button
             className="deck-primary"
@@ -157,7 +253,8 @@ export function DeckPage() {
         <section className="deck-board" aria-label="調査カラム" tabIndex={0}>
           {deck.columns.map((column, index) => (
             <ResearchColumn
-              key={column.id}
+              key={`${deck.id}:${column.id}`}
+              registry={registry}
               column={column}
               first={index === 0}
               last={index === deck.columns.length - 1}

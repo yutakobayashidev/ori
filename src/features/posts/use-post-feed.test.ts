@@ -4,7 +4,6 @@ import { createElement, type ReactNode } from 'react'
 import { beforeEach, describe, expect, it, vi } from 'vitest'
 import {
   createPostFeedOptions,
-  getPostFeedData,
   PostLoadError,
   usePostFeed,
 } from './use-post-feed'
@@ -23,7 +22,6 @@ const loaders = (overrides: Partial<FeedLoaders> = {}): FeedLoaders => ({
   loadUser: vi.fn(),
   loadList: vi.fn(),
   search: vi.fn(),
-  thread: vi.fn(),
   ...overrides,
 })
 
@@ -34,7 +32,7 @@ describe('createPostFeedOptions', () => {
       page: { tweets: [], nextCursor: 'next' },
     })
     const options = createPostFeedOptions(
-      { kind: 'user', target: '@yuta' },
+      { profileName: 'main', kind: 'user', target: '@yuta' },
       loaders({ loadUser }),
     )
 
@@ -42,7 +40,7 @@ describe('createPostFeedOptions', () => {
 
     expect(loadUser).toHaveBeenCalledOnce()
     expect(loadUser).toHaveBeenCalledWith({
-      data: { target: '@yuta', cursor: 'cursor' },
+      data: { profileName: 'main', target: '@yuta', cursor: 'cursor' },
     })
   })
 
@@ -52,7 +50,7 @@ describe('createPostFeedOptions', () => {
       page: { tweets: [], nextCursor: 'next' },
     })
     const options = createPostFeedOptions(
-      { kind: 'list', target: '1234567890' },
+      { profileName: 'main', kind: 'list', target: '1234567890' },
       loaders({ loadList }),
     )
 
@@ -60,17 +58,17 @@ describe('createPostFeedOptions', () => {
 
     expect(loadList).toHaveBeenCalledOnce()
     expect(loadList).toHaveBeenCalledWith({
-      data: { target: '1234567890', cursor: 'cursor' },
+      data: { profileName: 'main', target: '1234567890', cursor: 'cursor' },
     })
     expect(options.queryKey).toEqual([
       'posts',
-      { kind: 'list', target: '1234567890' },
+      { profileName: 'main', kind: 'list', target: '1234567890' },
     ])
   })
 
   it('does not retry requests automatically', () => {
     const options = createPostFeedOptions(
-      { kind: 'user', target: 'yuta' },
+      { profileName: 'main', kind: 'user', target: 'yuta' },
       loaders(),
     )
 
@@ -79,7 +77,7 @@ describe('createPostFeedOptions', () => {
 
   it('does not refetch automatically when the window regains focus', () => {
     const options = createPostFeedOptions(
-      { kind: 'user', target: 'yuta' },
+      { profileName: 'main', kind: 'user', target: 'yuta' },
       loaders(),
     )
 
@@ -88,7 +86,7 @@ describe('createPostFeedOptions', () => {
 
   it('does not refetch automatically when the connection returns', () => {
     const options = createPostFeedOptions(
-      { kind: 'user', target: 'yuta' },
+      { profileName: 'main', kind: 'user', target: 'yuta' },
       loaders(),
     )
 
@@ -97,7 +95,7 @@ describe('createPostFeedOptions', () => {
 
   it('takes the next cursor only from the resolved page', () => {
     const options = createPostFeedOptions(
-      { kind: 'user', target: 'yuta' },
+      { profileName: 'main', kind: 'user', target: 'yuta' },
       loaders(),
     )
 
@@ -110,6 +108,7 @@ describe('createPostFeedOptions', () => {
   it('includes every search control in the query key', () => {
     const options = createPostFeedOptions(
       {
+        profileName: 'main',
         kind: 'search',
         query: 'AI',
         product: 'Top',
@@ -120,7 +119,13 @@ describe('createPostFeedOptions', () => {
 
     expect(options.queryKey).toEqual([
       'posts',
-      { kind: 'search', query: 'AI', product: 'Top', following: true },
+      {
+        profileName: 'main',
+        kind: 'search',
+        query: 'AI',
+        product: 'Top',
+        following: true,
+      },
     ])
   })
 
@@ -131,6 +136,7 @@ describe('createPostFeedOptions', () => {
     })
     const options = createPostFeedOptions(
       {
+        profileName: 'main',
         kind: 'search',
         query: 'AI lang:ja',
         product: 'Top',
@@ -144,65 +150,11 @@ describe('createPostFeedOptions', () => {
     expect(search).toHaveBeenCalledOnce()
     expect(search).toHaveBeenCalledWith({
       data: {
+        profileName: 'main',
         query: 'AI lang:ja',
         product: 'Top',
         following: true,
         cursor: 'search-cursor',
-      },
-    })
-  })
-
-  it('loads the initial thread and carries its root with the next cursor', async () => {
-    const thread = vi.fn().mockResolvedValue({
-      ok: true,
-      page: {
-        tweets: [],
-        focalPost: {
-          id: '123',
-          text: 'focal',
-          author: { username: 'focus', name: 'Focus' },
-        },
-        conversationId: '100',
-        nextCursor: 'thread-next',
-      },
-    })
-    const options = createPostFeedOptions(
-      { kind: 'thread', tweetId: '123' },
-      loaders({ thread }),
-    )
-
-    const page = await options.queryFn({ pageParam: undefined } as never)
-
-    expect(thread).toHaveBeenCalledWith({ data: { tweetId: '123' } })
-    expect(options.queryKey).toEqual([
-      'posts',
-      { kind: 'thread', tweetId: '123' },
-    ])
-    expect(options.getNextPageParam(page)).toEqual({
-      cursor: 'thread-next',
-      conversationId: '100',
-    })
-  })
-
-  it('forwards a thread continuation page parameter intact', async () => {
-    const thread = vi.fn().mockResolvedValue({
-      ok: true,
-      page: { tweets: [], conversationId: '100' },
-    })
-    const options = createPostFeedOptions(
-      { kind: 'thread', tweetId: '123' },
-      loaders({ thread }),
-    )
-
-    await options.queryFn({
-      pageParam: { cursor: 'thread-next', conversationId: '100' },
-    } as never)
-
-    expect(thread).toHaveBeenCalledWith({
-      data: {
-        tweetId: '123',
-        cursor: 'thread-next',
-        conversationId: '100',
       },
     })
   })
@@ -214,7 +166,7 @@ describe('createPostFeedOptions', () => {
       retryable: true,
     }
     const options = createPostFeedOptions(
-      { kind: 'user', target: 'yuta' },
+      { profileName: 'main', kind: 'user', target: 'yuta' },
       loaders({
         loadUser: vi.fn().mockResolvedValue({ ok: false, error }),
       }),
@@ -230,93 +182,33 @@ describe('createPostFeedOptions', () => {
   })
 })
 
-describe('getPostFeedData', () => {
-  it('reuses the visible feed without fetching a second copy', async () => {
-    const loadUser = vi
-      .fn()
-      .mockResolvedValue({ ok: true, page: { tweets: [] } })
-    const options = createPostFeedOptions(
-      { kind: 'user', target: 'yuta' },
+describe('profile-bound feed cache', () => {
+  it('keeps cached posts and pagination isolated between bound profiles', async () => {
+    const loadUser = vi.fn(async ({ data }) => ({
+      ok: true as const,
+      page: { tweets: [], nextCursor: `${data.profileName}-next` },
+    }))
+    const main = createPostFeedOptions(
+      { kind: 'user', target: 'yuta', profileName: 'main' },
+      loaders({ loadUser }),
+    )
+    const work = createPostFeedOptions(
+      { kind: 'user', target: 'yuta', profileName: 'work' },
       loaders({ loadUser }),
     )
     const client = new QueryClient()
-    const visible = await client.fetchInfiniteQuery(options)
-
-    expect(await getPostFeedData(client, options)).toEqual(visible)
-    expect(loadUser).toHaveBeenCalledOnce()
-    client.clear()
-  })
-
-  it('waits for the active profile refresh instead of returning old cached posts', async () => {
-    let release = () => {}
-    const gate = new Promise<void>((resolve) => {
-      release = resolve
+    await client.ensureInfiniteQueryData(main)
+    expect(
+      (await client.ensureInfiniteQueryData(work)).pages[0]?.nextCursor,
+    ).toBe('work-next')
+    expect(
+      (await client.ensureInfiniteQueryData(main)).pages[0]?.nextCursor,
+    ).toBe('main-next')
+    expect(loadUser).toHaveBeenCalledTimes(2)
+    await work.queryFn({ pageParam: 'work-next' })
+    expect(loadUser).toHaveBeenLastCalledWith({
+      data: { target: 'yuta', profileName: 'work', cursor: 'work-next' },
     })
-    const freshPage = {
-      tweets: [
-        {
-          id: 'new-profile',
-          text: 'fresh',
-          author: { username: 'new', name: 'New' },
-        },
-      ],
-    }
-    const loadUser = vi.fn(async () => {
-      await gate
-      return { ok: true as const, page: freshPage }
-    })
-    const options = createPostFeedOptions(
-      { kind: 'user', target: 'yuta' },
-      loaders({ loadUser }),
-    )
-    const client = new QueryClient()
-    client.setQueryData(options.queryKey, {
-      pages: [{ tweets: [] }],
-      pageParams: [undefined],
-    })
-    await client.invalidateQueries({
-      queryKey: options.queryKey,
-      refetchType: 'none',
-    })
-    const refresh = client.fetchInfiniteQuery(options)
-    const resolved = vi.fn()
-    const tool = getPostFeedData(client, options).then(resolved)
-    await Promise.resolve()
-
-    expect(resolved).not.toHaveBeenCalled()
-    release()
-    await Promise.all([refresh, tool])
-    expect(resolved).toHaveBeenCalledWith({
-      pages: [freshPage],
-      pageParams: [undefined],
-    })
-    expect(loadUser).toHaveBeenCalledOnce()
-    client.clear()
-  })
-
-  it('refreshes invalidated cached data before returning it', async () => {
-    const loadUser = vi.fn().mockResolvedValue({
-      ok: true,
-      page: { tweets: [], nextCursor: 'fresh' },
-    })
-    const options = createPostFeedOptions(
-      { kind: 'user', target: 'yuta' },
-      loaders({ loadUser }),
-    )
-    const client = new QueryClient()
-    client.setQueryData(options.queryKey, {
-      pages: [{ tweets: [] }],
-      pageParams: [undefined],
-    })
-    await client.invalidateQueries({
-      queryKey: options.queryKey,
-      refetchType: 'none',
-    })
-
-    expect((await getPostFeedData(client, options)).pages[0]?.nextCursor).toBe(
-      'fresh',
-    )
-    expect(loadUser).toHaveBeenCalledOnce()
     client.clear()
   })
 })

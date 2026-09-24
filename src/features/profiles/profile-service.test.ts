@@ -1,7 +1,40 @@
 // @vitest-environment node
 
-import { describe, expect, it, vi } from 'vitest'
-import { fetchProfileNames } from './profile-service.server'
+import { afterEach, describe, expect, it, vi } from 'vitest'
+import { ProfileUnavailableError } from './errors'
+import { fetchProfileNames, requireProfileName } from './profile-service.server'
+
+afterEach(() => {
+  vi.unstubAllGlobals()
+  vi.unstubAllEnvs()
+})
+
+describe('requireProfileName', () => {
+  it('accepts a discovered profile and rejects a stale column binding', async () => {
+    vi.stubEnv('TWITTER_RELAY_BASE_URL', 'https://relay.invalid')
+    vi.stubGlobal(
+      'fetch',
+      vi.fn(async () => Response.json({ profiles: ['main', 'work'] })),
+    )
+
+    await expect(requireProfileName('work')).resolves.toBeUndefined()
+    await expect(requireProfileName('removed')).rejects.toBeInstanceOf(
+      ProfileUnavailableError,
+    )
+  })
+
+  it('reports discovery failures without silently selecting another profile', async () => {
+    vi.stubEnv('TWITTER_RELAY_BASE_URL', 'https://relay.invalid')
+    vi.stubGlobal(
+      'fetch',
+      vi.fn(async () => new Response(null, { status: 503 })),
+    )
+
+    await expect(requireProfileName('work')).rejects.toThrow(
+      'プロファイルを確認できませんでした。',
+    )
+  })
+})
 
 describe('fetchProfileNames', () => {
   it('loads profile names from the relay endpoint', async () => {

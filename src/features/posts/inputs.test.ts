@@ -1,52 +1,28 @@
 import { describe, expect, it } from 'vitest'
 import {
-  buildAdvancedSearchQuery,
-  buildFilteredSearchQuery,
   buildSearchQuery,
+  listChoicesInputSchema,
+  listPageInputSchema,
   normalizeListTarget,
-  normalizeTweetId,
   normalizeUserTarget,
-  postSearchRouteSchema,
-  threadPageInputSchema,
+  searchPageInputSchema,
+  userPageInputSchema,
 } from './inputs'
 
-describe('threadPageInputSchema', () => {
-  it('accepts initial and complete continuation requests', () => {
-    expect(threadPageInputSchema.parse({ tweetId: '123' })).toEqual({
-      tweetId: '123',
-    })
-    expect(
-      threadPageInputSchema.parse({
-        tweetId: '123',
-        conversationId: '100',
-        cursor: 'thread-next',
-      }),
-    ).toEqual({
-      tweetId: '123',
-      conversationId: '100',
-      cursor: 'thread-next',
-    })
-  })
-
+describe('explicit relay profile binding', () => {
   it.each([
-    { tweetId: '' },
-    { tweetId: 'abc' },
-    { tweetId: '123', cursor: 'thread-next' },
-    { tweetId: '123', conversationId: '100' },
-    { tweetId: '123', conversationId: 'root', cursor: 'thread-next' },
-  ])('rejects an invalid thread request %#', (input) => {
-    expect(() => threadPageInputSchema.parse(input)).toThrow()
-  })
-})
-
-describe('normalizeTweetId', () => {
-  it('keeps a decimal post ID', () => {
-    expect(normalizeTweetId(' 1234567890 ')).toBe('1234567890')
-  })
-
-  it.each(['', '123/status', '@123', '１２３'])('rejects %s', (input) => {
-    expect(() => normalizeTweetId(input)).toThrow(
-      '投稿 ID を確認してください。',
+    [
+      searchPageInputSchema,
+      { query: 'AI', product: 'Latest', following: false },
+    ],
+    [listPageInputSchema, { target: '123' }],
+    [userPageInputSchema, { target: 'yuta' }],
+    [listChoicesInputSchema, {}],
+  ])('rejects missing or empty bindings for loader %#', (schema, input) => {
+    expect(schema.safeParse(input).success).toBe(false)
+    expect(schema.safeParse({ ...input, profileName: ' ' }).success).toBe(false)
+    expect(schema.safeParse({ ...input, profileName: 'work' }).success).toBe(
+      true,
     )
   })
 })
@@ -109,136 +85,5 @@ describe('buildSearchQuery', () => {
 
   it('rejects an empty query', () => {
     expect(() => buildSearchQuery('   ', false)).toThrow()
-  })
-})
-
-describe('buildAdvancedSearchQuery', () => {
-  it('builds a query from button-friendly filters', () => {
-    expect(
-      buildAdvancedSearchQuery({
-        q: 'TypeScript',
-        from: '@tan_stack',
-        since: '2026-08-04',
-        until: '2026-08-11',
-        lang: 'ja',
-        content: 'images',
-        excludeReplies: true,
-        excludeReposts: true,
-      }),
-    ).toBe(
-      'TypeScript from:tan_stack since:2026-08-04 until:2026-08-11 lang:ja filter:images -filter:replies -filter:retweets',
-    )
-  })
-
-  it('allows an author search without keywords', () => {
-    expect(
-      buildAdvancedSearchQuery({
-        q: '',
-        from: 'tan_stack',
-        since: '',
-        until: '',
-        lang: 'all',
-        content: 'all',
-        excludeReplies: false,
-        excludeReposts: false,
-      }),
-    ).toBe('from:tan_stack')
-  })
-
-  it('rejects filters that have no keyword or author', () => {
-    expect(() =>
-      buildAdvancedSearchQuery({
-        q: '',
-        from: '',
-        since: '2026-08-04',
-        until: '',
-        lang: 'ja',
-        content: 'all',
-        excludeReplies: false,
-        excludeReposts: false,
-      }),
-    ).toThrow('検索語または投稿者を入力してください。')
-  })
-
-  it('rejects an invalid author and reversed dates', () => {
-    const base = {
-      q: 'TypeScript',
-      from: '',
-      since: '',
-      until: '',
-      lang: 'all' as const,
-      content: 'all' as const,
-      excludeReplies: false,
-      excludeReposts: false,
-    }
-
-    expect(() =>
-      buildAdvancedSearchQuery({ ...base, from: 'not-valid!' }),
-    ).toThrow('投稿者のハンドルを確認してください。')
-    expect(() =>
-      buildAdvancedSearchQuery({
-        ...base,
-        since: '2026-08-11',
-        until: '2026-08-10',
-      }),
-    ).toThrow('終了日は開始日より後の日付を選んでください。')
-  })
-
-  it('rejects nonexistent dates and a compiled query over 512 characters', () => {
-    const base = {
-      q: 'TypeScript',
-      from: '',
-      since: '',
-      until: '',
-      lang: 'all' as const,
-      content: 'all' as const,
-      excludeReplies: false,
-      excludeReposts: false,
-    }
-
-    expect(() =>
-      buildAdvancedSearchQuery({ ...base, since: '2026-02-30' }),
-    ).toThrow('開始日を確認してください。')
-    expect(() =>
-      buildAdvancedSearchQuery({ ...base, q: 'a'.repeat(510), lang: 'ja' }),
-    ).toThrow('検索語は 512 文字以内で入力してください。')
-  })
-})
-
-describe('buildFilteredSearchQuery', () => {
-  it('includes the follows filter in the final query and enforces its length', () => {
-    const input = {
-      q: 'TypeScript',
-      from: '',
-      since: '',
-      until: '',
-      lang: 'ja' as const,
-      content: 'all' as const,
-      excludeReplies: false,
-      excludeReposts: false,
-    }
-
-    expect(buildFilteredSearchQuery(input, true)).toBe(
-      'TypeScript lang:ja filter:follows',
-    )
-    expect(() =>
-      buildFilteredSearchQuery({ ...input, q: 'a'.repeat(498) }, true),
-    ).toThrow('検索語は 512 文字以内で入力してください。')
-  })
-})
-
-describe('postSearchRouteSchema', () => {
-  it('keeps omitted filter parameters optional', () => {
-    expect(
-      postSearchRouteSchema.parse({
-        q: 'AI',
-        product: 'Latest',
-        following: false,
-      }),
-    ).toEqual({
-      q: 'AI',
-      product: 'Latest',
-      following: false,
-    })
   })
 })

@@ -1,9 +1,9 @@
 import { TwitterClient } from '@yuta/bird'
 import type { BirdReader } from './post-service'
 
-const clients = new Map<string | undefined, TwitterClient>()
+const clients = new Map<string, TwitterClient>()
 
-export function getBirdReader(profileName?: string): BirdReader {
+export function getBirdReader(profileName: string): BirdReader {
   const existing = clients.get(profileName)
   if (existing) return existing
 

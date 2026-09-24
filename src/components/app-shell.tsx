@@ -1,43 +1,21 @@
-import { Link } from '@tanstack/react-router'
-import { ProfileSwitcher } from '#/features/profiles/profile-switcher'
+import { Icon } from './icon'
 
 export function AppShell({
-  active,
+  sidebar,
   children,
 }: {
-  active?: 'user' | 'search' | 'list' | 'deck'
+  sidebar: React.ReactNode
   children: React.ReactNode
 }) {
   return (
-    <main className={active === 'deck' ? 'app app-deck' : 'app'}>
-      <header className="app-header">
-        <p className="brand">Twitter Lite</p>
-        <ProfileSwitcher />
-        <nav aria-label="閲覧方法" className="tabs">
-          <Link
-            aria-current={active === 'deck' ? 'page' : undefined}
-            to="/deck"
-          >
-            デッキ
-          </Link>
-          <Link
-            aria-current={active === 'search' ? 'page' : undefined}
-            search={{ q: '', product: 'Latest', following: false }}
-            to="/search"
-          >
-            検索
-          </Link>
-          <Link aria-current={active === 'user' ? 'page' : undefined} to="/">
-            ユーザー
-          </Link>
-          <Link
-            aria-current={active === 'list' ? 'page' : undefined}
-            to="/i/lists"
-          >
-            リスト
-          </Link>
-        </nav>
-      </header>
+    <main className="app app-deck">
+      <aside className="app-sidebar" aria-label="デッキ管理">
+        <p className="brand">
+          <Icon name="columns" />
+          <span>Twitter Lite</span>
+        </p>
+        {sidebar}
+      </aside>
       <section className="reader">{children}</section>
     </main>
   )

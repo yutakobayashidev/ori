@@ -1,9 +1,12 @@
+import { Icon } from '#/components/icon'
 import { PostText } from '#/components/post-text'
 import type { ResearchPost } from '#/features/platforms/types'
 
 const dateFormatter = new Intl.DateTimeFormat('ja-JP', {
-  dateStyle: 'short',
-  timeStyle: 'short',
+  month: 'numeric',
+  day: 'numeric',
+  hour: '2-digit',
+  minute: '2-digit',
   timeZone: 'Asia/Tokyo',
 })
 
@@ -15,15 +18,22 @@ export function ResearchPostCard({ post }: { post: ResearchPost }) {
           <img
             src={post.author.avatarUrl}
             alt=""
-            width={32}
-            height={32}
+            width={36}
+            height={36}
             loading="lazy"
           />
         ) : null}
         <div>
           <strong>{post.author.name}</strong>
-          <span className="handle">{post.author.handle}</span>
+          <span className="handle">
+            @{post.author.handle.replace(/^@/, '')}
+          </span>
         </div>
+        {post.createdAt ? (
+          <time dateTime={post.createdAt} title={post.createdAt}>
+            {dateFormatter.format(new Date(post.createdAt))}
+          </time>
+        ) : null}
       </header>
       <p className="research-post-text">
         <PostText text={post.text} />
@@ -64,13 +74,8 @@ export function ResearchPostCard({ post }: { post: ResearchPost }) {
         </blockquote>
       ) : null}
       <footer>
-        {post.createdAt ? (
-          <time dateTime={post.createdAt}>
-            {dateFormatter.format(new Date(post.createdAt))}
-          </time>
-        ) : null}
         <a href={post.url} target="_blank" rel="noreferrer noopener">
-          元の投稿を開く
+          元の投稿を開く <Icon name="arrow" />
         </a>
       </footer>
     </article>

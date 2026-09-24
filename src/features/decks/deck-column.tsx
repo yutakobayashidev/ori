@@ -1,6 +1,9 @@
+import { Icon } from '#/components/icon'
 import { mapTwitterPost } from '#/features/platforms/twitter'
 import { flattenPostPages } from '#/features/posts/page'
 import { PostLoadError, usePostFeed } from '#/features/posts/use-post-feed'
+import { columnRequest } from './column-request'
+import { type ColumnRegistry, useRegisterColumn } from './column-tools'
 import type { DeckColumn } from './model'
 import { ResearchPostCard } from './research-post-card'
 
@@ -11,6 +14,7 @@ export function ResearchColumn({
   onMove,
   first,
   last,
+  registry,
 }: {
   column: DeckColumn
   onEdit: () => void
@@ -18,13 +22,10 @@ export function ResearchColumn({
   onMove: (direction: -1 | 1) => void
   first: boolean
   last: boolean
+  registry: ColumnRegistry
 }) {
-  const query = usePostFeed({
-    kind: 'search',
-    query: column.source.query,
-    product: column.source.product,
-    following: column.source.following,
-  })
+  const query = usePostFeed(columnRequest(column))
+  useRegisterColumn(registry, column, query)
   const posts = flattenPostPages(query.data?.pages ?? []).map(mapTwitterPost)
   const error =
     query.error instanceof PostLoadError
@@ -34,50 +35,85 @@ export function ResearchColumn({
   return (
     <section className="deck-column" aria-labelledby={headingId}>
       <header className="deck-column-header">
-        <div className="deck-column-label">
-          <span>Twitter</span>
-          <span>
-            {column.source.product === 'Latest' ? '最新' : '話題'}
-            {column.source.following ? ' · フォロー中' : ''}
-          </span>
-        </div>
-        <h2 id={headingId}>{column.title}</h2>
-        <p className="deck-query">{column.source.query}</p>
-        <div className="deck-actions">
-          <button type="button" onClick={onEdit}>
-            編集
-          </button>
+        <div className="deck-column-title">
+          <Icon name={column.source.kind} />
+          <h2 id={headingId}>{column.title}</h2>
           <button
+            className="icon-button"
+            aria-label="更新"
+            title="更新"
             type="button"
             onClick={() => void query.refetch()}
             disabled={query.isFetching}
           >
-            更新
+            <Icon name="refresh" />
           </button>
-          <button
-            type="button"
-            onClick={() => onMove(-1)}
-            disabled={first}
-            aria-label={`${column.title}を左へ`}
-          >
-            ←
-          </button>
-          <button
-            type="button"
-            onClick={() => onMove(1)}
-            disabled={last}
-            aria-label={`${column.title}を右へ`}
-          >
-            →
-          </button>
-          <button
-            type="button"
-            onClick={onRemove}
-            aria-label={`${column.title}を削除`}
-          >
-            削除
-          </button>
+          <details className="column-menu">
+            <summary
+              className="icon-button"
+              aria-label={`${column.title}の操作`}
+              title="カラムの操作"
+            >
+              <Icon name="more" />
+            </summary>
+            <div className="column-menu-panel">
+              <button type="button" onClick={onEdit}>
+                編集
+              </button>
+              <button
+                type="button"
+                onClick={(event) => {
+                  onMove(-1)
+                  event.currentTarget
+                    .closest('details')
+                    ?.removeAttribute('open')
+                }}
+                disabled={first}
+                aria-label={`${column.title}を左へ`}
+              >
+                ← 左へ移動
+              </button>
+              <button
+                type="button"
+                onClick={(event) => {
+                  onMove(1)
+                  event.currentTarget
+                    .closest('details')
+                    ?.removeAttribute('open')
+                }}
+                disabled={last}
+                aria-label={`${column.title}を右へ`}
+              >
+                右へ移動 →
+              </button>
+              <button
+                type="button"
+                className="danger"
+                onClick={onRemove}
+                aria-label={`${column.title}を削除`}
+              >
+                カラムを削除
+              </button>
+            </div>
+          </details>
         </div>
+        <div className="deck-column-label">
+          <span title={`接続プロファイル: ${column.profileName}`}>
+            {column.profileName}
+          </span>
+          <span>
+            {column.source.kind === 'search'
+              ? `${column.source.product === 'Latest' ? '最新' : '話題'}${column.source.following ? ' · フォロー中' : ''}`
+              : column.source.kind === 'user'
+                ? 'ユーザー投稿'
+                : 'リスト'}
+          </span>
+        </div>
+        <p className="deck-query">
+          {column.source.kind === 'search'
+            ? column.source.query
+            : column.source.target}
+        </p>
         <p className="deck-column-status" role="status">
           {query.isFetching
             ? '投稿を取得しています…'

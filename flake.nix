@@ -113,13 +113,6 @@
               description = "Base URL of the Twitter relay.";
             };
 
-            profileName = lib.mkOption {
-              type = lib.types.nullOr lib.types.nonEmptyStr;
-              default = null;
-              example = "default";
-              description = "Relay profile to use when the relay has multiple profiles.";
-            };
-
             host = lib.mkOption {
               type = lib.types.nonEmptyStr;
               default = "127.0.0.1";
@@ -142,8 +135,6 @@
                 HOST = cfg.host;
                 PORT = toString cfg.port;
                 TWITTER_RELAY_BASE_URL = cfg.relayBaseUrl;
-              } // lib.optionalAttrs (cfg.profileName != null) {
-                BIRD_PROFILE_NAME = cfg.profileName;
               };
               serviceConfig = {
                 DynamicUser = true;

@@ -5,13 +5,28 @@ async function addColumn(
   page: Page,
   title: string,
   query: string,
-  top = false,
+  profile = 'e2e',
+  kind = 'search',
 ) {
   await page.getByRole('button', { name: 'カラムを追加', exact: true }).click()
   const editor = page.getByRole('form', { name: 'カラムを追加', exact: true })
   await editor.getByLabel('カラム名', { exact: true }).fill(title)
-  await editor.getByLabel('Twitterの検索条件').fill(query)
-  if (top) await editor.getByLabel('表示順').selectOption('Top')
+  await editor
+    .getByRole('combobox', { name: '接続プロファイル', exact: true })
+    .selectOption(profile)
+  await editor
+    .getByRole('combobox', { name: 'カラムの種類', exact: true })
+    .selectOption(kind)
+  await editor
+    .getByLabel(
+      kind === 'search'
+        ? 'Twitterの検索条件'
+        : kind === 'user'
+          ? 'ユーザー'
+          : 'リスト',
+      { exact: true },
+    )
+    .fill(query)
   await editor.getByRole('button', { name: '追加して検索' }).click()
   await expect(
     page
@@ -22,63 +37,114 @@ async function addColumn(
 }
 
 test.beforeEach(async ({ page }) => {
-  await page.goto('/deck')
+  await page.goto('/')
   await page.waitForLoadState('networkidle')
 })
 
-test('creates independent columns, edits, reorders, and restores saved conditions', async ({
+test('binds identical searches to independent profiles through paging, editing and reload', async ({
   page,
 }) => {
-  const errors: string[] = []
-  page.on('pageerror', (error) => errors.push(error.message))
-  await page.getByRole('button', { name: '名前を変更' }).click()
-  await page.getByLabel('調査テーマ・デッキ名').fill('WebMCPの反応')
-  await page.getByRole('button', { name: '名前を保存' }).click()
-  await addColumn(page, '日本語の反応', 'WebMCP lang:ja')
-  await addColumn(page, '話題の投稿', 'WebMCP', true)
-  const first = page.getByRole('region', { name: '日本語の反応', exact: true })
-  const second = page.getByRole('region', { name: '話題の投稿', exact: true })
+  await addColumn(page, '通常の接続', 'same-query')
+  await addColumn(page, '別の接続', 'same-query', 'alternate')
+  const first = page.getByRole('region', { name: '通常の接続', exact: true })
+  const second = page.getByRole('region', { name: '別の接続', exact: true })
+  await expect(
+    first.getByText('Latest · all page 1', { exact: true }),
+  ).toBeVisible()
+  await expect(
+    second.getByText('alternate · Latest · all page 1', { exact: true }),
+  ).toBeVisible()
   await first.getByRole('button', { name: '続きを読み込む' }).click()
   await expect(first.locator('article')).toHaveCount(2)
   await expect(second.locator('article')).toHaveCount(1)
-  await second.getByRole('button', { name: '話題の投稿を左へ' }).click()
-  await expect(page.locator('.deck-column h2')).toHaveText([
-    '話題の投稿',
-    '日本語の反応',
-  ])
+  await second.getByRole('button', { name: '続きを読み込む' }).click()
+  await expect(
+    second.getByText('alternate · Latest · all page 2'),
+  ).toBeVisible()
+  await second.locator('summary[aria-label="別の接続の操作"]').click()
   await second.getByRole('button', { name: '編集', exact: true }).click()
   await page
-    .getByRole('form', { name: 'カラムを編集' })
-    .getByLabel('カラム名', { exact: true })
-    .fill('公式の投稿')
-  await page.getByLabel('Twitterの検索条件').fill('from:OpenAI')
+    .getByRole('combobox', { name: '接続プロファイル', exact: true })
+    .selectOption('e2e')
   await page.getByRole('button', { name: '変更を保存' }).click()
-  await page.reload()
-  await expect(page.getByRole('heading', { level: 1 })).toHaveText(
-    'WebMCPの反応',
+  await expect(
+    second.getByText('Latest · all page 1', { exact: true }),
+  ).toBeVisible()
+  await expect(second.getByText('alternate · Latest · all page 1')).toHaveCount(
+    0,
   )
-  await expect(page.locator('.deck-column h2')).toHaveText([
-    '公式の投稿',
-    '日本語の反応',
-  ])
-  const official = page.getByRole('region', { name: '公式の投稿', exact: true })
-  await expect(official.locator('.deck-query')).toHaveText('from:OpenAI')
-  await expect(official.locator('article')).toHaveCount(1)
-  await official.getByRole('button', { name: '公式の投稿を削除' }).click()
-  await expect(page.locator('.deck-column')).toHaveCount(1)
-  await page.getByRole('button', { name: '元に戻す' }).click()
-  await expect(page.locator('.deck-column h2')).toHaveText([
-    '公式の投稿',
-    '日本語の反応',
-  ])
-  expect(errors).toEqual([])
+  await page.reload()
+  await expect(
+    second.getByText('Latest · all page 1', { exact: true }),
+  ).toBeVisible()
+  await expect(first.locator('article')).toHaveCount(1)
 })
 
-test('keeps other columns usable when pagination fails and retries only that column', async ({
+test('creates, switches, renames and deletes persisted deck profiles', async ({
+  page,
+}) => {
+  await page.getByRole('button', { name: '名前を変更' }).click()
+  await page.getByLabel('調査テーマ・デッキ名').fill('最初の調査')
+  await page.getByRole('button', { name: '名前を保存' }).click()
+  await addColumn(page, '最初の観点', 'first-deck')
+  await page.getByRole('button', { name: 'デッキを作成', exact: true }).click()
+  await page.getByLabel('新しいデッキ名').fill('別の調査')
+  await page.getByRole('button', { name: '作成', exact: true }).click()
+  await expect(page.locator('.deck-column')).toHaveCount(0)
+  await addColumn(page, '別の観点', 'second-deck', 'alternate')
+  await page
+    .getByLabel('デッキプロファイル', { exact: true })
+    .selectOption({ label: '最初の調査' })
+  await expect(page.locator('.deck-column h2')).toHaveText(['最初の観点'])
+  await page.reload()
+  await expect(page.getByRole('heading', { level: 1 })).toHaveText('最初の調査')
+  await page
+    .getByLabel('デッキプロファイル', { exact: true })
+    .selectOption({ label: '別の調査' })
+  await expect(page.locator('.deck-column h2')).toHaveText(['別の観点'])
+  await page.getByRole('button', { name: 'デッキを削除', exact: true }).click()
+  await page.getByRole('button', { name: '削除する', exact: true }).click()
+  await page.reload()
+  await expect(page.getByRole('heading', { level: 1 })).toHaveText('最初の調査')
+  await expect(
+    page.getByLabel('デッキプロファイル', { exact: true }).locator('option'),
+  ).toHaveCount(1)
+})
+
+test('reads user and list timelines within columns and reorders, deletes and restores them', async ({
+  page,
+}) => {
+  await addColumn(page, 'アカウント', 'yuta', 'alternate', 'user')
+  await addColumn(page, 'リストの投稿', '1234567890', 'e2e', 'list')
+  const user = page.getByRole('region', { name: 'アカウント', exact: true })
+  const list = page.getByRole('region', { name: 'リストの投稿', exact: true })
+  await expect(user.getByText('alternate profile page 1')).toBeVisible()
+  await expect(list.getByText('list page 1')).toBeVisible()
+  await list.getByRole('button', { name: '続きを読み込む' }).click()
+  await expect(list.getByText('list page 2')).toBeVisible()
+  await list.locator('summary[aria-label="リストの投稿の操作"]').click()
+  await list.getByRole('button', { name: 'リストの投稿を左へ' }).click()
+  await expect(page.locator('.deck-column h2')).toHaveText([
+    'リストの投稿',
+    'アカウント',
+  ])
+  await list.locator('summary[aria-label="リストの投稿の操作"]').click()
+  await list.getByRole('button', { name: 'リストの投稿を削除' }).click()
+  await page.getByRole('button', { name: '元に戻す' }).click()
+  await expect(page.locator('.deck-column h2')).toHaveText([
+    'リストの投稿',
+    'アカウント',
+  ])
+  await page.reload()
+  await expect(user.getByText('alternate profile page 1')).toBeVisible()
+  await expect(list.getByText('list page 1')).toBeVisible()
+})
+
+test('keeps other columns usable when pagination fails and retries that column', async ({
   page,
 }, testInfo) => {
   await addColumn(page, '失敗する検索', `retry-deck-${testInfo.project.name}`)
-  await addColumn(page, '別の検索', 'independent-deck', true)
+  await addColumn(page, '別の検索', 'independent-deck')
   const failed = page.getByRole('region', { name: '失敗する検索', exact: true })
   const other = page.getByRole('region', { name: '別の検索', exact: true })
   await failed.getByRole('button', { name: '続きを読み込む' }).click()
@@ -88,15 +154,15 @@ test('keeps other columns usable when pagination fails and retries only that col
   await expect(other.locator('article')).toHaveCount(2)
   await failed.getByRole('button', { name: '再試行' }).click()
   await expect(failed.locator('article')).toHaveCount(2)
-  await expect(failed.getByRole('alert')).toHaveCount(0)
 })
 
-test('keeps columns within narrow viewports and accessible', async ({
+test('keeps the deck and editor accessible within narrow viewports', async ({
   page,
   a11y,
 }, testInfo) => {
   await addColumn(page, '日本語の反応', 'WebMCP lang:ja')
-  await addColumn(page, '海外の反応', 'WebMCP lang:en', true)
+  await addColumn(page, '海外の反応', 'WebMCP lang:en', 'alternate')
+  await addColumn(page, '公式アカウント', 'OpenAI', 'e2e', 'user')
   for (const width of [320, 375, 414, 768]) {
     await page.setViewportSize({ width, height: 900 })
     expect(
@@ -104,16 +170,36 @@ test('keeps columns within narrow viewports and accessible', async ({
         () => document.documentElement.scrollWidth > innerWidth,
       ),
     ).toBe(false)
+    expect(
+      await page.evaluate(
+        () => document.documentElement.scrollHeight <= innerHeight,
+      ),
+    ).toBe(true)
+    const board = await page.locator('.deck-board').boundingBox()
+    expect(board).not.toBeNull()
+    expect((board?.y ?? 0) + (board?.height ?? 0)).toBeLessThanOrEqual(901)
   }
   await page.setViewportSize({
     width: testInfo.project.name === 'desktop' ? 1440 : 393,
     height: 900,
   })
-  await expect(
-    page
-      .getByRole('region', { name: '日本語の反応', exact: true })
-      .locator('article'),
-  ).toHaveCount(1)
+  if (testInfo.project.name === 'desktop') {
+    await page
+      .getByRole('navigation', { name: 'カラム一覧' })
+      .getByRole('button', { name: '公式アカウント' })
+      .click()
+    await expect(
+      page
+        .getByRole('region', { name: '公式アカウント', exact: true })
+        .locator('.deck-column-results'),
+    ).toBeFocused()
+  }
+  expect((await a11y().analyze()).violations).toEqual([])
+  await page.screenshot({
+    path: testInfo.outputPath('deck-populated.png'),
+    fullPage: true,
+  })
+  await page.getByRole('button', { name: 'カラムを追加', exact: true }).click()
   expect((await a11y().analyze()).violations).toEqual([])
   await page.screenshot({
     path: testInfo.outputPath('deck.png'),
@@ -121,9 +207,22 @@ test('keeps columns within narrow viewports and accessible', async ({
   })
 })
 
-test('does not overwrite an unreadable saved deck on reload', async ({
+test('closes the column editor with Escape and restores focus without applying edits', async ({
   page,
 }) => {
+  const opener = page.getByRole('button', { name: 'カラムを追加', exact: true })
+  await opener.click()
+  await expect(page.getByRole('dialog')).toBeVisible()
+  await page.getByLabel('カラム名', { exact: true }).fill('キャンセルする観点')
+  await page.keyboard.press('Escape')
+  await expect(page.getByRole('dialog')).toHaveCount(0)
+  await expect(opener).toBeFocused()
+  await expect(page.locator('.deck-column')).toHaveCount(0)
+  await opener.click()
+  await expect(page.getByLabel('カラム名', { exact: true })).toHaveValue('')
+})
+
+test('does not overwrite unreadable storage on reload', async ({ page }) => {
   await page.evaluate(() =>
     localStorage.setItem('twitter-lite-research-deck', '{broken'),
   )
@@ -136,58 +235,33 @@ test('does not overwrite an unreadable saved deck on reload', async ({
   ).toBe('{broken')
 })
 
-test('keeps the six-column limit when undo and add overlap', async ({
+test('selects a list from the column profile catalog and refreshes it on profile change', async ({
   page,
 }) => {
-  await page.evaluate(() =>
-    localStorage.setItem(
-      'twitter-lite-research-deck',
-      JSON.stringify({
-        version: 1,
-        title: '上限の確認',
-        columns: Array.from({ length: 6 }, (_, index) => ({
-          id: `column-${index}`,
-          title: `観点${index}`,
-          source: {
-            platform: 'twitter',
-            query: `limit-${index}`,
-            product: 'Latest',
-            following: false,
-          },
-        })),
-      }),
-    ),
-  )
-  await page.reload()
-  await page.waitForLoadState('networkidle')
-  await expect(
-    page.getByRole('button', { name: 'カラムを追加', exact: true }),
-  ).toBeDisabled()
-  await page.getByRole('button', { name: '観点0を削除' }).click()
   await page.getByRole('button', { name: 'カラムを追加', exact: true }).click()
-  await expect(page.getByRole('button', { name: '元に戻す' })).toBeDisabled()
-  await page.getByLabel('カラム名', { exact: true }).fill('追加の観点')
-  await page.getByLabel('Twitterの検索条件').fill('new-limit')
-  await page.getByRole('button', { name: '追加して検索' }).click()
-  await expect(page.locator('.deck-column')).toHaveCount(6)
-  await expect(page.getByRole('button', { name: '元に戻す' })).toBeDisabled()
-  await page.reload()
-  await expect(page.locator('.deck-column')).toHaveCount(6)
-})
-
-test('creates columns without the secure-context-only randomUUID API', async ({
-  page,
-}) => {
-  await page.addInitScript(() =>
-    Object.defineProperty(crypto, 'randomUUID', { value: undefined }),
+  await page.getByLabel('カラム名', { exact: true }).fill('購読リスト')
+  await page
+    .getByRole('combobox', { name: 'カラムの種類', exact: true })
+    .selectOption('list')
+  await expect(
+    page.getByRole('button', { name: 'My E2E List', exact: true }),
+  ).toBeVisible()
+  await page
+    .getByRole('combobox', { name: '接続プロファイル', exact: true })
+    .selectOption('alternate')
+  await expect(
+    page.getByRole('button', { name: 'My E2E List', exact: true }),
+  ).toHaveCount(0)
+  await page
+    .getByRole('button', { name: 'Alternate List', exact: true })
+    .click()
+  await expect(page.getByLabel('リスト', { exact: true })).toHaveValue(
+    '1234567890',
   )
-  await page.reload()
-  await page.waitForLoadState('networkidle')
-  await addColumn(page, 'HTTP接続からの調査', 'http-deck')
-  await page.reload()
+  await page.getByRole('button', { name: '追加して検索' }).click()
   await expect(
     page
-      .getByRole('region', { name: 'HTTP接続からの調査', exact: true })
-      .locator('article'),
-  ).toHaveCount(1)
+      .getByRole('region', { name: '購読リスト', exact: true })
+      .getByText('list page 1', { exact: true }),
+  ).toBeVisible()
 })

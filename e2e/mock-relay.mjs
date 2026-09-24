@@ -218,7 +218,10 @@ const server = createServer(async (request, response) => {
                               itemContent: {
                                 list: {
                                   id_str: '1234567890',
-                                  name: 'My E2E List',
+                                  name:
+                                    profileName === 'alternate'
+                                      ? 'Alternate List'
+                                      : 'My E2E List',
                                   description: 'Accounts selected for testing',
                                   member_count: 10,
                                   mode: 'Public',
@@ -456,7 +459,7 @@ const server = createServer(async (request, response) => {
   }
 
   const follows = rawQuery.includes('filter:follows') ? 'follows' : 'all'
-  const label = `${variables.product} · ${follows}`
+  const label = `${profileName === 'alternate' ? 'alternate · ' : ''}${variables.product} · ${follows}`
   const id = encodeURIComponent(rawQuery)
   const entries = secondPage
     ? [tweet(`s-${id}-2`, `${label} page 2`)]

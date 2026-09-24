@@ -1,9 +1,10 @@
 {
-  "date": "2026-07-26",
-  "font_stack": "Inter / Noto Sans JP / system sans declared in src/styles.css",
-  "palette": "CSS custom properties with muted teal hex values",
-  "motion": "motion-cut; no motion library",
-  "spacing": "no named scale",
+  "date": "2026-09-24",
+  "font_stack": "System sans; tokens.css",
+  "palette": "Dark navy and blue OKLCH tokens",
+  "motion": "motion-cut",
+  "spacing": "named token scale",
   "framework": "React 19 + TanStack Start + Vite 8",
-  "preserve": ["routes", "information architecture", "read-only behavior"]
+  "preserve": ["deck data model", "profile binding", "WebMCP contracts"],
+  "override": "User requested TweetDeck-like full UI redesign instead of Garden reader"
 }

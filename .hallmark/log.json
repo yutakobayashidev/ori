@@ -1,5 +1,13 @@
 [
   {
+    "date": "2026-09-24",
+    "macrostructure": "Workbench",
+    "theme": "custom",
+    "theme_axes": "dark navy / system sans / blue",
+    "enrichment": "none",
+    "brief": "Full-height TweetDeck-style research columns with compact sidebar and modal editors"
+  },
+  {
     "date": "2026-07-26",
     "macrostructure": "Workbench",
     "theme": "Garden",

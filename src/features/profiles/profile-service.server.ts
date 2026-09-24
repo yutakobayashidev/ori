@@ -1,12 +1,6 @@
-import {
-  deleteCookie,
-  getCookie,
-  setCookie,
-} from '@tanstack/react-start/server'
 import { z } from 'zod'
-import type { ProfileSettings } from './types'
+import { ProfileUnavailableError } from './errors'
 
-const PROFILE_COOKIE = 'twitter-lite-profile'
 const profilesSchema = z.object({
   profiles: z.array(z.string().min(1)),
 })
@@ -32,38 +26,15 @@ export async function fetchProfileNames(
   return profilesSchema.parse(await response.json()).profiles
 }
 
-export function getSelectedProfileName(): string | undefined {
-  return getCookie(PROFILE_COOKIE) || process.env.BIRD_PROFILE_NAME
-}
-
-export async function loadProfileSettings(): Promise<ProfileSettings> {
-  const profiles = await fetchProfileNames()
-  const selectedProfile = getSelectedProfileName()
-  return {
-    profiles,
-    ...(selectedProfile && profiles.includes(selectedProfile)
-      ? { selectedProfile }
-      : {}),
-  }
-}
-
-export async function saveProfileSelection(
-  profileName: string | null,
-): Promise<void> {
-  if (profileName === null) {
-    deleteCookie(PROFILE_COOKIE, { path: '/' })
-    return
-  }
-
-  const profiles = await fetchProfileNames()
-  if (!profiles.includes(profileName)) {
-    throw new Error(`Unknown relay profile: ${profileName}`)
-  }
-
-  setCookie(PROFILE_COOKIE, profileName, {
-    httpOnly: true,
-    maxAge: 60 * 60 * 24 * 365,
-    path: '/',
-    sameSite: 'lax',
+export async function requireProfileName(profileName: string): Promise<void> {
+  const profiles = await fetchProfileNames().catch(() => {
+    throw new ProfileUnavailableError(
+      'プロファイルを確認できませんでした。Relay への接続を確認して再試行してください。',
+    )
   })
+  if (!profiles.includes(profileName)) {
+    throw new ProfileUnavailableError(
+      'このプロファイルは利用できません。カラムのプロファイルを選び直してください。',
+    )
+  }
 }

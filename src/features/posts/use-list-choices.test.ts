@@ -10,13 +10,13 @@ describe('createListChoicesOptions', () => {
       ok: true,
       lists: [{ id: '123', name: 'My List' }],
     })
-    const options = createListChoicesOptions(loader)
+    const options = createListChoicesOptions('main', loader)
 
     await expect(options.queryFn()).resolves.toEqual([
       { id: '123', name: 'My List' },
     ])
-    expect(loader).toHaveBeenCalledWith({ data: {} })
-    expect(options.queryKey).toEqual(['list-choices'])
+    expect(loader).toHaveBeenCalledWith({ data: { profileName: 'main' } })
+    expect(options.queryKey).toEqual(['list-choices', 'main'])
     expect(options.retry).toBe(false)
     expect(options.refetchOnWindowFocus).toBe(false)
     expect(options.refetchOnReconnect).toBe(false)
@@ -29,6 +29,7 @@ describe('createListChoicesOptions', () => {
       retryable: true,
     }
     const options = createListChoicesOptions(
+      'main',
       vi.fn().mockResolvedValue({ ok: false, error }),
     )
 

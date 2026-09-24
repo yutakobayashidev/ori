@@ -1,98 +1,88 @@
 # WebMCP prototype
 
-## Scope and design
+## Scope and registration
 
-Expose the existing intentional reader to agents through three React-owned
-reader tools. The deck additionally exposes `get_deck` and `set_deck` on `/deck`;
-see [deck tool contracts](research-decks.md#deck-webmcp-tools).
-Search remains available across routes. Feed tools are registered only
-while a valid timeline, search, or conversation is open. Returning home or to
-an empty search/list page removes the feed tools. Unsupported browsers do not
-register tools or fetch posts automatically.
+The deck workspace exposes seven React-owned tools on `/` and `/deck`.
+`usewebmcp` owns native browser registration and cleanup. There is no polyfill
+or external MCP transport. Unsupported browsers retain the manual UI. Tools
+are enabled after local storage loads; relay-profile discovery may still be
+pending, which `list_decks` reports as `profiles: null`.
 
-`usewebmcp` 5.1.0 owns browser registration and cleanup. No polyfill is
-initialized. The root search tool navigates through TanStack Router and awaits
-the same query options as the visible feed. Completed data is reused through
-`ensureInfiniteQueryData`; an invalidated or in-progress query is awaited
-through `fetchInfiniteQuery`, including refreshes after a profile change.
-Reading the feed uses its current React Query result. Continuation and the
-scroll observer use `fetchNextPage({ cancelRefetch: false })` to join an
-existing request. A feed change during continuation returns an error instead
-of reporting old results as belonging to the new feed.
+The former `search_posts`, `get_loaded_posts`, and `load_more_posts` tools and
+standalone reader routes have been removed. Agents manage named decks and
+address columns explicitly, including their bound relay profiles.
 
-## Tool contracts
+## Workspace tools
 
-### `search_posts`
-
-Search X, show the criteria and results in the UI, and return the first slice
-after retrieval. Searches use the currently selected relay profile.
-
-Inputs match the existing search controls:
-
-| Field | Default | Meaning |
+| Tool | Input | Behavior |
 | --- | --- | --- |
-| `q` | empty | Search text, including raw X search syntax |
-| `from` | empty | Author handle, optionally prefixed with `@` |
-| `since` | empty | Inclusive `YYYY-MM-DD` date using X search semantics |
-| `until` | empty | Exclusive `YYYY-MM-DD` date, later than `since` |
-| `lang` | `all` | `all`, `ja`, or `en` |
-| `content` | `all` | `all`, `images`, `videos`, or `links` |
-| `excludeReplies`, `excludeReposts` | `false` | Exclusions |
-| `product` | `Latest` | `Latest` or `Top` |
-| `following` | `false` | Restrict to followed accounts |
+| `list_decks` | `{}` | Return all deck definitions, `activeDeckId`, available `profiles`, and `storageError` |
+| `get_deck` | Optional `deckId` | Read a saved deck; omitted ID selects the active deck |
+| `set_deck` | Optional `deckId`, required `title` and `columns` | Create when ID is omitted; otherwise replace an existing deck, then activate it |
+| `select_deck` | `deckId` | Activate a saved deck and persist the selection |
+| `delete_deck` | `deckId` | Permanently remove the definition; cannot delete the last deck |
 
-Supply `q` or `from`. Unknown properties and invalid inputs fail before
-navigation. Existing query construction validates dates, handles, and the
-512-character compiled-query limit. A concurrent search fails with an
-actionable message. Navigating elsewhere during a search prevents a stale
-success response.
+`set_deck` accepts at most six columns. Each requires `title`, `profileName`
+from `list_decks`, and a discriminated `source`. Its `kind` is `search`, `user`,
+or `list`; `platform` defaults to `twitter`. Searches require `query`, with
+`product` defaulting to `Latest` and `following` to false. User and list sources
+require `target` (handle/profile URL or list ID/URL). Unknown source fields,
+invalid targets, duplicate column IDs, and unknown profiles fail before saving.
 
-### `get_loaded_posts`
+Read before editing. Include every column to keep; omitted columns are removed.
+Preserve IDs for retained columns and omit IDs for new ones. An empty columns
+array clears a deck. A supplied deck ID must already exist. Successful mutation
+closes unsaved editor forms. `set_deck` returns the applied definition,
+`persisted: true`, and `posts: "loading-asynchronously"`; searches can fail
+independently after the save succeeds.
 
-Return a slice of the current feed without a network request. Accepts
-`offset` (default 0, nonnegative integer) and `limit` (default 20, integer
-1–50). Conversation results place the selected post first, once.
+Deleting the active deck selects the first remaining one. Deletion has no
+workspace-tool undo. Storage failures return `isError: true` explaining that
+the mutation applied in memory but could not be persisted. Saving replaces
+invalid or legacy saved data; there is no automatic legacy migration.
 
-The response includes `status` (`loading`, `ready`, or `error`), `loading`,
-and `error` information alongside the common result. This is a snapshot of
-all loaded posts, not just posts inside the viewport.
+## Column tools
 
-### `load_more_posts`
+`get_column_posts` accepts `columnId`, `offset` (default 0, nonnegative integer),
+and `limit` (default 20, integer 1–50). It reads already loaded posts without a
+network request. Only columns mounted in the active deck are available; select
+the deck and allow it to render first.
 
-Accepts `{}`. Wait for one continuation, append it to the UI, and return up to
-20 newly appended posts. An in-progress scroll request is shared. Initial
-loading or a feed refresh must finish first. A failed continuation can be retried explicitly.
-At the end of the feed the result is an empty `posts` array and `hasMore: false`.
+`load_more_column` accepts `columnId`. It loads or retries one continuation
+using that column's bound profile. Wait for its initial load or refresh before
+calling. Concurrent pagination joins the existing request. If the deck or
+column changes during the request, the tool reports an error instead of
+returning results under the new identity. At the end, it returns no appended
+posts and `hasMore: false`.
+
+Both return:
+
+- `column`: ID, title, bound profile, and source definition
+- `status`: `loading`, `ready`, or `error`, plus `loading` and `error` details
+- `posts`: normalized records with original URLs, identity, text, author,
+  and available media/quotes
+- `loadedCount`, `offset`, and `nextOffset` for slicing deduplicated cached posts
+- `hasMore`: whether the current feed has an upstream continuation
+
+Continuation returns up to 20 newly appended posts. Use `nextOffset` with
+`get_column_posts` to read additional already loaded records, and
+`load_more_column` for an upstream page. These are cache snapshots; manual UI
+refreshes and pagination can change the available records.
 
 ## Results and errors
 
-Successful tool results contain JSON in an MCP text content block:
+Tools return JSON in an MCP text content block. Execution failures set
+`isError: true` with `code`, `message`, and `retryable`. Schema failures use
+`invalid-input`; other tool failures use `tool-error`. Column snapshots report
+underlying relay failures through their `error` field. An empty successful
+query is not an error.
 
-- `request`: active feed kind and normalized criteria.
-- `posts`: `id`, `author` (username/name), `text`, `textTruncated`, optional
-  `createdAt`, and the original X `url`.
-- `loadedCount`: number of deduplicated, loaded posts.
-- `offset`: start of this slice within the loaded feed.
-- `nextOffset`: next unread offset within the already loaded feed, or `null`.
-- `hasMore`: whether the last loaded page has an upstream continuation.
+`list_decks`, `get_deck`, and `get_column_posts` carry `readOnlyHint: true`.
+The other tools change local UI or storage. `delete_deck` carries
+`destructiveHint: true`; tools returning external posts mark them untrusted.
+Annotations are metadata, not authorization controls. No tool writes to X.
 
-Use `get_loaded_posts` with `nextOffset` for loaded posts outside a returned
-slice; use `load_more_posts` for an upstream continuation. Scrolling can load
-more posts independently, so these fields describe a snapshot. Post text is
-capped at 2,000 characters per post and explicitly marked when truncated;
-the source URL remains available. Media, quote bodies, and article previews
-are not included in this initial text-oriented tool response.
-
-Failures use `isError: true` and JSON containing `code`, `message`, and
-`retryable`. Existing relay error details are preserved. A successful empty
-search is not an error.
-
-All tools mark returned external content with `untrustedContentHint: true`.
-Only `get_loaded_posts` has `readOnlyHint: true`: search and continuation
-change local UI state. No tool performs X write actions. Annotations are
-metadata, not authorization controls.
-
-## Verification and limits
+## Verification and browser setup
 
 ```sh
 nix develop -c pnpm test
@@ -100,24 +90,19 @@ nix develop -c pnpm typecheck
 nix develop -c pnpm test:e2e e2e/integrations/webmcp.test.ts
 ```
 
-The E2E file enables native Chromium WebMCP/testing flags and uses
-`navigator.modelContextTesting` to invoke actual registered tools. The
-standalone mock relay supplies deterministic data through the production
-server-function boundary. Tests do not contact X or a personal relay.
+The E2E tests enable native Chromium WebMCP/testing flags and use
+`navigator.modelContextTesting` to invoke actual registered tools. A mock
+relay supplies deterministic responses through real server functions.
 
-For interactive testing, enable Chrome's WebMCP testing flag, restart, run
-`nix develop -c pnpm dev`, and open the local site with Model Context Tool
-Inspector. Registration uses `document.modelContext`; availability is checked
-at mount, so reload after changing browser support. No production origin-trial
-token or external MCP-client bridge is configured by this prototype.
+For interactive testing, enable `chrome://flags/#enable-webmcp-testing`,
+restart Chrome, and use Model Context Tool Inspector on the app. Registration
+uses `document.modelContext`; reload after changing browser support. Native
+WebMCP requires a secure context: local loopback works for development; remote
+Tailscale access should use an HTTPS Serve origin. Allow the exact hostname
+through `__VITE_ADDITIONAL_SERVER_ALLOWED_HOSTS` in the Vite process environment.
+HTTP and HTTPS have separate browser-local workspaces.
 
-The hook does not forward the browser's execution AbortSignal to application
-callbacks. Browser cancellation therefore does not guarantee cancellation of
-the shared read request. Tools do detect navigation changes before returning
-their asynchronous results. Agent task-selection quality still needs manual
-evaluation with the consuming agent; deterministic browser tests verify the
-tool contracts and UI behavior.
-
-Design references: [Chrome best practices](https://developer.chrome.com/docs/ai/webmcp/best-practices),
-[workflow design](https://developer.chrome.com/docs/ai/webmcp/build-tools),
-and [usewebmcp](https://github.com/WebMCP-org/npm-packages/tree/main/packages/usewebmcp).
+No production origin-trial token or external MCP-client bridge is configured.
+Browser cancellation does not guarantee cancellation of a shared feed request.
+Agent task-selection quality still needs evaluation with the consuming agent;
+automated browser tests verify contracts and UI behavior.
