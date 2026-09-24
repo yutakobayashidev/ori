@@ -189,17 +189,12 @@ test('keeps the deck and editor accessible within narrow viewports', async ({
     width: testInfo.project.name === 'desktop' ? 1440 : 393,
     height: 900,
   })
-  if (testInfo.project.name === 'desktop') {
-    await page
-      .getByRole('navigation', { name: 'カラム一覧' })
-      .getByRole('button', { name: '公式アカウント' })
-      .click()
-    await expect(
-      page
-        .getByRole('region', { name: '公式アカウント', exact: true })
-        .locator('.deck-column-results'),
-    ).toBeFocused()
-  }
+  await expect(
+    page.getByRole('navigation', { name: 'カラム一覧' }),
+  ).toHaveCount(0)
+  await expect(
+    page.getByRole('heading', { name: '公式アカウント', exact: true }),
+  ).toBeVisible()
   expect((await a11y().analyze()).violations).toEqual([])
   await page.screenshot({
     path: testInfo.outputPath('deck-populated.png'),

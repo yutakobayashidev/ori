@@ -468,25 +468,6 @@
     padding: var(--space-xs);
   }
 }
-.sidebar-columns {
-  display: flex;
-  flex-direction: column;
-  gap: var(--space-2xs);
-  min-height: 0;
-  overflow-y: auto;
-}
-.app-deck .sidebar-columns button {
-  flex-shrink: 0;
-  justify-content: flex-start;
-  width: 100%;
-  background: transparent;
-  border-color: transparent;
-}
-.sidebar-columns span {
-  overflow: hidden;
-  text-overflow: ellipsis;
-  white-space: nowrap;
-}
 .research-post header > div {
   flex: 1;
 }
@@ -505,9 +486,4 @@
 }
 .column-menu-panel .danger {
   color: var(--error);
-}
-@media (max-width: 767px) {
-  .sidebar-columns {
-    display: none;
-  }
 }

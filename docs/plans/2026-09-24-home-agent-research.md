@@ -65,6 +65,12 @@ before contacting either provider. Returned list IDs can be used directly in
 list-column sources. Discovery and post retrieval share the per-turn budget of
 12 upstream calls, including failures. Twitter requests up to 100 entries through
 the existing catalog service; discovery has no pagination yet.
+For Twitter, the agent prefers the selected connected account named `account2`
+for new columns and retrieval, resolving its ID through `list_connections`.
+It uses another selected account when `account2` is unavailable, lacks access
+(for example to a private list), or the user explicitly requests it. Existing
+columns retain their account bindings.
+
 The default agent instructions require this discovery at the start of research,
 before planning new searches. Relevant existing lists become candidate sources;
 their posts are retrieved through the regular column tool. Catalogs already read

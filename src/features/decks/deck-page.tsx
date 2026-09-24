@@ -159,26 +159,6 @@ export function DeckPage() {
             <Icon name="plus" />
             <span>カラムを追加</span>
           </button>
-          <nav className="sidebar-columns" aria-label="カラム一覧">
-            {deck.columns.map((column) => (
-              <button
-                key={column.id}
-                type="button"
-                title={column.title}
-                onClick={() => {
-                  const element = document.getElementById(`column-${column.id}`)
-                  element?.scrollIntoView({ block: 'nearest', inline: 'start' })
-                  element
-                    ?.closest('.deck-column')
-                    ?.querySelector<HTMLElement>('.deck-column-results')
-                    ?.focus({ preventScroll: true })
-                }}
-              >
-                <Icon name={column.source.kind} />
-                <span>{column.title}</span>
-              </button>
-            ))}
-          </nav>
           <p className="sidebar-note">
             {deck.persisted
               ? 'サーバーに保存・端末間で共有'

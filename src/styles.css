@@ -98,6 +98,11 @@ svg {
   min-height: 0;
   display: flex;
   flex-direction: column;
+  margin: var(--space-sm);
+  padding: var(--space-xs);
+  border: var(--rule-hairline) solid var(--border);
+  border-radius: 16px;
+  background: var(--paper);
   overflow: hidden;
 }
 h1 {

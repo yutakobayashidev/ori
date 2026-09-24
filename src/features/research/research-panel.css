@@ -181,20 +181,6 @@
 .app-deck .deck-toolbar .sidebar-add {
   width: 36px;
 }
-.deck-toolbar .sidebar-columns {
-  flex-direction: row;
-  order: 10;
-  width: 100%;
-  max-height: 36px;
-  overflow-x: auto;
-  overflow-y: hidden;
-}
-.deck-toolbar .sidebar-columns:empty {
-  display: none;
-}
-.app-deck .deck-toolbar .sidebar-columns button {
-  width: auto;
-}
 @media (max-width: 767px) {
   .app.app-deck {
     grid-template-columns: minmax(0, 1fr);
@@ -221,8 +207,7 @@
   .research-run {
     flex-shrink: 0;
   }
-  .deck-toolbar .brand,
-  .deck-toolbar .sidebar-columns {
+  .deck-toolbar .brand {
     display: none;
   }
   .deck-toolbar > button:last-child {
