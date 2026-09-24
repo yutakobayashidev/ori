@@ -1,7 +1,7 @@
-import { useState } from 'react'
+import { useEffect, useState } from 'react'
 import { Dialog } from '#/components/dialog'
 import { Icon } from '#/components/icon'
-import type { Deck } from './model'
+import type { DeckView } from './model'
 
 export function DeckSwitcher({
   decks,
@@ -10,16 +10,22 @@ export function DeckSwitcher({
   onSelect,
   onCreate,
   onDelete,
+  onEditingChange,
 }: {
-  decks: Deck[]
+  decks: DeckView[]
   activeId: string
   ready: boolean
   onSelect: (id: string) => void
-  onCreate: (title: string) => void
-  onDelete: () => void
+  onCreate: (title: string) => Promise<boolean>
+  onDelete: () => Promise<boolean>
+  onEditingChange: (editing: boolean) => void
 }) {
   const [creating, setCreating] = useState(false)
   const [deleting, setDeleting] = useState(false)
+  useEffect(() => {
+    onEditingChange(creating || deleting)
+    return () => onEditingChange(false)
+  }, [creating, deleting, onEditingChange])
   return (
     <div className="deck-workspaces">
       <div className="deck-actions">
@@ -37,6 +43,7 @@ export function DeckSwitcher({
           {decks.map((deck) => (
             <option key={deck.id} value={deck.id}>
               {deck.title}
+              {deck.persisted ? '' : '（一時）'}
             </option>
           ))}
         </select>
@@ -59,7 +66,7 @@ export function DeckSwitcher({
           aria-label="デッキを削除"
           title="デッキを削除"
           type="button"
-          disabled={!ready || decks.length <= 1}
+          disabled={!ready}
           onClick={() => {
             setDeleting(!deleting)
             setCreating(false)
@@ -73,14 +80,13 @@ export function DeckSwitcher({
         <Dialog title="デッキを作成" onClose={() => setCreating(false)}>
           <form
             className="deck-rename"
-            onSubmit={(event) => {
+            onSubmit={async (event) => {
               event.preventDefault()
               const title = String(
                 new FormData(event.currentTarget).get('title') ?? '',
               ).trim()
               if (!title) return
-              onCreate(title)
-              setCreating(false)
+              if (await onCreate(title)) setCreating(false)
             }}
           >
             <label htmlFor="new-deck-title">
@@ -105,9 +111,8 @@ export function DeckSwitcher({
             <p>このデッキとカラムの設定を削除します。</p>
             <button
               type="button"
-              onClick={() => {
-                onDelete()
-                setDeleting(false)
+              onClick={async () => {
+                if (await onDelete()) setDeleting(false)
               }}
             >
               削除する

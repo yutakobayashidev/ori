@@ -1,10 +1,12 @@
 import { useQuery } from '@tanstack/react-query'
+import { useLocation } from '@tanstack/react-router'
 import { useServerFn } from '@tanstack/react-start'
 import { useRef, useState } from 'react'
 import { AppShell } from '#/components/app-shell'
 import { Dialog } from '#/components/dialog'
 import { Icon } from '#/components/icon'
-import { loadProfiles } from '#/features/profiles/server-functions'
+import { ConnectionManager } from '#/features/connections/connection-manager'
+import { loadConnections } from '#/features/connections/server-functions'
 import { ColumnEditor } from './column-editor'
 import { type ColumnRegistry, useColumnTools } from './column-tools'
 import { ResearchColumn } from './deck-column'
@@ -15,26 +17,38 @@ import { useDeckTools } from './webmcp-tools'
 import './decks.css'
 
 export function DeckPage() {
+  const oauthResult = useLocation({
+    select: (location) =>
+      new URLSearchParams(location.searchStr).get('mastodon'),
+  })
   const registry = useRef<ColumnRegistry>(new Map()).current
+  const [editing, setEditing] = useState<{ id: string } | 'new' | null>(null)
+  const [renaming, setRenaming] = useState(false)
+  const [managingConnections, setManagingConnections] = useState(false)
+  const [switcherEditing, setSwitcherEditing] = useState(false)
   const {
     deck,
     workspace,
     ready,
+    saving,
+    persist,
+    createTemporary,
+    refresh,
+    importLegacy,
+    legacyAvailable,
     storageError,
     save,
     create,
     select,
     remove,
     getWorkspace,
-  } = useDeck()
-  const fetchProfiles = useServerFn(loadProfiles)
+  } = useDeck(editing !== null || renaming || switcherEditing)
+  const fetchProfiles = useServerFn(loadConnections)
   const profiles = useQuery({
-    queryKey: ['profiles'],
+    queryKey: ['connections'],
     queryFn: () => fetchProfiles(),
     retry: false,
   })
-  const [editing, setEditing] = useState<{ id: string } | 'new' | null>(null)
-  const [renaming, setRenaming] = useState(false)
   useColumnTools(registry, ready)
   const [removed, setRemoved] = useState<{
     column: DeckColumn
@@ -43,12 +57,15 @@ export function DeckPage() {
 
   useDeckTools({
     ready,
+    saving,
     storageError,
     save,
     select,
     remove,
     getWorkspace,
-    profiles: profiles.data?.profiles,
+    createTemporary,
+    persist,
+    connections: profiles.data?.connections,
     onApplied: clearEditors,
   })
 
@@ -58,8 +75,8 @@ export function DeckPage() {
     setRemoved(undefined)
   }
 
-  function saveColumn(column: DeckColumn) {
-    save({
+  async function saveColumn(column: DeckColumn) {
+    const saved = await save({
       ...deck,
       columns:
         editing === 'new'
@@ -68,7 +85,8 @@ export function DeckPage() {
               current.id === column.id ? column : current,
             ),
     })
-    setEditing(null)
+    if (saved) setEditing(null)
+    return saved
   }
 
   return (
@@ -79,18 +97,21 @@ export function DeckPage() {
             key={deck.id}
             decks={workspace.decks}
             activeId={deck.id}
-            ready={ready}
+            ready={ready && !saving}
+            onEditingChange={setSwitcherEditing}
             onSelect={(id) => {
               select(id)
               clearEditors()
             }}
-            onCreate={(title) => {
-              create(title)
-              clearEditors()
+            onCreate={async (title) => {
+              const saved = await create(title)
+              if (saved) clearEditors()
+              return saved
             }}
-            onDelete={() => {
-              remove(deck.id)
-              clearEditors()
+            onDelete={async () => {
+              const saved = await remove(deck.id)
+              if (saved) clearEditors()
+              return saved
             }}
           />
           <button
@@ -98,7 +119,7 @@ export function DeckPage() {
             aria-label="カラムを追加"
             title="カラムを追加"
             type="button"
-            disabled={!ready || deck.columns.length >= MAX_COLUMNS}
+            disabled={!ready || saving || deck.columns.length >= MAX_COLUMNS}
             onClick={() => setEditing('new')}
           >
             <Icon name="plus" />
@@ -124,7 +145,18 @@ export function DeckPage() {
               </button>
             ))}
           </nav>
-          <p className="sidebar-note">このブラウザに保存</p>
+          <p className="sidebar-note">
+            {deck.persisted
+              ? 'サーバーに保存・端末間で共有'
+              : '一時ビュー · このタブのみ'}
+          </p>
+          <button
+            type="button"
+            disabled={!ready}
+            onClick={() => setManagingConnections(true)}
+          >
+            接続アカウントを管理
+          </button>
         </>
       }
     >
@@ -136,18 +168,60 @@ export function DeckPage() {
           </span>
         </div>
         <div className="deck-actions">
+          {deck.persisted ? (
+            <button
+              type="button"
+              disabled={saving}
+              onClick={() => {
+                createTemporary(`${deck.title}のコピー`, deck.columns)
+                clearEditors()
+              }}
+            >
+              一時コピーを作成
+            </button>
+          ) : (
+            <button
+              type="button"
+              disabled={!ready || saving}
+              onClick={() => void persist(deck.id)}
+            >
+              デッキとして保存
+            </button>
+          )}
           <button
             className="icon-button"
             aria-label="名前を変更"
             title="名前を変更"
             type="button"
-            disabled={!ready}
+            disabled={!ready || saving}
             onClick={() => setRenaming(!renaming)}
           >
             <Icon name="edit" />
           </button>
         </div>
       </div>
+      {!deck.persisted && ready ? (
+        <p className="deck-save-status">
+          一時ビューです。再読み込みやタブを閉じると失われます。
+        </p>
+      ) : null}
+      {saving ? (
+        <p className="deck-save-status" role="status">
+          保存しています…
+        </p>
+      ) : null}
+      {legacyAvailable ? (
+        <p className="deck-save-status">
+          このブラウザに旧デッキがあります。
+          <button
+            type="button"
+            disabled={saving || !profiles.data}
+            onClick={() => void importLegacy()}
+          >
+            旧デッキを取り込む
+          </button>
+        </p>
+      ) : null}
       {!ready ? (
         <p className="deck-save-status" role="status">
           デッキを読み込んでいます…
@@ -161,26 +235,62 @@ export function DeckPage() {
           </button>
         </p>
       ) : null}
+      {oauthResult === 'failed' ? (
+        <p className="deck-error" role="alert">
+          Mastodonの認可を完了できませんでした。接続アカウントからやり直してください。
+        </p>
+      ) : null}
+      {oauthResult === 'connected' ? (
+        <p className="deck-save-status" role="status">
+          Mastodonアカウントを接続しました。カラムの接続先に選べます。
+        </p>
+      ) : null}
+      {profiles.data?.relayError ? (
+        <p className="deck-error" role="alert">
+          {profiles.data.relayError}
+        </p>
+      ) : null}
+      {managingConnections ? (
+        <Dialog
+          title="接続アカウント"
+          onClose={() => setManagingConnections(false)}
+        >
+          <ConnectionManager
+            connections={profiles.data?.connections ?? []}
+            onChanged={() => profiles.refetch()}
+            hasTemporaryDecks={workspace.decks.some((deck) => !deck.persisted)}
+          />
+        </Dialog>
+      ) : null}
       {profiles.isPending ? (
         <p role="status">接続プロファイルを取得しています…</p>
       ) : null}
       {storageError ? (
         <p className="deck-error" role="alert">
           {storageError}
+          <button
+            type="button"
+            disabled={saving}
+            onClick={() => {
+              clearEditors()
+              void refresh(true)
+            }}
+          >
+            最新のデッキを再読み込み
+          </button>
         </p>
       ) : null}
       {renaming ? (
         <Dialog title="デッキ名を変更" onClose={() => setRenaming(false)}>
           <form
             className="deck-rename"
-            onSubmit={(event) => {
+            onSubmit={async (event) => {
               event.preventDefault()
               const title = String(
                 new FormData(event.currentTarget).get('title') ?? '',
               ).trim()
               if (!title) return
-              save({ ...deck, title })
-              setRenaming(false)
+              if (await save({ ...deck, title })) setRenaming(false)
             }}
           >
             <label htmlFor="deck-title">
@@ -203,8 +313,8 @@ export function DeckPage() {
           onClose={() => setEditing(null)}
         >
           <ColumnEditor
-            key={`${deck.id}-${editing === 'new' ? 'new' : editing.id}-${profiles.data?.profiles.join(',')}`}
-            profiles={profiles.data?.profiles ?? []}
+            key={`${deck.id}-${editing === 'new' ? 'new' : editing.id}`}
+            connections={profiles.data?.connections ?? []}
             column={
               editing === 'new'
                 ? undefined
@@ -221,11 +331,10 @@ export function DeckPage() {
           <button
             type="button"
             disabled={deck.columns.length >= MAX_COLUMNS || editing === 'new'}
-            onClick={() => {
+            onClick={async () => {
               const columns = [...deck.columns]
               columns.splice(removed.index, 0, removed.column)
-              save({ ...deck, columns })
-              setRemoved(undefined)
+              if (await save({ ...deck, columns })) setRemoved(undefined)
             }}
           >
             元に戻す
@@ -256,20 +365,25 @@ export function DeckPage() {
               key={`${deck.id}:${column.id}`}
               registry={registry}
               column={column}
+              connectionLabel={
+                profiles.data?.connections.find(
+                  (connection) => connection.id === column.connectionId,
+                )?.displayName
+              }
               first={index === 0}
               last={index === deck.columns.length - 1}
               onEdit={() => setEditing({ id: column.id })}
               onMove={(direction) =>
                 save(moveColumn(deck, column.id, direction))
               }
-              onRemove={() => {
-                setRemoved({ column, index })
-                save({
+              onRemove={async () => {
+                const saved = await save({
                   ...deck,
                   columns: deck.columns.filter(
                     (current) => current.id !== column.id,
                   ),
                 })
+                if (saved) setRemoved({ column, index })
                 if (typeof editing === 'object' && editing?.id === column.id)
                   setEditing(null)
               }}

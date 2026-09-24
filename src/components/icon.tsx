@@ -1,5 +1,6 @@
 const paths = {
   columns: 'M3 4h7v16H3z M14 4h7v16h-7z',
+  hashtag: 'M10 3 8 21 M17 3l-2 18 M4 9h16 M3 15h16',
   search: 'M21 21l-5-5 M18 10a8 8 0 1 1-16 0 8 8 0 0 1 16 0',
   user: 'M20 21v-2a7 7 0 0 0-14 0v2 M17 7a4 4 0 1 1-8 0 4 4 0 0 1 8 0',
   list: 'M8 6h13 M8 12h13 M8 18h13 M3 6h.01 M3 12h.01 M3 18h.01',

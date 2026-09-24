@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest'
-import { type Deck, deckSchema, moveColumn, workspaceSchema } from './model'
+import { type Deck, deckSchema, moveColumn } from './model'
 
 const deck: Deck = {
   id: 'research',
@@ -7,7 +7,7 @@ const deck: Deck = {
   columns: ['a', 'b'].map((id) => ({
     id,
     title: id,
-    profileName: 'main',
+    connectionId: 'main',
     source: {
       platform: 'twitter',
       kind: 'search',
@@ -71,21 +71,7 @@ describe('deck definitions', () => {
     expect(
       deckSchema.safeParse({
         ...deck,
-        columns: [{ ...deck.columns[0], profileName: '' }],
-      }).success,
-    ).toBe(false)
-    expect(
-      workspaceSchema.safeParse({
-        version: 2,
-        activeDeckId: 'missing',
-        decks: [deck],
-      }).success,
-    ).toBe(false)
-    expect(
-      workspaceSchema.safeParse({
-        version: 2,
-        activeDeckId: deck.id,
-        decks: [deck, deck],
+        columns: [{ ...deck.columns[0], connectionId: '' }],
       }).success,
     ).toBe(false)
   })

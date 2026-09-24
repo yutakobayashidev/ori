@@ -36,12 +36,12 @@ const configFailure = (diagnostic: unknown): LoadFailure => {
   }
 }
 
-async function reader(profileName: string) {
-  const [{ getBirdReader }, { requireProfileName }] = await Promise.all([
+async function reader(connectionId: string) {
+  const [{ getBirdReader }, { requireTwitterConnection }] = await Promise.all([
     import('./bird-client.server'),
-    import('../profiles/profile-service.server'),
+    import('../connections/repository.server'),
   ])
-  await requireProfileName(profileName)
+  const profileName = await requireTwitterConnection(connectionId)
   return getBirdReader(profileName)
 }
 
@@ -49,7 +49,7 @@ export const loadUserPosts = createServerFn({ method: 'GET' })
   .validator(userPageInputSchema)
   .handler(async ({ data }) => {
     try {
-      return await loadUserPage(await reader(data.profileName), data)
+      return await loadUserPage(await reader(data.connectionId), data)
     } catch (error) {
       return configFailure(error)
     }
@@ -59,7 +59,7 @@ export const loadListPosts = createServerFn({ method: 'GET' })
   .validator(listPageInputSchema)
   .handler(async ({ data }) => {
     try {
-      return await loadListPage(await reader(data.profileName), data)
+      return await loadListPage(await reader(data.connectionId), data)
     } catch (error) {
       return configFailure(error)
     }
@@ -69,7 +69,7 @@ export const loadLists = createServerFn({ method: 'GET' })
   .validator(listChoicesInputSchema)
   .handler(async ({ data }) => {
     try {
-      return await loadListChoices(await reader(data.profileName))
+      return await loadListChoices(await reader(data.connectionId))
     } catch (error) {
       return configFailure(error)
     }
@@ -79,7 +79,7 @@ export const searchPosts = createServerFn({ method: 'GET' })
   .validator(searchPageInputSchema)
   .handler(async ({ data }) => {
     try {
-      return await searchPage(await reader(data.profileName), data)
+      return await searchPage(await reader(data.connectionId), data)
     } catch (error) {
       return configFailure(error)
     }

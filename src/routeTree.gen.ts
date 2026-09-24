@@ -11,6 +11,7 @@
 import { Route as rootRouteImport } from './routes/__root'
 import { Route as DeckRouteImport } from './routes/deck'
 import { Route as IndexRouteImport } from './routes/index'
+import { Route as OauthMastodonCallbackRouteImport } from './routes/oauth/mastodon/callback'
 
 const DeckRoute = DeckRouteImport.update({
   id: '/deck',
@@ -22,31 +23,40 @@ const IndexRoute = IndexRouteImport.update({
   path: '/',
   getParentRoute: () => rootRouteImport,
 } as any)
+const OauthMastodonCallbackRoute = OauthMastodonCallbackRouteImport.update({
+  id: '/oauth/mastodon/callback',
+  path: '/oauth/mastodon/callback',
+  getParentRoute: () => rootRouteImport,
+} as any)
 
 export interface FileRoutesByFullPath {
   '/': typeof IndexRoute
   '/deck': typeof DeckRoute
+  '/oauth/mastodon/callback': typeof OauthMastodonCallbackRoute
 }
 export interface FileRoutesByTo {
   '/': typeof IndexRoute
   '/deck': typeof DeckRoute
+  '/oauth/mastodon/callback': typeof OauthMastodonCallbackRoute
 }
 export interface FileRoutesById {
   __root__: typeof rootRouteImport
   '/': typeof IndexRoute
   '/deck': typeof DeckRoute
+  '/oauth/mastodon/callback': typeof OauthMastodonCallbackRoute
 }
 export interface FileRouteTypes {
   fileRoutesByFullPath: FileRoutesByFullPath
-  fullPaths: '/' | '/deck'
+  fullPaths: '/' | '/deck' | '/oauth/mastodon/callback'
   fileRoutesByTo: FileRoutesByTo
-  to: '/' | '/deck'
-  id: '__root__' | '/' | '/deck'
+  to: '/' | '/deck' | '/oauth/mastodon/callback'
+  id: '__root__' | '/' | '/deck' | '/oauth/mastodon/callback'
   fileRoutesById: FileRoutesById
 }
 export interface RootRouteChildren {
   IndexRoute: typeof IndexRoute
   DeckRoute: typeof DeckRoute
+  OauthMastodonCallbackRoute: typeof OauthMastodonCallbackRoute
 }
 
 declare module '@tanstack/react-router' {
@@ -65,22 +75,31 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof IndexRouteImport
       parentRoute: typeof rootRouteImport
     }
+    '/oauth/mastodon/callback': {
+      id: '/oauth/mastodon/callback'
+      path: '/oauth/mastodon/callback'
+      fullPath: '/oauth/mastodon/callback'
+      preLoaderRoute: typeof OauthMastodonCallbackRouteImport
+      parentRoute: typeof rootRouteImport
+    }
   }
 }
 
 const rootRouteChildren: RootRouteChildren = {
   IndexRoute: IndexRoute,
   DeckRoute: DeckRoute,
+  OauthMastodonCallbackRoute: OauthMastodonCallbackRoute,
 }
 export const routeTree = rootRouteImport
   ._addFileChildren(rootRouteChildren)
   ._addFileTypes<FileRouteTypes>()
 
 import type { getRouter } from './router.tsx'
-import type { createStart } from '@tanstack/react-start'
+import type { startInstance } from './start.ts'
 declare module '@tanstack/react-start' {
   interface Register {
     ssr: true
     router: Awaited<ReturnType<typeof getRouter>>
+    config: Awaited<ReturnType<typeof startInstance.getOptions>>
   }
 }

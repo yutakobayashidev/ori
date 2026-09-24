@@ -1,0 +1,1 @@
+ALTER TABLE `connection_credentials` ADD `app_id` text REFERENCES oauth_apps(id);

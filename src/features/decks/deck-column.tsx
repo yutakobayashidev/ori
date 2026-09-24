@@ -1,14 +1,17 @@
 import { Icon } from '#/components/icon'
-import { mapTwitterPost } from '#/features/platforms/twitter'
-import { flattenPostPages } from '#/features/posts/page'
-import { PostLoadError, usePostFeed } from '#/features/posts/use-post-feed'
-import { columnRequest } from './column-request'
+import {
+  flattenResearchPages,
+  useResearchFeed,
+} from '#/features/platforms/use-research-feed'
+import { PostLoadError } from '#/features/posts/use-post-feed'
 import { type ColumnRegistry, useRegisterColumn } from './column-tools'
 import type { DeckColumn } from './model'
 import { ResearchPostCard } from './research-post-card'
+import { describeSource } from './source-description'
 
 export function ResearchColumn({
   column,
+  connectionLabel,
   onEdit,
   onRemove,
   onMove,
@@ -17,6 +20,7 @@ export function ResearchColumn({
   registry,
 }: {
   column: DeckColumn
+  connectionLabel?: string
   onEdit: () => void
   onRemove: () => void
   onMove: (direction: -1 | 1) => void
@@ -24,14 +28,15 @@ export function ResearchColumn({
   last: boolean
   registry: ColumnRegistry
 }) {
-  const query = usePostFeed(columnRequest(column))
+  const query = useResearchFeed(column)
   useRegisterColumn(registry, column, query)
-  const posts = flattenPostPages(query.data?.pages ?? []).map(mapTwitterPost)
+  const posts = flattenResearchPages(query.data?.pages ?? [])
   const error =
     query.error instanceof PostLoadError
       ? query.error.detail
       : { message: '投稿を取得できませんでした。', retryable: true }
   const headingId = `column-${column.id}`
+  const sourceDescription = describeSource(column.source)
   return (
     <section className="deck-column" aria-labelledby={headingId}>
       <header className="deck-column-header">
@@ -98,22 +103,14 @@ export function ResearchColumn({
           </details>
         </div>
         <div className="deck-column-label">
-          <span title={`接続プロファイル: ${column.profileName}`}>
-            {column.profileName}
+          <span
+            title={`接続プロファイル: ${connectionLabel ?? '接続が見つかりません'}`}
+          >
+            {connectionLabel ?? '接続が見つかりません'}
           </span>
-          <span>
-            {column.source.kind === 'search'
-              ? `${column.source.product === 'Latest' ? '最新' : '話題'}${column.source.following ? ' · フォロー中' : ''}`
-              : column.source.kind === 'user'
-                ? 'ユーザー投稿'
-                : 'リスト'}
-          </span>
+          <span>{sourceDescription.label}</span>
         </div>
-        <p className="deck-query">
-          {column.source.kind === 'search'
-            ? column.source.query
-            : column.source.target}
-        </p>
+        <p className="deck-query">{sourceDescription.query}</p>
         <p className="deck-column-status" role="status">
           {query.isFetching
             ? '投稿を取得しています…'

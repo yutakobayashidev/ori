@@ -1,7 +1,4 @@
-import { useInfiniteQuery } from '@tanstack/react-query'
-import { useServerFn } from '@tanstack/react-start'
 import type { SearchProduct } from '@yuta/bird'
-import { loadListPosts, loadUserPosts, searchPosts } from './server-functions'
 import type {
   ListPageInput,
   LoadError,
@@ -11,7 +8,7 @@ import type {
   UserPageInput,
 } from './types'
 
-export type FeedRequest = { profileName: string } & (
+export type FeedRequest = { connectionId: string } & (
   | { kind: 'user'; target: string }
   | { kind: 'list'; target: string }
   | {
@@ -51,7 +48,7 @@ export function createPostFeedOptions(request: FeedRequest, loaders: Loaders) {
         return unwrap(
           await loaders.loadUser({
             data: {
-              profileName: request.profileName,
+              connectionId: request.connectionId,
               target: request.target,
               cursor: pageParam,
             },
@@ -62,7 +59,7 @@ export function createPostFeedOptions(request: FeedRequest, loaders: Loaders) {
         return unwrap(
           await loaders.loadList({
             data: {
-              profileName: request.profileName,
+              connectionId: request.connectionId,
               target: request.target,
               cursor: pageParam,
             },
@@ -72,7 +69,7 @@ export function createPostFeedOptions(request: FeedRequest, loaders: Loaders) {
       return unwrap(
         await loaders.search({
           data: {
-            profileName: request.profileName,
+            connectionId: request.connectionId,
             query: request.query,
             product: request.product,
             following: request.following,
@@ -83,30 +80,4 @@ export function createPostFeedOptions(request: FeedRequest, loaders: Loaders) {
     },
     getNextPageParam: (page: PostPage) => page.nextCursor,
   }
-}
-
-function usePostFeedOptions() {
-  const loadUser = useServerFn(loadUserPosts)
-  const loadList = useServerFn(loadListPosts)
-  const search = useServerFn(searchPosts)
-  return (request: FeedRequest) =>
-    createPostFeedOptions(request, {
-      loadUser,
-      loadList,
-      search,
-    })
-}
-
-export function usePostFeed(request: FeedRequest | undefined) {
-  const options = usePostFeedOptions()
-  const disabled = {
-    kind: 'user',
-    target: '',
-    profileName: '',
-  } satisfies FeedRequest
-
-  return useInfiniteQuery({
-    ...options(request ?? disabled),
-    enabled: request !== undefined,
-  })
 }

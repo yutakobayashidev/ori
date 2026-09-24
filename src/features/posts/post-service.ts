@@ -164,7 +164,7 @@ function resultPage(
 
 export async function loadUserPage(
   reader: BirdReader,
-  input: Omit<UserPageInput, 'profileName'>,
+  input: Omit<UserPageInput, 'connectionId'>,
 ): Promise<LoadResult> {
   try {
     const handle = normalizeUserTarget(input.target)
@@ -192,7 +192,7 @@ export async function loadUserPage(
 
 export async function loadListPage(
   reader: BirdReader,
-  input: Omit<ListPageInput, 'profileName'>,
+  input: Omit<ListPageInput, 'connectionId'>,
 ): Promise<LoadResult> {
   try {
     const listId = normalizeListTarget(input.target)
@@ -216,7 +216,7 @@ export async function loadListPage(
 
 export async function searchPage(
   reader: BirdReader,
-  input: Omit<SearchPageInput, 'profileName'>,
+  input: Omit<SearchPageInput, 'connectionId'>,
 ): Promise<LoadResult> {
   try {
     return resultPage(

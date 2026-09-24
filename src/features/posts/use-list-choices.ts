@@ -4,7 +4,7 @@ import { loadLists } from './server-functions'
 import type { ListChoice, ListChoicesResult, LoadError } from './types'
 
 type ListChoicesLoader = (options: {
-  data: { profileName: string }
+  data: { connectionId: string }
 }) => Promise<ListChoicesResult>
 
 export class ListChoicesLoadError extends Error {
@@ -14,13 +14,13 @@ export class ListChoicesLoadError extends Error {
 }
 
 export function createListChoicesOptions(
-  profileName: string,
+  connectionId: string,
   loader: ListChoicesLoader,
 ) {
   return {
-    queryKey: ['list-choices', profileName] as const,
+    queryKey: ['list-choices', connectionId] as const,
     queryFn: async (): Promise<ListChoice[]> => {
-      const result = await loader({ data: { profileName } })
+      const result = await loader({ data: { connectionId } })
       if (!result.ok) throw new ListChoicesLoadError(result.error)
       return result.lists
     },
@@ -30,10 +30,10 @@ export function createListChoicesOptions(
   }
 }
 
-export function useListChoices(profileName: string) {
+export function useListChoices(connectionId: string) {
   const loader = useServerFn(loadLists)
   return useQuery({
-    ...createListChoicesOptions(profileName, loader),
-    enabled: Boolean(profileName),
+    ...createListChoicesOptions(connectionId, loader),
+    enabled: Boolean(connectionId),
   })
 }

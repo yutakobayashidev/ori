@@ -20,8 +20,10 @@ describe('explicit relay profile binding', () => {
     [listChoicesInputSchema, {}],
   ])('rejects missing or empty bindings for loader %#', (schema, input) => {
     expect(schema.safeParse(input).success).toBe(false)
-    expect(schema.safeParse({ ...input, profileName: ' ' }).success).toBe(false)
-    expect(schema.safeParse({ ...input, profileName: 'work' }).success).toBe(
+    expect(schema.safeParse({ ...input, connectionId: ' ' }).success).toBe(
+      false,
+    )
+    expect(schema.safeParse({ ...input, connectionId: 'work' }).success).toBe(
       true,
     )
   })

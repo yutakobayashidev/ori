@@ -1,20 +1,6 @@
-import { QueryClient, QueryClientProvider } from '@tanstack/react-query'
-import { renderHook } from '@testing-library/react'
-import { createElement, type ReactNode } from 'react'
-import { beforeEach, describe, expect, it, vi } from 'vitest'
-import {
-  createPostFeedOptions,
-  PostLoadError,
-  usePostFeed,
-} from './use-post-feed'
-
-const useServerFn = vi.hoisted(() => vi.fn())
-
-vi.mock('@tanstack/react-start', async (importOriginal) => {
-  const original =
-    await importOriginal<typeof import('@tanstack/react-start')>()
-  return { ...original, useServerFn }
-})
+import { QueryClient } from '@tanstack/react-query'
+import { describe, expect, it, vi } from 'vitest'
+import { createPostFeedOptions, PostLoadError } from './use-post-feed'
 
 type FeedLoaders = Parameters<typeof createPostFeedOptions>[1]
 
@@ -32,7 +18,7 @@ describe('createPostFeedOptions', () => {
       page: { tweets: [], nextCursor: 'next' },
     })
     const options = createPostFeedOptions(
-      { profileName: 'main', kind: 'user', target: '@yuta' },
+      { connectionId: 'main', kind: 'user', target: '@yuta' },
       loaders({ loadUser }),
     )
 
@@ -40,7 +26,7 @@ describe('createPostFeedOptions', () => {
 
     expect(loadUser).toHaveBeenCalledOnce()
     expect(loadUser).toHaveBeenCalledWith({
-      data: { profileName: 'main', target: '@yuta', cursor: 'cursor' },
+      data: { connectionId: 'main', target: '@yuta', cursor: 'cursor' },
     })
   })
 
@@ -50,7 +36,7 @@ describe('createPostFeedOptions', () => {
       page: { tweets: [], nextCursor: 'next' },
     })
     const options = createPostFeedOptions(
-      { profileName: 'main', kind: 'list', target: '1234567890' },
+      { connectionId: 'main', kind: 'list', target: '1234567890' },
       loaders({ loadList }),
     )
 
@@ -58,17 +44,17 @@ describe('createPostFeedOptions', () => {
 
     expect(loadList).toHaveBeenCalledOnce()
     expect(loadList).toHaveBeenCalledWith({
-      data: { profileName: 'main', target: '1234567890', cursor: 'cursor' },
+      data: { connectionId: 'main', target: '1234567890', cursor: 'cursor' },
     })
     expect(options.queryKey).toEqual([
       'posts',
-      { profileName: 'main', kind: 'list', target: '1234567890' },
+      { connectionId: 'main', kind: 'list', target: '1234567890' },
     ])
   })
 
   it('does not retry requests automatically', () => {
     const options = createPostFeedOptions(
-      { profileName: 'main', kind: 'user', target: 'yuta' },
+      { connectionId: 'main', kind: 'user', target: 'yuta' },
       loaders(),
     )
 
@@ -77,7 +63,7 @@ describe('createPostFeedOptions', () => {
 
   it('does not refetch automatically when the window regains focus', () => {
     const options = createPostFeedOptions(
-      { profileName: 'main', kind: 'user', target: 'yuta' },
+      { connectionId: 'main', kind: 'user', target: 'yuta' },
       loaders(),
     )
 
@@ -86,7 +72,7 @@ describe('createPostFeedOptions', () => {
 
   it('does not refetch automatically when the connection returns', () => {
     const options = createPostFeedOptions(
-      { profileName: 'main', kind: 'user', target: 'yuta' },
+      { connectionId: 'main', kind: 'user', target: 'yuta' },
       loaders(),
     )
 
@@ -95,7 +81,7 @@ describe('createPostFeedOptions', () => {
 
   it('takes the next cursor only from the resolved page', () => {
     const options = createPostFeedOptions(
-      { profileName: 'main', kind: 'user', target: 'yuta' },
+      { connectionId: 'main', kind: 'user', target: 'yuta' },
       loaders(),
     )
 
@@ -108,7 +94,7 @@ describe('createPostFeedOptions', () => {
   it('includes every search control in the query key', () => {
     const options = createPostFeedOptions(
       {
-        profileName: 'main',
+        connectionId: 'main',
         kind: 'search',
         query: 'AI',
         product: 'Top',
@@ -120,7 +106,7 @@ describe('createPostFeedOptions', () => {
     expect(options.queryKey).toEqual([
       'posts',
       {
-        profileName: 'main',
+        connectionId: 'main',
         kind: 'search',
         query: 'AI',
         product: 'Top',
@@ -136,7 +122,7 @@ describe('createPostFeedOptions', () => {
     })
     const options = createPostFeedOptions(
       {
-        profileName: 'main',
+        connectionId: 'main',
         kind: 'search',
         query: 'AI lang:ja',
         product: 'Top',
@@ -150,7 +136,7 @@ describe('createPostFeedOptions', () => {
     expect(search).toHaveBeenCalledOnce()
     expect(search).toHaveBeenCalledWith({
       data: {
-        profileName: 'main',
+        connectionId: 'main',
         query: 'AI lang:ja',
         product: 'Top',
         following: true,
@@ -166,7 +152,7 @@ describe('createPostFeedOptions', () => {
       retryable: true,
     }
     const options = createPostFeedOptions(
-      { profileName: 'main', kind: 'user', target: 'yuta' },
+      { connectionId: 'main', kind: 'user', target: 'yuta' },
       loaders({
         loadUser: vi.fn().mockResolvedValue({ ok: false, error }),
       }),
@@ -186,14 +172,14 @@ describe('profile-bound feed cache', () => {
   it('keeps cached posts and pagination isolated between bound profiles', async () => {
     const loadUser = vi.fn(async ({ data }) => ({
       ok: true as const,
-      page: { tweets: [], nextCursor: `${data.profileName}-next` },
+      page: { tweets: [], nextCursor: `${data.connectionId}-next` },
     }))
     const main = createPostFeedOptions(
-      { kind: 'user', target: 'yuta', profileName: 'main' },
+      { kind: 'user', target: 'yuta', connectionId: 'main' },
       loaders({ loadUser }),
     )
     const work = createPostFeedOptions(
-      { kind: 'user', target: 'yuta', profileName: 'work' },
+      { kind: 'user', target: 'yuta', connectionId: 'work' },
       loaders({ loadUser }),
     )
     const client = new QueryClient()
@@ -207,29 +193,8 @@ describe('profile-bound feed cache', () => {
     expect(loadUser).toHaveBeenCalledTimes(2)
     await work.queryFn({ pageParam: 'work-next' })
     expect(loadUser).toHaveBeenLastCalledWith({
-      data: { target: 'yuta', profileName: 'work', cursor: 'work-next' },
+      data: { target: 'yuta', connectionId: 'work', cursor: 'work-next' },
     })
     client.clear()
-  })
-})
-
-describe('usePostFeed', () => {
-  beforeEach(() => {
-    useServerFn.mockReset()
-  })
-
-  it('keeps an absent request idle without calling a loader', () => {
-    const loader = vi.fn()
-    useServerFn.mockReturnValue(loader)
-    const queryClient = new QueryClient({
-      defaultOptions: { queries: { retry: false } },
-    })
-    const wrapper = ({ children }: { children: ReactNode }) =>
-      createElement(QueryClientProvider, { client: queryClient }, children)
-
-    const { result } = renderHook(() => usePostFeed(undefined), { wrapper })
-
-    expect(result.current.fetchStatus).toBe('idle')
-    expect(loader).not.toHaveBeenCalled()
   })
 })

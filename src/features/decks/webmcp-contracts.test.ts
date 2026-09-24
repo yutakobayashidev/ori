@@ -1,15 +1,24 @@
 import { describe, expect, it } from 'vitest'
+import type { Connection } from '#/features/connections/model'
 import { prepareDeck } from './webmcp-contracts'
 
+const account = (id: string): Connection => ({
+  id,
+  platform: 'twitter',
+  origin: 'https://relay.invalid',
+  accountId: null,
+  displayName: id,
+  status: 'connected',
+})
 const column = {
   title: '観点',
-  profileName: 'main',
+  connectionId: 'main',
   source: { kind: 'search', query: 'AI' },
 }
 describe('deck tool input', () => {
   it('fills Twitter defaults and assigns independent deck and column IDs', () => {
     const deck = prepareDeck({ title: '調査', columns: [column, column] }, [
-      'main',
+      account('main'),
     ])
     expect(deck.columns[0]?.source).toEqual({
       platform: 'twitter',
@@ -27,19 +36,19 @@ describe('deck tool input', () => {
     expect(
       prepareDeck(
         { deckId: 'research', title: '調査', columns: [identified] },
-        ['main'],
+        [account('main')],
       ),
     ).toMatchObject({ id: 'research', columns: [{ id: 'existing' }] })
     expect(() =>
       prepareDeck({ title: '調査', columns: [identified, identified] }, [
-        'main',
+        account('main'),
       ]),
     ).toThrow()
   })
   it('rejects unavailable profiles before applying a definition', () => {
     expect(() =>
-      prepareDeck({ title: '調査', columns: [column] }, ['work']),
-    ).toThrow('Unknown relay profile')
+      prepareDeck({ title: '調査', columns: [column] }, [account('work')]),
+    ).toThrow('Unavailable connection')
   })
   it('accepts user and list columns bound to separate profiles', () => {
     const deck = prepareDeck(
@@ -49,14 +58,14 @@ describe('deck tool input', () => {
           { ...column, source: { kind: 'user', target: '@alice' } },
           {
             ...column,
-            profileName: 'work',
+            connectionId: 'work',
             source: { kind: 'list', target: '123' },
           },
         ],
       },
-      ['main', 'work'],
+      [account('main'), account('work')],
     )
-    expect(deck.columns.map((column) => column.profileName)).toEqual([
+    expect(deck.columns.map((column) => column.connectionId)).toEqual([
       'main',
       'work',
     ])
@@ -77,7 +86,7 @@ describe('deck tool input', () => {
             },
           ],
         },
-        ['main'],
+        [account('main')],
       ),
     ).toThrow()
     expect(() =>
@@ -95,14 +104,37 @@ describe('deck tool input', () => {
             },
           ],
         },
-        ['main'],
+        [account('main')],
       ),
     ).toThrow()
     expect(() =>
       prepareDeck(
         { title: '調査', columns: Array.from({ length: 7 }, () => column) },
-        ['main'],
+        [account('main')],
       ),
     ).toThrow()
   })
+})
+
+it('builds a mixed-platform deck with explicit account bindings', () => {
+  const deck = prepareDeck(
+    {
+      title: 'Mixed',
+      columns: [
+        column,
+        {
+          title: 'Mastodon tag',
+          connectionId: 'masto',
+          source: { platform: 'mastodon', kind: 'hashtag', target: 'WebMCP' },
+        },
+      ],
+    },
+    [account('main'), { ...account('masto'), platform: 'mastodon' }],
+  )
+  expect(
+    deck.columns.map((column) => [column.connectionId, column.source.platform]),
+  ).toEqual([
+    ['main', 'twitter'],
+    ['masto', 'mastodon'],
+  ])
 })

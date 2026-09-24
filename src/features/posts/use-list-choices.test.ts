@@ -15,7 +15,7 @@ describe('createListChoicesOptions', () => {
     await expect(options.queryFn()).resolves.toEqual([
       { id: '123', name: 'My List' },
     ])
-    expect(loader).toHaveBeenCalledWith({ data: { profileName: 'main' } })
+    expect(loader).toHaveBeenCalledWith({ data: { connectionId: 'main' } })
     expect(options.queryKey).toEqual(['list-choices', 'main'])
     expect(options.retry).toBe(false)
     expect(options.refetchOnWindowFocus).toBe(false)

@@ -1,0 +1,73 @@
+.connection-manager {
+  display: grid;
+  gap: 1rem;
+}
+.connection-manager-description,
+.connection-manager-note {
+  margin: 0;
+  color: #aab8c2;
+  font-size: 0.875rem;
+}
+.connection-manager-list {
+  list-style: none;
+  padding: 0;
+  margin: 0;
+  display: grid;
+  gap: 0.75rem;
+}
+.connection-manager-list > li {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 0.75rem;
+  padding-block: 0.75rem;
+  border-bottom: 1px solid #38444d;
+}
+.connection-manager-account {
+  display: grid;
+  gap: 0.25rem;
+  min-width: 0;
+  overflow-wrap: anywhere;
+}
+.connection-manager-account > span {
+  font-size: 0.8rem;
+  color: #aab8c2;
+}
+.connection-manager-account > .connection-manager-status-connected {
+  color: #71d6ad;
+}
+.connection-manager-account > .connection-manager-status-expired {
+  color: #f2c66d;
+}
+.connection-manager-actions {
+  display: flex;
+  flex-wrap: wrap;
+  justify-content: flex-end;
+  gap: 0.5rem;
+}
+.connection-manager-add {
+  display: grid;
+  gap: 0.75rem;
+}
+.connection-manager-add h3 {
+  margin: 0;
+  font-size: 1rem;
+}
+.connection-manager select {
+  width: 100%;
+  min-width: 0;
+  background: #15202b;
+  color: #e7e9ea;
+  border: 1px solid #536471;
+  border-radius: 0.25rem;
+  padding: 0.6rem;
+}
+.connection-manager button {
+  min-height: 2.5rem;
+}
+@media (max-width: 480px) {
+  .connection-manager-list > li {
+    align-items: flex-start;
+    flex-direction: column;
+  }
+}

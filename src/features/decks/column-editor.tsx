@@ -1,91 +1,54 @@
 import { useId, useState } from 'react'
-import { useListChoices } from '#/features/posts/use-list-choices'
+import type { Connection } from '#/features/connections/model'
+import {
+  ColumnSourceEditor,
+  defaultColumnSource,
+  rebindColumnSource,
+} from './column-source-editor'
 import { columnSchema, type DeckColumn } from './model'
-
-function ListChoices({
-  profileName,
-  onSelect,
-}: {
-  profileName: string
-  onSelect: (id: string) => void
-}) {
-  const lists = useListChoices(profileName)
-  if (lists.isPending) return <p role="status">リストを取得しています…</p>
-  if (lists.isError)
-    return (
-      <p role="alert">
-        リストを取得できませんでした。
-        <button type="button" onClick={() => void lists.refetch()}>
-          再試行
-        </button>
-      </p>
-    )
-  return (
-    <section
-      className="deck-list-choices"
-      aria-label="このプロファイルのリスト"
-    >
-      {lists.data.length === 0 ? (
-        <p>リストはありません。URLまたはIDでも指定できます。</p>
-      ) : (
-        lists.data.map((list) => (
-          <button type="button" key={list.id} onClick={() => onSelect(list.id)}>
-            {list.name}
-            {list.isPrivate ? ' · 非公開' : ''}
-          </button>
-        ))
-      )}
-    </section>
-  )
-}
 
 export function ColumnEditor({
   column,
-  profiles,
+  connections,
   onSave,
   onCancel,
 }: {
   column?: DeckColumn
-  profiles: string[]
-  onSave: (column: DeckColumn) => void
+  connections: Connection[]
+  onSave: (column: DeckColumn) => Promise<boolean>
   onCancel: () => void
 }) {
+  const available = connections.filter(
+    (connection) => connection.status === 'connected',
+  )
   const formId = useId()
   const [error, setError] = useState<string>()
-  const [kind, setKind] = useState<DeckColumn['source']['kind']>(
-    column?.source.kind ?? 'search',
+  const [connectionId, setConnectionId] = useState(
+    column?.connectionId ?? available[0]?.id ?? '',
   )
-  const [profileName, setProfileName] = useState(
-    column?.profileName ?? profiles[0] ?? '',
+  const [source, setSource] = useState(
+    column?.source ?? defaultColumnSource(available[0]?.platform ?? 'twitter'),
   )
-  const [target, setTarget] = useState(
-    column && column.source.kind !== 'search' ? column.source.target : '',
+  const validConnection = available.some(
+    (connection) => connection.id === connectionId,
   )
+
   return (
     <form
       className="deck-editor"
       aria-label={column ? 'カラムを編集' : 'カラムを追加'}
-      onSubmit={(event) => {
+      onSubmit={async (event) => {
         event.preventDefault()
+        setError(undefined)
         const data = new FormData(event.currentTarget)
-        const source =
-          kind === 'search'
-            ? {
-                platform: 'twitter',
-                kind,
-                query: data.get('query'),
-                product: data.get('product'),
-                following: data.get('following') === 'on',
-              }
-            : { platform: 'twitter', kind, target }
         const parsed = columnSchema.safeParse({
           id:
             column?.id ?? crypto.getRandomValues(new Uint32Array(4)).join('-'),
           title: data.get('title'),
-          profileName,
+          connectionId,
           source,
         })
-        if (!parsed.success || !profiles.includes(profileName)) {
+        if (!parsed.success || !validConnection) {
           setError(
             parsed.success
               ? '接続プロファイルを選択してください。'
@@ -93,7 +56,7 @@ export function ColumnEditor({
           )
           return
         }
-        onSave(parsed.data)
+        await onSave(parsed.data)
       }}
     >
       <div className="deck-editor-fields">
@@ -112,124 +75,52 @@ export function ColumnEditor({
           接続プロファイル
           <select
             id={`${formId}-profile`}
-            value={profileName}
-            onChange={(event) => setProfileName(event.target.value)}
+            value={connectionId}
             required
+            onChange={(event) => {
+              const connection = available.find(
+                (value) => value.id === event.target.value,
+              )
+              if (!connection) return
+              setConnectionId(connection.id)
+              setSource(rebindColumnSource(source, connection.platform))
+            }}
           >
             <option value="" disabled>
               選択してください
             </option>
-            {profileName && !profiles.includes(profileName) ? (
-              <option value={profileName} disabled>
-                {profileName}（利用不可）
+            {connectionId && !validConnection && (
+              <option value={connectionId} disabled>
+                {connectionId}（利用不可）
               </option>
-            ) : null}
-            {profiles.map((name) => (
-              <option key={name} value={name}>
-                {name}
+            )}
+            {available.map((connection) => (
+              <option key={connection.id} value={connection.id}>
+                {connection.displayName}
+                {connection.platform === 'mastodon' ? ' · Mastodon' : ''}
               </option>
             ))}
           </select>
         </label>
-        <label htmlFor={`${formId}-kind`}>
-          カラムの種類
-          <select
-            id={`${formId}-kind`}
-            value={kind}
-            onChange={(event) => {
-              setKind(event.target.value as typeof kind)
-              setTarget('')
-            }}
-          >
-            <option value="search">検索</option>
-            <option value="user">ユーザー投稿</option>
-            <option value="list">リスト</option>
-          </select>
-        </label>
       </div>
-      {kind === 'search' ? (
-        <div className="deck-source-fields" key="search">
-          <label htmlFor={`${formId}-query`}>
-            Twitterの検索条件
-            <input
-              id={`${formId}-query`}
-              name="query"
-              defaultValue={
-                column?.source.kind === 'search' ? column.source.query : ''
-              }
-              maxLength={512}
-              placeholder="例：WebMCP lang:ja"
-              required
-            />
-          </label>
-          <label htmlFor={`${formId}-product`}>
-            表示順
-            <select
-              id={`${formId}-product`}
-              name="product"
-              defaultValue={
-                column?.source.kind === 'search'
-                  ? column.source.product
-                  : 'Latest'
-              }
-            >
-              <option value="Latest">最新</option>
-              <option value="Top">話題</option>
-            </select>
-          </label>
-          <p className="deck-help">
-            from:、lang:、since: など、Twitterの検索構文を使えます。
-          </p>
-          <label className="deck-checkbox">
-            <input
-              type="checkbox"
-              name="following"
-              defaultChecked={
-                column?.source.kind === 'search' && column.source.following
-              }
-            />
-            フォロー中のみ
-          </label>
-        </div>
-      ) : (
-        <div className="deck-source-fields" key={kind}>
-          <label htmlFor={`${formId}-target`}>
-            {kind === 'user' ? 'ユーザー' : 'リスト'}
-            <input
-              id={`${formId}-target`}
-              value={target}
-              onChange={(event) => setTarget(event.target.value)}
-              placeholder={
-                kind === 'user'
-                  ? '@handle またはプロフィールURL'
-                  : 'リストのURLまたはID'
-              }
-              maxLength={256}
-              required
-            />
-          </label>
-          {kind === 'list' && profiles.includes(profileName) ? (
-            <ListChoices
-              key={profileName}
-              profileName={profileName}
-              onSelect={setTarget}
-            />
-          ) : null}
-        </div>
-      )}
+      <ColumnSourceEditor
+        source={source}
+        connectionId={validConnection ? connectionId : ''}
+        onChange={setSource}
+      />
       <p className="deck-help">
         このカラムは選択した接続プロファイルで取得します。
       </p>
-      {error ? (
+      {error && (
         <p role="alert" className="deck-error">
           {error}
         </p>
-      ) : null}
+      )}
       <div className="deck-actions">
         <button
           type="submit"
           className="deck-primary"
-          disabled={!profiles.includes(profileName)}
+          disabled={!validConnection}
         >
           {column ? '変更を保存' : '追加して検索'}
         </button>

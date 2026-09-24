@@ -13,7 +13,7 @@ async function addColumn(
   await editor.getByLabel('カラム名', { exact: true }).fill(title)
   await editor
     .getByRole('combobox', { name: '接続プロファイル', exact: true })
-    .selectOption(profile)
+    .selectOption({ label: profile })
   await editor
     .getByRole('combobox', { name: 'カラムの種類', exact: true })
     .selectOption(kind)
@@ -39,6 +39,10 @@ async function addColumn(
 test.beforeEach(async ({ page }) => {
   await page.goto('/')
   await page.waitForLoadState('networkidle')
+  await page
+    .getByRole('button', { name: 'デッキとして保存', exact: true })
+    .click()
+  await expect(page.getByText('サーバーに保存・端末間で共有')).toHaveCount(1)
 })
 
 test('binds identical searches to independent profiles through paging, editing and reload', async ({
@@ -65,7 +69,7 @@ test('binds identical searches to independent profiles through paging, editing a
   await second.getByRole('button', { name: '編集', exact: true }).click()
   await page
     .getByRole('combobox', { name: '接続プロファイル', exact: true })
-    .selectOption('e2e')
+    .selectOption({ label: 'e2e' })
   await page.getByRole('button', { name: '変更を保存' }).click()
   await expect(
     second.getByText('Latest · all page 1', { exact: true }),
@@ -241,6 +245,9 @@ test('selects a list from the column profile catalog and refreshes it on profile
   await page.getByRole('button', { name: 'カラムを追加', exact: true }).click()
   await page.getByLabel('カラム名', { exact: true }).fill('購読リスト')
   await page
+    .getByRole('combobox', { name: '接続プロファイル', exact: true })
+    .selectOption({ label: 'e2e' })
+  await page
     .getByRole('combobox', { name: 'カラムの種類', exact: true })
     .selectOption('list')
   await expect(
@@ -248,7 +255,7 @@ test('selects a list from the column profile catalog and refreshes it on profile
   ).toBeVisible()
   await page
     .getByRole('combobox', { name: '接続プロファイル', exact: true })
-    .selectOption('alternate')
+    .selectOption({ label: 'alternate' })
   await expect(
     page.getByRole('button', { name: 'My E2E List', exact: true }),
   ).toHaveCount(0)
@@ -264,4 +271,105 @@ test('selects a list from the column profile catalog and refreshes it on profile
       .getByRole('region', { name: '購読リスト', exact: true })
       .getByText('list page 1', { exact: true }),
   ).toBeVisible()
+})
+
+test('keeps an open draft through remote edits and rejects its stale save', async ({
+  page,
+  browser,
+  baseURL,
+}) => {
+  const other = await browser.newContext({
+    baseURL,
+    extraHTTPHeaders: { 'Tailscale-User-Login': 'owner@twitter-lite.invalid' },
+  })
+  try {
+    const device = await other.newPage()
+    await device.goto('/')
+    await page.getByRole('button', { name: '名前を変更' }).click()
+    await page.getByLabel('調査テーマ・デッキ名').fill('編集中の名前')
+    await device.getByRole('button', { name: '名前を変更' }).click()
+    await device.getByLabel('調査テーマ・デッキ名').fill('別の端末の変更')
+    await device.getByRole('button', { name: '名前を保存' }).click()
+    await expect(device.getByRole('heading', { level: 1 })).toHaveText(
+      '別の端末の変更',
+    )
+    await page.evaluate(() => window.dispatchEvent(new Event('focus')))
+    await expect(page.getByLabel('調査テーマ・デッキ名')).toHaveValue(
+      '編集中の名前',
+    )
+    await page.getByRole('button', { name: '名前を保存' }).click()
+    await expect(page.getByRole('alert')).toContainText(
+      '別の端末で変更されました',
+    )
+    await expect(page.getByLabel('調査テーマ・デッキ名')).toHaveValue(
+      '編集中の名前',
+    )
+    await page.keyboard.press('Escape')
+    await page.getByRole('button', { name: '最新のデッキを再読み込み' }).click()
+    await expect(page.getByRole('heading', { level: 1 })).toHaveText(
+      '別の端末の変更',
+    )
+  } finally {
+    await other.close()
+  }
+})
+
+test('imports old browser decks explicitly and avoids duplicate imports after retry', async ({
+  page,
+}) => {
+  const legacy = {
+    version: 2,
+    activeDeckId: 'old',
+    decks: [
+      {
+        id: 'old',
+        title: '以前の調査',
+        columns: [
+          {
+            id: 'a',
+            title: '以前の観点',
+            profileName: 'e2e',
+            source: {
+              platform: 'twitter',
+              kind: 'search',
+              query: 'WebMCP',
+              product: 'Latest',
+              following: false,
+            },
+          },
+        ],
+      },
+    ],
+  }
+  await page.evaluate(
+    (legacy) =>
+      localStorage.setItem(
+        'twitter-lite-research-deck',
+        JSON.stringify(legacy),
+      ),
+    legacy,
+  )
+  await page.reload()
+  const selector = page.getByLabel('デッキプロファイル', { exact: true })
+  await expect(selector.locator('option')).toHaveCount(1)
+  await page.getByRole('button', { name: '旧デッキを取り込む' }).click()
+  await expect(selector.locator('option')).toHaveCount(2)
+  await selector.selectOption({ label: '以前の調査' })
+  await expect(
+    page.getByText('Latest · all page 1', { exact: true }),
+  ).toBeVisible()
+  await page.evaluate(
+    (legacy) =>
+      localStorage.setItem(
+        'twitter-lite-research-deck',
+        JSON.stringify(legacy),
+      ),
+    legacy,
+  )
+  await page.reload()
+  await page.getByRole('button', { name: '旧デッキを取り込む' }).click()
+  await expect(
+    page.getByRole('button', { name: '旧デッキを取り込む' }),
+  ).toHaveCount(0)
+  await expect(selector.locator('option')).toHaveCount(2)
 })

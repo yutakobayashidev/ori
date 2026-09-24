@@ -3,28 +3,28 @@ import { z } from 'zod'
 const HANDLE = /^[A-Za-z0-9_]{1,15}$/
 const FOLLOWS = /(?:^|\s)filter:follows(?:\s|$)/i
 const LIST_ID = /^\d{1,32}$/
-const profileNameSchema = z.string().trim().min(1).max(256)
+const connectionIdSchema = z.string().trim().min(1).max(256)
 
 export class InputError extends Error {}
 
 export const userPageInputSchema = z.object({
-  profileName: profileNameSchema,
+  connectionId: connectionIdSchema,
   target: z.string().trim().min(1).max(256),
   cursor: z.string().min(1).optional(),
 })
 
 export const listPageInputSchema = z.object({
-  profileName: profileNameSchema,
+  connectionId: connectionIdSchema,
   target: z.string().trim().min(1).max(256),
   cursor: z.string().min(1).optional(),
 })
 
 export const listChoicesInputSchema = z.object({
-  profileName: profileNameSchema,
+  connectionId: connectionIdSchema,
 })
 
 export const searchPageInputSchema = z.object({
-  profileName: profileNameSchema,
+  connectionId: connectionIdSchema,
   query: z.string().trim().min(1).max(512),
   product: z.enum(['Top', 'Latest']),
   following: z.boolean(),

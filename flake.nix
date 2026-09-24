@@ -22,7 +22,7 @@
             inherit (finalAttrs) pname version src;
             pnpm = pkgs.pnpm_11;
             fetcherVersion = 4;
-            hash = "sha256-rUszJwsou2NXbVwyPQQ0bk+pRFzRQIzrWs+JXBX/Q9Y=";
+            hash = "sha256-3mfbk9jA/3j/WbgokZnHpExSNVbOxSD5tYiFgvP/LI8=";
           };
 
           nativeBuildInputs = with pkgs; [
@@ -44,6 +44,8 @@
             cp -r .output/. $out/lib/twitter-lite/
             makeWrapper ${nixpkgs.lib.getExe pkgs.nodejs_22} $out/bin/twitter-lite \
               --add-flags "$out/lib/twitter-lite/server/index.mjs"
+            makeWrapper ${nixpkgs.lib.getExe pkgs.nodejs_22} $out/bin/twitter-lite-backup \
+              --add-flags "$out/lib/twitter-lite/server/tools/backup-database.js"
             runHook postInstall
           '';
 
@@ -113,10 +115,29 @@
               description = "Base URL of the Twitter relay.";
             };
 
-            host = lib.mkOption {
+            publicOrigin = lib.mkOption {
               type = lib.types.nonEmptyStr;
-              default = "127.0.0.1";
-              description = "Address on which Twitter Lite listens.";
+              example = "https://home.example-tailnet.ts.net";
+              description = "Exact Tailscale Serve HTTPS origin, without a trailing slash.";
+            };
+
+            allowedLogin = lib.mkOption {
+              type = lib.types.nonEmptyStr;
+              description = "Tailscale login allowed to access this personal workspace.";
+            };
+
+            credentialKeyFile = lib.mkOption {
+              type = lib.types.nullOr lib.types.str;
+              default = null;
+              example = "/var/lib/secrets/twitter-lite-key";
+              description = "Runtime file containing the base64-encoded 32-byte credential encryption key. Never put this key in the Nix store.";
+            };
+
+            mastodonOrigins = lib.mkOption {
+              type = lib.types.listOf lib.types.nonEmptyStr;
+              default = [ ];
+              example = [ "https://mastodon.social" ];
+              description = "Allowed Mastodon HTTPS origins, without trailing slashes.";
             };
 
             port = lib.mkOption {
@@ -132,12 +153,23 @@
               after = [ "network.target" ];
               wantedBy = [ "multi-user.target" ];
               environment = {
-                HOST = cfg.host;
+                HOST = "127.0.0.1";
                 PORT = toString cfg.port;
                 TWITTER_RELAY_BASE_URL = cfg.relayBaseUrl;
+                TWITTER_LITE_ORIGIN = cfg.publicOrigin;
+                TWITTER_LITE_ALLOWED_LOGIN = cfg.allowedLogin;
+                TWITTER_LITE_DB_PATH = "/var/lib/twitter-lite/workspace.sqlite";
+                TWITTER_LITE_MASTODON_ORIGINS = lib.concatStringsSep "," cfg.mastodonOrigins;
+              } // lib.optionalAttrs (cfg.credentialKeyFile != null) {
+                TWITTER_LITE_CREDENTIAL_KEY_FILE = "%d/credential-key";
               };
               serviceConfig = {
                 DynamicUser = true;
+                StateDirectory = "twitter-lite";
+                StateDirectoryMode = "0700";
+                UMask = "0077";
+                LoadCredential = lib.optional (cfg.credentialKeyFile != null)
+                  "credential-key:${cfg.credentialKeyFile}";
                 ExecStart = lib.getExe cfg.package;
                 Restart = "on-failure";
               };

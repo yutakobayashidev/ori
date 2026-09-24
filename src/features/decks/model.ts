@@ -1,4 +1,5 @@
 import { z } from 'zod'
+import { mastodonSourceSchema } from '#/features/platforms/mastodon-source'
 import {
   buildSearchQuery,
   normalizeListTarget,
@@ -69,11 +70,14 @@ export const columnSchema = z
   .object({
     id: z.string().min(1).max(128),
     title: z.string().trim().min(1).max(80),
-    profileName: z.string().min(1),
-    source: z.discriminatedUnion('kind', [
-      searchSourceSchema,
-      userSourceSchema,
-      listSourceSchema,
+    connectionId: z.string().min(1),
+    source: z.union([
+      z.discriminatedUnion('kind', [
+        searchSourceSchema,
+        userSourceSchema,
+        listSourceSchema,
+      ]),
+      mastodonSourceSchema,
     ]),
   })
   .strict()
@@ -92,37 +96,18 @@ export const deckSchema = z
     'カラム ID が重複しています。',
   )
 
-export const workspaceSchema = z
-  .object({
-    version: z.literal(2),
-    activeDeckId: deckSchema.shape.id,
-    decks: z.array(deckSchema).min(1),
-  })
-  .strict()
-  .refine(
-    (workspace) =>
-      new Set(workspace.decks.map((deck) => deck.id)).size ===
-      workspace.decks.length,
-    'デッキ ID が重複しています。',
-  )
-  .refine(
-    (workspace) =>
-      workspace.decks.some((deck) => deck.id === workspace.activeDeckId),
-    '選択したデッキが見つかりません。',
-  )
-
 export type Deck = z.infer<typeof deckSchema>
 export type DeckColumn = z.infer<typeof columnSchema>
-export type Workspace = z.infer<typeof workspaceSchema>
+export type DeckView = Deck & { persisted: boolean; revision?: number }
+export type Workspace = { activeDeckId: string; decks: DeckView[] }
 export const EMPTY_DECK: Deck = {
   id: 'initial',
   title: '新しい調査',
   columns: [],
 }
 export const EMPTY_WORKSPACE: Workspace = {
-  version: 2,
   activeDeckId: EMPTY_DECK.id,
-  decks: [EMPTY_DECK],
+  decks: [{ ...EMPTY_DECK, persisted: false }],
 }
 export function newId() {
   return crypto.getRandomValues(new Uint32Array(4)).join('-')

@@ -1,0 +1,98 @@
+// @vitest-environment node
+import { afterEach, describe, expect, it, vi } from 'vitest'
+import { checkAccess, readAccessConfig } from './policy.server'
+
+const config = {
+  origin: 'https://deck.invalid',
+  allowedLogin: 'owner@deck.invalid',
+}
+
+afterEach(() => vi.unstubAllEnvs())
+
+describe('Serve access boundary', () => {
+  it('fails closed when the deployment is not configured', () => {
+    vi.stubEnv('TWITTER_LITE_ORIGIN', '')
+    vi.stubEnv('TWITTER_LITE_ALLOWED_LOGIN', '')
+    expect(readAccessConfig()).toBeNull()
+    expect(checkAccess(new Request(config.origin), null)?.status).toBe(503)
+  })
+
+  it.each([
+    '',
+    'https://deck.invalid/path',
+    'http://deck.invalid',
+    'not a URL',
+  ])('rejects an invalid configured origin: %s', (origin) => {
+    vi.stubEnv('TWITTER_LITE_ORIGIN', origin)
+    vi.stubEnv('TWITTER_LITE_ALLOWED_LOGIN', config.allowedLogin)
+    expect(readAccessConfig()).toBeNull()
+  })
+
+  it.each([
+    'https://deck.invalid',
+    'http://127.0.0.1:4173',
+  ])('accepts an explicit deployment origin: %s', (origin) => {
+    vi.stubEnv('TWITTER_LITE_ORIGIN', origin)
+    vi.stubEnv('TWITTER_LITE_ALLOWED_LOGIN', config.allowedLogin)
+    expect(readAccessConfig()).toEqual({ ...config, origin })
+  })
+
+  it.each([
+    undefined,
+    'other@deck.invalid',
+    'owner@deck.invalid, other@deck.invalid',
+  ])('rejects absent, foreign, or ambiguous identities: %s', (login) => {
+    const headers = new Headers()
+    if (login) headers.set('Tailscale-User-Login', login)
+    expect(
+      checkAccess(new Request(config.origin, { headers }), config)?.status,
+    ).toBe(403)
+  })
+
+  it('permits owner navigation back from an OAuth provider without Origin', () => {
+    const request = new Request(
+      `${config.origin}/oauth/mastodon/callback?code=code`,
+      {
+        headers: {
+          'Tailscale-User-Login': config.allowedLogin,
+          'Sec-Fetch-Site': 'cross-site',
+        },
+      },
+    )
+    expect(checkAccess(request, config)).toBeNull()
+  })
+
+  it.each([
+    'POST',
+    'PUT',
+    'PATCH',
+    'DELETE',
+  ])('requires exact Origin for %s even with same-origin Fetch Metadata', (method) => {
+    const headers = {
+      'Tailscale-User-Login': config.allowedLogin,
+      'Sec-Fetch-Site': 'same-origin',
+    }
+    expect(
+      checkAccess(new Request(config.origin, { method, headers }), config)
+        ?.status,
+    ).toBe(403)
+    expect(
+      checkAccess(
+        new Request(config.origin, {
+          method,
+          headers: { ...headers, Origin: 'https://other.invalid' },
+        }),
+        config,
+      )?.status,
+    ).toBe(403)
+    expect(
+      checkAccess(
+        new Request(config.origin, {
+          method,
+          headers: { ...headers, Origin: config.origin },
+        }),
+        config,
+      ),
+    ).toBeNull()
+  })
+})

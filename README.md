@@ -1,27 +1,29 @@
 # Twitter Lite
 
-Twitter Lite is a read-only research deck for X. Create multiple named decks,
-and arrange up to six columns per deck for searches, user timelines, and lists.
-Each column is bound to an explicit relay profile, so different accounts can
-be used side by side.
+Twitter Lite is a personal research deck for Twitter and Mastodon. Create
+multiple named decks and arrange up to six columns per deck. Each column is
+bound to a connection account, so platforms and multiple accounts work side by side.
 
 ## Scope
 
 - Multiple deck profiles with creation, selection, renaming, and deletion
-- Search, user timeline, and list columns with independent relay profiles
+- Twitter search, user timeline, and list columns with independent relay accounts
+- Mastodon OAuth, multiple accounts, search, user, list, and hashtag columns
 - Native X search syntax, Top/Latest ranking, and optional `filter:follows`
 - List discovery for the profile selected in the column editor
 - Column editing, ordering, deletion/undo, manual refresh, and cursor pagination
-- Browser-local persistence of deck definitions and the active deck
+- SQLite-backed shared decks, revision conflicts, and device-local active selection
+- Temporary views for AI exploration, with explicit save and temporary copies
+- Server-only encrypted Mastodon credentials and Tailscale owner access
 - Read-only cards with original-post links, text, media, and quotes
 - Experimental WebMCP tools to manage decks and read or paginate their columns
 
 Both `/` and `/deck` open the deck workspace. The separate reader, search,
 list, user-profile, and conversation routes have been removed. Original-post
-links open X; conversations are not rendered inside the app.
+links open their source site; conversations are not rendered inside the app.
 
-Built-in AI planning, summaries, and the Mastodon/Bluesky/Threads/Nostr
-connectors are not implemented yet. Twitter is the only supported platform.
+Built-in AI planning, summaries, and Bluesky/Threads/Nostr connectors are not
+implemented yet. An external browser agent can create and read decks through WebMCP.
 
 ## Requirements and setup
 
@@ -34,8 +36,11 @@ cp .env.example .env.local
 ```
 
 The Nix development shell installs Hallmark's agent skill for the supported
-local agent targets. Set `TWITTER_RELAY_BASE_URL` in `.env.local` for Vite
-development, or export it before running the production server:
+local agent targets. Set the runtime configuration in `.env.local` for Vite
+development, or export it before running the production server. In addition to
+the relay URL, configure the Serve origin, owner login, and an absolute SQLite
+path from `.env.example`. Mastodon needs an allowed instance and a runtime
+encryption key file; see [storage, OAuth and restore](docs/storage-and-oauth.md).
 
 ```bash
 export TWITTER_RELAY_BASE_URL=http://127.0.0.1:6900
@@ -46,7 +51,8 @@ endpoint. Select a profile for each column. There is no global account selector,
 profile cookie, or application-level `BIRD_PROFILE_NAME` default. Requests
 validate that the bound profile still exists before fetching posts or lists.
 Bird and relay credentials stay on the server; saved deck definitions include
-the selected profile names.
+stable connection IDs. The connection metadata resolves Twitter IDs to relay
+profiles; Mastodon credentials never go to the browser.
 
 ## Commands
 
@@ -60,6 +66,7 @@ nix develop -c pnpm test:e2e
 nix develop -c pnpm test:live
 nix develop -c pnpm build
 nix develop -c pnpm start
+nix develop -c pnpm db:generate
 ```
 
 `test:e2e` uses the system Chromium supplied by the Nix dev shell. Playwright
@@ -83,26 +90,28 @@ dialogs; Escape closes them and returns focus. Column menus contain editing,
 ordering, and deletion; refresh stays available directly in each header.
 
 Create a deck for an investigation, then add columns for each perspective.
-Choose a relay profile and a source: search, user timeline, or list. Profile
-changes affect only the edited column. Matching source conditions and profiles
+Choose a connected account and one of its supported sources. Account
+changes affect only the edited column. Matching source conditions and accounts
 share the query cache; different profiles never share posts or cursors.
 
-The workspace saves multiple decks and the active selection in localStorage.
-Only the active deck is rendered and fetched. Posts and cursors are not saved;
-reloading fetches first pages. Devices and tabs do not synchronize edits.
+Saved decks live on the server and refresh across devices on focus and while
+visible. Conflicting revisions are rejected. Only the active deck is rendered
+and fetched; posts and cursors are not archived. The active selection stays
+local to the device.
 
-Old single-deck data is not migrated automatically because it has no explicit
-column profile binding. Invalid or older saved data remains untouched while
-the app shows an empty workspace and an explanation. Saving a new edit replaces
-that saved data. See [the deck model and persistence contract](docs/research-decks.md).
+AI-created decks start as temporary views in the current tab. Save a view to
+share it across devices, or make a temporary copy of a saved deck to experiment.
+Temporary views disappear on reload or navigation, including OAuth redirects.
+Existing version-2 browser decks have an explicit import action; invalid older
+data is left untouched. See [the deck model and persistence contract](docs/research-decks.md).
 
 ## WebMCP
 
-A WebMCP-enabled browser exposes `list_decks`, `get_deck`, `set_deck`,
-`select_deck`, `delete_deck`, `get_column_posts`, and `load_more_column` on
-both deck routes. Start with `list_decks` to discover deck IDs and available
-relay profiles. `set_deck` creates a new deck when `deckId` is omitted; supply
-an existing ID to replace that deck's complete ordered columns and activate it.
+A WebMCP-enabled browser exposes `list_connections`, `list_decks`, `get_deck`,
+`set_deck`, `save_deck`, `select_deck`, `delete_deck`, `get_column_posts`, and
+`load_more_column` on both deck routes. Discover connection IDs first.
+`set_deck` creates a temporary view when `deckId` is omitted. `save_deck`
+persists it. Replacing or deleting a saved deck requires its `expectedRevision`.
 
 Enable `chrome://flags/#enable-webmcp-testing`, restart Chrome, and open the
 local app. Use the
@@ -111,11 +120,18 @@ to invoke tools. Registration uses native `document.modelContext` through
 `usewebmcp`; there is no polyfill or external MCP transport. Unsupported
 browsers retain the manual deck UI. See [tool contracts and verification](docs/webmcp-prototype.md).
 
-Development binds to `127.0.0.1` by default. `dev:tailscale` binds to
-`0.0.0.0`, including LAN interfaces. Native WebMCP needs a secure context;
+Development and `dev:tailscale` both bind to `127.0.0.1`. Native WebMCP needs a secure context;
 use a Tailscale Serve HTTPS origin for remote access, and allow its exact
 hostname through `__VITE_ADDITIONAL_SERVER_ALLOWED_HOSTS` in the Vite process
 environment. HTTP and HTTPS origins have separate localStorage.
+
+Set `TWITTER_LITE_ORIGIN` to the exact Serve HTTPS origin (no trailing slash)
+and `TWITTER_LITE_ALLOWED_LOGIN` to your Tailscale login. The app requires
+Serve's `Tailscale-User-Login` header and rejects other users. Keep the backend
+on localhost: the trusted Serve proxy supplies identity. Tagged clients do not
+provide user identity. Missing configuration fails closed; direct browser access
+to localhost does not supply the required identity. Playwright supplies an
+explicit fixture identity to its isolated test server.
 
 ## NixOS service
 
@@ -135,6 +151,10 @@ The flake provides a production package and a NixOS module:
           services.twitter-lite = {
             enable = true;
             relayBaseUrl = "http://127.0.0.1:6900";
+            publicOrigin = "https://home.example-tailnet.ts.net";
+            allowedLogin = "your-tailscale-login";
+            mastodonOrigins = [ "https://fedi.yutakobayashi.com" ];
+            credentialKeyFile = "/var/lib/secrets/twitter-lite-key";
           };
         }
       ];
@@ -143,9 +163,12 @@ The flake provides a production package and a NixOS module:
 }
 ```
 
-The service listens on `127.0.0.1:3000` by default. Set
-`services.twitter-lite.host` or `services.twitter-lite.port` to change the
-listener. Profiles are selected in column definitions, not service options.
+The service listens on `127.0.0.1:3000`. Set
+`services.twitter-lite.port` to change the port; the host remains loopback.
+The module reserves `/var/lib/twitter-lite` with mode 0700 for persistent state.
+`credentialKeyFile` can reference a runtime secret file for SNS credentials;
+systemd loads it as a credential, separate from the database and Nix store.
+Profiles are selected in column definitions, not service options.
 The package can also be built directly with `nix build`.
 
 ## Reliability

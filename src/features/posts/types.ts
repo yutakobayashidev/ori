@@ -19,6 +19,10 @@ type LoadErrorCode =
   | 'relay-config'
   | 'timeout'
   | 'upstream'
+  | 'account-unavailable'
+  | 'rate-limit'
+  | 'search-unavailable'
+  | 'request-failed'
 
 export type LoadError = {
   code: LoadErrorCode
@@ -43,19 +47,19 @@ export type ListChoice = {
 export type ListChoicesResult = { ok: true; lists: ListChoice[] } | LoadFailure
 
 export type UserPageInput = {
-  profileName: string
+  connectionId: string
   target: string
   cursor?: string
 }
 
 export type ListPageInput = {
-  profileName: string
+  connectionId: string
   target: string
   cursor?: string
 }
 
 export type SearchPageInput = {
-  profileName: string
+  connectionId: string
   query: string
   product: SearchProduct
   following: boolean

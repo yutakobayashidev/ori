@@ -1,20 +1,25 @@
 import { useEffect, useRef } from 'react'
 import { useWebMCP } from 'usewebmcp'
 import { z } from 'zod'
-import { mapTwitterPost } from '#/features/platforms/twitter'
-import { flattenPostPages } from '#/features/posts/page'
-import { PostLoadError, type usePostFeed } from '#/features/posts/use-post-feed'
+import {
+  flattenResearchPages,
+  type useResearchFeed,
+} from '#/features/platforms/use-research-feed'
+import { PostLoadError } from '#/features/posts/use-post-feed'
 import type { DeckColumn } from './model'
 import { useWebMCPSupported } from './use-webmcp-supported'
 import { toolResult } from './webmcp-contracts'
 
-type ColumnFeed = { column: DeckColumn; query: ReturnType<typeof usePostFeed> }
+type ColumnFeed = {
+  column: DeckColumn
+  query: ReturnType<typeof useResearchFeed>
+}
 export type ColumnRegistry = Map<string, { current: ColumnFeed }>
 
 export function useRegisterColumn(
   registry: ColumnRegistry,
   column: DeckColumn,
-  query: ReturnType<typeof usePostFeed>,
+  query: ReturnType<typeof useResearchFeed>,
 ) {
   const entry = useRef({ column, query })
   entry.current = { column, query }
@@ -32,7 +37,7 @@ const readInput = columnInput.extend({
 })
 
 function read(feed: ColumnFeed, offset = 0, limit = 20) {
-  const posts = flattenPostPages(feed.query.data?.pages ?? [])
+  const posts = flattenResearchPages(feed.query.data?.pages ?? [])
   const selected = posts.slice(offset, offset + limit)
   return {
     column: feed.column,
@@ -46,7 +51,7 @@ function read(feed: ColumnFeed, offset = 0, limit = 20) {
       feed.query.error instanceof PostLoadError
         ? feed.query.error.detail
         : null,
-    posts: selected.map(mapTwitterPost),
+    posts: selected,
     loadedCount: posts.length,
     offset,
     nextOffset:
@@ -95,7 +100,7 @@ export function useColumnTools(registry: ColumnRegistry, ready: boolean) {
         if (query.isPending || (query.isFetching && !query.isFetchingNextPage))
           throw new Error('Wait for the column to finish loading.')
         if (query.isError && !query.isFetchNextPageError) throw query.error
-        const offset = flattenPostPages(query.data?.pages ?? []).length
+        const offset = flattenResearchPages(query.data?.pages ?? []).length
         if (!query.hasNextPage) return read(entry.current, offset)
         const result = await query.fetchNextPage({ cancelRefetch: false })
         if (

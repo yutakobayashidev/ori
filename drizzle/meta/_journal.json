@@ -1,0 +1,27 @@
+{
+  "version": "7",
+  "dialect": "sqlite",
+  "entries": [
+    {
+      "idx": 0,
+      "version": "6",
+      "when": 1790234301369,
+      "tag": "0000_aspiring_bloodstorm",
+      "breakpoints": true
+    },
+    {
+      "idx": 1,
+      "version": "6",
+      "when": 1790234518415,
+      "tag": "0001_many_fat_cobra",
+      "breakpoints": true
+    },
+    {
+      "idx": 2,
+      "version": "6",
+      "when": 1790234736939,
+      "tag": "0002_fine_master_chief",
+      "breakpoints": true
+    }
+  ]
+}

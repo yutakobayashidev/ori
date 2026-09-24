@@ -1,4 +1,6 @@
 import { z } from 'zod'
+import type { Connection } from '#/features/connections/model'
+import { mastodonSourceSchema } from '#/features/platforms/mastodon-source'
 import { InputError } from '#/features/posts/inputs'
 import { columnSchema, deckSchema, MAX_COLUMNS, newId } from './model'
 
@@ -8,34 +10,40 @@ const toolColumn = columnSchema.omit({ id: true, source: true }).extend({
     .describe(
       'Keep an existing column ID when editing; omit for a new column.',
     ),
-  source: z.discriminatedUnion('kind', [
-    z
-      .object({
-        platform: z.literal('twitter').default('twitter'),
-        kind: z.literal('search'),
-        query: z.string().trim().min(1).max(512),
-        product: z.enum(['Latest', 'Top']).default('Latest'),
-        following: z.boolean().default(false),
-      })
-      .strict(),
-    z
-      .object({
-        platform: z.literal('twitter').default('twitter'),
-        kind: z.literal('user'),
-        target: z.string().min(1).max(256),
-      })
-      .strict(),
-    z
-      .object({
-        platform: z.literal('twitter').default('twitter'),
-        kind: z.literal('list'),
-        target: z.string().min(1).max(256),
-      })
-      .strict(),
+  source: z.union([
+    mastodonSourceSchema,
+    z.discriminatedUnion('kind', [
+      z
+        .object({
+          platform: z.literal('twitter').default('twitter'),
+          kind: z.literal('search'),
+          query: z.string().trim().min(1).max(512),
+          product: z.enum(['Latest', 'Top']).default('Latest'),
+          following: z.boolean().default(false),
+        })
+        .strict(),
+      z
+        .object({
+          platform: z.literal('twitter').default('twitter'),
+          kind: z.literal('user'),
+          target: z.string().min(1).max(256),
+        })
+        .strict(),
+      z
+        .object({
+          platform: z.literal('twitter').default('twitter'),
+          kind: z.literal('list'),
+          target: z.string().min(1).max(256),
+        })
+        .strict(),
+    ]),
   ]),
 })
 export const emptyToolInput = z.object({}).strict()
 export const deckIdInput = z.object({ deckId: deckSchema.shape.id }).strict()
+export const deleteDeckToolInput = deckIdInput
+  .extend({ expectedRevision: z.number().int().positive().optional() })
+  .strict()
 export const getDeckInput = z
   .object({ deckId: deckSchema.shape.id.optional() })
   .strict()
@@ -44,19 +52,30 @@ export const setDeckInput = z
     deckId: deckSchema.shape.id
       .optional()
       .describe(
-        'Omit to create a deck; supply an existing deck ID to replace and activate it.',
+        'Omit to create a temporary view in this tab; supply an existing ID to replace and activate it.',
+      ),
+    expectedRevision: z
+      .number()
+      .int()
+      .positive()
+      .optional()
+      .describe(
+        'Required when replacing a saved deck; omit for a temporary view.',
       ),
     title: deckSchema.shape.title,
     columns: z
       .array(toolColumn)
       .max(MAX_COLUMNS)
       .describe(
-        'Complete ordered columns, each bound to a relay profile from list_decks. Omitted existing columns are removed.',
+        'Complete ordered columns, each bound to a connection ID from list_connections. Omitted existing columns are removed.',
       ),
   })
   .strict()
 
-export function prepareDeck(input: unknown, profiles: readonly string[]) {
+export function prepareDeck(
+  input: unknown,
+  connections: readonly Connection[],
+) {
   const parsed = setDeckInput.parse(input)
   const deck = deckSchema.parse({
     id: parsed.deckId ?? newId(),
@@ -67,8 +86,15 @@ export function prepareDeck(input: unknown, profiles: readonly string[]) {
     })),
   })
   for (const column of deck.columns) {
-    if (!profiles.includes(column.profileName))
-      throw new InputError(`Unknown relay profile: ${column.profileName}`)
+    if (
+      !connections.some(
+        (connection) =>
+          connection.id === column.connectionId &&
+          connection.platform === column.source.platform &&
+          connection.status === 'connected',
+      )
+    )
+      throw new InputError(`Unavailable connection: ${column.connectionId}`)
   }
   return deck
 }
