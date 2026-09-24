@@ -15,7 +15,7 @@ bound to a connection account, so platforms and multiple accounts work side by s
 - Platform logos in column headers distinguish Twitter and Mastodon at a glance
 - SQLite-backed shared decks, revision conflicts, and device-local active selection
 - Temporary views for AI exploration, with explicit save and temporary copies
-- Server-only encrypted Mastodon credentials and Tailscale owner access
+- Server-only encrypted Mastodon credentials and configurable Tailscale owner access
 - Read-only cards with original-post links, text, media, and quotes
 - Experimental WebMCP tools to manage decks and read or paginate their columns
 - Prototype: chat with a resident home Codex beside a live deck, reuse existing
@@ -206,13 +206,24 @@ use a Tailscale Serve HTTPS origin for remote access, and allow its exact
 hostname through `__VITE_ADDITIONAL_SERVER_ALLOWED_HOSTS` in the Vite process
 environment. HTTP and HTTPS origins have separate localStorage.
 
-Set `TWITTER_LITE_ORIGIN` to the exact Serve HTTPS origin (no trailing slash)
-and `TWITTER_LITE_ALLOWED_LOGIN` to your Tailscale login. The app requires
+Set `TWITTER_LITE_ORIGIN` to the exact public HTTPS origin (no trailing slash).
+The default `TWITTER_LITE_AUTH_MODE=tailscale` requires
+`TWITTER_LITE_ALLOWED_LOGIN` to be your Tailscale login. The app requires
 Serve's `Tailscale-User-Login` header and rejects other users. Keep the backend
 on localhost: the trusted Serve proxy supplies identity. Tagged clients do not
 provide user identity. Missing configuration fails closed; direct browser access
 to localhost does not supply the required identity. Playwright supplies an
 explicit fixture identity to its isolated test server.
+
+For a private, tailnet-only reverse proxy such as Traefik, explicitly set
+`TWITTER_LITE_AUTH_MODE=none` to disable application identity checks. This mode
+does not require `TWITTER_LITE_ALLOWED_LOGIN` or Tailscale identity headers;
+anyone who can reach that proxy can use the app and its connected accounts and
+Codex. Bind the backend to loopback or its Tailscale address and restrict proxy
+access to the tailnet.
+Both modes require the exact configured `Origin` for state-changing requests,
+including chat and deck mutations. Missing origin or an unknown auth mode
+fails closed. Mastodon OAuth uses the configured public origin for its callback.
 
 ## NixOS service
 

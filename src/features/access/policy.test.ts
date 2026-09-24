@@ -1,15 +1,88 @@
 // @vitest-environment node
-import { afterEach, describe, expect, it, vi } from 'vitest'
+import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest'
 import { checkAccess, readAccessConfig } from './policy.server'
 
 const config = {
+  mode: 'tailscale' as const,
   origin: 'https://deck.invalid',
   allowedLogin: 'owner@deck.invalid',
 }
 
+beforeEach(() => vi.stubEnv('TWITTER_LITE_AUTH_MODE', undefined))
 afterEach(() => vi.unstubAllEnvs())
 
-describe('Serve access boundary', () => {
+describe('access boundary', () => {
+  it.each([
+    undefined,
+    'tailscale',
+  ])('requires an owner in identity mode: %s', (mode) => {
+    vi.stubEnv('TWITTER_LITE_AUTH_MODE', mode)
+    vi.stubEnv('TWITTER_LITE_ORIGIN', config.origin)
+    vi.stubEnv('TWITTER_LITE_ALLOWED_LOGIN', '')
+    expect(readAccessConfig()).toBeNull()
+  })
+
+  it.each([
+    '',
+    'off',
+    'NONE',
+  ])('fails closed for an unknown auth mode: %s', (mode) => {
+    vi.stubEnv('TWITTER_LITE_AUTH_MODE', mode)
+    vi.stubEnv('TWITTER_LITE_ORIGIN', config.origin)
+    vi.stubEnv('TWITTER_LITE_ALLOWED_LOGIN', config.allowedLogin)
+    expect(
+      checkAccess(new Request(config.origin), readAccessConfig())?.status,
+    ).toBe(503)
+  })
+
+  it('allows private-proxy navigation without an identity only when explicitly configured', () => {
+    vi.stubEnv('TWITTER_LITE_AUTH_MODE', 'none')
+    vi.stubEnv('TWITTER_LITE_ORIGIN', config.origin)
+    vi.stubEnv('TWITTER_LITE_ALLOWED_LOGIN', '')
+    const access = readAccessConfig()
+    expect(access).toEqual({ origin: config.origin, mode: 'none' })
+    expect(checkAccess(new Request(config.origin), access)).toBeNull()
+  })
+
+  it('still requires a configured origin without identity authentication', () => {
+    vi.stubEnv('TWITTER_LITE_AUTH_MODE', 'none')
+    vi.stubEnv('TWITTER_LITE_ORIGIN', '')
+    expect(readAccessConfig()).toBeNull()
+  })
+
+  it.each([
+    'POST',
+    'PUT',
+    'PATCH',
+    'DELETE',
+  ])('requires exact Origin without identity authentication for %s', (method) => {
+    const access = { origin: config.origin, mode: 'none' as const }
+    expect(
+      checkAccess(new Request(config.origin, { method }), access)?.status,
+    ).toBe(403)
+    expect(
+      checkAccess(
+        new Request(config.origin, {
+          method,
+          headers: {
+            Origin: 'https://other.invalid',
+            'Sec-Fetch-Site': 'same-origin',
+          },
+        }),
+        access,
+      )?.status,
+    ).toBe(403)
+    expect(
+      checkAccess(
+        new Request(config.origin, {
+          method,
+          headers: { Origin: config.origin },
+        }),
+        access,
+      ),
+    ).toBeNull()
+  })
+
   it('fails closed when the deployment is not configured', () => {
     vi.stubEnv('TWITTER_LITE_ORIGIN', '')
     vi.stubEnv('TWITTER_LITE_ALLOWED_LOGIN', '')
