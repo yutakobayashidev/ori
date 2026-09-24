@@ -3,7 +3,9 @@
 ## Scope and design
 
 Expose the existing intentional reader to agents through three React-owned
-tools. Search remains available across routes. Feed tools are registered only
+reader tools. The deck additionally exposes `get_deck` and `set_deck` on `/deck`;
+see [deck tool contracts](research-decks.md#deck-webmcp-tools).
+Search remains available across routes. Feed tools are registered only
 while a valid timeline, search, or conversation is open. Returning home or to
 an empty search/list page removes the feed tools. Unsupported browsers do not
 register tools or fetch posts automatically.

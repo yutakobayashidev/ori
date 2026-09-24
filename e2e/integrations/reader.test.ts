@@ -188,6 +188,7 @@ test('keeps keyboard focus intentional and discovery or mutation controls absent
   await searchPage.tabTo(
     searchPage.page.getByRole('combobox', { name: 'プロファイル' }),
   )
+  await searchPage.tabTo(searchPage.page.getByRole('link', { name: 'デッキ' }))
   await searchPage.tabTo(searchPage.page.getByRole('link', { name: '検索' }))
   await searchPage.tabTo(
     searchPage.page.getByRole('link', { name: 'ユーザー' }),

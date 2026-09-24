@@ -19,7 +19,7 @@ import {
   toolResult,
 } from './webmcp-contracts'
 
-function useWebMCPSupported() {
+export function useWebMCPSupported() {
   const [supported, setSupported] = useState(false)
   useEffect(() => {
     setSupported(Boolean(document.modelContext))

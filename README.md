@@ -18,6 +18,9 @@ deliberate post detail link, or manually open a valid
 - Infinite conversation loading with explicit continuation retry
 - Read-only cards for text, media, quotes, articles, and quiet engagement counts
 - Experimental WebMCP tools for search, loaded-post reading, and continuation
+- Deck WebMCP tools to inspect or create/replace up to six columns at once
+- Research deck with named Twitter search columns, independent pagination,
+  editing, ordering, and browser-local condition persistence
 
 It intentionally has no home feed, recommendations, trends, notifications,
 history, account directory, or write actions.
@@ -28,6 +31,7 @@ they do not add related-post recommendations or an account-discovery surface.
 ## Routes
 
 - `/` shows the empty user input.
+- `/deck` opens the research deck (up to six search columns).
 - `/:handle` shows a user timeline.
 - `/search` shows search results. Its typed query parameters preserve the query,
   author, period, language, content type, exclusions, ranking, and follows filter
@@ -94,6 +98,22 @@ transport differences, cursors, and stateful failure scenarios remain in the
 handwritten mock server.
 `test:live` is an explicit, opt-in smoke test that performs exactly one
 read-only Top search using the configured relay.
+
+## Research deck
+
+Open **デッキ** in the navigation, name the investigation, and add a column
+for each perspective. Each column has a title, native Twitter search query,
+Top/Latest ordering, and an optional follows filter. Update or paginate a
+column independently, edit its conditions, move it left/right, or undo a
+removal. All columns use the currently selected relay profile.
+
+One deck's conditions are stored in this browser's localStorage. Reloading
+fetches the first page again; collected posts are not archived or synced
+between devices. Other open tabs are not synchronized. A WebMCP-capable agent
+can use `get_deck` and `set_deck` on `/deck` to create or edit the whole deck.
+Built-in AI planning, summaries, and the Mastodon/Bluesky/Threads/Nostr connectors
+are not implemented yet. Only Twitter can currently be selected. See
+[the platform boundary and next steps](docs/research-decks.md).
 
 ## WebMCP prototype
 

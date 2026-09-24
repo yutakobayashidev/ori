@@ -252,3 +252,105 @@ test('keeps the normal search form functional without native WebMCP', async ({
     await browser.close()
   }
 })
+
+test('creates a deck through native WebMCP, edits it, and restores its saved definition', async ({
+  page,
+}) => {
+  await page.goto('/deck')
+  await page.waitForLoadState('networkidle')
+  await expect
+    .poll(() => toolNames(page))
+    .toEqual(['get_deck', 'search_posts', 'set_deck'])
+  const result = await executeTool(page, 'set_deck', {
+    title: 'WebMCPの反応',
+    columns: [
+      { id: 'new', title: '日本語', source: { query: 'WebMCP lang:ja' } },
+      { title: '話題', source: { query: 'WebMCP', product: 'Top' } },
+    ],
+  })
+  expect(result.isError).not.toBe(true)
+  await expect(page.locator('.deck-column h2')).toHaveText(['日本語', '話題'])
+  await expect(page.getByText('Latest · all page 1')).toBeVisible()
+  await expect(page.getByText('Top · all page 1')).toBeVisible()
+  const before = await executeTool(page, 'get_deck')
+  const { deck } = JSON.parse(before.content[0]?.text ?? '')
+  expect(deck.columns[0].id).toBe('new')
+  // Tool-provided IDs must not collide with the UI's new-column editing state.
+  await page
+    .getByRole('region', { name: '日本語', exact: true })
+    .getByRole('button', { name: '編集', exact: true })
+    .click()
+  await expect(page.getByLabel('Twitterの検索条件')).toHaveValue(
+    'WebMCP lang:ja',
+  )
+  const edited = await executeTool(page, 'set_deck', {
+    title: '更新した調査',
+    columns: [deck.columns[1]],
+  })
+  expect(edited.isError).not.toBe(true)
+  await expect(page.getByRole('form', { name: 'カラムを編集' })).toHaveCount(0)
+  await expect(page.locator('.deck-column h2')).toHaveText(['話題'])
+  await page.reload()
+  await expect(page.getByRole('heading', { level: 1 })).toHaveText(
+    '更新した調査',
+  )
+  await expect.poll(() => toolNames(page)).toContain('get_deck')
+  const restored = await executeTool(page, 'get_deck')
+  expect(JSON.parse(restored.content[0]?.text ?? '').deck.columns[0].id).toBe(
+    deck.columns[1].id,
+  )
+  await page.getByRole('link', { name: 'ユーザー', exact: true }).click()
+  await expect.poll(() => toolNames(page)).toEqual(['search_posts'])
+})
+
+test('rejects an invalid deck without changing the visible or saved columns', async ({
+  page,
+}) => {
+  await page.goto('/deck')
+  await page.waitForLoadState('networkidle')
+  await expect.poll(() => toolNames(page)).toContain('set_deck')
+  await executeTool(page, 'set_deck', {
+    title: '残す調査',
+    columns: [{ title: '残す観点', source: { query: 'AI' } }],
+  })
+  const saved = await page.evaluate(() =>
+    localStorage.getItem('twitter-lite-research-deck'),
+  )
+  const column = { id: 'duplicate', title: '不正', source: { query: 'AI' } }
+  const result = await executeTool(page, 'set_deck', {
+    title: '変更しない',
+    columns: [column, column],
+  })
+  expect(result.isError).toBe(true)
+  await expect(page.locator('.deck-column h2')).toHaveText(['残す観点'])
+  expect(
+    await page.evaluate(() =>
+      localStorage.getItem('twitter-lite-research-deck'),
+    ),
+  ).toBe(saved)
+})
+
+test('reports a deck persistence failure instead of claiming it was saved', async ({
+  page,
+}) => {
+  await page.goto('/deck')
+  await page.waitForLoadState('networkidle')
+  await expect.poll(() => toolNames(page)).toContain('set_deck')
+  await page.evaluate(() => {
+    Storage.prototype.setItem = () => {
+      throw new Error('QuotaExceededError')
+    }
+  })
+  const result = await executeTool(page, 'set_deck', {
+    title: '未保存の調査',
+    columns: [],
+  })
+  expect(result.isError).toBe(true)
+  expect(result.content[0]?.text).toContain(
+    'applied in this tab but could not be saved',
+  )
+  await expect(page.getByRole('heading', { level: 1 })).toHaveText(
+    '未保存の調査',
+  )
+  await expect(page.getByRole('alert')).toContainText('保存できません')
+})

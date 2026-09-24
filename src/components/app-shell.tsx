@@ -5,15 +5,21 @@ export function AppShell({
   active,
   children,
 }: {
-  active?: 'user' | 'search' | 'list'
+  active?: 'user' | 'search' | 'list' | 'deck'
   children: React.ReactNode
 }) {
   return (
-    <main className="app">
+    <main className={active === 'deck' ? 'app app-deck' : 'app'}>
       <header className="app-header">
         <p className="brand">Twitter Lite</p>
         <ProfileSwitcher />
         <nav aria-label="閲覧方法" className="tabs">
+          <Link
+            aria-current={active === 'deck' ? 'page' : undefined}
+            to="/deck"
+          >
+            デッキ
+          </Link>
           <Link
             aria-current={active === 'search' ? 'page' : undefined}
             search={{ q: '', product: 'Latest', following: false }}

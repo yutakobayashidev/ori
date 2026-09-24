@@ -1,0 +1,274 @@
+/* Hallmark · existing Garden tokens · research deck: horizontal columns
+ * User-requested application layout; inherit the reader's typography and color.
+ * pre-emit critique: P4 H4 E4 S5 R5 V4
+ */
+.app-deck .reader {
+  min-width: 0;
+}
+.app-deck button,
+.app-deck input,
+.app-deck select {
+  font: inherit;
+}
+.app-deck button {
+  min-height: 44px;
+  padding: var(--space-xs) var(--space-sm);
+  border: var(--rule-hairline) solid var(--control-border);
+  border-radius: var(--radius-sm);
+  color: var(--ink);
+  background: var(--paper);
+  cursor: pointer;
+  white-space: nowrap;
+  transition: background-color var(--dur-short) var(--ease-out);
+}
+.app-deck button:hover:not(:disabled) {
+  background: var(--surface);
+}
+.app-deck button:active:not(:disabled) {
+  background: var(--color-paper-3);
+}
+.app-deck button:disabled {
+  opacity: 0.5;
+  cursor: default;
+}
+.app-deck :focus-visible {
+  outline: var(--rule-active) solid var(--color-focus);
+  outline-offset: 3px;
+}
+.app-deck .deck-primary {
+  color: var(--color-accent-ink);
+  background: var(--accent);
+  border-color: var(--accent);
+}
+.app-deck .deck-primary:hover:not(:disabled),
+.app-deck .deck-primary:active:not(:disabled) {
+  background: var(--accent-hover);
+}
+.deck-heading {
+  display: flex;
+  align-items: start;
+  justify-content: space-between;
+  flex-wrap: wrap;
+  gap: var(--space-md);
+}
+.deck-heading > div {
+  min-width: 0;
+}
+.deck-heading h1 {
+  overflow-wrap: anywhere;
+}
+.deck-actions {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: var(--space-xs);
+}
+.deck-help,
+.deck-save-status,
+.deck-column-status {
+  color: var(--secondary);
+  font-size: var(--text-sm);
+  line-height: 1.6;
+}
+.deck-save-status {
+  margin: var(--space-md) 0;
+}
+.deck-editor {
+  margin-block: var(--space-lg);
+  padding-block: var(--space-lg);
+  border-block: var(--rule-hairline) solid var(--border);
+}
+.deck-editor h2,
+.deck-empty h2 {
+  font-size: var(--text-md);
+  margin: 0 0 var(--space-md);
+  overflow-wrap: anywhere;
+}
+.deck-editor-fields {
+  display: grid;
+  gap: var(--space-md);
+}
+.deck-editor label,
+.deck-rename label {
+  display: grid;
+  gap: var(--space-xs);
+  font-size: var(--text-sm);
+  min-width: 0;
+}
+.deck-editor input:not([type="checkbox"]),
+.deck-editor select,
+.deck-rename input {
+  min-width: 0;
+  width: 100%;
+  min-height: 44px;
+  padding: var(--space-xs) var(--space-sm);
+  border: var(--rule-hairline) solid var(--control-border);
+  border-radius: var(--radius-sm);
+  background: var(--paper);
+  color: var(--ink);
+}
+.deck-editor .deck-checkbox {
+  display: flex;
+  align-items: center;
+  min-height: 44px;
+  margin-bottom: var(--space-sm);
+}
+.deck-checkbox input {
+  accent-color: var(--accent);
+  width: 1.15rem;
+  height: 1.15rem;
+}
+.deck-rename {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: end;
+  gap: var(--space-sm);
+  margin-block: var(--space-md);
+}
+.deck-rename label {
+  flex: 1 1 15rem;
+}
+.deck-error {
+  color: var(--error);
+  line-height: 1.6;
+}
+.deck-undo {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: var(--space-sm);
+  margin-block: var(--space-md);
+  overflow-wrap: anywhere;
+}
+.deck-empty {
+  max-width: 40rem;
+  padding-block: var(--space-2xl);
+}
+.deck-empty p {
+  line-height: 1.8;
+  margin-bottom: var(--space-lg);
+}
+.deck-board {
+  display: grid;
+  grid-auto-flow: column;
+  grid-auto-columns: min(100%, 23rem);
+  gap: var(--space-md);
+  overflow-x: auto;
+  padding: var(--space-2xs) var(--space-2xs) var(--space-md);
+  scroll-snap-type: x proximity;
+}
+.deck-column {
+  min-width: 0;
+  display: flex;
+  flex-direction: column;
+  height: max(30rem, calc(100svh - 20rem));
+  border: var(--rule-hairline) solid var(--border);
+  background: var(--paper);
+  scroll-snap-align: start;
+}
+.deck-column-header {
+  padding: var(--space-md);
+  border-bottom: var(--rule-hairline) solid var(--border);
+}
+.deck-column-label {
+  display: flex;
+  flex-wrap: wrap;
+  justify-content: space-between;
+  gap: var(--space-xs);
+  color: var(--secondary);
+  font-size: var(--text-xs);
+}
+.deck-column h2 {
+  margin: var(--space-sm) 0;
+  font-size: var(--text-md);
+  overflow-wrap: anywhere;
+}
+.deck-query {
+  margin: 0 0 var(--space-md);
+  font-size: var(--text-sm);
+  overflow-wrap: anywhere;
+  max-height: 4.5em;
+  overflow-y: auto;
+}
+.deck-column-status {
+  margin-bottom: 0;
+  font-variant-numeric: tabular-nums;
+}
+.deck-column-results {
+  min-height: 0;
+  overflow-y: auto;
+  flex: 1;
+  overscroll-behavior-y: contain;
+}
+.deck-message {
+  padding: var(--space-md);
+  color: var(--secondary);
+  line-height: 1.7;
+}
+.research-post {
+  padding: var(--space-md);
+  border-bottom: var(--rule-hairline) solid var(--border);
+  overflow-wrap: anywhere;
+}
+.research-post header {
+  display: flex;
+  align-items: center;
+  gap: var(--space-sm);
+}
+.research-post header > div {
+  min-width: 0;
+}
+.research-post header img {
+  border-radius: 50%;
+}
+.research-post strong {
+  font-size: var(--text-sm);
+}
+.research-post-text,
+.research-post blockquote p {
+  white-space: pre-wrap;
+  line-height: 1.8;
+  font-size: var(--text-sm);
+}
+.research-post blockquote {
+  margin: var(--space-md) 0;
+  padding-left: var(--space-md);
+  border-left: var(--rule-hairline) solid var(--border);
+}
+.research-post footer {
+  display: flex;
+  flex-wrap: wrap;
+  justify-content: space-between;
+  gap: var(--space-sm);
+  margin-top: var(--space-md);
+  color: var(--secondary);
+  font-size: var(--text-xs);
+}
+.research-post a {
+  color: var(--accent);
+  text-underline-offset: 0.2em;
+}
+.research-media {
+  display: block;
+  width: 100%;
+  max-height: 20rem;
+  object-fit: contain;
+  margin-block: var(--space-sm);
+}
+@media (min-width: 52rem) {
+  .app.app-deck {
+    width: 100%;
+    grid-template-columns: 11rem minmax(0, 1fr);
+  }
+  .app-deck .reader {
+    padding: var(--space-xl) var(--space-lg);
+  }
+  .deck-editor-fields {
+    grid-template-columns: minmax(0, 1fr) minmax(0, 2fr) minmax(7rem, 0.5fr);
+  }
+}
+@media (prefers-reduced-motion: reduce) {
+  .app-deck button {
+    transition: none;
+  }
+}
