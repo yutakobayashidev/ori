@@ -70,10 +70,12 @@ let directory: string
 let service: ReturnType<typeof createResearchService>
 let clients: FakeClient[]
 let setupClient: (client: FakeClient) => void
+let fetchedText: string
 beforeEach(async () => {
   directory = await mkdtemp(join(tmpdir(), 'research-runner-'))
   clients = []
   setupClient = () => {}
+  fetchedText = 'WebMCP discussion'
   service = createResearchService({
     config: () => ({
       url: 'ws://127.0.0.1:4500',
@@ -105,7 +107,7 @@ beforeEach(async () => {
               nativeId: '1',
               platform: 'twitter',
               url: 'https://x.invalid/post/1',
-              text: 'WebMCP discussion',
+              text: fetchedText,
               author: { name: 'Author', handle: 'author' },
             },
           ],
@@ -416,6 +418,77 @@ it('rejects unknown continuation IDs', () => {
   expect(() => service.start({ ...input(), runId: randomUUID() })).toThrow(
     '続ける会話が見つかりません',
   )
+})
+
+it('streams exact citation sources, upserts repeat evidence across turns and clears a new chat', async () => {
+  const snapshots: ReturnType<typeof service.status>[] = []
+  service.subscribe((snapshot) => snapshots.push(snapshot))
+  const first = service.start(input())
+  const client = await running()
+  await client.callTool('open_temporary_deck', deckInput)
+  await client.callTool('fetch_column_posts', { columnId: 'column' })
+  expect(service.status().run?.citations).toEqual([
+    {
+      column: {
+        id: 'column',
+        title: 'Discussion',
+        connectionId: account.id,
+        source: {
+          platform: 'twitter',
+          kind: 'search',
+          query: 'WebMCP',
+          product: 'Latest',
+          following: false,
+        },
+      },
+      post: {
+        key: 'twitter:1',
+        nativeId: '1',
+        platform: 'twitter',
+        url: 'https://x.invalid/post/1',
+        text: 'WebMCP discussion',
+        author: { name: 'Author', handle: 'author' },
+      },
+    },
+  ])
+  expect(
+    snapshots.some((snapshot) => snapshot.run?.citations.length === 1),
+  ).toBe(true)
+  await client.callTool('open_temporary_deck', {
+    title: 'Second source',
+    columns: [
+      {
+        id: 'column',
+        title: 'Another query',
+        connectionId: account.id,
+        source: { platform: 'twitter', kind: 'search', query: 'Other query' },
+      },
+    ],
+  })
+  await client.callTool('fetch_column_posts', { columnId: 'column' })
+  expect(service.status().run?.citations).toHaveLength(2)
+  const contextDeck = service.status().run?.deck
+  client.completed()
+  await vi.waitFor(() => expect(service.status().run?.status).toBe('complete'))
+  fetchedText = 'Updated post text'
+  service.start({ ...input(), runId: first.id, contextDeck })
+  const next = await running()
+  expect(service.status().run?.citations).toHaveLength(2)
+  await next.callTool('fetch_column_posts', { columnId: 'column' })
+  expect(service.status().run?.citations).toHaveLength(2)
+  expect(service.status().run?.citations[0]?.post.text).toBe(
+    'WebMCP discussion',
+  )
+  expect(service.status().run?.citations[1]?.post.text).toBe(
+    'Updated post text',
+  )
+  expect(
+    snapshots.find((snapshot) => snapshot.run?.citations.length === 2)?.run
+      ?.citations[1]?.post.text,
+  ).toBe('WebMCP discussion')
+  await service.cancel(first.id)
+  service.start(input())
+  expect(service.status().run?.citations).toEqual([])
 })
 
 it('resets a completed conversation for every viewer and starts a fresh thread without deleting its report', async () => {

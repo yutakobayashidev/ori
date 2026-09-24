@@ -298,6 +298,7 @@ it.each([
 })
 
 it('fetches with the current account binding, filters private fields and caps returned posts at20', async () => {
+  const onPosts = vi.fn()
   const fetchPage = vi.fn().mockResolvedValue({
     posts: Array.from({ length: 25 }, (_, index) => ({
       ...post,
@@ -305,10 +306,12 @@ it('fetches with the current account binding, filters private fields and caps re
       token: 'secret',
       _raw: { token: 'secret' },
       html: '<script>untrusted()</script>',
+      media: [{ type: 'photo', url: 'https://private.invalid/media' }],
+      author: { ...post.author, avatarUrl: 'https://private.invalid/avatar' },
     })),
     nextCursor: 'next',
   })
-  const tools = createResearchTools([account], vi.fn(), fetchPage)
+  const tools = createResearchTools([account], vi.fn(), fetchPage, { onPosts })
   await tools.execute('open_temporary_deck', open)
   const result = await tools.execute('fetch_column_posts', {
     columnId: 'column',
@@ -334,6 +337,27 @@ it('fetches with the current account binding, filters private fields and caps re
   })
   expect(JSON.stringify(result)).not.toContain('secret')
   expect(JSON.stringify(result)).not.toContain('<script>')
+  expect(JSON.stringify(result)).not.toContain('private.invalid')
+  expect(onPosts).toHaveBeenCalledOnce()
+  expect(onPosts).toHaveBeenCalledWith(
+    expect.objectContaining({
+      connectionId: account.id,
+      source: {
+        platform: 'twitter',
+        kind: 'search',
+        query: 'WebMCP',
+        product: 'Latest',
+        following: false,
+      },
+    }),
+    Array.from({ length: 20 }, (_, index) => ({
+      ...post,
+      key: `twitter:${index}`,
+    })),
+  )
+  expect(JSON.stringify(onPosts.mock.calls)).not.toContain('secret')
+  expect(JSON.stringify(onPosts.mock.calls)).not.toContain('<script>')
+  expect(JSON.stringify(onPosts.mock.calls)).not.toContain('private.invalid')
   expect(tools.evidenceCount).toBe(20)
 })
 

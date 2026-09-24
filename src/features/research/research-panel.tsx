@@ -3,7 +3,12 @@ import { useServerFn } from '@tanstack/react-start'
 import { useCallback, useEffect, useId, useRef, useState } from 'react'
 import type { Connection } from '../connections/model'
 import type { Deck } from '../decks/model'
-import { isResearchActive, type ResearchRun } from './model'
+import {
+  isResearchActive,
+  type ResearchCitation,
+  type ResearchRun,
+} from './model'
+import { ResearchMarkdown } from './research-markdown'
 import {
   cancelResearch,
   loadResearchStatus,
@@ -26,11 +31,13 @@ export function ResearchPanel({
   contextDeck,
   connections,
   onOpenDeck,
+  onNavigateCitation,
 }: {
   ready: boolean
   contextDeck: Deck
   connections: Connection[]
   onOpenDeck: (deck: Deck, activate?: boolean) => unknown
+  onNavigateCitation?: (url: string, citations: ResearchCitation[]) => boolean
 }) {
   const fetchStatus = useServerFn(loadResearchStatus)
   const start = useServerFn(startResearch)
@@ -254,7 +261,11 @@ export function ResearchPanel({
       ) : !status.data?.configured ? (
         <p role="status">自宅のCodexへの接続が設定されていません。</p>
       ) : null}
-      <ResearchConversation messages={run?.messages ?? []} />
+      <ResearchConversation
+        messages={run?.messages ?? []}
+        citations={run?.citations ?? []}
+        onNavigateCitation={onNavigateCitation}
+      />
       {run && (
         <ResearchRunStatus
           run={run}
@@ -278,8 +289,12 @@ export function ResearchPanel({
 
 function ResearchConversation({
   messages,
+  citations,
+  onNavigateCitation,
 }: {
   messages: ResearchRun['messages']
+  citations: ResearchCitation[]
+  onNavigateCitation?: (url: string, citations: ResearchCitation[]) => boolean
 }) {
   const container = useRef<HTMLDivElement>(null)
   const follow = useRef(true)
@@ -314,7 +329,16 @@ function ResearchConversation({
             key={message.id}
           >
             <strong>{names[message.role]}</strong>
-            <p>{message.text}</p>
+            {message.role === 'assistant' ? (
+              <ResearchMarkdown
+                text={message.text}
+                onNavigateCitation={(url) =>
+                  onNavigateCitation?.(url, citations) ?? false
+                }
+              />
+            ) : (
+              <p>{message.text}</p>
+            )}
           </article>
         ))
       )}

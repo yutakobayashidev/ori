@@ -9,6 +9,10 @@ import { ConnectionManager } from '#/features/connections/connection-manager'
 import { loadConnections } from '#/features/connections/server-functions'
 import { syncResearchDeck } from '#/features/research/research-deck-sync'
 import { ResearchPanel } from '#/features/research/research-panel'
+import {
+  sameCitationSource,
+  useCitationNavigation,
+} from '#/features/research/use-citation-navigation'
 import { ColumnEditor } from './column-editor'
 import { type ColumnRegistry, useColumnTools } from './column-tools'
 import { ResearchColumn } from './deck-column'
@@ -46,6 +50,12 @@ export function DeckPage() {
     remove,
     getWorkspace,
   } = useDeck(editing !== null || renaming || switcherEditing)
+  const citationNavigation = useCitationNavigation({
+    registry,
+    getWorkspace,
+    select,
+    createTemporary,
+  })
   const fetchProfiles = useServerFn(loadConnections)
   const profiles = useQuery({
     queryKey: ['connections'],
@@ -96,6 +106,7 @@ export function DeckPage() {
     <AppShell
       researchChat={
         <ResearchPanel
+          onNavigateCitation={citationNavigation.navigate}
           ready={ready}
           contextDeck={{
             id: deck.id,
@@ -388,6 +399,13 @@ export function DeckPage() {
               key={`${deck.id}:${column.id}`}
               registry={registry}
               column={column}
+              citation={
+                citationNavigation.target?.deckId === deck.id &&
+                citationNavigation.target.column.id === column.id &&
+                sameCitationSource(citationNavigation.target.column, column)
+                  ? citationNavigation.target
+                  : undefined
+              }
               connectionLabel={
                 profiles.data?.connections.find(
                   (connection) => connection.id === column.connectionId,

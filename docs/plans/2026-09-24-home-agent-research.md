@@ -82,6 +82,26 @@ delete deck definitions. Active turns must be stopped first; a stale reset must
 not clear a newer conversation started on another device. This does not add a
 conversation-history UI.
 
+## Markdown and source navigation
+
+Assistant messages use react-markdown with remark-gfm. Public tool messages and
+user input remain plain text. Markdown links retain their original URLs; a
+regular click on a known post navigates within the deck, while modified clicks
+and unrelated URLs retain external navigation.
+
+Successful agent post fetches capture the exact column definition and a public
+post projection in the in-memory conversation. The projection excludes raw
+provider responses, HTML, media and account credentials. References are retained
+across turns, updated per source/account/post identity and cleared by new chat.
+The agent is instructed to cite exact returned post URLs in Markdown.
+
+Navigation prefers a loaded card, then a workspace column with the same source
+and connection. Missing sources open a one-column temporary deck. An unloaded
+reference is displayed as a labeled research-time post without altering the
+query cache or pagination. Cards receive focus, scroll into view and briefly
+highlight; reduced-motion settings are respected and sensitive content stays
+collapsed.
+
 ## Verification
 
 - Protocol tests for dynamic-tool requests, failures, cancellation and process
@@ -219,3 +239,17 @@ be handled by the backend so research can continue without the initiating tab.
   The next message used a different thread ID, contained only the new user
   message and received the current deck context. The separate server avoided
   interrupting research already running in the public workspace.
+
+## Markdown citation verification
+
+- The full suite passed 306 unit/component tests, with one opt-in test skipped.
+  Typecheck, lint, knip and production build passed. Follow-up card tests verify
+  re-scrolling when a captured post is replaced by its loaded feed result.
+- 42 desktop/mobile E2E cases passed, including Markdown tables and emphasis,
+  navigating to an offscreen column, captured-post display, focus/highlight,
+  accessibility and existing manual deck/WebMCP operations.
+- A real Codex run on a separate development server fetched 20 Twitter posts,
+  cited two in a Markdown response, and navigated from a citation to its card.
+  Closing and reopening the page preserved working citation navigation.
+- react-markdown 10.1.0 and remark-gfm 4.0.1 were added with the user's approval.
+  The pnpm dependency hash was updated and the x86_64-linux Nix package built.

@@ -82,6 +82,7 @@ function publicPost(post: ResearchPost) {
     throw new SourceFailure('invalid-source-result')
   return {
     key: post.key,
+    nativeId: post.nativeId,
     platform: post.platform,
     url: url.href,
     text: post.text,
@@ -100,7 +101,11 @@ export function createResearchTools(
   connections: Connection[],
   onDeck: (deck: Deck) => void,
   loadPage: FetchPage = fetchPage,
-  options: { contextDeck?: Deck; temporaryDeckId?: string } = {},
+  options: {
+    contextDeck?: Deck
+    temporaryDeckId?: string
+    onPosts?: (column: DeckColumn, posts: ResearchPost[]) => void
+  } = {},
 ) {
   const selected = connections.map((connection) => ({
     id: connection.id,
@@ -343,6 +348,7 @@ export function createResearchTools(
               ? page.nextCursor
               : undefined
           for (const post of posts) evidence.add(post.key)
+          options.onPosts?.(structuredClone(column), structuredClone(posts))
           return {
             ok: true,
             column: structuredClone(column),

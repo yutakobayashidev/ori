@@ -34,6 +34,7 @@ const running: ResearchRun = {
   deckVersion: 1,
   startedAt: 1000,
   message: '投稿を調べています',
+  citations: [],
   messages: [{ id: 'u1', role: 'user', text: 'WebMCPの反応' }],
   deck: { id: 'plan', title: 'WebMCP調査', columns: [] },
 }
@@ -72,6 +73,7 @@ function show(connections = [connection], ready = true) {
   })
   clients.push(client)
   const onOpenDeck = vi.fn()
+  const onNavigateCitation = vi.fn().mockReturnValue(true)
   const ui = (
     ready = true,
     contextDeck = { id: 'manual', title: '手動デッキ', columns: [] },
@@ -82,10 +84,11 @@ function show(connections = [connection], ready = true) {
         contextDeck={contextDeck}
         connections={connections}
         onOpenDeck={onOpenDeck}
+        onNavigateCitation={onNavigateCitation}
       />
     </QueryClientProvider>
   )
-  return { ...render(ui(ready)), client, ui, onOpenDeck }
+  return { ...render(ui(ready)), client, ui, onOpenDeck, onNavigateCitation }
 }
 
 it('retains input and uses the same request ID when retrying a failed start', async () => {
@@ -463,4 +466,52 @@ it('does not let a late reset response erase a newer streamed conversation', asy
   await act(async () => finish({ configured: true, run: null }))
   expect(view.client.getQueryData(['research-status'])).toEqual(newer)
   expect(screen.getByText('別端末の新しい話題')).toBeVisible()
+})
+
+it('renders assistant Markdown and forwards its citation with the current evidence', async () => {
+  const citations: ResearchRun['citations'] = [
+    {
+      column: {
+        id: 'source',
+        title: '投稿元',
+        connectionId: 'first',
+        source: { platform: 'twitter', kind: 'user', target: 'author' },
+      },
+      post: {
+        key: 'twitter:123',
+        platform: 'twitter',
+        nativeId: '123',
+        url: 'https://x.com/author/status/123',
+        text: '調査に使った投稿',
+        author: { name: 'Author', handle: 'author' },
+      },
+    },
+  ]
+  current = {
+    configured: true,
+    run: {
+      ...running,
+      citations,
+      messages: [
+        { id: 'u1', role: 'user', text: '# ユーザーの入力はそのまま' },
+        {
+          id: 'a1',
+          role: 'assistant',
+          text: '# 調査結果\n\n[根拠の投稿](https://x.com/author/status/123)',
+        },
+        { id: 't1', role: 'tool', text: '**ツールの活動もそのまま**' },
+      ],
+    },
+  }
+  const view = show()
+  expect(
+    await screen.findByRole('heading', { level: 3, name: '調査結果' }),
+  ).toBeVisible()
+  expect(screen.getByText('# ユーザーの入力はそのまま')).toBeVisible()
+  expect(screen.getByText('**ツールの活動もそのまま**')).toBeVisible()
+  fireEvent.click(screen.getByRole('link', { name: '根拠の投稿' }))
+  expect(view.onNavigateCitation).toHaveBeenCalledWith(
+    'https://x.com/author/status/123',
+    citations,
+  )
 })

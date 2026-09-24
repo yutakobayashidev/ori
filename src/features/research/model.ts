@@ -1,5 +1,6 @@
 import { z } from 'zod'
-import { type Deck, deckSchema } from '../decks/model'
+import { type Deck, type DeckColumn, deckSchema } from '../decks/model'
+import type { ResearchPost } from '../platforms/types'
 
 export const startResearchInput = z
   .object({
@@ -25,9 +26,12 @@ export type ResearchRun = {
   deckVersion: number
   message: string
   messages: ResearchMessage[]
+  citations: ResearchCitation[]
   reportPath?: string
   error?: string
 }
+
+export type ResearchCitation = { column: DeckColumn; post: ResearchPost }
 
 export type ResearchMessage = {
   id: string

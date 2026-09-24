@@ -4,6 +4,8 @@ import {
   useResearchFeed,
 } from '#/features/platforms/use-research-feed'
 import { PostLoadError } from '#/features/posts/use-post-feed'
+import { citationUrlKey } from '#/features/research/citation-url'
+import type { CitationTarget } from '#/features/research/use-citation-navigation'
 import { type ColumnRegistry, useRegisterColumn } from './column-tools'
 import type { DeckColumn } from './model'
 import { ResearchPostCard } from './research-post-card'
@@ -18,6 +20,7 @@ export function ResearchColumn({
   first,
   last,
   registry,
+  citation,
 }: {
   column: DeckColumn
   connectionLabel?: string
@@ -27,10 +30,16 @@ export function ResearchColumn({
   first: boolean
   last: boolean
   registry: ColumnRegistry
+  citation?: CitationTarget
 }) {
   const query = useResearchFeed(column)
   useRegisterColumn(registry, column, query)
   const posts = flattenResearchPages(query.data?.pages ?? [])
+  const citedKey = citation ? citationUrlKey(citation.post.url) : null
+  const visiblePosts =
+    citation && !posts.some((post) => citationUrlKey(post.url) === citedKey)
+      ? [citation.post, ...posts]
+      : posts
   const error =
     query.error instanceof PostLoadError
       ? query.error.detail
@@ -123,8 +132,17 @@ export function ResearchColumn({
         tabIndex={0}
         aria-label={`${column.title}の投稿`}
       >
-        {posts.map((post) => (
-          <ResearchPostCard key={post.key} post={post} />
+        {visiblePosts.map((post) => (
+          <ResearchPostCard
+            key={post.key}
+            post={post}
+            citationRequest={
+              citation && citationUrlKey(post.url) === citedKey
+                ? citation.request
+                : undefined
+            }
+            citationSnapshot={citation?.post === post && !posts.includes(post)}
+          />
         ))}
         {query.isError ? (
           <div className="deck-message" role="alert">
@@ -144,7 +162,7 @@ export function ResearchColumn({
             ) : null}
           </div>
         ) : null}
-        {!query.isPending && !query.isError && posts.length === 0 ? (
+        {!query.isPending && !query.isError && visiblePosts.length === 0 ? (
           <p className="deck-message">条件に一致する投稿はありません。</p>
         ) : null}
         {query.hasNextPage && !query.isFetchNextPageError ? (

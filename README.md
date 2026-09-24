@@ -22,7 +22,8 @@ bound to a connection account, so platforms and multiple accounts work side by s
 
 Both `/` and `/deck` open the deck workspace. The separate reader, search,
 list, user-profile, and conversation routes have been removed. Original-post
-links open their source site; conversations are not rendered inside the app.
+links on post cards open their source site; SNS reply threads are not rendered
+inside the app.
 
 Bluesky/Threads/Nostr connectors are not implemented yet. An external browser
 agent can also create and read decks through WebMCP.
@@ -112,6 +113,16 @@ discovery and post retrieval (at most 20 posts per fetch), and 15 minutes.
 The prototype accepts up to 100 messages per backend process.
 SSE pushes conversation messages, tool activity and generated deck updates to
 open browsers, without polling.
+Codex replies render as Markdown, including tables, lists and code. Clicking a
+cited post link scrolls to its card and briefly highlights it. Loaded cards take
+priority; otherwise the app shows the post captured during research in a column
+with matching source and account settings, creating a temporary citation deck
+when needed. These captured posts are labeled and do not change feed pagination
+or reveal sensitive content automatically. Other links still open externally;
+Ctrl/Cmd-click on a citation also opens the original site.
+Citation metadata stays with the in-memory conversation across reconnects and
+follow-up messages. It is not saved in SQLite. Markdown HTML is not executed and
+Markdown images are rendered as links.
 Reopening the page receives the latest state and restores the temporary deck.
 Later updates modify the same temporary view; they do not overwrite saved decks
 or switch away from another deck you are reading. Use the existing save button

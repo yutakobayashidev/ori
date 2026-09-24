@@ -1,3 +1,4 @@
+import type { DeckColumn } from '../../src/features/decks/model'
 import type { ResearchRun } from '../../src/features/research/model'
 import { expect, test } from '../fixtures'
 
@@ -51,6 +52,7 @@ test('restores the conversation and growing temporary deck from reconnect snapsh
     status: 'running',
     startedAt: Date.now(),
     deckVersion: 1,
+    citations: [],
     message: '既存の検索条件を再利用しています。',
     messages: [
       { id: 'user-1', role: 'user', text: '既存の観点を使って調査して' },
@@ -134,6 +136,106 @@ test('rejects a different tailnet owner at the SSE endpoint', async ({
     headers: { 'Tailscale-User-Login': 'someone-else@twitter-lite.invalid' },
   })
   expect(response.status()).toBe(403)
+})
+
+test('renders Markdown and reveals an unloaded citation in an offscreen deck column', async ({
+  page,
+  a11y,
+}) => {
+  await page.emulateMedia({ reducedMotion: 'reduce' })
+  await page.goto('/')
+  await page.getByRole('button', { name: 'カラムを追加', exact: true }).click()
+  const accounts = page.getByRole('combobox', {
+    name: '接続プロファイル',
+    exact: true,
+  })
+  await accounts.selectOption({ label: 'e2e' })
+  const connectionId = await accounts.inputValue()
+  await page.keyboard.press('Escape')
+  const source: DeckColumn = {
+    id: 'citation-column-2',
+    title: '引用の観点',
+    connectionId,
+    source: {
+      platform: 'twitter',
+      kind: 'search',
+      query: 'citation-query-2',
+      product: 'Latest',
+      following: false,
+    },
+  }
+  const columns: DeckColumn[] = ['概要', '比較'].map((title, index) => ({
+    id: `citation-column-${index}`,
+    title,
+    connectionId,
+    source: {
+      platform: 'twitter',
+      kind: 'search',
+      query: `citation-query-${index}`,
+      product: 'Latest',
+      following: false,
+    },
+  }))
+  columns.push(source)
+  const run: ResearchRun = {
+    id: '973ae084-18ed-4674-8899-c75851e51d1b',
+    topic: '引用を確認',
+    status: 'complete',
+    startedAt: Date.now(),
+    deckVersion: 1,
+    message: '',
+    deck: { id: 'citation-deck', title: '引用付きの調査', columns },
+    messages: [
+      {
+        id: 'answer',
+        role: 'assistant',
+        text: '## 調査結果\n\n**重要な発見**です。\n\n- [根拠の投稿](https://x.com/author/status/123456789?s=20)\n\n| 観点 | 結果 |\n| --- | --- |\n| 投稿 | 確認済み |\n\n`コード`も表示します。',
+      },
+    ],
+    citations: [
+      {
+        column: source,
+        post: {
+          key: 'twitter:123456789',
+          nativeId: '123456789',
+          platform: 'twitter',
+          url: 'https://twitter.com/author/status/123456789',
+          text: 'AIが調査時に取得した引用本文',
+          author: { name: '引用元の著者', handle: 'author' },
+        },
+      },
+    ],
+  }
+  await page.route('**/api/research/events', (route) =>
+    route.fulfill({
+      contentType: 'text/event-stream',
+      body: `data: ${JSON.stringify({ configured: true, run })}\n\n`,
+    }),
+  )
+  await page.reload()
+  const chat = page.getByRole('log', { name: '調査の会話' })
+  await expect(chat.getByRole('heading', { name: '調査結果' })).toBeVisible()
+  await expect(
+    chat.locator('strong').filter({ hasText: '重要な発見' }),
+  ).toBeVisible()
+  await expect(chat.getByRole('table')).toBeVisible()
+  await expect(
+    page.getByText('AIが調査時に取得した引用本文', { exact: true }),
+  ).toHaveCount(0)
+  await chat.getByRole('link', { name: '根拠の投稿' }).click()
+  const card = page.locator(
+    '.research-post[data-post-url="https://twitter.com/author/status/123456789"]',
+  )
+  await expect(card).toBeVisible()
+  await expect(card).toHaveClass(/citation-highlight/)
+  await expect(card).toBeFocused()
+  await expect(card).toContainText('調査時に取得した投稿')
+  await expect(card).toContainText('AIが調査時に取得した引用本文')
+  expect(
+    await page.locator('.deck-board').evaluate((element) => element.scrollLeft),
+  ).toBeGreaterThan(0)
+  expect(page.context().pages()).toHaveLength(1)
+  expect((await a11y().analyze()).violations).toEqual([])
 })
 
 test('explains unconfigured Codex and prevents starting research without affecting the deck', async ({

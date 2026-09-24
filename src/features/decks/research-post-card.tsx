@@ -1,4 +1,4 @@
-import { useState } from 'react'
+import { useEffect, useRef, useState } from 'react'
 import { Icon } from '#/components/icon'
 import { PostText } from '#/components/post-text'
 import type { ResearchPost } from '#/features/platforms/types'
@@ -11,11 +11,45 @@ const dateFormatter = new Intl.DateTimeFormat('ja-JP', {
   timeZone: 'Asia/Tokyo',
 })
 
-export function ResearchPostCard({ post }: { post: ResearchPost }) {
+export function ResearchPostCard({
+  post,
+  citationRequest,
+  citationSnapshot,
+}: {
+  post: ResearchPost
+  citationRequest?: number
+  citationSnapshot?: boolean
+}) {
   const [revealed, setRevealed] = useState(false)
+  const [highlighted, setHighlighted] = useState(false)
+  const article = useRef<HTMLElement>(null)
+  // biome-ignore lint/correctness/useExhaustiveDependencies: Re-scroll when a snapshot moves to its live feed position.
+  useEffect(() => {
+    if (citationRequest === undefined) {
+      setHighlighted(false)
+      return
+    }
+    setHighlighted(true)
+    article.current?.focus({ preventScroll: true })
+    article.current?.scrollIntoView({
+      block: 'center',
+      inline: 'center',
+      behavior: window.matchMedia?.('(prefers-reduced-motion: reduce)').matches
+        ? 'instant'
+        : 'smooth',
+    })
+    const timer = setTimeout(() => setHighlighted(false), 2500)
+    return () => clearTimeout(timer)
+  }, [citationRequest, citationSnapshot])
   const concealed = Boolean(post.contentWarning || post.sensitive)
   return (
-    <article className="research-post">
+    <article
+      ref={article}
+      tabIndex={-1}
+      className={`research-post${highlighted ? ' citation-highlight' : ''}`}
+      data-post-url={post.url}
+    >
+      {citationSnapshot ? <p className="handle">調査時に取得した投稿</p> : null}
       {post.boostedBy ? (
         <p className="handle">{post.boostedBy.name} がブースト</p>
       ) : null}

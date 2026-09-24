@@ -1,7 +1,59 @@
-import { fireEvent, render, screen } from '@testing-library/react'
-import { expect, it } from 'vitest'
+import { act, fireEvent, render, screen } from '@testing-library/react'
+import { afterEach, expect, it, vi } from 'vitest'
 import type { ResearchPost } from '../platforms/types'
 import { ResearchPostCard } from './research-post-card'
+
+afterEach(() => {
+  vi.useRealTimers()
+  vi.unstubAllGlobals()
+})
+
+it('focuses and briefly highlights a cited card without revealing sensitive content', () => {
+  vi.useFakeTimers()
+  vi.stubGlobal('matchMedia', () => ({ matches: true }))
+  const post: ResearchPost = {
+    key: 'mastodon:1',
+    platform: 'mastodon',
+    nativeId: '1',
+    url: 'https://social.invalid/@a/1',
+    text: 'Hidden content',
+    author: { name: 'Alice', handle: 'a@social.invalid' },
+    contentWarning: 'Spoiler',
+    sensitive: true,
+  }
+  const { rerender } = render(<ResearchPostCard post={post} />)
+  const article = screen.getByRole('article')
+  const scroll = vi.fn()
+  article.scrollIntoView = scroll
+  rerender(
+    <ResearchPostCard post={post} citationRequest={1} citationSnapshot />,
+  )
+  expect(article).toHaveFocus()
+  expect(article).toHaveClass('citation-highlight')
+  expect(scroll).toHaveBeenCalledWith({
+    block: 'center',
+    inline: 'center',
+    behavior: 'instant',
+  })
+  expect(screen.getByText('調査時に取得した投稿')).toBeInTheDocument()
+  expect(screen.getByRole('button', { name: '内容を表示' })).toHaveAttribute(
+    'aria-expanded',
+    'false',
+  )
+  expect(screen.queryByText('Hidden content')).not.toBeInTheDocument()
+  rerender(<ResearchPostCard post={post} citationRequest={1} />)
+  expect(scroll).toHaveBeenCalledTimes(2)
+  expect(article).toHaveFocus()
+  expect(screen.queryByText('調査時に取得した投稿')).not.toBeInTheDocument()
+  act(() => {
+    vi.advanceTimersByTime(2500)
+  })
+  expect(article).not.toHaveClass('citation-highlight')
+  rerender(<ResearchPostCard post={post} citationRequest={2} />)
+  expect(article).toHaveClass('citation-highlight')
+  rerender(<ResearchPostCard post={post} />)
+  expect(article).not.toHaveClass('citation-highlight')
+})
 
 it('waits for reveal before mounting CW content or sensitive media', () => {
   const post: ResearchPost = {
