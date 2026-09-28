@@ -15,7 +15,6 @@ import {
   EmptyTitle,
 } from '#/components/ui/empty'
 import { Input } from '#/components/ui/input'
-import { ConnectionManager } from '#/features/connections/connection-manager'
 import { loadConnections } from '#/features/connections/server-functions'
 import { syncResearchDeck } from '#/features/research/research-deck-sync'
 import { ResearchPanel } from '#/features/research/research-panel'
@@ -41,7 +40,6 @@ export function DeckPage() {
   const researchDeckBindings = useRef(new Map<string, string>()).current
   const [editing, setEditing] = useState<{ id: string } | 'new' | null>(null)
   const [renaming, setRenaming] = useState(false)
-  const [managingConnections, setManagingConnections] = useState(false)
   const [deckDialog, setDeckDialog] = useState<'create' | 'delete' | null>(null)
   const [newDeckTitle, setNewDeckTitle] = useState('')
   const switcherEditing = deckDialog !== null
@@ -155,6 +153,7 @@ export function DeckPage() {
     >
       {(renderResearchPanel) => (
         <AppShell
+          hasTemporaryDecks={workspace.decks.some((deck) => !deck.persisted)}
           researchChat={renderResearchPanel}
           sidebar={
             <>
@@ -204,14 +203,6 @@ export function DeckPage() {
                   ? 'サーバーに保存・端末間で共有'
                   : '一時ビュー · このタブのみ'}
               </p>
-              <Button
-                variant="outline"
-                type="button"
-                disabled={!ready}
-                onClick={() => setManagingConnections(true)}
-              >
-                接続アカウントを管理
-              </Button>
             </>
           }
         >
@@ -307,20 +298,6 @@ export function DeckPage() {
             <p className="deck-error" role="alert">
               {profiles.data.relayError}
             </p>
-          ) : null}
-          {managingConnections ? (
-            <Dialog
-              title="接続アカウント"
-              onClose={() => setManagingConnections(false)}
-            >
-              <ConnectionManager
-                connections={profiles.data?.connections ?? []}
-                onChanged={() => profiles.refetch()}
-                hasTemporaryDecks={workspace.decks.some(
-                  (deck) => !deck.persisted,
-                )}
-              />
-            </Dialog>
           ) : null}
           {profiles.isPending ? (
             <p role="status">接続プロファイルを取得しています…</p>

@@ -1,6 +1,14 @@
 [
   {
     "date": "2026-09-28",
+    "macrostructure": "sidebar-09 Inbox",
+    "theme": "shadcn base-nova neutral",
+    "scope": "inbox",
+    "enrichment": "none",
+    "brief": "Shared navigation with Twitter Lite, inferred-interest article list and reading pane; no manual interest settings"
+  },
+  {
+    "date": "2026-09-28",
     "macrostructure": "sidebar-09 Workbench",
     "theme": "shadcn base-nova neutral",
     "scope": "app",

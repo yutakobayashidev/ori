@@ -23,7 +23,14 @@ bound to a connection account, so platforms and multiple accounts work side by s
 - Saved chat history with deck, account and citation restoration across devices
   and backend restarts
 
-Both `/` and `/deck` open the deck workspace. The separate reader, search,
+Both `/` and `/deck` open the deck workspace. A shared sidebar also opens
+the article reader at `/inbox`. This UI-only prototype shows articles inferred
+from past reading, searches, and research, with no manual interest settings.
+Articles are fictional samples; search and article selection work locally.
+On mobile, the article list and reader switch views. The shared sidebar’s bottom
+avatar opens connected-account management from either workspace.
+
+The former SNS reader, search,
 list, user-profile, and conversation routes have been removed. Original-post
 links on post cards open their source site; SNS reply threads are not rendered
 inside the app.

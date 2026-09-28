@@ -1,14 +1,8 @@
-import { Columns3, MessageSquare, PanelLeftClose, Search } from 'lucide-react'
+import { Columns3, MessageSquare, PanelLeftClose } from 'lucide-react'
 import { type CSSProperties, type ReactNode, useState } from 'react'
 import {
   Sidebar,
-  SidebarContent,
-  SidebarFooter,
-  SidebarGroup,
-  SidebarGroupContent,
-  SidebarHeader,
   SidebarInset,
-  SidebarMenu,
   SidebarMenuButton,
   SidebarMenuItem,
   SidebarProvider,
@@ -16,8 +10,10 @@ import {
   useSidebar,
 } from '#/components/ui/sidebar'
 import { TooltipProvider } from '#/components/ui/tooltip'
+import { WorkspaceNavigation } from '#/components/workspace-navigation'
 
 type ShellProps = {
+  hasTemporaryDecks: boolean
   sidebar: ReactNode
   researchChat: (closeMobileSidebar: () => void) => ReactNode
   children: ReactNode
@@ -28,7 +24,12 @@ export function AppShell(props: ShellProps) {
     <TooltipProvider delay={800}>
       <SidebarProvider
         className="workspace h-dvh min-h-0 overflow-hidden"
-        style={{ '--sidebar-width': '25rem' } as CSSProperties}
+        style={
+          {
+            '--sidebar-width': '25rem',
+            '--sidebar-width-icon': '4rem',
+          } as CSSProperties
+        }
       >
         <Workspace {...props} />
       </SidebarProvider>
@@ -36,7 +37,12 @@ export function AppShell(props: ShellProps) {
   )
 }
 
-function Workspace({ sidebar, researchChat, children }: ShellProps) {
+function Workspace({
+  sidebar,
+  researchChat,
+  children,
+  hasTemporaryDecks,
+}: ShellProps) {
   const [panel, setPanel] = useState<'chat' | 'decks'>('chat')
   const { setOpen, setOpenMobile, isMobile } = useSidebar()
   const navigation = [
@@ -50,61 +56,42 @@ function Workspace({ sidebar, researchChat, children }: ShellProps) {
         collapsible="icon"
         className="overflow-hidden *:data-[sidebar=sidebar]:flex-row"
       >
-        <Sidebar
-          collapsible="none"
-          className="w-[calc(var(--sidebar-width-icon)+1px)]! shrink-0 border-r"
+        <WorkspaceNavigation
+          hasTemporaryDecks={hasTemporaryDecks}
+          footer={
+            <SidebarMenuItem>
+              <SidebarMenuButton
+                aria-label="サイドバーを閉じる"
+                tooltip={{ children: 'サイドバーを閉じる', hidden: false }}
+                onClick={() =>
+                  isMobile ? setOpenMobile(false) : setOpen(false)
+                }
+                className="size-10 justify-center p-0"
+              >
+                <PanelLeftClose />
+              </SidebarMenuButton>
+            </SidebarMenuItem>
+          }
         >
-          <SidebarHeader>
-            <div
-              className="flex size-8 items-center justify-center rounded-lg bg-sidebar-primary text-sidebar-primary-foreground"
-              role="img"
-              aria-label="Twitter Lite"
-            >
-              <Search className="size-4" aria-hidden="true" />
-            </div>
-          </SidebarHeader>
-          <SidebarContent>
-            <SidebarGroup>
-              <SidebarGroupContent>
-                <SidebarMenu>
-                  {navigation.map((item) => (
-                    <SidebarMenuItem key={item.id}>
-                      <SidebarMenuButton
-                        aria-label={item.title}
-                        tooltip={{ children: item.title, hidden: false }}
-                        isActive={panel === item.id}
-                        onClick={() => {
-                          setPanel(item.id)
-                          if (isMobile) setOpenMobile(true)
-                          else setOpen(true)
-                        }}
-                        className="px-2"
-                      >
-                        <item.icon />
-                        <span className="sr-only">{item.title}</span>
-                      </SidebarMenuButton>
-                    </SidebarMenuItem>
-                  ))}
-                </SidebarMenu>
-              </SidebarGroupContent>
-            </SidebarGroup>
-          </SidebarContent>
-          <SidebarFooter>
-            <SidebarMenu>
-              <SidebarMenuItem>
-                <SidebarMenuButton
-                  aria-label="サイドバーを閉じる"
-                  tooltip="サイドバーを閉じる"
-                  onClick={() =>
-                    isMobile ? setOpenMobile(false) : setOpen(false)
-                  }
-                >
-                  <PanelLeftClose />
-                </SidebarMenuButton>
-              </SidebarMenuItem>
-            </SidebarMenu>
-          </SidebarFooter>
-        </Sidebar>
+          {navigation.map((item) => (
+            <SidebarMenuItem key={item.id}>
+              <SidebarMenuButton
+                aria-label={item.title}
+                tooltip={{ children: item.title, hidden: false }}
+                isActive={panel === item.id}
+                onClick={() => {
+                  setPanel(item.id)
+                  if (isMobile) setOpenMobile(true)
+                  else setOpen(true)
+                }}
+                className="size-10 justify-center p-0"
+              >
+                <item.icon />
+                <span className="sr-only">{item.title}</span>
+              </SidebarMenuButton>
+            </SidebarMenuItem>
+          ))}
+        </WorkspaceNavigation>
         <Sidebar
           collapsible="none"
           className="min-w-0 flex-1 group-data-[collapsible=icon]:hidden"

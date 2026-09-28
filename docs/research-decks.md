@@ -3,8 +3,11 @@
 ## Workspace
 
 Both `/` and `/deck` render the research workspace. A collapsible shadcn/ui
-sidebar based on `sidebar-09` switches between research chat and deck management.
-Deck management switches decks, adds columns, and manages connected accounts. Up to six ordered columns scroll independently; only the active deck
+sidebar based on `sidebar-09` shares its navigation rail with the article reader
+at `/inbox`. Within Twitter Lite, it switches between research chat and deck management.
+Deck management switches decks and adds columns. The avatar at the bottom of the
+shared sidebar opens connected-account management in a dialog from either workspace.
+Up to six ordered columns scroll independently; only the active deck
 mounts and fetches its columns. On mobile, the sidebar opens as a sheet.
 shadcn Base UI dialogs handle creation and editing, with Escape and focus
 restoration. Column menus offer editing, ordering, and deletion; refresh and

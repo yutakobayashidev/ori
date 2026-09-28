@@ -1,3 +1,4 @@
+import { cn } from 'cn'
 import { Icon } from './icon'
 import { Button } from './ui/button'
 import {
@@ -12,8 +13,10 @@ export function Dialog({
   title,
   onClose,
   children,
+  className,
 }: {
   title: string
+  className?: string
   onClose: () => void
   children: React.ReactNode
 }) {
@@ -26,7 +29,7 @@ export function Dialog({
     >
       <DialogContent
         showCloseButton={false}
-        className="max-h-[calc(100dvh-2rem)] overflow-y-auto"
+        className={cn('max-h-[calc(100dvh-2rem)] overflow-y-auto', className)}
         aria-describedby={undefined}
       >
         <DialogHeader>

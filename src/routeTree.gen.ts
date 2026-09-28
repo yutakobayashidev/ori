@@ -9,11 +9,17 @@
 // Additionally, you should also exclude this file from your linter and/or formatter to prevent it from being checked or modified.
 
 import { Route as rootRouteImport } from './routes/__root'
+import { Route as InboxRouteImport } from './routes/inbox'
 import { Route as DeckRouteImport } from './routes/deck'
 import { Route as IndexRouteImport } from './routes/index'
 import { Route as OauthMastodonCallbackRouteImport } from './routes/oauth/mastodon/callback'
 import { Route as ApiResearchEventsRouteImport } from './routes/api/research/events'
 
+const InboxRoute = InboxRouteImport.update({
+  id: '/inbox',
+  path: '/inbox',
+  getParentRoute: () => rootRouteImport,
+} as any)
 const DeckRoute = DeckRouteImport.update({
   id: '/deck',
   path: '/deck',
@@ -38,12 +44,14 @@ const ApiResearchEventsRoute = ApiResearchEventsRouteImport.update({
 export interface FileRoutesByFullPath {
   '/': typeof IndexRoute
   '/deck': typeof DeckRoute
+  '/inbox': typeof InboxRoute
   '/api/research/events': typeof ApiResearchEventsRoute
   '/oauth/mastodon/callback': typeof OauthMastodonCallbackRoute
 }
 export interface FileRoutesByTo {
   '/': typeof IndexRoute
   '/deck': typeof DeckRoute
+  '/inbox': typeof InboxRoute
   '/api/research/events': typeof ApiResearchEventsRoute
   '/oauth/mastodon/callback': typeof OauthMastodonCallbackRoute
 }
@@ -51,18 +59,30 @@ export interface FileRoutesById {
   __root__: typeof rootRouteImport
   '/': typeof IndexRoute
   '/deck': typeof DeckRoute
+  '/inbox': typeof InboxRoute
   '/api/research/events': typeof ApiResearchEventsRoute
   '/oauth/mastodon/callback': typeof OauthMastodonCallbackRoute
 }
 export interface FileRouteTypes {
   fileRoutesByFullPath: FileRoutesByFullPath
-  fullPaths: '/' | '/deck' | '/api/research/events' | '/oauth/mastodon/callback'
+  fullPaths:
+    | '/'
+    | '/deck'
+    | '/inbox'
+    | '/api/research/events'
+    | '/oauth/mastodon/callback'
   fileRoutesByTo: FileRoutesByTo
-  to: '/' | '/deck' | '/api/research/events' | '/oauth/mastodon/callback'
+  to:
+    | '/'
+    | '/deck'
+    | '/inbox'
+    | '/api/research/events'
+    | '/oauth/mastodon/callback'
   id:
     | '__root__'
     | '/'
     | '/deck'
+    | '/inbox'
     | '/api/research/events'
     | '/oauth/mastodon/callback'
   fileRoutesById: FileRoutesById
@@ -70,12 +90,20 @@ export interface FileRouteTypes {
 export interface RootRouteChildren {
   IndexRoute: typeof IndexRoute
   DeckRoute: typeof DeckRoute
+  InboxRoute: typeof InboxRoute
   ApiResearchEventsRoute: typeof ApiResearchEventsRoute
   OauthMastodonCallbackRoute: typeof OauthMastodonCallbackRoute
 }
 
 declare module '@tanstack/react-router' {
   interface FileRoutesByPath {
+    '/inbox': {
+      id: '/inbox'
+      path: '/inbox'
+      fullPath: '/inbox'
+      preLoaderRoute: typeof InboxRouteImport
+      parentRoute: typeof rootRouteImport
+    }
     '/deck': {
       id: '/deck'
       path: '/deck'
@@ -110,6 +138,7 @@ declare module '@tanstack/react-router' {
 const rootRouteChildren: RootRouteChildren = {
   IndexRoute: IndexRoute,
   DeckRoute: DeckRoute,
+  InboxRoute: InboxRoute,
   ApiResearchEventsRoute: ApiResearchEventsRoute,
   OauthMastodonCallbackRoute: OauthMastodonCallbackRoute,
 }
