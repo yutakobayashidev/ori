@@ -106,28 +106,34 @@ it('retains input, selected accounts, and the request ID across responsive view 
     connection,
     { ...connection, id: 'second', displayName: 'second' },
   ])
-  await waitFor(() => expect(screen.getByLabelText('メッセージ')).toBeEnabled())
-  fireEvent.click(screen.getByRole('button', { name: '接続アカウント · 2件' }))
+  await waitFor(() => expect(screen.getByLabelText('Message')).toBeEnabled())
+  fireEvent.click(
+    screen.getByRole('button', { name: 'Connected accounts · 2' }),
+  )
   fireEvent.click(screen.getByRole('checkbox', { name: 'second · Twitter' }))
-  fireEvent.change(screen.getByLabelText('メッセージ'), {
+  fireEvent.change(screen.getByLabelText('Message'), {
     target: { value: 'WebMCPの反応' },
   })
-  fireEvent.click(screen.getByRole('button', { name: '送信' }))
+  fireEvent.click(screen.getByRole('button', { name: 'Send' }))
   expect(await screen.findByRole('alert')).toHaveTextContent(
-    '入力内容は残っています',
+    'Your draft has been kept',
   )
-  expect(screen.getByLabelText('メッセージ')).toHaveValue('WebMCPの反応')
+  expect(screen.getByLabelText('Message')).toHaveValue('WebMCPの反応')
   expect(screen.queryByText(/internal credential/)).toBeNull()
   view.rerender(view.ui(true, undefined, 'mobile'))
-  expect(screen.getByRole('alert')).toHaveTextContent('入力内容は残っています')
-  expect(screen.getByLabelText('メッセージ')).toHaveValue('WebMCPの反応')
-  fireEvent.click(screen.getByRole('button', { name: '接続アカウント · 1件' }))
+  expect(screen.getByRole('alert')).toHaveTextContent(
+    'Your draft has been kept',
+  )
+  expect(screen.getByLabelText('Message')).toHaveValue('WebMCPの反応')
+  fireEvent.click(
+    screen.getByRole('button', { name: 'Connected accounts · 1' }),
+  )
   expect(
     screen.getByRole('checkbox', { name: 'second · Twitter' }),
   ).not.toBeChecked()
   expect(MockEventSource.instances).toHaveLength(1)
   expect(MockEventSource.instances[0]?.close).not.toHaveBeenCalled()
-  fireEvent.click(screen.getByRole('button', { name: '送信' }))
+  fireEvent.click(screen.getByRole('button', { name: 'Send' }))
   await waitFor(() => expect(actions.start).toHaveBeenCalledTimes(2))
   expect(actions.start.mock.calls[1]?.[0]).toEqual(
     actions.start.mock.calls[0]?.[0],
@@ -136,11 +142,11 @@ it('retains input, selected accounts, and the request ID across responsive view 
 
 it('opens each generated deck version only once for the run started in this browser', async () => {
   const view = show()
-  await waitFor(() => expect(screen.getByLabelText('メッセージ')).toBeEnabled())
-  fireEvent.change(screen.getByLabelText('メッセージ'), {
+  await waitFor(() => expect(screen.getByLabelText('Message')).toBeEnabled())
+  fireEvent.change(screen.getByLabelText('Message'), {
     target: { value: 'WebMCPの反応' },
   })
-  fireEvent.click(screen.getByRole('button', { name: '送信' }))
+  fireEvent.click(screen.getByRole('button', { name: 'Send' }))
   await waitFor(() => expect(view.onOpenDeck).toHaveBeenCalledOnce())
   act(() =>
     view.client.setQueryData(['research-status'], {
@@ -162,7 +168,9 @@ it('opens each generated deck version only once for the run started in this brow
   await waitFor(() => expect(view.onOpenDeck).toHaveBeenCalledTimes(2), {
     timeout: 2500,
   })
-  expect(screen.getByRole('log', { name: '調査の会話' })).toBeVisible()
+  expect(
+    screen.getByRole('log', { name: 'Research conversation' }),
+  ).toBeVisible()
 })
 
 it('restores the latest plan automatically on reload and permits manual activation', async () => {
@@ -172,7 +180,7 @@ it('restores the latest plan automatically on reload and permits manual activati
     expect(view.onOpenDeck).toHaveBeenCalledWith(running.deck, true),
   )
   fireEvent.click(
-    await screen.findByRole('button', { name: '一時デッキで開く' }),
+    await screen.findByRole('button', { name: 'Open temporary deck' }),
   )
   await waitFor(() =>
     expect(view.onOpenDeck).toHaveBeenLastCalledWith(running.deck, true),
@@ -185,13 +193,13 @@ it('reports cancellation failure and updates the run after a successful retry', 
     .mockRejectedValueOnce(new Error('offline'))
     .mockResolvedValue({ ...running, status: 'cancelled' })
   show()
-  fireEvent.click(await screen.findByRole('button', { name: '調査を中止' }))
+  fireEvent.click(await screen.findByRole('button', { name: 'Stop research' }))
   expect(await screen.findByRole('alert')).toHaveTextContent(
-    '中止できませんでした',
+    'Unable to stop research',
   )
-  fireEvent.click(screen.getByRole('button', { name: '調査を中止' }))
+  fireEvent.click(screen.getByRole('button', { name: 'Stop research' }))
   await waitFor(() =>
-    expect(screen.queryByRole('button', { name: '調査を中止' })).toBeNull(),
+    expect(screen.queryByRole('button', { name: 'Stop research' })).toBeNull(),
   )
   expect(actions.cancel).toHaveBeenCalledWith({ data: { id: running.id } })
 })
@@ -213,7 +221,7 @@ it('limits account selection to six and shows the host report path on completion
     })),
   )
   await screen.findByText('/home/owner/reports/webmcp.md')
-  fireEvent.click(screen.getByText('接続アカウント · 6件'))
+  fireEvent.click(screen.getByText('Connected accounts · 6'))
   expect(
     screen.getByRole('checkbox', { name: 'account6 · Twitter' }),
   ).toHaveAttribute('aria-disabled', 'true')
@@ -225,7 +233,7 @@ it('limits account selection to six and shows the host report path on completion
 
 it('waits for the workspace before restoring a completed plan from the stream', async () => {
   const view = show([connection], false)
-  await screen.findByLabelText('メッセージ')
+  await screen.findByLabelText('Message')
   act(() =>
     MockEventSource.instances[0]?.onmessage?.({
       data: JSON.stringify({
@@ -253,9 +261,9 @@ it('reconnects the stream without polling or cancelling the host job on unmount'
   const stream = MockEventSource.instances[0]
   expect(stream?.url).toBe('/api/research/events')
   act(() => stream?.onerror?.())
-  expect(screen.getByText(/配信に再接続/)).toBeVisible()
+  expect(screen.getByText(/Reconnecting to research updates/)).toBeVisible()
   act(() => stream?.onopen?.())
-  expect(screen.queryByText(/配信に再接続/)).toBeNull()
+  expect(screen.queryByText(/Reconnecting to research updates/)).toBeNull()
   await act(async () => {
     await new Promise((resolve) => setTimeout(resolve, 1200))
   })
@@ -274,11 +282,11 @@ it('keeps newer stream state when the start response arrives late', async () => 
       }),
   )
   const view = show()
-  await waitFor(() => expect(screen.getByLabelText('メッセージ')).toBeEnabled())
-  fireEvent.change(screen.getByLabelText('メッセージ'), {
+  await waitFor(() => expect(screen.getByLabelText('Message')).toBeEnabled())
+  fireEvent.change(screen.getByLabelText('Message'), {
     target: { value: 'WebMCP' },
   })
-  fireEvent.click(screen.getByRole('button', { name: '送信' }))
+  fireEvent.click(screen.getByRole('button', { name: 'Send' }))
   act(() =>
     MockEventSource.instances[0]?.onmessage?.({
       data: JSON.stringify({ configured: true, run: running }),
@@ -343,13 +351,13 @@ it('shows streamed conversation and sends follow-up input with the current deck 
   const view = show()
   expect(await screen.findByText('検索結果を比較しました。')).toBeVisible()
   expect(screen.getByText('検索カラムを追加しました')).toBeVisible()
-  expect(screen.getByText('あなた')).toBeVisible()
+  expect(screen.getByText('You')).toBeVisible()
   const editedDeck = { id: 'other', title: '切り替えたデッキ', columns: [] }
   view.rerender(view.ui(true, editedDeck))
-  fireEvent.change(screen.getByLabelText('メッセージ'), {
+  fireEvent.change(screen.getByLabelText('Message'), {
     target: { value: 'このデッキを絞って' },
   })
-  fireEvent.click(screen.getByRole('button', { name: '送信' }))
+  fireEvent.click(screen.getByRole('button', { name: 'Send' }))
   await waitFor(() =>
     expect(actions.start).toHaveBeenCalledWith({
       data: expect.objectContaining({
@@ -359,9 +367,7 @@ it('shows streamed conversation and sends follow-up input with the current deck 
       }),
     }),
   )
-  await waitFor(() =>
-    expect(screen.getByLabelText('メッセージ')).toHaveValue(''),
-  )
+  await waitFor(() => expect(screen.getByLabelText('Message')).toHaveValue(''))
   const updatedDeck = { id: 'plan', title: '絞り込み結果', columns: [] }
   act(() =>
     MockEventSource.instances[0]?.onmessage?.({
@@ -390,9 +396,11 @@ it('shows streamed conversation and sends follow-up input with the current deck 
 
 it('selects newly loaded connected accounts until the user changes their selection', async () => {
   const view = show([])
-  await waitFor(() => expect(screen.getByLabelText('メッセージ')).toBeEnabled())
-  fireEvent.click(screen.getByRole('button', { name: '接続アカウント · 0件' }))
-  await screen.findByText('接続アカウントを先に追加してください。')
+  await waitFor(() => expect(screen.getByLabelText('Message')).toBeEnabled())
+  fireEvent.click(
+    screen.getByRole('button', { name: 'Connected accounts · 0' }),
+  )
+  await screen.findByText('Add a connected account first.')
   view.rerender(
     <QueryClientProvider client={view.client}>
       <ResearchPanel
@@ -403,10 +411,10 @@ it('selects newly loaded connected accounts until the user changes their selecti
       />
     </QueryClientProvider>,
   )
-  fireEvent.change(screen.getByLabelText('メッセージ'), {
+  fireEvent.change(screen.getByLabelText('Message'), {
     target: { value: '調べて' },
   })
-  expect(screen.getByRole('button', { name: '送信' })).toBeEnabled()
+  expect(screen.getByRole('button', { name: 'Send' })).toBeEnabled()
 })
 
 it('starts a new chat without changing the deck and clears the draft only after success', async () => {
@@ -419,30 +427,26 @@ it('starts a new chat without changing the deck and clears the draft only after 
     .mockResolvedValue({ configured: true, run: null })
   const view = show()
   await waitFor(() =>
-    expect(
-      screen.getByRole('button', { name: '新しいチャット' }),
-    ).toBeEnabled(),
+    expect(screen.getByRole('button', { name: 'New chat' })).toBeEnabled(),
   )
-  fireEvent.change(screen.getByLabelText('メッセージ'), {
+  fireEvent.change(screen.getByLabelText('Message'), {
     target: { value: '下書き' },
   })
-  fireEvent.click(screen.getByRole('button', { name: '新しいチャット' }))
+  fireEvent.click(screen.getByRole('button', { name: 'New chat' }))
   expect(await screen.findByRole('alert')).toHaveTextContent(
-    '会話と入力内容は残っています',
+    'Your conversation and draft have been kept',
   )
-  expect(screen.getByLabelText('メッセージ')).toHaveValue('下書き')
+  expect(screen.getByLabelText('Message')).toHaveValue('下書き')
   const callsBeforeReset = view.onOpenDeck.mock.calls.length
-  fireEvent.click(screen.getByRole('button', { name: '新しいチャット' }))
-  await waitFor(() =>
-    expect(screen.getByLabelText('メッセージ')).toHaveValue(''),
-  )
+  fireEvent.click(screen.getByRole('button', { name: 'New chat' }))
+  await waitFor(() => expect(screen.getByLabelText('Message')).toHaveValue(''))
   expect(screen.queryByText('WebMCPの反応')).toBeNull()
   expect(view.onOpenDeck).toHaveBeenCalledTimes(callsBeforeReset)
   expect(screen.getByText('手動デッキ')).toBeVisible()
-  fireEvent.change(screen.getByLabelText('メッセージ'), {
+  fireEvent.change(screen.getByLabelText('Message'), {
     target: { value: '新しい話題' },
   })
-  fireEvent.click(screen.getByRole('button', { name: '送信' }))
+  fireEvent.click(screen.getByRole('button', { name: 'Send' }))
   await waitFor(() => expect(actions.start).toHaveBeenCalledOnce())
   expect(actions.start.mock.calls[0]?.[0].data).not.toHaveProperty('runId')
   expect(actions.reset).toHaveBeenCalledWith({ data: { id: running.id } })
@@ -452,7 +456,7 @@ it('disables new chat during a running turn and receives another device reset ov
   current = { configured: true, run: running }
   const view = show()
   await screen.findByText('WebMCPの反応')
-  expect(screen.getByRole('button', { name: '新しいチャット' })).toBeDisabled()
+  expect(screen.getByRole('button', { name: 'New chat' })).toBeDisabled()
   const callsBeforeReset = view.onOpenDeck.mock.calls.length
   act(() =>
     MockEventSource.instances[0]?.onmessage?.({
@@ -475,11 +479,9 @@ it('does not let a late reset response erase a newer streamed conversation', asy
   )
   const view = show()
   await waitFor(() =>
-    expect(
-      screen.getByRole('button', { name: '新しいチャット' }),
-    ).toBeEnabled(),
+    expect(screen.getByRole('button', { name: 'New chat' })).toBeEnabled(),
   )
-  fireEvent.click(screen.getByRole('button', { name: '新しいチャット' }))
+  fireEvent.click(screen.getByRole('button', { name: 'New chat' }))
   const newer = {
     configured: true,
     run: {
@@ -596,11 +598,11 @@ it('opens a saved chat with its context deck and selected accounts, preserving l
     connection,
     { ...connection, id: 'second', displayName: 'account2' },
   ])
-  await screen.findByLabelText('チャット履歴')
-  fireEvent.change(screen.getByLabelText('メッセージ'), {
+  await screen.findByLabelText('Chat history')
+  fireEvent.change(screen.getByLabelText('Message'), {
     target: { value: '別の下書き' },
   })
-  fireEvent.change(screen.getByLabelText('チャット履歴'), {
+  fireEvent.change(screen.getByLabelText('Chat history'), {
     target: { value: saved.id },
   })
   expect(await screen.findByText('保存した会話')).toBeVisible()
@@ -615,9 +617,9 @@ it('opens a saved chat with its context deck and selected accounts, preserving l
   await waitFor(() =>
     expect(view.onOpenDeck).toHaveBeenCalledWith(contextDeck, true),
   )
-  expect(screen.getByLabelText('メッセージ')).toHaveValue('')
-  expect(screen.getByText('中断しました・続きから再開できます')).toBeVisible()
-  fireEvent.click(screen.getByText('接続アカウント · 1件'))
+  expect(screen.getByLabelText('Message')).toHaveValue('')
+  expect(screen.getByText('Interrupted · Ready to resume')).toBeVisible()
+  fireEvent.click(screen.getByText('Connected accounts · 1'))
   expect(
     screen.getByRole('checkbox', { name: '調査用アカウント · Twitter' }),
   ).not.toBeChecked()
@@ -631,24 +633,24 @@ it('opens a saved chat with its context deck and selected accounts, preserving l
     MockEventSource.instances[0]?.onmessage?.({
       data: JSON.stringify({
         configured: true,
-        run: { ...saved, message: '更新' },
+        run: { ...saved, message: 'Refresh' },
         history,
       }),
     }),
   )
   await waitFor(() =>
     expect(view.client.getQueryData(['research-status'])).toMatchObject({
-      run: { message: '更新' },
+      run: { message: 'Refresh' },
     }),
   )
   expect(
     screen.getByRole('checkbox', { name: '調査用アカウント · Twitter' }),
   ).toBeChecked()
   expect(view.onOpenDeck).toHaveBeenCalledOnce()
-  fireEvent.change(screen.getByLabelText('メッセージ'), {
+  fireEvent.change(screen.getByLabelText('Message'), {
     target: { value: '続きを調べて' },
   })
-  fireEvent.click(screen.getByRole('button', { name: '送信' }))
+  fireEvent.click(screen.getByRole('button', { name: 'Send' }))
   await waitFor(() =>
     expect(actions.start).toHaveBeenCalledWith({
       data: expect.objectContaining({
@@ -680,7 +682,7 @@ it('restores a context-only chat on reload and prevents switching during a runni
   await waitFor(() =>
     expect(view.onOpenDeck).toHaveBeenCalledWith(contextDeck, true),
   )
-  expect(screen.getByLabelText('チャット履歴')).toBeDisabled()
+  expect(screen.getByLabelText('Chat history')).toBeDisabled()
 })
 
 it('keeps newer streamed history when a chat selection response arrives late', async () => {
@@ -702,7 +704,7 @@ it('keeps newer streamed history when a chat selection response arrives late', a
       }),
   )
   const view = show()
-  fireEvent.change(await screen.findByLabelText('チャット履歴'), {
+  fireEvent.change(await screen.findByLabelText('Chat history'), {
     target: { value: saved.id },
   })
   const newer = { configured: true, run: { ...running, id: 'remote' }, history }

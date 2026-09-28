@@ -73,17 +73,14 @@ const failure = (
 type FailureSubject = 'user' | 'list'
 
 const notFoundFailure: Record<FailureSubject, () => LoadFailure> = {
-  user: () =>
-    failure('user-not-found', 'ユーザーが見つかりませんでした。', false),
-  list: () =>
-    failure('list-not-found', 'リストが見つかりませんでした。', false),
+  user: () => failure('user-not-found', 'User not found.', false),
+  list: () => failure('list-not-found', 'List not found.', false),
 }
 
 const unavailableFailure: Record<FailureSubject, () => LoadFailure> = {
   user: () =>
-    failure('user-unavailable', 'このユーザーの投稿は取得できません。', false),
-  list: () =>
-    failure('list-unavailable', 'このリストは取得できません。', false),
+    failure('user-unavailable', 'Posts from this user are unavailable.', false),
+  list: () => failure('list-unavailable', 'This list is unavailable.', false),
 }
 
 function upstreamFailure(
@@ -98,7 +95,7 @@ function upstreamFailure(
         : ''
   const lower = message.toLowerCase()
   if (lower.includes('timeout') || lower.includes('aborted')) {
-    return failure('timeout', '取得がタイムアウトしました。', true)
+    return failure('timeout', 'The request timed out.', true)
   }
   if (lower.includes('not found')) {
     return notFoundFailure[subject]()
@@ -107,7 +104,7 @@ function upstreamFailure(
     return unavailableFailure[subject]()
   }
   console.error('Unexpected Bird failure:', diagnostic)
-  return failure('upstream', 'X から投稿を取得できませんでした。', true)
+  return failure('upstream', 'Could not load posts from X.', true)
 }
 
 function publicPost(tweet: TweetData): Post {
@@ -141,7 +138,7 @@ export async function loadListChoices(
     }
   } catch (error) {
     if (error instanceof Error && error.name === 'AbortError') {
-      return failure('timeout', '取得がタイムアウトしました。', true)
+      return failure('timeout', 'The request timed out.', true)
     }
     return upstreamFailure(error, 'list')
   }
@@ -181,7 +178,7 @@ export async function loadUserPage(
     )
   } catch (error) {
     if (error instanceof Error && error.name === 'AbortError') {
-      return failure('timeout', '取得がタイムアウトしました。', true)
+      return failure('timeout', 'The request timed out.', true)
     }
     if (error instanceof InputError) {
       return failure('invalid-input', error.message, false)
@@ -205,7 +202,7 @@ export async function loadListPage(
     )
   } catch (error) {
     if (error instanceof Error && error.name === 'AbortError') {
-      return failure('timeout', '取得がタイムアウトしました。', true)
+      return failure('timeout', 'The request timed out.', true)
     }
     if (error instanceof InputError) {
       return failure('invalid-input', error.message, false)
@@ -231,7 +228,7 @@ export async function searchPage(
     )
   } catch (error) {
     if (error instanceof Error && error.name === 'AbortError') {
-      return failure('timeout', '取得がタイムアウトしました。', true)
+      return failure('timeout', 'The request timed out.', true)
     }
     if (error instanceof InputError) {
       return failure('invalid-input', error.message, false)

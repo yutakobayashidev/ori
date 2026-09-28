@@ -29,7 +29,7 @@ export function importLegacyWorkspace(
         if (marker.payloadHash !== payloadHash)
           throw new DeckPersistenceError(
             'conflict',
-            '旧デッキはすでに取り込み済みです。別の内容で上書きできません。',
+            'Legacy decks have already been imported and cannot be overwritten.',
           )
         return listDecks(database)
       }
@@ -56,7 +56,7 @@ export function importLegacyWorkspace(
               if (!connection)
                 throw new DeckPersistenceError(
                   'connection-unavailable',
-                  `旧プロファイル「${profileName}」に対応する接続がありません。接続一覧を更新してください。`,
+                  `No connection matches the legacy profile “${profileName}”. Refresh your connections.`,
                 )
               return { ...column, connectionId: connection.id }
             }),

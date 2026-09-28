@@ -126,7 +126,7 @@ export function DeckPage() {
           void refresh(true)
         }}
       >
-        最新のデッキを再読み込み
+        Reload latest deck
       </Button>
     </p>
   ) : null
@@ -187,8 +187,8 @@ export function DeckPage() {
               />
               <Button
                 className="w-full"
-                aria-label="カラムを追加"
-                title="カラムを追加"
+                aria-label="Add column"
+                title="Add column"
                 type="button"
                 disabled={
                   !ready || saving || deck.columns.length >= MAX_COLUMNS
@@ -196,12 +196,12 @@ export function DeckPage() {
                 onClick={() => setEditing('new')}
               >
                 <Icon name="plus" />
-                <span>カラムを追加</span>
+                <span>Add column</span>
               </Button>
               <p className="sidebar-note">
                 {deck.persisted
-                  ? 'サーバーに保存・端末間で共有'
-                  : '一時ビュー · このタブのみ'}
+                  ? 'Saved to server · Shared across devices'
+                  : 'Temporary view · This tab only'}
               </p>
             </>
           }
@@ -210,7 +210,7 @@ export function DeckPage() {
             <div>
               <h1>{deck.title}</h1>
               <span className="deck-count">
-                {deck.columns.length} / {MAX_COLUMNS} カラム
+                {deck.columns.length} / {MAX_COLUMNS} columns
               </span>
             </div>
             <div className="deck-actions">
@@ -220,11 +220,11 @@ export function DeckPage() {
                   type="button"
                   disabled={saving}
                   onClick={() => {
-                    createTemporary(`${deck.title}のコピー`, deck.columns)
+                    createTemporary(`${deck.title} copy`, deck.columns)
                     clearEditors()
                   }}
                 >
-                  一時コピーを作成
+                  Create temporary copy
                 </Button>
               ) : (
                 <Button
@@ -233,14 +233,14 @@ export function DeckPage() {
                   disabled={!ready || saving}
                   onClick={() => void persist(deck.id)}
                 >
-                  デッキとして保存
+                  Save as deck
                 </Button>
               )}
               <Button
                 variant="outline"
                 className="icon-button"
-                aria-label="名前を変更"
-                title="名前を変更"
+                aria-label="Rename"
+                title="Rename"
                 type="button"
                 disabled={!ready || saving}
                 onClick={() => setRenaming(!renaming)}
@@ -251,47 +251,48 @@ export function DeckPage() {
           </div>
           {saving ? (
             <p className="deck-save-status" role="status">
-              保存しています…
+              Saving…
             </p>
           ) : null}
           {legacyAvailable ? (
             <p className="deck-save-status">
-              このブラウザに旧デッキがあります。
+              Legacy decks are available in this browser.
               <Button
                 variant="outline"
                 type="button"
                 disabled={saving || !profiles.data}
                 onClick={() => void importLegacy()}
               >
-                旧デッキを取り込む
+                Import legacy decks
               </Button>
             </p>
           ) : null}
           {!ready ? (
             <p className="deck-save-status" role="status">
-              デッキを読み込んでいます…
+              Loading decks…
             </p>
           ) : null}
           {profiles.isError ? (
             <p role="alert" className="deck-error">
-              接続プロファイルを取得できませんでした。
+              Unable to load connection profiles.
               <Button
                 variant="outline"
                 type="button"
                 onClick={() => void profiles.refetch()}
               >
-                再試行
+                Retry
               </Button>
             </p>
           ) : null}
           {oauthResult === 'failed' ? (
             <p className="deck-error" role="alert">
-              Mastodonの認可を完了できませんでした。接続アカウントからやり直してください。
+              Could not complete Mastodon authorization. Try again from
+              Connected accounts.
             </p>
           ) : null}
           {oauthResult === 'connected' ? (
             <p className="deck-save-status" role="status">
-              Mastodonアカウントを接続しました。カラムの接続先に選べます。
+              Mastodon account connected. You can now use it in a column.
             </p>
           ) : null}
           {profiles.data?.relayError ? (
@@ -300,13 +301,13 @@ export function DeckPage() {
             </p>
           ) : null}
           {profiles.isPending ? (
-            <p role="status">接続プロファイルを取得しています…</p>
+            <p role="status">Loading connection profiles…</p>
           ) : null}
           {!renaming && editing === null && !switcherEditing
             ? storageErrorNotice
             : null}
           {renaming ? (
-            <Dialog title="デッキ名を変更" onClose={() => setRenaming(false)}>
+            <Dialog title="Rename deck" onClose={() => setRenaming(false)}>
               <form
                 className="deck-rename"
                 onSubmit={async (event) => {
@@ -319,7 +320,7 @@ export function DeckPage() {
                 }}
               >
                 <label htmlFor="deck-title">
-                  調査テーマ・デッキ名
+                  Research topic / deck name
                   <Input
                     id="deck-title"
                     name="title"
@@ -329,7 +330,7 @@ export function DeckPage() {
                   />
                 </label>
                 <Button variant="outline" type="submit">
-                  名前を保存
+                  Save name
                 </Button>
               </form>
               {storageErrorNotice}
@@ -337,7 +338,7 @@ export function DeckPage() {
           ) : null}
           {editing !== null ? (
             <Dialog
-              title={editing === 'new' ? 'カラムを追加' : 'カラムを編集'}
+              title={editing === 'new' ? 'Add column' : 'Edit column'}
               onClose={() => setEditing(null)}
             >
               <ColumnEditor
@@ -356,7 +357,7 @@ export function DeckPage() {
           ) : null}
           {removed ? (
             <div className="deck-undo" role="status">
-              <span>「{removed.column.title}」を削除しました。</span>
+              <span>Deleted “{removed.column.title}”.</span>
               <Button
                 variant="outline"
                 type="button"
@@ -369,7 +370,7 @@ export function DeckPage() {
                   if (await save({ ...deck, columns })) setRemoved(undefined)
                 }}
               >
-                元に戻す
+                Undo
               </Button>
             </div>
           ) : null}
@@ -380,16 +381,17 @@ export function DeckPage() {
                   <Icon name="columns" />
                 </EmptyMedia>
                 <EmptyTitle>
-                  <h2>調べたいことから、デッキを作りましょう</h2>
+                  <h2>Start a deck with a question</h2>
                 </EmptyTitle>
                 <EmptyDescription>
-                  チャットでAIに調べたいことを伝えると、調査に合ったカラムを作成します。
-                  検索・ユーザー投稿・リストのカラムを手動で追加することもできます。
+                  Tell the assistant what you want to research to create
+                  relevant columns. You can also add search, user posts, and
+                  list columns yourself.
                 </EmptyDescription>
               </EmptyHeader>
               <EmptyContent>
                 <Button type="button" onClick={() => setEditing('new')}>
-                  手動でカラムを追加
+                  Add column manually
                 </Button>
               </EmptyContent>
             </Empty>
@@ -397,7 +399,7 @@ export function DeckPage() {
           {ready && deck.columns.length > 0 ? (
             <section
               className="deck-board"
-              aria-label="調査カラム"
+              aria-label="Research columns"
               // biome-ignore lint/a11y/noNoninteractiveTabindex: Keyboard users must be able to scroll the column board.
               tabIndex={0}
             >

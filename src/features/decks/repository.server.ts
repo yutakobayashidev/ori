@@ -22,12 +22,12 @@ export class DeckPersistenceError extends Error {
 const conflict = () =>
   new DeckPersistenceError(
     'conflict',
-    '別の端末で変更されました。最新のデッキを読み直してください。',
+    'This deck changed on another device. Reload the latest deck.',
   )
 const missing = () =>
   new DeckPersistenceError(
     'not-found',
-    'このデッキは削除されたか、見つかりません。',
+    'This deck was deleted or could not be found.',
   )
 
 export function loadDeck(
@@ -79,7 +79,7 @@ function validateConnections(deck: SavedDeckDefinition, database: AppDatabase) {
     ) {
       throw new DeckPersistenceError(
         'connection-unavailable',
-        'カラムの接続アカウントが利用できません。接続を確認してください。',
+        'The account for this column is unavailable. Check your connections.',
       )
     }
   }

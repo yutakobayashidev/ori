@@ -19,7 +19,7 @@ export const loadMastodonPosts = createServerFn({ method: 'GET' })
           message:
             error instanceof MastodonFeedError
               ? error.message
-              : 'Mastodonから取得できませんでした。',
+              : 'Could not load from Mastodon.',
           retryable:
             !(error instanceof MastodonFeedError) ||
             error.code !== 'account-unavailable',

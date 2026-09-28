@@ -10,26 +10,26 @@ async function addColumn(
   kind = 'search',
 ) {
   await showDeckManagement(page)
-  await page.getByRole('button', { name: 'カラムを追加', exact: true }).click()
-  const editor = page.getByRole('form', { name: 'カラムを追加', exact: true })
-  await editor.getByLabel('カラム名', { exact: true }).fill(title)
+  await page.getByRole('button', { name: 'Add column', exact: true }).click()
+  const editor = page.getByRole('form', { name: 'Add column', exact: true })
+  await editor.getByLabel('Column name', { exact: true }).fill(title)
   await editor
-    .getByRole('combobox', { name: '接続プロファイル', exact: true })
+    .getByRole('combobox', { name: 'Connection profile', exact: true })
     .selectOption({ label: profile })
   await editor
-    .getByRole('combobox', { name: 'カラムの種類', exact: true })
+    .getByRole('combobox', { name: 'Column type', exact: true })
     .selectOption(kind)
   await editor
     .getByLabel(
       kind === 'search'
-        ? 'Twitterの検索条件'
+        ? 'Twitter search query'
         : kind === 'user'
-          ? 'ユーザー'
-          : 'リスト',
+          ? 'User'
+          : 'List',
       { exact: true },
     )
     .fill(query)
-  await editor.getByRole('button', { name: '追加して検索' }).click()
+  await editor.getByRole('button', { name: 'Add and search' }).click()
   await closeMobileSidebar(page)
   await expect(
     page
@@ -42,13 +42,13 @@ async function addColumn(
 test.beforeEach(async ({ page }) => {
   await page.goto('/deck')
   await expect(
-    page.getByRole('button', { name: 'デッキとして保存', exact: true }),
+    page.getByRole('button', { name: 'Save as deck', exact: true }),
   ).toBeEnabled()
-  await page
-    .getByRole('button', { name: 'デッキとして保存', exact: true })
-    .click()
+  await page.getByRole('button', { name: 'Save as deck', exact: true }).click()
   await showDeckManagement(page)
-  await expect(page.getByText('サーバーに保存・端末間で共有')).toBeVisible()
+  await expect(
+    page.getByText('Saved to server · Shared across devices'),
+  ).toBeVisible()
   await closeMobileSidebar(page)
 })
 
@@ -65,19 +65,19 @@ test('binds identical searches to independent profiles through paging, editing a
   await expect(
     second.getByText('alternate · Latest · all page 1', { exact: true }),
   ).toBeVisible()
-  await first.getByRole('button', { name: '続きを読み込む' }).click()
+  await first.getByRole('button', { name: 'Load more' }).click()
   await expect(first.locator('article')).toHaveCount(2)
   await expect(second.locator('article')).toHaveCount(1)
-  await second.getByRole('button', { name: '続きを読み込む' }).click()
+  await second.getByRole('button', { name: 'Load more' }).click()
   await expect(
     second.getByText('alternate · Latest · all page 2'),
   ).toBeVisible()
-  await second.getByRole('button', { name: '別の接続の操作' }).click()
-  await page.getByRole('menuitem', { name: '編集', exact: true }).click()
+  await second.getByRole('button', { name: 'Actions for 別の接続' }).click()
+  await page.getByRole('menuitem', { name: 'Edit', exact: true }).click()
   await page
-    .getByRole('combobox', { name: '接続プロファイル', exact: true })
+    .getByRole('combobox', { name: 'Connection profile', exact: true })
     .selectOption({ label: 'e2e' })
-  await page.getByRole('button', { name: '変更を保存' }).click()
+  await page.getByRole('button', { name: 'Save changes' }).click()
   await expect(
     second.getByText('Latest · all page 1', { exact: true }),
   ).toBeVisible()
@@ -94,19 +94,19 @@ test('binds identical searches to independent profiles through paging, editing a
 test('creates, switches, renames and deletes persisted deck profiles', async ({
   page,
 }) => {
-  await page.getByRole('button', { name: '名前を変更' }).click()
-  await page.getByLabel('調査テーマ・デッキ名').fill('最初の調査')
-  await page.getByRole('button', { name: '名前を保存' }).click()
+  await page.getByRole('button', { name: 'Rename' }).click()
+  await page.getByLabel('Research topic / deck name').fill('最初の調査')
+  await page.getByRole('button', { name: 'Save name' }).click()
   await addColumn(page, '最初の観点', 'first-deck')
   await showDeckManagement(page)
-  await page.getByRole('button', { name: 'デッキを作成', exact: true }).click()
-  await page.getByLabel('新しいデッキ名').fill('別の調査')
-  await page.getByRole('button', { name: '作成', exact: true }).click()
+  await page.getByRole('button', { name: 'Create deck', exact: true }).click()
+  await page.getByLabel('New deck name').fill('別の調査')
+  await page.getByRole('button', { name: 'Create', exact: true }).click()
   await expect(page.locator('.deck-column')).toHaveCount(0)
   await addColumn(page, '別の観点', 'second-deck', 'alternate')
   await showDeckManagement(page)
   await page
-    .getByLabel('デッキプロファイル', { exact: true })
+    .getByLabel('Deck profile', { exact: true })
     .selectOption({ label: '最初の調査' })
   await closeMobileSidebar(page)
   await expect(page.locator('.deck-column h2')).toHaveText(['最初の観点'])
@@ -114,18 +114,18 @@ test('creates, switches, renames and deletes persisted deck profiles', async ({
   await expect(page.getByRole('heading', { level: 1 })).toHaveText('最初の調査')
   await showDeckManagement(page)
   await page
-    .getByLabel('デッキプロファイル', { exact: true })
+    .getByLabel('Deck profile', { exact: true })
     .selectOption({ label: '別の調査' })
   await closeMobileSidebar(page)
   await expect(page.locator('.deck-column h2')).toHaveText(['別の観点'])
   await showDeckManagement(page)
-  await page.getByRole('button', { name: 'デッキを削除', exact: true }).click()
-  await page.getByRole('button', { name: '削除する', exact: true }).click()
+  await page.getByRole('button', { name: 'Delete deck', exact: true }).click()
+  await page.getByRole('button', { name: 'Delete', exact: true }).click()
   await page.reload()
   await expect(page.getByRole('heading', { level: 1 })).toHaveText('最初の調査')
   await showDeckManagement(page)
   await expect(
-    page.getByLabel('デッキプロファイル', { exact: true }).locator('option'),
+    page.getByLabel('Deck profile', { exact: true }).locator('option'),
   ).toHaveCount(1)
 })
 
@@ -138,17 +138,17 @@ test('reads user and list timelines within columns and reorders, deletes and res
   const list = page.getByRole('region', { name: 'リストの投稿', exact: true })
   await expect(user.getByText('alternate profile page 1')).toBeVisible()
   await expect(list.getByText('list page 1')).toBeVisible()
-  await list.getByRole('button', { name: '続きを読み込む' }).click()
+  await list.getByRole('button', { name: 'Load more' }).click()
   await expect(list.getByText('list page 2')).toBeVisible()
-  await list.getByRole('button', { name: 'リストの投稿の操作' }).click()
-  await page.getByRole('menuitem', { name: 'リストの投稿を左へ' }).click()
+  await list.getByRole('button', { name: 'Actions for リストの投稿' }).click()
+  await page.getByRole('menuitem', { name: 'Move リストの投稿 left' }).click()
   await expect(page.locator('.deck-column h2')).toHaveText([
     'リストの投稿',
     'アカウント',
   ])
-  await list.getByRole('button', { name: 'リストの投稿の操作' }).click()
-  await page.getByRole('menuitem', { name: 'リストの投稿を削除' }).click()
-  await page.getByRole('button', { name: '元に戻す' }).click()
+  await list.getByRole('button', { name: 'Actions for リストの投稿' }).click()
+  await page.getByRole('menuitem', { name: 'Delete リストの投稿' }).click()
+  await page.getByRole('button', { name: 'Undo' }).click()
   await expect(page.locator('.deck-column h2')).toHaveText([
     'リストの投稿',
     'アカウント',
@@ -165,12 +165,12 @@ test('keeps other columns usable when pagination fails and retries that column',
   await addColumn(page, '別の検索', 'independent-deck')
   const failed = page.getByRole('region', { name: '失敗する検索', exact: true })
   const other = page.getByRole('region', { name: '別の検索', exact: true })
-  await failed.getByRole('button', { name: '続きを読み込む' }).click()
+  await failed.getByRole('button', { name: 'Load more' }).click()
   await expect(failed.getByRole('alert')).toBeVisible()
   await expect(failed.locator('article')).toHaveCount(1)
-  await other.getByRole('button', { name: '続きを読み込む' }).click()
+  await other.getByRole('button', { name: 'Load more' }).click()
   await expect(other.locator('article')).toHaveCount(2)
-  await failed.getByRole('button', { name: '再試行' }).click()
+  await failed.getByRole('button', { name: 'Retry' }).click()
   await expect(failed.locator('article')).toHaveCount(2)
 })
 
@@ -201,9 +201,7 @@ test('keeps the deck and editor accessible within narrow viewports', async ({
     width: testInfo.project.name === 'desktop' ? 1440 : 393,
     height: 900,
   })
-  await expect(
-    page.getByRole('navigation', { name: 'カラム一覧' }),
-  ).toHaveCount(0)
+  await expect(page.getByRole('navigation', { name: 'Columns' })).toHaveCount(0)
   await expect(
     page.getByRole('heading', { name: '公式アカウント', exact: true }),
   ).toBeVisible()
@@ -213,7 +211,7 @@ test('keeps the deck and editor accessible within narrow viewports', async ({
     fullPage: true,
   })
   await showDeckManagement(page)
-  await page.getByRole('button', { name: 'カラムを追加', exact: true }).click()
+  await page.getByRole('button', { name: 'Add column', exact: true }).click()
   expect((await a11y().analyze()).violations).toEqual([])
   await page.screenshot({
     path: testInfo.outputPath('deck.png'),
@@ -225,20 +223,22 @@ test('closes the column editor with Escape and restores focus without applying e
   page,
 }) => {
   await showDeckManagement(page)
-  const opener = page.getByRole('button', { name: 'カラムを追加', exact: true })
+  const opener = page.getByRole('button', { name: 'Add column', exact: true })
   await opener.click()
   await expect(
-    page.getByRole('dialog', { name: 'カラムを追加', exact: true }),
+    page.getByRole('dialog', { name: 'Add column', exact: true }),
   ).toBeVisible()
-  await page.getByLabel('カラム名', { exact: true }).fill('キャンセルする観点')
+  await page
+    .getByLabel('Column name', { exact: true })
+    .fill('キャンセルする観点')
   await page.keyboard.press('Escape')
   await expect(
-    page.getByRole('dialog', { name: 'カラムを追加', exact: true }),
+    page.getByRole('dialog', { name: 'Add column', exact: true }),
   ).toHaveCount(0)
   await expect(opener).toBeFocused()
   await expect(page.locator('.deck-column')).toHaveCount(0)
   await opener.click()
-  await expect(page.getByLabel('カラム名', { exact: true })).toHaveValue('')
+  await expect(page.getByLabel('Column name', { exact: true })).toHaveValue('')
 })
 
 test('does not overwrite unreadable storage on reload', async ({ page }) => {
@@ -246,7 +246,7 @@ test('does not overwrite unreadable storage on reload', async ({ page }) => {
     localStorage.setItem('twitter-lite-research-deck', '{broken'),
   )
   await page.reload()
-  await expect(page.getByRole('alert')).toContainText('読み込めませんでした')
+  await expect(page.getByRole('alert')).toContainText('Unable to load')
   expect(
     await page.evaluate(() =>
       localStorage.getItem('twitter-lite-research-deck'),
@@ -258,19 +258,19 @@ test('selects a list from the column profile catalog and refreshes it on profile
   page,
 }) => {
   await showDeckManagement(page)
-  await page.getByRole('button', { name: 'カラムを追加', exact: true }).click()
-  await page.getByLabel('カラム名', { exact: true }).fill('購読リスト')
+  await page.getByRole('button', { name: 'Add column', exact: true }).click()
+  await page.getByLabel('Column name', { exact: true }).fill('購読リスト')
   await page
-    .getByRole('combobox', { name: '接続プロファイル', exact: true })
+    .getByRole('combobox', { name: 'Connection profile', exact: true })
     .selectOption({ label: 'e2e' })
   await page
-    .getByRole('combobox', { name: 'カラムの種類', exact: true })
+    .getByRole('combobox', { name: 'Column type', exact: true })
     .selectOption('list')
   await expect(
     page.getByRole('button', { name: 'My E2E List', exact: true }),
   ).toBeVisible()
   await page
-    .getByRole('combobox', { name: '接続プロファイル', exact: true })
+    .getByRole('combobox', { name: 'Connection profile', exact: true })
     .selectOption({ label: 'alternate' })
   await expect(
     page.getByRole('button', { name: 'My E2E List', exact: true }),
@@ -278,10 +278,10 @@ test('selects a list from the column profile catalog and refreshes it on profile
   await page
     .getByRole('button', { name: 'Alternate List', exact: true })
     .click()
-  await expect(page.getByLabel('リスト', { exact: true })).toHaveValue(
+  await expect(page.getByLabel('List', { exact: true })).toHaveValue(
     '1234567890',
   )
-  await page.getByRole('button', { name: '追加して検索' }).click()
+  await page.getByRole('button', { name: 'Add and search' }).click()
   await closeMobileSidebar(page)
   await expect(
     page
@@ -302,27 +302,27 @@ test('keeps an open draft through remote edits and rejects its stale save', asyn
   try {
     const device = await other.newPage()
     await device.goto('/deck')
-    await page.getByRole('button', { name: '名前を変更' }).click()
-    await page.getByLabel('調査テーマ・デッキ名').fill('編集中の名前')
-    await device.getByRole('button', { name: '名前を変更' }).click()
-    await device.getByLabel('調査テーマ・デッキ名').fill('別の端末の変更')
-    await device.getByRole('button', { name: '名前を保存' }).click()
+    await page.getByRole('button', { name: 'Rename' }).click()
+    await page.getByLabel('Research topic / deck name').fill('編集中の名前')
+    await device.getByRole('button', { name: 'Rename' }).click()
+    await device.getByLabel('Research topic / deck name').fill('別の端末の変更')
+    await device.getByRole('button', { name: 'Save name' }).click()
     await expect(device.getByRole('heading', { level: 1 })).toHaveText(
       '別の端末の変更',
     )
     await page.evaluate(() => window.dispatchEvent(new Event('focus')))
-    await expect(page.getByLabel('調査テーマ・デッキ名')).toHaveValue(
+    await expect(page.getByLabel('Research topic / deck name')).toHaveValue(
       '編集中の名前',
     )
-    await page.getByRole('button', { name: '名前を保存' }).click()
+    await page.getByRole('button', { name: 'Save name' }).click()
     await expect(page.getByRole('alert')).toContainText(
-      '別の端末で変更されました',
+      'This deck changed on another device',
     )
-    await expect(page.getByLabel('調査テーマ・デッキ名')).toHaveValue(
+    await expect(page.getByLabel('Research topic / deck name')).toHaveValue(
       '編集中の名前',
     )
     await page.keyboard.press('Escape')
-    await page.getByRole('button', { name: '最新のデッキを再読み込み' }).click()
+    await page.getByRole('button', { name: 'Reload latest deck' }).click()
     await expect(page.getByRole('heading', { level: 1 })).toHaveText(
       '別の端末の変更',
     )
@@ -368,10 +368,10 @@ test('imports old browser decks explicitly and avoids duplicate imports after re
   )
   await page.reload()
   await showDeckManagement(page)
-  const selector = page.getByLabel('デッキプロファイル', { exact: true })
+  const selector = page.getByLabel('Deck profile', { exact: true })
   await expect(selector.locator('option')).toHaveCount(1)
   await closeMobileSidebar(page)
-  await page.getByRole('button', { name: '旧デッキを取り込む' }).click()
+  await page.getByRole('button', { name: 'Import legacy decks' }).click()
   await showDeckManagement(page)
   await expect(selector.locator('option')).toHaveCount(2)
   await selector.selectOption({ label: '以前の調査' })
@@ -388,9 +388,9 @@ test('imports old browser decks explicitly and avoids duplicate imports after re
     legacy,
   )
   await page.reload()
-  await page.getByRole('button', { name: '旧デッキを取り込む' }).click()
+  await page.getByRole('button', { name: 'Import legacy decks' }).click()
   await expect(
-    page.getByRole('button', { name: '旧デッキを取り込む' }),
+    page.getByRole('button', { name: 'Import legacy decks' }),
   ).toHaveCount(0)
   await showDeckManagement(page)
   await expect(selector.locator('option')).toHaveCount(2)
@@ -400,19 +400,19 @@ test('preserves a new deck dialog and its draft across the mobile breakpoint', a
   page,
 }) => {
   await showDeckManagement(page)
-  await page.getByRole('button', { name: 'デッキを作成', exact: true }).click()
-  const dialog = page.getByRole('dialog', { name: 'デッキを作成', exact: true })
-  await dialog.getByLabel('新しいデッキ名').fill('画面を回転しても残る調査')
+  await page.getByRole('button', { name: 'Create deck', exact: true }).click()
+  const dialog = page.getByRole('dialog', { name: 'Create deck', exact: true })
+  await dialog.getByLabel('New deck name').fill('画面を回転しても残る調査')
   for (const width of [1024, 375, 1024]) {
     await page.setViewportSize({ width, height: 900 })
     await expect(dialog).toHaveCount(1)
     await expect(dialog).toBeVisible()
-    await expect(dialog.getByLabel('新しいデッキ名')).toHaveValue(
+    await expect(dialog.getByLabel('New deck name')).toHaveValue(
       '画面を回転しても残る調査',
     )
     await expect(page.locator('#new-deck-title')).toHaveCount(1)
   }
-  await dialog.getByRole('button', { name: '作成', exact: true }).click()
+  await dialog.getByRole('button', { name: 'Create', exact: true }).click()
   await expect(dialog).toHaveCount(0)
   await expect(page.getByRole('heading', { level: 1 })).toHaveText(
     '画面を回転しても残る調査',

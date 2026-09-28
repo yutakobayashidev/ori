@@ -189,8 +189,10 @@ function Sidebar({
           side={side}
         >
           <SheetHeader className="sr-only">
-            <SheetTitle>ワークスペース</SheetTitle>
-            <SheetDescription>調査チャットとデッキ管理</SheetDescription>
+            <SheetTitle>Workspace</SheetTitle>
+            <SheetDescription>
+              Research chat and deck management
+            </SheetDescription>
           </SheetHeader>
           <div className="flex h-full w-full flex-row">{children}</div>
         </SheetContent>

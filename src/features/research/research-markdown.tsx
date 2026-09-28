@@ -45,15 +45,15 @@ export function ResearchMarkdown({
           img: ({ src, alt }) =>
             typeof src === 'string' && src ? (
               <a href={src} target="_blank" rel="noopener noreferrer">
-                {alt || '画像を開く'}
+                {alt || 'Open image'}
               </a>
             ) : (
-              <span>{alt || '画像'}</span>
+              <span>{alt || 'Image'}</span>
             ),
           table: ({ children }) => (
             <section
               className="research-markdown-table"
-              aria-label="回答の表"
+              aria-label="Response table"
               // biome-ignore lint/a11y/noNoninteractiveTabindex: Keyboard users need to scroll wide tables inside the narrow chat pane.
               tabIndex={0}
             >

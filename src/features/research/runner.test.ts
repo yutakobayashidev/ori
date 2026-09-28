@@ -154,7 +154,7 @@ it('deduplicates repeated start requests and rejects changed content under the s
   const first = service.start(request)
   expect(service.start(request).id).toBe(first.id)
   expect(() => service.start({ ...request, topic: 'Different' })).toThrow(
-    '内容が変わっています',
+    'content for this request ID has changed',
   )
   const client = await running()
   expect(clients).toHaveLength(1)
@@ -166,7 +166,7 @@ it('deduplicates repeated start requests and rejects changed content under the s
 it('rejects a second active research run', async () => {
   service.start(input())
   await running()
-  expect(() => service.start(input())).toThrow('調査が実行中')
+  expect(() => service.start(input())).toThrow('Research is running')
   expect(clients).toHaveLength(1)
 })
 
@@ -271,7 +271,7 @@ it('waits for an accepted turn-start response before interrupting and ignores la
   const cancelled = service.cancel(first.id)
   expect(service.status().run?.status).toBe('cancelled')
   expect(old.close).not.toHaveBeenCalled()
-  expect(() => service.start(input())).toThrow('調査が実行中')
+  expect(() => service.start(input())).toThrow('Research is running')
   resolveTurn({ turn: { id: old.turnId } })
   await cancelled
   expect(old.calls).toHaveBeenCalledWith('turn/interrupt', {
@@ -428,7 +428,10 @@ it('resumes the same conversation with fresh deck context and preserves prior me
     expect.objectContaining({ role: 'user', text: 'WebMCP' }),
     { id: 'reply-one', role: 'assistant', text: 'どんな調査をしますか？' },
     expect.objectContaining({ role: 'user', text: 'このカラムを読んで' }),
-    expect.objectContaining({ role: 'tool', text: 'fetch_column_posts 完了' }),
+    expect.objectContaining({
+      role: 'tool',
+      text: 'fetch_column_posts Complete',
+    }),
     { id: 'reply-two', role: 'assistant', text: '読みました' },
   ])
   old.disconnected()
@@ -437,7 +440,7 @@ it('resumes the same conversation with fresh deck context and preserves prior me
 
 it('rejects unknown continuation IDs', () => {
   expect(() => service.start({ ...input(), runId: randomUUID() })).toThrow(
-    '続ける会話が見つかりません',
+    'The conversation to continue could not be found',
   )
 })
 
@@ -528,7 +531,7 @@ it('resets a completed conversation for every viewer and starts a fresh thread w
   expect(service.reset(first.id).run).toBeNull()
   expect(await readFile(reportPath, 'utf8')).toBe('# Saved research')
   expect(() => service.start({ ...input(), runId: first.id })).toThrow(
-    '続ける会話が見つかりません',
+    'The conversation to continue could not be found',
   )
   const next = service.start(input())
   const current = await running()
@@ -546,9 +549,9 @@ it('resets a completed conversation for every viewer and starts a fresh thread w
 it('requires an active turn to stop before resetting and rejects a stale reset from another viewer', async () => {
   const first = service.start(input())
   await running()
-  expect(() => service.reset(first.id)).toThrow('中止してから')
+  expect(() => service.reset(first.id)).toThrow('Stop it before')
   await service.cancel(first.id)
-  expect(() => service.reset(randomUUID())).toThrow('別のチャット')
+  expect(() => service.reset(randomUUID())).toThrow('Another chat')
   expect(service.status().run?.id).toBe(first.id)
   expect(service.reset(first.id).run).toBeNull()
 })
@@ -698,11 +701,13 @@ it('persists a blank new chat and lets all viewers reopen the retained conversat
 it('rejects switching conversations while running or from a stale viewer', async () => {
   const first = service.start(input())
   const client = await running()
-  expect(() => service.select(first.id, first.id)).toThrow('調査中')
+  expect(() => service.select(first.id, first.id)).toThrow(
+    'Research is running',
+  )
   client.completed()
   await vi.waitFor(() => expect(service.status().run?.status).toBe('complete'))
-  expect(() => service.select(first.id, null)).toThrow('別のチャット')
-  expect(() => service.select(randomUUID(), first.id)).toThrow('見つかりません')
+  expect(() => service.select(first.id, null)).toThrow('Another chat')
+  expect(() => service.select(randomUUID(), first.id)).toThrow('not found')
   expect(service.status().run?.id).toBe(first.id)
 })
 
@@ -728,7 +733,7 @@ it('stops a running turn when saving streamed messages fails', async () => {
   })
   expect(service.status().run).toMatchObject({
     status: 'failed',
-    error: expect.stringContaining('保存できません'),
+    error: expect.stringContaining('Unable to save'),
   })
   await vi.waitFor(() => expect(client.close).toHaveBeenCalledTimes(1))
   expect(client.calls).toHaveBeenCalledWith('turn/interrupt', {
@@ -750,7 +755,7 @@ function orphanedRun(): ResearchRun {
     turnId: 'orphan-turn',
     connectionIds: [account.id],
     deckVersion: 0,
-    message: '調査中',
+    message: 'Researching',
     citations: [],
     messages: [{ id: 'original', role: 'user', text: 'WebMCP' }],
   }
@@ -763,7 +768,7 @@ it('marks an unfinished persisted turn interrupted after service restart', () =>
   expect(service.status().run).toMatchObject({
     ...interrupted,
     status: 'interrupted',
-    error: expect.stringContaining('再起動'),
+    error: expect.stringContaining('server restart'),
   })
   expect(store.loadActive()?.status).toBe('interrupted')
   expect(clients).toHaveLength(0)

@@ -20,14 +20,18 @@ export function ConnectionManagerDialog({
   })
 
   return (
-    <Dialog title="接続アカウント" onClose={onClose} className="sm:max-w-2xl">
+    <Dialog
+      title="Connected accounts"
+      onClose={onClose}
+      className="sm:max-w-2xl"
+    >
       {connections.isPending ? (
-        <p role="status">接続アカウントを読み込んでいます…</p>
+        <p role="status">Loading connected accounts…</p>
       ) : connections.isError ? (
         <div className="grid gap-3">
-          <p role="alert">接続アカウントを取得できませんでした。</p>
+          <p role="alert">Could not load connected accounts.</p>
           <Button variant="outline" onClick={() => void connections.refetch()}>
-            再試行
+            Retry
           </Button>
         </div>
       ) : (

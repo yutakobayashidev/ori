@@ -9,10 +9,10 @@ test('keeps the sidebar, composer and deck reachable at compact widths', async (
   for (const width of [320, 375, 414, 768]) {
     await page.setViewportSize({ width, height: 850 })
     await showResearch(page)
-    const chat = page.getByRole('complementary', { name: '調査チャット' })
+    const chat = page.getByRole('complementary', { name: 'Research chat' })
     await expect(chat).toBeVisible()
     const composer = chat.getByRole('textbox', {
-      name: 'メッセージ',
+      name: 'Message',
       exact: true,
     })
     await expect(composer).toBeVisible()
@@ -30,12 +30,12 @@ test('keeps the sidebar, composer and deck reachable at compact widths', async (
     if (width === 320) expect((await a11y().analyze()).violations).toEqual([])
     await closeMobileSidebar(page)
   }
-  await page.getByRole('button', { name: 'サイドバーを切り替え' }).click()
+  await page.getByRole('button', { name: 'Toggle sidebar' }).click()
   await expect(
-    page.getByRole('complementary', { name: '調査チャット' }),
+    page.getByRole('complementary', { name: 'Research chat' }),
   ).toBeHidden()
-  await page.getByRole('button', { name: '調査チャット', exact: true }).click()
+  await page.getByRole('button', { name: 'Research chat', exact: true }).click()
   await expect(
-    page.getByRole('complementary', { name: '調査チャット' }),
+    page.getByRole('complementary', { name: 'Research chat' }),
   ).toBeVisible()
 })

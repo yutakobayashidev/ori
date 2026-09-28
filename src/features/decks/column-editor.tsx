@@ -40,7 +40,7 @@ export function ColumnEditor({
   return (
     <form
       className="deck-editor"
-      aria-label={column ? 'カラムを編集' : 'カラムを追加'}
+      aria-label={column ? 'Edit column' : 'Add column'}
       onSubmit={async (event) => {
         event.preventDefault()
         setError(undefined)
@@ -55,7 +55,7 @@ export function ColumnEditor({
         if (!parsed.success || !validConnection) {
           setError(
             parsed.success
-              ? '接続プロファイルを選択してください。'
+              ? 'Select a connection profile.'
               : parsed.error.issues[0]?.message,
           )
           return
@@ -65,18 +65,18 @@ export function ColumnEditor({
     >
       <div className="deck-editor-fields">
         <Label htmlFor={`${formId}-title`}>
-          カラム名
+          Column name
           <Input
             id={`${formId}-title`}
             name="title"
             defaultValue={column?.title ?? ''}
             maxLength={80}
-            placeholder="例：発表元の投稿"
+            placeholder="e.g. Announcements"
             required
           />
         </Label>
         <Label htmlFor={`${formId}-profile`}>
-          接続プロファイル
+          Connection profile
           <NativeSelect
             className="w-full"
             id={`${formId}-profile`}
@@ -92,11 +92,11 @@ export function ColumnEditor({
             }}
           >
             <NativeSelectOption value="" disabled>
-              選択してください
+              Select an option
             </NativeSelectOption>
             {connectionId && !validConnection && (
               <NativeSelectOption value={connectionId} disabled>
-                {connectionId}（利用不可）
+                {connectionId} (unavailable)
               </NativeSelectOption>
             )}
             {available.map((connection) => (
@@ -114,7 +114,7 @@ export function ColumnEditor({
         onChange={setSource}
       />
       <p className="deck-help">
-        このカラムは選択した接続プロファイルで取得します。
+        This column uses the selected connection profile.
       </p>
       {error && (
         <p role="alert" className="deck-error">
@@ -123,10 +123,10 @@ export function ColumnEditor({
       )}
       <div className="deck-actions">
         <Button type="submit" disabled={!validConnection}>
-          {column ? '変更を保存' : '追加して検索'}
+          {column ? 'Save changes' : 'Add and search'}
         </Button>
         <Button variant="outline" type="button" onClick={onCancel}>
-          キャンセル
+          Cancel
         </Button>
       </div>
     </form>

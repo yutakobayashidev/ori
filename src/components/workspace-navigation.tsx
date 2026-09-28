@@ -38,27 +38,27 @@ export function WorkspaceNavigation({
   const [managingAccounts, setManagingAccounts] = useState(false)
   const pathname = useLocation({ select: (location) => location.pathname })
   const navigation = [
-    { title: 'ホーム', to: '/', icon: House, active: pathname === '/' },
+    { title: 'Home', to: '/', icon: House, active: pathname === '/' },
     {
-      title: 'バイタル',
+      title: 'Vitals',
       to: '/vitals',
       icon: Activity,
       active: pathname === '/vitals',
     },
     {
-      title: '連絡',
+      title: 'Messages',
       to: '/support',
       icon: MessagesSquare,
       active: pathname === '/support',
     },
     {
-      title: '記録',
+      title: 'Journal',
       to: '/journal',
       icon: NotebookPen,
       active: pathname === '/journal',
     },
     {
-      title: 'リーダー',
+      title: 'Reader',
       to: '/inbox',
       icon: Inbox,
       active: pathname === '/inbox',
@@ -80,7 +80,7 @@ export function WorkspaceNavigation({
         <div
           className="flex size-9 items-center justify-center rounded-lg bg-sidebar-primary text-sidebar-primary-foreground"
           role="img"
-          aria-label="ワークスペース"
+          aria-label="Workspace"
         >
           <Layers3 className="size-5" aria-hidden="true" />
         </div>
@@ -123,8 +123,8 @@ export function WorkspaceNavigation({
         <SidebarMenu className="mt-2">
           <SidebarMenuItem>
             <SidebarMenuButton
-              aria-label="接続アカウントを管理"
-              tooltip={{ children: '接続アカウントを管理', hidden: false }}
+              aria-label="Manage connected accounts"
+              tooltip={{ children: 'Manage connected accounts', hidden: false }}
               className="size-10 justify-center p-0"
               onClick={() => setManagingAccounts(true)}
             >

@@ -20,11 +20,11 @@ import { conversations } from './mock-conversations'
 import './support.css'
 
 const views = [
-  { id: 'now', label: '今' },
-  { id: 'later', label: 'あとで' },
-  { id: 'waiting', label: '相手待ち' },
-  { id: 'done', label: '履歴' },
-  { id: 'all', label: 'すべて' },
+  { id: 'now', label: 'Now' },
+  { id: 'later', label: 'Later' },
+  { id: 'waiting', label: 'Waiting' },
+  { id: 'done', label: 'History' },
+  { id: 'all', label: 'All' },
 ] as const
 export function SupportPage() {
   const [view, setView] = useState<string>('now')
@@ -50,12 +50,12 @@ export function SupportPage() {
     if (note) setOutcomes((current) => ({ ...current, [id]: note }))
     setNotice(
       status === 'sent'
-        ? '返信の操作を記録しました'
+        ? 'Reply preview recorded'
         : status === 'later'
-          ? 'あとでに移しました'
+          ? 'Moved to Later'
           : status === 'waiting'
-            ? '相手待ちに移しました'
-            : '対応不要にしました',
+            ? 'Moved to Waiting'
+            : 'Marked as no action needed',
     )
     setReading(false)
   }
@@ -66,7 +66,7 @@ export function SupportPage() {
           <WorkspaceNavigation />
           <Sidebar collapsible="none" className="support-list">
             <SidebarHeader className="border-b p-5 gap-4">
-              <h1 className="text-base font-semibold">連絡</h1>
+              <h1 className="text-base font-semibold">Messages</h1>
               <div className="flex gap-1 flex-wrap">
                 {views.map((tab) => (
                   <Button
@@ -88,8 +88,8 @@ export function SupportPage() {
               <div className="relative">
                 <Search className="absolute left-3 top-2 size-4 text-muted-foreground" />
                 <Input
-                  aria-label="連絡を検索"
-                  placeholder="検索"
+                  aria-label="Search messages"
+                  placeholder="Search"
                   className="pl-9"
                   value={query}
                   onChange={(event) => setQuery(event.target.value)}
@@ -116,12 +116,14 @@ export function SupportPage() {
               ))}
               {!visible.length && (
                 <p className="p-5 text-sm text-muted-foreground">
-                  {query ? '見つかりませんでした' : 'いま扱う連絡はありません'}
+                  {query
+                    ? 'No results found'
+                    : 'No messages to handle right now'}
                 </p>
               )}
               {view === 'now' && matches.length > 3 && (
                 <p className="p-5 text-xs text-muted-foreground">
-                  ほか {matches.length - 3} 件
+                  {matches.length - 3} more
                 </p>
               )}
             </SidebarContent>
@@ -133,7 +135,7 @@ export function SupportPage() {
               variant="ghost"
               size="icon"
               className="support-back"
-              aria-label="連絡一覧に戻る"
+              aria-label="Back to messages"
               onClick={() => setReading(false)}
             >
               <ArrowLeft />
@@ -148,7 +150,7 @@ export function SupportPage() {
           </header>
           <section
             className="support-detail"
-            aria-label="連絡の詳細"
+            aria-label="Message details"
             // biome-ignore lint/a11y/noNoninteractiveTabindex: Independent region needs keyboard scrolling.
             tabIndex={0}
           >
@@ -169,7 +171,7 @@ export function SupportPage() {
               <>
                 {outcomes[selected.id] && (
                   <div className="support-outcome">
-                    <h2 className="font-medium text-sm">活動の記録</h2>
+                    <h2 className="font-medium text-sm">Activity log</h2>
                     <p className="whitespace-pre-wrap mt-2 text-sm">
                       {outcomes[selected.id]}
                     </p>
@@ -187,12 +189,12 @@ export function SupportPage() {
                       setView('now')
                     }}
                   >
-                    今に戻す
+                    Move to Now
                   </Button>
                 )}
               </>
             ) : (
-              <div className="support-empty">連絡を選択</div>
+              <div className="support-empty">Select a conversation</div>
             )}
           </section>
         </SidebarInset>

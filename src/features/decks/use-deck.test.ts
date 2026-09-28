@@ -194,7 +194,7 @@ it('leaves unreadable legacy data untouched', async () => {
   localStorage.setItem(LEGACY_STORAGE_KEY, '{broken')
   const { result } = renderHook(() => useDeck())
   await waitFor(() => expect(result.current.ready).toBe(true))
-  expect(result.current.storageError).toContain('読み込めませんでした')
+  expect(result.current.storageError).toContain('Unable to load')
   expect(localStorage.getItem(LEGACY_STORAGE_KEY)).toBe('{broken')
 })
 

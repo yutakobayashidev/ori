@@ -53,7 +53,7 @@ export function ResearchColumn({
   const error =
     query.error instanceof PostLoadError
       ? query.error.detail
-      : { message: '投稿を取得できませんでした。', retryable: true }
+      : { message: 'Unable to load posts.', retryable: true }
   const headingId = `column-${column.id}`
   const sourceDescription = describeSource(column.source)
   return (
@@ -65,8 +65,8 @@ export function ResearchColumn({
           <Button
             variant="ghost"
             size="icon-sm"
-            aria-label="更新"
-            title="更新"
+            aria-label="Refresh"
+            title="Refresh"
             type="button"
             onClick={() => void query.refetch()}
             disabled={query.isFetching}
@@ -79,45 +79,45 @@ export function ResearchColumn({
                 <Button
                   variant="ghost"
                   size="icon-sm"
-                  aria-label={`${column.title}の操作`}
-                  title="カラムの操作"
+                  aria-label={`Actions for ${column.title}`}
+                  title="Column actions"
                 />
               }
             >
               <Icon name="more" />
             </DropdownMenuTrigger>
             <DropdownMenuContent align="end">
-              <DropdownMenuItem onClick={onEdit}>編集</DropdownMenuItem>
+              <DropdownMenuItem onClick={onEdit}>Edit</DropdownMenuItem>
               <DropdownMenuItem
                 onClick={() => onMove(-1)}
                 disabled={first}
-                aria-label={`${column.title}を左へ`}
+                aria-label={`Move ${column.title} left`}
               >
-                ← 左へ移動
+                ← Move left
               </DropdownMenuItem>
               <DropdownMenuItem
                 onClick={() => onMove(1)}
                 disabled={last}
-                aria-label={`${column.title}を右へ`}
+                aria-label={`Move ${column.title} right`}
               >
-                右へ移動 →
+                Move right →
               </DropdownMenuItem>
               <DropdownMenuSeparator />
               <DropdownMenuItem
                 variant="destructive"
                 onClick={onRemove}
-                aria-label={`${column.title}を削除`}
+                aria-label={`Delete ${column.title}`}
               >
-                カラムを削除
+                Delete column
               </DropdownMenuItem>
             </DropdownMenuContent>
           </DropdownMenu>
         </div>
         <div className="deck-column-label">
           <span
-            title={`接続プロファイル: ${connectionLabel ?? '接続が見つかりません'}`}
+            title={`Connection profile: ${connectionLabel ?? 'Connection not found'}`}
           >
-            {connectionLabel ?? '接続が見つかりません'}
+            {connectionLabel ?? 'Connection not found'}
           </span>
           <Badge variant="outline" className="deck-source-label">
             <Icon name={column.source.kind} />
@@ -126,16 +126,14 @@ export function ResearchColumn({
         </div>
         <p className="deck-query">{sourceDescription.query}</p>
         <p className="deck-column-status" role="status">
-          {query.isFetching
-            ? '投稿を取得しています…'
-            : `${posts.length}件を読み込み済み`}
+          {query.isFetching ? 'Loading posts…' : `${posts.length} posts loaded`}
         </p>
       </header>
       <section
         className="deck-column-results"
         // biome-ignore lint/a11y/noNoninteractiveTabindex: Make the scrolling feed keyboard-accessible.
         tabIndex={0}
-        aria-label={`${column.title}の投稿`}
+        aria-label={`Posts in ${column.title}`}
       >
         {visiblePosts.map((post) => (
           <ResearchPostCard
@@ -163,13 +161,13 @@ export function ResearchColumn({
                     : query.refetch())
                 }
               >
-                再試行
+                Retry
               </Button>
             ) : null}
           </div>
         ) : null}
         {!query.isPending && !query.isError && visiblePosts.length === 0 ? (
-          <p className="deck-message">条件に一致する投稿はありません。</p>
+          <p className="deck-message">No posts match your filters.</p>
         ) : null}
         {query.hasNextPage && !query.isFetchNextPageError ? (
           <div className="deck-message">
@@ -179,7 +177,7 @@ export function ResearchColumn({
               disabled={query.isFetching}
               onClick={() => void query.fetchNextPage({ cancelRefetch: false })}
             >
-              続きを読み込む
+              Load more
             </Button>
           </div>
         ) : null}
@@ -187,7 +185,7 @@ export function ResearchColumn({
         !query.isError &&
         posts.length > 0 &&
         !query.hasNextPage ? (
-          <p className="deck-message">これ以上の投稿はありません。</p>
+          <p className="deck-message">No more posts.</p>
         ) : null}
       </section>
     </section>

@@ -52,12 +52,12 @@ import {
 import './research-panel.css'
 
 const statusNames: Record<ResearchRun['status'], string> = {
-  starting: '開始しています',
-  running: '調査中',
-  complete: '完了',
-  failed: '失敗',
-  cancelled: '中止しました',
-  interrupted: '中断しました・続きから再開できます',
+  starting: 'Starting',
+  running: 'Researching',
+  complete: 'Complete',
+  failed: 'Failed',
+  cancelled: 'Cancelled',
+  interrupted: 'Interrupted · Ready to resume',
 }
 type ResearchInput = { topic: string; connectionIds: string[] }
 type ResearchDraft = {
@@ -186,7 +186,7 @@ export function ResearchPanel({
       pendingTurn.current = null
     void syncDeck(deck, activate).catch(() => {
       setError(
-        '調査デッキを同期できませんでした。「一時デッキで開く」から再試行できます。',
+        'Unable to sync the research deck. Use “Open temporary deck” to try again.',
       )
     })
   }, [run, syncDeck, ready])
@@ -222,7 +222,7 @@ export function ResearchPanel({
     } catch {
       pendingTurn.current = null
       setError(
-        '送信できませんでした。接続を確認して再試行してください。入力内容は残っています。',
+        'Unable to send. Check your connection and try again. Your draft has been kept.',
       )
       return false
     } finally {
@@ -247,7 +247,7 @@ export function ResearchPanel({
           : existing,
       )
     } catch {
-      setError('調査を中止できませんでした。もう一度お試しください。')
+      setError('Unable to stop research. Please try again.')
     } finally {
       setBusy(false)
     }
@@ -268,7 +268,7 @@ export function ResearchPanel({
       updateDraft({ topic: '' })
     } catch {
       setError(
-        '新しいチャットを開始できませんでした。会話と入力内容は残っています。もう一度お試しください。',
+        'Unable to start a new chat. Your conversation and draft have been kept. Please try again.',
       )
     } finally {
       setBusy(false)
@@ -287,7 +287,7 @@ export function ResearchPanel({
       )
     } catch {
       setError(
-        'チャットを開けませんでした。入力内容は残っています。もう一度お試しください。',
+        'Unable to open the chat. Your draft has been kept. Please try again.',
       )
     } finally {
       setBusy(false)
@@ -301,7 +301,7 @@ export function ResearchPanel({
       await syncDeck(deck, true)
     } catch {
       setError(
-        '調査デッキを開けませんでした。保存処理の完了後に再試行してください。',
+        'Unable to open the research deck. Try again after saving finishes.',
       )
     } finally {
       setBusy(false)
@@ -309,9 +309,9 @@ export function ResearchPanel({
   }
 
   const renderPanel: RenderResearchPanel = (onCitationNavigated) => (
-    <aside className="research-panel" aria-label="調査チャット">
+    <aside className="research-panel" aria-label="Research chat">
       <header className="research-heading">
-        <h2>調査チャット</h2>
+        <h2>Research chat</h2>
         <Button
           variant="ghost"
           size="sm"
@@ -319,16 +319,16 @@ export function ResearchPanel({
           disabled={busy || !run || isResearchActive(run)}
           title={
             isResearchActive(run)
-              ? '調査を中止してから新しいチャットを開始できます'
+              ? 'Stop research before starting a new chat'
               : undefined
           }
           onClick={() => void newChat()}
         >
-          新しいチャット
+          New chat
         </Button>
         {(status.data?.history?.length ?? 0) > 0 && (
           <label className="research-history" htmlFor={historyId}>
-            <span>チャット履歴</span>
+            <span>Chat history</span>
             <NativeSelect
               id={historyId}
               size="sm"
@@ -337,7 +337,7 @@ export function ResearchPanel({
               onChange={(event) => void selectChat(event.target.value)}
             >
               <NativeSelectOption value="" disabled>
-                新しいチャット
+                New chat
               </NativeSelectOption>
               {status.data?.history?.map((entry) => (
                 <NativeSelectOption key={entry.id} value={entry.id}>
@@ -350,14 +350,15 @@ export function ResearchPanel({
       </header>
       {reconnecting && (
         <p className="deck-save-status" role="status">
-          調査状況の配信に再接続しています。処理は自宅サーバーで続きます。
+          Reconnecting to research updates. Processing continues on your home
+          server.
         </p>
       )}
       {status.isError && (
         <p className="deck-error" role="alert">
-          調査状況を取得できませんでした。
+          Unable to load research status.
           <Button type="button" onClick={() => void status.refetch()}>
-            再試行
+            Retry
           </Button>
         </p>
       )}
@@ -367,9 +368,11 @@ export function ResearchPanel({
         </p>
       )}
       {status.isPending ? (
-        <p role="status">調査の接続を確認しています…</p>
+        <p role="status">Checking the research connection…</p>
       ) : !status.data?.configured ? (
-        <p role="status">自宅のCodexへの接続が設定されていません。</p>
+        <p role="status">
+          The connection to Codex on your home server is not configured.
+        </p>
       ) : null}
       <ResearchConversation
         key={`conversation:${run?.id ?? 'new'}`}
@@ -416,16 +419,20 @@ function ResearchConversation({
   citations: ResearchCitation[]
   onNavigateCitation?: (url: string, citations: ResearchCitation[]) => boolean
 }) {
-  const names = { user: 'あなた', assistant: 'Codex', tool: 'ツール実行' }
+  const names = { user: 'You', assistant: 'Codex', tool: 'Tool activity' }
   return (
     <MessageScrollerProvider autoScroll>
       <MessageScroller className="research-conversation">
-        <MessageScrollerViewport aria-label="調査メッセージ">
-          <MessageScrollerContent aria-label="調査の会話" className="gap-5 p-4">
+        <MessageScrollerViewport aria-label="Research messages">
+          <MessageScrollerContent
+            aria-label="Research conversation"
+            className="gap-5 p-4"
+          >
             {messages.length === 0 ? (
               <MessageScrollerItem messageId="empty">
                 <p className="research-empty">
-                  気になる話題や調べたいことを送ってください。検索を進めながらカラムを追加し、レポートを自宅サーバーに保存します。
+                  Send a topic or question. The assistant adds columns as it
+                  searches and saves a report to your home server.
                 </p>
               </MessageScrollerItem>
             ) : (
@@ -471,7 +478,7 @@ function ResearchConversation({
             )}
           </MessageScrollerContent>
         </MessageScrollerViewport>
-        <MessageScrollerButton aria-label="最新のメッセージへ" />
+        <MessageScrollerButton aria-label="Jump to latest message" />
       </MessageScroller>
     </MessageScrollerProvider>
   )
@@ -508,7 +515,7 @@ function ResearchComposer({
   return (
     <form
       className="research-start-form"
-      aria-label="調査メッセージ"
+      aria-label="Research messages"
       onSubmit={(event) => {
         event.preventDefault()
         if (!topic.trim() || validSelection.length === 0 || disabled) return
@@ -521,18 +528,18 @@ function ResearchComposer({
       }}
     >
       <p className="research-context">
-        送信するデッキ: <strong>{contextTitle}</strong>
+        Deck to send: <strong>{contextTitle}</strong>
       </p>
       <fieldset disabled={disabled}>
         <Collapsible className="research-account-picker" disabled={disabled}>
           <CollapsibleTrigger render={<Button variant="ghost" size="sm" />}>
-            接続アカウント · {validSelection.length}件
+            Connected accounts · {validSelection.length}
           </CollapsibleTrigger>
           <CollapsibleContent>
             <fieldset className="research-accounts">
-              <legend>調査に使う接続アカウント（最大6件）</legend>
+              <legend>Accounts for research (up to 6)</legend>
               {available.length === 0 ? (
-                <p>接続アカウントを先に追加してください。</p>
+                <p>Add a connected account first.</p>
               ) : (
                 available.map((connection) => (
                   <label key={connection.id} htmlFor={`${id}-${connection.id}`}>
@@ -562,7 +569,7 @@ function ResearchComposer({
             </fieldset>
           </CollapsibleContent>
         </Collapsible>
-        <label htmlFor={id}>メッセージ</label>
+        <label htmlFor={id}>Message</label>
         <InputGroup>
           <InputGroupTextarea
             id={id}
@@ -570,7 +577,7 @@ function ResearchComposer({
             onChange={(event) => onTopicChange(event.target.value)}
             maxLength={1000}
             rows={3}
-            placeholder="例：WebMCPの反応を比較して。その後、このデッキを絞り込んで。"
+            placeholder="e.g. Compare reactions to WebMCP, then refine this deck."
             required
             disabled={disabled}
           />
@@ -583,7 +590,7 @@ function ResearchComposer({
                 disabled || !topic.trim() || validSelection.length === 0
               }
             >
-              送信
+              Send
             </InputGroupButton>
           </InputGroupAddon>
         </InputGroup>
@@ -605,7 +612,7 @@ function ResearchRunStatus({
 }) {
   const deck = run.deck ?? run.contextDeck
   return (
-    <section className="research-run" aria-label="調査状況">
+    <section className="research-run" aria-label="Research status">
       <Marker role="status">
         <MarkerContent>{statusNames[run.status]}</MarkerContent>
       </Marker>
@@ -616,7 +623,7 @@ function ResearchRunStatus({
       )}
       {run.reportPath && (
         <p>
-          Markdownの保存先
+          Markdown location
           <br />
           <code className="research-report-path">{run.reportPath}</code>
         </p>
@@ -630,7 +637,7 @@ function ResearchRunStatus({
             disabled={busy}
             onClick={onCancel}
           >
-            調査を中止
+            Stop research
           </Button>
         )}
         {deck && (
@@ -642,7 +649,7 @@ function ResearchRunStatus({
               onOpenDeck(deck)
             }}
           >
-            一時デッキで開く
+            Open temporary deck
           </Button>
         )}
       </div>

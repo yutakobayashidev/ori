@@ -39,7 +39,7 @@ export function TwitterSourceEditor({
   return (
     <>
       <Label htmlFor={id}>
-        カラムの種類
+        Column type
         <NativeSelect
           className="w-full"
           id={id}
@@ -48,9 +48,9 @@ export function TwitterSourceEditor({
             onChange(defaultTwitterSource(event.target.value as Source['kind']))
           }
         >
-          <NativeSelectOption value="search">検索</NativeSelectOption>
-          <NativeSelectOption value="user">ユーザー投稿</NativeSelectOption>
-          <NativeSelectOption value="list">リスト</NativeSelectOption>
+          <NativeSelectOption value="search">Search</NativeSelectOption>
+          <NativeSelectOption value="user">User posts</NativeSelectOption>
+          <NativeSelectOption value="list">List</NativeSelectOption>
         </NativeSelect>
       </Label>
       <TwitterSourceFields
@@ -91,7 +91,7 @@ function TwitterSearchEditor({
   return (
     <div className="deck-source-fields">
       <Label htmlFor={`${id}-query`}>
-        Twitterの検索条件
+        Twitter search query
         <Input
           id={`${id}-query`}
           value={source.query}
@@ -99,12 +99,12 @@ function TwitterSearchEditor({
             onChange({ ...source, query: event.target.value })
           }
           maxLength={512}
-          placeholder="例：WebMCP lang:ja"
+          placeholder="e.g. WebMCP lang:en"
           required
         />
       </Label>
       <Label htmlFor={`${id}-product`}>
-        表示順
+        Sort by
         <NativeSelect
           className="w-full"
           id={`${id}-product`}
@@ -116,12 +116,12 @@ function TwitterSearchEditor({
             })
           }
         >
-          <NativeSelectOption value="Latest">最新</NativeSelectOption>
-          <NativeSelectOption value="Top">話題</NativeSelectOption>
+          <NativeSelectOption value="Latest">Latest</NativeSelectOption>
+          <NativeSelectOption value="Top">Top</NativeSelectOption>
         </NativeSelect>
       </Label>
       <p className="deck-help">
-        from:、lang:、since: など、Twitterの検索構文を使えます。
+        Use Twitter search operators such as from:, lang:, and since:.
       </p>
       <Label className="deck-checkbox">
         <Checkbox
@@ -130,7 +130,7 @@ function TwitterSearchEditor({
             onChange({ ...source, following: checked })
           }
         />
-        フォロー中のみ
+        Following only
       </Label>
     </div>
   )
@@ -144,14 +144,14 @@ function TwitterUserEditor({
   return (
     <div className="deck-source-fields">
       <Label htmlFor={id}>
-        ユーザー
+        User
         <Input
           id={id}
           value={source.target}
           onChange={(event) =>
             onChange({ ...source, target: event.target.value })
           }
-          placeholder="@handle またはプロフィールURL"
+          placeholder="@handle or profile URL"
           maxLength={256}
           required
         />
@@ -169,14 +169,14 @@ function TwitterListEditor({
   return (
     <div className="deck-source-fields">
       <Label htmlFor={id}>
-        リスト
+        List
         <Input
           id={id}
           value={source.target}
           onChange={(event) =>
             onChange({ ...source, target: event.target.value })
           }
-          placeholder="リストのURLまたはID"
+          placeholder="List URL or ID"
           maxLength={256}
           required
         />
@@ -199,27 +199,24 @@ function TwitterListChoices({
   onSelect: (target: string) => void
 }) {
   const lists = useListChoices(connectionId)
-  if (lists.isPending) return <p role="status">リストを取得しています…</p>
+  if (lists.isPending) return <p role="status">Loading lists…</p>
   if (lists.isError)
     return (
       <p role="alert">
-        リストを取得できませんでした。
+        Unable to load lists.
         <Button
           variant="outline"
           type="button"
           onClick={() => void lists.refetch()}
         >
-          再試行
+          Retry
         </Button>
       </p>
     )
   return (
-    <section
-      className="deck-list-choices"
-      aria-label="このプロファイルのリスト"
-    >
+    <section className="deck-list-choices" aria-label="Lists for this profile">
       {lists.data.length === 0 ? (
-        <p>リストはありません。URLまたはIDでも指定できます。</p>
+        <p>No lists found. You can enter a URL or ID instead.</p>
       ) : (
         lists.data.map((list) => (
           <Button
@@ -229,7 +226,7 @@ function TwitterListChoices({
             onClick={() => onSelect(list.id)}
           >
             {list.name}
-            {list.isPrivate ? ' · 非公開' : ''}
+            {list.isPrivate ? ' · Private' : ''}
           </Button>
         ))
       )}

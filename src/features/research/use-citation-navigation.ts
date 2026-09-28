@@ -83,7 +83,7 @@ export function useCitationNavigation({
       }))
       return true
     }
-    const deck = createTemporary('引用元の投稿', [citation.column])
+    const deck = createTemporary('Cited posts', [citation.column])
     setTarget((previous) => ({
       ...citation,
       deckId: deck.id,

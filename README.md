@@ -23,6 +23,8 @@ bound to a connection account, so platforms and multiple accounts work side by s
 - Saved chat history with deck, account and citation restoration across devices
   and backend restarts
 
+The system interface is in English; user-entered text and external posts retain their original language.
+
 `/` opens the daily home with a greeting, natural-language action proposals,
 flexible tasks/routines, messages, notes, and reading. `/deck` opens Twitter Lite.
 The shared sidebar also opens

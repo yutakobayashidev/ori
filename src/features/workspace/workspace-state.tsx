@@ -18,6 +18,13 @@ export type Task = {
 
 export type Status = 'now' | 'later' | 'waiting' | 'sent' | 'dismissed'
 export type EntryKind = 'メモ' | '再開地点' | '服薬' | '体重'
+export const entryKindLabels: Record<EntryKind, string> = {
+  メモ: 'Note',
+  再開地点: 'Resume point',
+  服薬: 'Medication',
+  体重: 'Weight',
+}
+
 export type JournalEntry = {
   id: string
   kind: EntryKind
@@ -45,18 +52,18 @@ export function WorkspaceStateProvider({ children }: { children: ReactNode }) {
   const [tasks, setTasks] = useState<Task[]>([
     {
       id: 'review',
-      title: 'レビュー資料を確認する',
+      title: 'Review the documents',
       section: 'focus',
       status: 'todo',
     },
     {
       id: 'morning',
-      title: '朝の支度',
+      title: 'Morning routine',
       section: 'routine',
       status: 'todo',
-      steps: ['水を飲む', '身支度をする', '朝食をとる'],
+      steps: ['Drink water', 'Get ready', 'Have breakfast'],
     },
-    { id: 'walk', title: '散歩する', section: 'optional', status: 'todo' },
+    { id: 'walk', title: 'Go for a walk', section: 'optional', status: 'todo' },
   ])
   const [statuses, setStatuses] = useState<Record<string, Status>>({})
   const [outcomes, setOutcomes] = useState<Record<string, string>>({})

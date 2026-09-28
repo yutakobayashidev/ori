@@ -74,7 +74,7 @@ export function VitalsPage() {
               <button
                 className="vital-mobile-close"
                 type="button"
-                aria-label="メニューを閉じる"
+                aria-label="Close menu"
                 onClick={() => setMobileMenu(false)}
               >
                 <X />
@@ -118,7 +118,7 @@ export function VitalsPage() {
               <button
                 className="vital-mobile-toggle"
                 type="button"
-                aria-label="Healthメニューを開く"
+                aria-label="Open Health menu"
                 onClick={() => setMobileMenu(true)}
               >
                 <Menu />
@@ -131,7 +131,7 @@ export function VitalsPage() {
                 </span>
                 <button
                   type="button"
-                  aria-label="通知を開く"
+                  aria-label="Open notifications"
                   onClick={() => setDetail('Notifications')}
                 >
                   <Bell />
@@ -308,7 +308,7 @@ export function VitalsPage() {
                             <div
                               className="vital-anatomy"
                               role="img"
-                              aria-label="人体と各系統の位置を示す参照図"
+                              aria-label="Reference illustration of the body and its systems"
                             >
                               <img src="/vitals/body-reference.jpg" alt="" />
                             </div>
@@ -399,7 +399,8 @@ export function VitalsPage() {
             onClose={() => setDetail(undefined)}
           >
             <p className="text-sm leading-relaxed text-muted-foreground">
-              画像をもとにした表示サンプルです。実際の測定・診断・機器の操作には接続していません。
+              This preview uses sample data from the reference image. It is not
+              connected to health measurements, diagnoses, or device controls.
             </p>
             {systems.find((item) => item.name === detail) && (
               <p className="text-3xl">
@@ -410,7 +411,7 @@ export function VitalsPage() {
               </p>
             )}
             <Button variant="outline" onClick={() => setDetail(undefined)}>
-              閉じる
+              Close
             </Button>
           </Dialog>
         )}

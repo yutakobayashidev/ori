@@ -40,7 +40,7 @@ it('preserves unavailable bindings and reconnects the original ID when a profile
   )
   await expect(
     requireTwitterConnection(id, database, async () => []),
-  ).rejects.toThrow('この接続は利用できません')
+  ).rejects.toThrow('This connection is unavailable')
   expect(
     (await listConnections(database, async () => ['first'])).connections,
   ).toEqual(original)
@@ -69,7 +69,7 @@ it('does not reuse an old relay binding for the same profile at another origin',
     requireTwitterConnection(original[0]?.id ?? '', database, async () => [
       'first',
     ]),
-  ).rejects.toThrow('この接続は利用できません')
+  ).rejects.toThrow('This connection is unavailable')
 })
 
 it('does not convert a relay outage into persisted account removal', async () => {
@@ -80,7 +80,7 @@ it('does not convert a relay outage into persisted account removal', async () =>
   const failed = await listConnections(database, unavailable)
   expect(failed.connections).toEqual(original.connections)
   expect(failed.relayError).toContain(
-    'Relay への接続を確認して再試行してください。',
+    'Check the relay connection and try again.',
   )
   expect(database.select().from(connections).get()?.status).toBe('connected')
   expect(await listConnections(database, async () => ['first'])).toEqual(
@@ -140,7 +140,7 @@ it('returns public metadata for all platforms without joining or exposing creden
     requireTwitterConnection('mastodon-account', database, async () => [
       'first',
     ]),
-  ).rejects.toThrow('この接続は利用できません')
+  ).rejects.toThrow('This connection is unavailable')
   expect(
     database
       .select()
@@ -153,5 +153,5 @@ it('returns public metadata for all platforms without joining or exposing creden
 it('rejects an unknown connection without treating its ID as a relay profile', async () => {
   await expect(
     requireTwitterConnection('first', database, async () => ['first']),
-  ).rejects.toThrow('この接続は利用できません')
+  ).rejects.toThrow('This connection is unavailable')
 })

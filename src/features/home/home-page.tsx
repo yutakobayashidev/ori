@@ -23,7 +23,10 @@ import { WorkspaceNavigation } from '#/components/workspace-navigation'
 import { articles } from '#/features/inbox/mock-articles'
 import { ConversationDetail } from '#/features/support/conversation-detail'
 import { conversations } from '#/features/support/mock-conversations'
-import { useWorkspaceState } from '#/features/workspace/workspace-state'
+import {
+  entryKindLabels,
+  useWorkspaceState,
+} from '#/features/workspace/workspace-state'
 import { DailyBrief } from './daily-brief'
 import { type HomeAction, interpretAction } from './interpret-action'
 import './home.css'
@@ -138,7 +141,7 @@ export function HomePage() {
         void navigate({ to: action.to })
         break
     }
-    setNotice(proposal?.label ?? '反映しました')
+    setNotice(proposal?.label ?? 'Updated')
     setProposal(null)
     setPrompt('')
   }
@@ -171,8 +174,8 @@ export function HomePage() {
           <div className="home-scroll">
             <div className="home-content">
               <header className="home-greeting">
-                <p className="text-sm text-muted-foreground">今日</p>
-                <h1>おはようございます、Yutaさん</h1>
+                <p className="text-sm text-muted-foreground">Today</p>
+                <h1>Good morning, Yuta</h1>
                 <DailyBrief onOpenContact={setContactId} />
               </header>
               <form
@@ -184,8 +187,8 @@ export function HomePage() {
               >
                 <Textarea
                   ref={input}
-                  aria-label="ホームへの入力"
-                  placeholder="頭にあることを、そのまま。"
+                  aria-label="Home input"
+                  placeholder="What’s on your mind?"
                   value={prompt}
                   onChange={(event) => {
                     setPrompt(event.target.value)
@@ -205,12 +208,12 @@ export function HomePage() {
                 />
                 <div className="home-composer-footer">
                   <span className="text-xs text-muted-foreground">
-                    やること、返信、メモ。
+                    Tasks, replies, notes.
                   </span>
                   <Button
                     type="submit"
                     size="icon"
-                    aria-label="候補を表示"
+                    aria-label="Preview action"
                     disabled={!prompt.trim()}
                   >
                     <ArrowUp />
@@ -219,9 +222,9 @@ export function HomePage() {
               </form>
               <div className="home-suggestions">
                 {[
-                  '買い物を追加',
-                  '青木さんに返信',
-                  'メモ：次は資料の2ページ目から',
+                  'Add grocery shopping',
+                  'Reply to Aoki',
+                  'Note: Resume on page 2',
                 ].map((text) => (
                   <button
                     type="button"
@@ -236,13 +239,11 @@ export function HomePage() {
               {proposal && (
                 <div className="home-proposal">
                   <p>{proposal.label}</p>
-                  <Button onClick={() => apply(proposal.action)}>
-                    実行する
-                  </Button>
+                  <Button onClick={() => apply(proposal.action)}>Apply</Button>
                   <Button
                     variant="ghost"
                     size="icon"
-                    aria-label="候補を取り消す"
+                    aria-label="Dismiss suggestion"
                     onClick={() => setProposal(null)}
                   >
                     <X />
@@ -253,12 +254,12 @@ export function HomePage() {
                 {notice}
               </p>
               <div className="home-columns">
-                <section className="home-plan" aria-label="今日の予定">
+                <section className="home-plan" aria-label="Today’s plan">
                   {(
                     [
-                      { id: 'focus', label: 'まずこれ' },
-                      { id: 'routine', label: 'いつものこと' },
-                      { id: 'optional', label: '余裕があれば' },
+                      { id: 'focus', label: 'Start here' },
+                      { id: 'routine', label: 'Routines' },
+                      { id: 'optional', label: 'If there’s room' },
                     ] as const
                   ).map((section) => (
                     <section key={section.id} className="home-section">
@@ -267,14 +268,14 @@ export function HomePage() {
                         <Button
                           variant="ghost"
                           size="icon-sm"
-                          aria-label={`${section.label}に追加`}
+                          aria-label={`Add to ${section.label}`}
                           onClick={() =>
                             suggest(
                               section.id === 'routine'
-                                ? 'ルーティンに追加：'
+                                ? 'Add routine:'
                                 : section.id === 'optional'
-                                  ? '余裕があれば '
-                                  : '追加：',
+                                  ? 'Optional: '
+                                  : 'Add:',
                             )
                           }
                         >
@@ -292,7 +293,7 @@ export function HomePage() {
                             <button
                               type="button"
                               className="home-check"
-                              aria-label={`${task.title}を完了`}
+                              aria-label={`Complete ${task.title}`}
                               onClick={() =>
                                 setTasks((current) =>
                                   current.map((item) =>
@@ -309,7 +310,7 @@ export function HomePage() {
                               <p>{task.title}</p>
                               {task.steps && (
                                 <details>
-                                  <summary>小さく進める</summary>
+                                  <summary>One step at a time</summary>
                                   <div className="home-steps">
                                     {task.steps.map((step) => (
                                       <label
@@ -360,7 +361,7 @@ export function HomePage() {
                               <Button
                                 variant="ghost"
                                 size="icon-sm"
-                                aria-label={`${task.title}を上へ`}
+                                aria-label={`Move ${task.title} up`}
                                 onClick={() => moveTask(task.id, -1)}
                               >
                                 <ArrowUp />
@@ -368,7 +369,7 @@ export function HomePage() {
                               <Button
                                 variant="ghost"
                                 size="icon-sm"
-                                aria-label={`${task.title}を下へ`}
+                                aria-label={`Move ${task.title} down`}
                                 onClick={() => moveTask(task.id, 1)}
                               >
                                 <ArrowDown />
@@ -376,7 +377,7 @@ export function HomePage() {
                               <Button
                                 variant="ghost"
                                 size="sm"
-                                aria-label={`${task.title}をあとで`}
+                                aria-label={`Defer ${task.title}`}
                                 onClick={() =>
                                   setTasks((current) =>
                                     current.map((item) =>
@@ -387,7 +388,7 @@ export function HomePage() {
                                   )
                                 }
                               >
-                                あとで
+                                Later
                               </Button>
                             </div>
                           </div>
@@ -402,7 +403,7 @@ export function HomePage() {
                               onClick={() => setContactId(item.id)}
                             >
                               <span className="block">
-                                {item.name}さんに返信
+                                Reply to {item.name}
                               </span>
                               <span className="text-xs text-muted-foreground">
                                 {item.subject}
@@ -411,7 +412,7 @@ export function HomePage() {
                             <Button
                               variant="ghost"
                               size="icon-sm"
-                              aria-label={`${item.name}との会話を開く`}
+                              aria-label={`Open conversation with ${item.name}`}
                               onClick={() => setContactId(item.id)}
                             >
                               <ChevronRight />
@@ -424,7 +425,7 @@ export function HomePage() {
                       ) &&
                         (section.id !== 'focus' || !waiting.length) && (
                           <p className="home-empty">
-                            ここは空けておいても大丈夫。
+                            It’s okay to leave some room.
                           </p>
                         )}
                     </section>
@@ -432,7 +433,7 @@ export function HomePage() {
                   {rest.length > 0 && (
                     <details className="home-rest">
                       <summary>
-                        あとで・終えたこと <span>{rest.length}</span>
+                        Later & done <span>{rest.length}</span>
                       </summary>
                       {rest.map((task) => (
                         <div className="home-task" key={task.id}>
@@ -445,7 +446,7 @@ export function HomePage() {
                           <Button
                             variant="ghost"
                             size="icon-sm"
-                            aria-label={`${task.title}を戻す`}
+                            aria-label={`Restore ${task.title}`}
                             onClick={() =>
                               setTasks((current) =>
                                 current.map((item) =>
@@ -463,11 +464,11 @@ export function HomePage() {
                     </details>
                   )}
                 </section>
-                <aside className="home-context" aria-label="今日のつながり">
+                <aside className="home-context" aria-label="Today’s context">
                   <section className="home-section">
                     <header className="home-section-heading">
-                      <h2>連絡</h2>
-                      <Link to="/support" aria-label="連絡をすべて見る">
+                      <h2>Messages</h2>
+                      <Link to="/support" aria-label="View all messages">
                         <ArrowUpRight className="size-4" />
                       </Link>
                     </header>
@@ -488,9 +489,9 @@ export function HomePage() {
                           <span>{item.name}</span>
                           <span className="text-xs text-muted-foreground">
                             {statuses[item.id] === 'waiting'
-                              ? '相手待ち'
+                              ? 'Waiting'
                               : statuses[item.id] === 'later'
-                                ? 'あとで'
+                                ? 'Later'
                                 : item.channels.join(' / ')}
                           </span>
                         </button>
@@ -498,15 +499,15 @@ export function HomePage() {
                   </section>
                   <section className="home-section">
                     <header className="home-section-heading">
-                      <h2>記録</h2>
-                      <Link to="/journal" aria-label="記録を開く">
+                      <h2>Journal</h2>
+                      <Link to="/journal" aria-label="Open journal">
                         <ArrowUpRight className="size-4" />
                       </Link>
                     </header>
                     {currentEntries.slice(0, 2).map((entry) => (
                       <p className="home-record" key={entry.id}>
                         <span className="text-xs text-muted-foreground">
-                          {entry.kind}
+                          {entryKindLabels[entry.kind]}
                         </span>
                         <span>
                           {entry.text}
@@ -518,17 +519,17 @@ export function HomePage() {
                       <button
                         type="button"
                         className="home-context-row"
-                        onClick={() => suggest('メモ：')}
+                        onClick={() => suggest('Note:')}
                       >
-                        <span>ひとこと残す</span>
+                        <span>Leave a note</span>
                         <Plus className="size-4" />
                       </button>
                     )}
                   </section>
                   <section className="home-section">
                     <header className="home-section-heading">
-                      <h2>読みもの</h2>
-                      <Link to="/inbox" aria-label="リーダーを開く">
+                      <h2>Reading</h2>
+                      <Link to="/inbox" aria-label="Open reader">
                         <ArrowUpRight className="size-4" />
                       </Link>
                     </header>
@@ -547,7 +548,7 @@ export function HomePage() {
                     ))}
                   </section>
                   <Link to="/deck" className="home-deck-link">
-                    Twitter Liteで調べる
+                    Explore in Twitter Lite
                     <ArrowUpRight className="size-4" />
                   </Link>
                 </aside>
@@ -557,7 +558,7 @@ export function HomePage() {
         </SidebarInset>
         {contact && (
           <Dialog
-            title={`${contact.name}との連絡`}
+            title={`Conversation with ${contact.name}`}
             className="sm:max-w-3xl"
             onClose={() => setContactId(undefined)}
           >

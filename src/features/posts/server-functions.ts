@@ -30,7 +30,7 @@ const configFailure = (diagnostic: unknown): LoadFailure => {
     ok: false,
     error: {
       code: 'relay-config',
-      message: 'TWITTER_RELAY_BASE_URL を設定してください。',
+      message: 'Set TWITTER_RELAY_BASE_URL.',
       retryable: false,
     },
   }

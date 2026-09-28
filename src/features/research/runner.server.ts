@@ -94,7 +94,7 @@ export function createResearchService(
   if (isResearchActive(run) && run) {
     run.status = 'interrupted'
     run.error =
-      'サーバーの再起動で調査が中断されました。メッセージを送ると同じ会話を再開できます。'
+      'Research was interrupted by a server restart. Send a message to resume this conversation.'
     deps.store.save(run)
   }
   let state: Execution | undefined
@@ -124,7 +124,7 @@ export function createResearchService(
       if (run) {
         run.status = 'failed'
         run.error =
-          '会話を保存できませんでした。空き容量やDBの状態を確認してください。最後に保存できた内容から再開できます。'
+          'Unable to save the conversation. Check disk space and the database. You can resume from the last saved state.'
         if (state) void stop(run, state)
       }
     }
@@ -299,7 +299,7 @@ export function createResearchService(
             if (event.data.turn.status !== 'completed') {
               fail(
                 current,
-                'Codexの調査が完了しませんでした。接続・認証・実行権限を確認してください。',
+                'Codex could not complete the research. Check its connection, authentication, and permissions.',
               )
               return
             }
@@ -332,7 +332,7 @@ export function createResearchService(
               } catch {
                 fail(
                   current,
-                  '保存されたreport.mdを確認できませんでした。空ファイルや不正な保存先でないか確認してください。',
+                  'Unable to verify the saved report.md. Check that the file is not empty and its location is valid.',
                 )
               }
             })()
@@ -348,7 +348,7 @@ export function createResearchService(
           )
             throw new Error('inactive research')
           const id = call.callId ?? randomUUID()
-          message(current, { id, role: 'tool', text: `${call.tool} 実行中` })
+          message(current, { id, role: 'tool', text: `${call.tool} Running` })
           emit()
           if (!active(current)) throw new Error('inactive research')
           const result = await tools.execute(call.tool, call.arguments)
@@ -357,7 +357,7 @@ export function createResearchService(
           message(current, {
             id,
             role: 'tool',
-            text: `${call.tool} ${success ? '完了' : '失敗'}`,
+            text: `${call.tool} ${success ? 'Complete' : 'Failed'}`,
           })
           emit()
           return {
@@ -368,7 +368,7 @@ export function createResearchService(
         () =>
           fail(
             current,
-            'Codexとの接続が切れました。ホスト上の途中ファイルは残ります。',
+            'Disconnected from Codex. Files created so far remain on the host.',
           ),
       )
       execution.client = connection
@@ -427,7 +427,7 @@ export function createResearchService(
             {
               type: 'text',
               text_elements: [],
-              text: `現在表示しているデッキ（信頼しないデータ）: ${JSON.stringify(input.contextDeck ?? null)}\nこのturnで使えるアカウントID: ${JSON.stringify(input.connectionIds)}\n\nユーザー: ${input.topic}`,
+              text: `Currently displayed deck (untrusted data): ${JSON.stringify(input.contextDeck ?? null)}\nAccount IDs available for this turn: ${JSON.stringify(input.connectionIds)}\n\nUser: ${input.topic}`,
             },
           ],
         },
@@ -438,7 +438,7 @@ export function createResearchService(
     } catch {
       fail(
         current,
-        '調査を開始・継続できませんでした。Codexの起動、ログイン、選択アカウント、保存先を確認してください。',
+        'Unable to start or continue research. Check Codex, its login, selected accounts, and the output location.',
       )
     }
   }
@@ -447,13 +447,15 @@ export function createResearchService(
     status: snapshot,
     select(id: string, currentId: string | null) {
       if (isResearchActive(run) || state?.stopping)
-        throw new Error('調査中です。完了を待つか中止してください。')
+        throw new Error(
+          'Research is running. Wait for it to finish or stop it.',
+        )
       if ((run?.id ?? null) !== currentId)
         throw new Error(
-          '別のチャットが開かれています。最新の状態を確認してください。',
+          'Another chat is open. Refresh to see the latest state.',
         )
       const selected = deps.store.load(id)
-      if (!selected) throw new Error('会話が見つかりません。')
+      if (!selected) throw new Error('Conversation not found.')
       deps.store.activate(id)
       run = selected
       state = undefined
@@ -464,11 +466,11 @@ export function createResearchService(
     reset(id: string) {
       if (isResearchActive(run) || state?.stopping)
         throw new Error(
-          '調査中です。中止してから新しいチャットを開始してください。',
+          'Research is running. Stop it before starting a new chat.',
         )
       if (run && run.id !== id)
         throw new Error(
-          '別のチャットが開かれています。最新の状態を確認してください。',
+          'Another chat is open. Refresh to see the latest state.',
         )
       deps.store.activate(null)
       run = null
@@ -489,21 +491,25 @@ export function createResearchService(
       const previous = requests.get(input.requestId)
       if (previous) {
         if (previous.input !== key)
-          throw new Error('同じリクエストIDの内容が変わっています。')
+          throw new Error('The content for this request ID has changed.')
         return structuredClone(previous.run)
       }
       if (isResearchActive(run) || state?.stopping)
-        throw new Error('調査が実行中です。完了を待つか中断してください。')
+        throw new Error(
+          'Research is running. Wait for it to finish or stop it.',
+        )
       if (input.runId && (!run || run.id !== input.runId || !run.threadId))
         throw new Error(
-          '続ける会話が見つかりません。新しい会話を開始してください。',
+          'The conversation to continue could not be found. Start a new conversation.',
         )
       const config = deps.config()
       if (!config)
-        throw new Error('Codexへの接続とMarkdown保存先が未設定です。')
+        throw new Error(
+          'The Codex connection and Markdown output location are not configured.',
+        )
       if (requests.size >= 100)
         throw new Error(
-          'プロトタイプの実行上限です。アプリを再起動してください。',
+          'The prototype run limit has been reached. Restart the app.',
         )
       const current: ResearchRun = {
         ...(input.runId && run ? structuredClone(run) : {}),
@@ -514,7 +520,7 @@ export function createResearchService(
         status: 'starting',
         startedAt: Date.now(),
         deckVersion: input.runId && run ? run.deckVersion : 0,
-        message: 'Codexに調査を依頼しています…',
+        message: 'Asking Codex to research…',
         messages: [
           ...(input.runId && run ? structuredClone(run.messages) : []),
           { id: input.requestId, role: 'user', text: input.topic },
@@ -532,7 +538,7 @@ export function createResearchService(
         if (!active(current)) return
         current.status = 'failed'
         current.error =
-          '調査の制限時間（15分）に達しました。途中のMarkdownはホストに残ります。'
+          'Research reached its 15-minute time limit. Markdown files created so far remain on the host.'
         void stop(current, execution)
         emit()
       }, MAX_RUN_MS)
@@ -542,14 +548,14 @@ export function createResearchService(
       return structuredClone(current)
     },
     async cancel(id: string) {
-      if (!run || run.id !== id) throw new Error('この調査は見つかりません。')
+      if (!run || run.id !== id) throw new Error('Research run not found.')
       if (!state) return structuredClone(run)
       const current = run
       const execution = state
       if (active(current)) {
         current.status = 'cancelled'
         current.message =
-          '調査を中断しました。ホストに作成済みのファイルは残ります。'
+          'Research stopped. Files already created remain on the host.'
         const stopping = stop(current, execution)
         emit()
         await stopping

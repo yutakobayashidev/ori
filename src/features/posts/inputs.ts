@@ -33,7 +33,9 @@ export const searchPageInputSchema = z.object({
 
 function requireHandle(value: string): string {
   if (!HANDLE.test(value)) {
-    throw new InputError('ハンドルは英数字とアンダースコアで入力してください。')
+    throw new InputError(
+      'Handles can only contain letters, numbers, and underscores.',
+    )
   }
   return value
 }
@@ -41,7 +43,7 @@ function requireHandle(value: string): string {
 export function normalizeUserTarget(raw: string): string {
   const value = raw.trim()
   if (!value) {
-    throw new InputError('ハンドルまたはプロフィール URL を入力してください。')
+    throw new InputError('Enter a handle or profile URL.')
   }
   if (value.startsWith('@')) {
     return requireHandle(value.slice(1))
@@ -54,21 +56,21 @@ export function normalizeUserTarget(raw: string): string {
   try {
     url = new URL(value)
   } catch {
-    throw new InputError('プロフィール URL の形式を確認してください。')
+    throw new InputError('Check the profile URL format.')
   }
   if (!['x.com', 'twitter.com'].includes(url.hostname.toLowerCase())) {
-    throw new InputError('x.com または twitter.com の URL を入力してください。')
+    throw new InputError('Enter an x.com or twitter.com URL.')
   }
   const segments = url.pathname.split('/').filter(Boolean)
   if (segments.length !== 1) {
-    throw new InputError('プロフィール URL を入力してください。')
+    throw new InputError('Enter a profile URL.')
   }
   return requireHandle(segments[0] ?? '')
 }
 
 function requireListId(value: string): string {
   if (!LIST_ID.test(value)) {
-    throw new InputError('リスト ID は数字で入力してください。')
+    throw new InputError('List IDs must contain only numbers.')
   }
   return value
 }
@@ -76,7 +78,7 @@ function requireListId(value: string): string {
 export function normalizeListTarget(raw: string): string {
   const value = raw.trim()
   if (!value) {
-    throw new InputError('リストの URL または ID を入力してください。')
+    throw new InputError('Enter a list URL or ID.')
   }
   if (!value.includes('://')) {
     return requireListId(value)
@@ -86,14 +88,14 @@ export function normalizeListTarget(raw: string): string {
   try {
     url = new URL(value)
   } catch {
-    throw new InputError('リスト URL の形式を確認してください。')
+    throw new InputError('Check the list URL format.')
   }
   if (!['x.com', 'twitter.com'].includes(url.hostname.toLowerCase())) {
-    throw new InputError('x.com または twitter.com の URL を入力してください。')
+    throw new InputError('Enter an x.com or twitter.com URL.')
   }
   const segments = url.pathname.split('/').filter(Boolean)
   if (segments.length !== 3 || segments[0] !== 'i' || segments[1] !== 'lists') {
-    throw new InputError('リストの URL を入力してください。')
+    throw new InputError('Enter a list URL.')
   }
   return requireListId(segments[2] ?? '')
 }
@@ -101,12 +103,12 @@ export function normalizeListTarget(raw: string): string {
 export function buildSearchQuery(raw: string, following: boolean): string {
   const query = raw.trim()
   if (!query) {
-    throw new InputError('検索語を入力してください。')
+    throw new InputError('Enter a search query.')
   }
   const finalQuery =
     following && !FOLLOWS.test(query) ? `${query} filter:follows` : query
   if (finalQuery.length > 512) {
-    throw new InputError('検索語は 512 文字以内で入力してください。')
+    throw new InputError('Search queries must be 512 characters or fewer.')
   }
   return finalQuery
 }

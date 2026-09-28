@@ -35,7 +35,7 @@ export function DeckSwitcher({
   return (
     <div className="deck-workspaces">
       <div className="deck-actions">
-        <Label htmlFor="deck-selection">デッキプロファイル</Label>
+        <Label htmlFor="deck-selection">Deck profile</Label>
         <NativeSelect
           className="w-full"
           id="deck-selection"
@@ -49,15 +49,15 @@ export function DeckSwitcher({
           {decks.map((deck) => (
             <NativeSelectOption key={deck.id} value={deck.id}>
               {deck.title}
-              {deck.persisted ? '' : '（一時）'}
+              {deck.persisted ? '' : ' (temporary)'}
             </NativeSelectOption>
           ))}
         </NativeSelect>
         <Button
           variant="outline"
           className="workspace-create"
-          aria-label="デッキを作成"
-          title="デッキを作成"
+          aria-label="Create deck"
+          title="Create deck"
           type="button"
           disabled={!ready}
           onClick={() => {
@@ -65,13 +65,13 @@ export function DeckSwitcher({
           }}
         >
           <Icon name="plus" />
-          <span>デッキを作成</span>
+          <span>Create deck</span>
         </Button>
         <Button
           variant="ghost"
           className="workspace-delete"
-          aria-label="デッキを削除"
-          title="デッキを削除"
+          aria-label="Delete deck"
+          title="Delete deck"
           type="button"
           disabled={!ready}
           onClick={() => {
@@ -79,11 +79,11 @@ export function DeckSwitcher({
           }}
         >
           <Icon name="trash" />
-          <span>デッキを削除</span>
+          <span>Delete deck</span>
         </Button>
       </div>
       {dialog === 'create' ? (
-        <Dialog title="デッキを作成" onClose={() => onDialogChange(null)}>
+        <Dialog title="Create deck" onClose={() => onDialogChange(null)}>
           <form
             className="deck-rename"
             onSubmit={async (event) => {
@@ -94,7 +94,7 @@ export function DeckSwitcher({
             }}
           >
             <Label htmlFor="new-deck-title">
-              新しいデッキ名
+              New deck name
               <Input
                 id="new-deck-title"
                 name="title"
@@ -104,22 +104,22 @@ export function DeckSwitcher({
                 required
               />
             </Label>
-            <Button type="submit">作成</Button>
+            <Button type="submit">Create</Button>
             <Button
               variant="outline"
               type="button"
               onClick={() => onDialogChange(null)}
             >
-              キャンセル
+              Cancel
             </Button>
           </form>
           {errorNotice}
         </Dialog>
       ) : null}
       {dialog === 'delete' ? (
-        <Dialog title="デッキを削除" onClose={() => onDialogChange(null)}>
+        <Dialog title="Delete deck" onClose={() => onDialogChange(null)}>
           <div className="deck-undo">
-            <p>このデッキとカラムの設定を削除します。</p>
+            <p>Delete this deck and its column settings.</p>
             <Button
               variant="destructive"
               type="button"
@@ -127,14 +127,14 @@ export function DeckSwitcher({
                 if (await onDelete()) onDialogChange(null)
               }}
             >
-              削除する
+              Delete
             </Button>
             <Button
               variant="outline"
               type="button"
               onClick={() => onDialogChange(null)}
             >
-              キャンセル
+              Cancel
             </Button>
           </div>
           {errorNotice}

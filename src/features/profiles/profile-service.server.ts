@@ -29,12 +29,12 @@ export async function fetchProfileNames(
 export async function requireProfileName(profileName: string): Promise<void> {
   const profiles = await fetchProfileNames().catch(() => {
     throw new ProfileUnavailableError(
-      'プロファイルを確認できませんでした。Relay への接続を確認して再試行してください。',
+      'Could not verify profiles. Check the relay connection and try again.',
     )
   })
   if (!profiles.includes(profileName)) {
     throw new ProfileUnavailableError(
-      'このプロファイルは利用できません。カラムのプロファイルを選び直してください。',
+      'This profile is unavailable. Select a different profile for this column.',
     )
   }
 }

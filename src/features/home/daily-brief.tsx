@@ -24,11 +24,11 @@ export function DailyBrief({
   )
 
   return (
-    <section className="home-brief" aria-label="今日のブリーフ">
+    <section className="home-brief" aria-label="Daily brief">
       <p>
         {focus
-          ? `今日は「${focus.title}」から始められそうです。`
-          : 'いま優先して取りかかるタスクはありません。'}
+          ? `Start with “${focus.title}” today.`
+          : 'There are no priority tasks right now.'}
         {firstContact ? (
           <>
             {' '}
@@ -36,27 +36,27 @@ export function DailyBrief({
               type="button"
               onClick={() => onOpenContact(firstContact.id)}
             >
-              {firstContact.name}さんへの返信
+              Reply to {firstContact.name}
             </button>
             {contacts.length > 1
-              ? `など、確認できる連絡が${contacts.length}件あります。`
-              : 'が残っています。'}
+              ? ` — one of ${contacts.length} conversations to review.`
+              : ' when you’re ready.'}
           </>
         ) : (
-          ' いま返信に取りかかる連絡もありません。'
+          ' There are no conversations awaiting your attention.'
         )}
       </p>
       {resume ? (
         <p className="home-brief-secondary">
-          再開メモには「
+          Your resume note: “
           {resume.text.length > 100
             ? `${resume.text.slice(0, 100)}…`
             : resume.text}
-          」と残っています。
+          ”
         </p>
       ) : optional ? (
         <p className="home-brief-secondary">
-          「{optional.title}」は、余裕があるときに。
+          “{optional.title}” can wait until you have room.
         </p>
       ) : null}
     </section>

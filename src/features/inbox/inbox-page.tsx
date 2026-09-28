@@ -35,22 +35,22 @@ export function InboxPage() {
           <WorkspaceNavigation />
           <Sidebar collapsible="none" className="inbox-list-panel">
             <SidebarHeader className="gap-4 border-b p-5">
-              <h1 className="text-base font-semibold">リーダー</h1>
+              <h1 className="text-base font-semibold">Reader</h1>
               <div className="relative">
                 <Search
                   aria-hidden="true"
                   className="pointer-events-none absolute left-3 top-2 size-4 text-muted-foreground"
                 />
                 <Input
-                  aria-label="記事を検索"
-                  placeholder="検索"
+                  aria-label="Search articles"
+                  placeholder="Search"
                   className="pl-9"
                   value={query}
                   onChange={(event) => setQuery(event.target.value)}
                 />
               </div>
             </SidebarHeader>
-            <SidebarContent className="gap-0" aria-label="記事一覧">
+            <SidebarContent className="gap-0" aria-label="Articles">
               {visible.map((article) => (
                 <ArticleRow
                   key={article.id}
@@ -64,9 +64,9 @@ export function InboxPage() {
               ))}
               {visible.length === 0 && (
                 <div className="inbox-no-results">
-                  <p>記事がありません</p>
+                  <p>No articles found</p>
                   <Button variant="outline" onClick={() => setQuery('')}>
-                    検索をクリア
+                    Clear search
                   </Button>
                 </div>
               )}
@@ -79,7 +79,7 @@ export function InboxPage() {
               variant="ghost"
               size="icon"
               className="inbox-back"
-              aria-label="記事一覧に戻る"
+              aria-label="Back to articles"
               onClick={() => setReadingMobile(false)}
             >
               <ArrowLeft />
@@ -91,7 +91,7 @@ export function InboxPage() {
           <section
             className="inbox-reader-scroll"
             key={selected?.id}
-            aria-label="記事本文"
+            aria-label="Article content"
             // biome-ignore lint/a11y/noNoninteractiveTabindex: The independently scrolling reader must be keyboard-scrollable.
             tabIndex={0}
           >

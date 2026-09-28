@@ -32,7 +32,7 @@ export function ConversationDetail({
   return (
     <article
       className="mx-auto w-full max-w-3xl px-5 py-8 sm:px-10 sm:py-10"
-      aria-label={`${conversation.name}との会話`}
+      aria-label={`Conversation with ${conversation.name}`}
     >
       <header className="mb-8 space-y-2">
         <p className="text-xs text-muted-foreground">
@@ -44,13 +44,13 @@ export function ConversationDetail({
         <p className="text-sm text-muted-foreground">{conversation.subject}</p>
       </header>
 
-      <section className="mb-8 space-y-4" aria-label="会話の要点">
+      <section className="mb-8 space-y-4" aria-label="Conversation summary">
         <p className="text-sm leading-7">{conversation.summary}</p>
         <div className="border-l-2 border-border pl-4">
           <p className="text-sm leading-6">{conversation.nextStep}</p>
           {conversation.deadline && (
             <p className="mt-1 text-xs text-muted-foreground">
-              相手の指定期限 · {conversation.deadline}
+              Requested deadline · {conversation.deadline}
             </p>
           )}
         </div>
@@ -58,7 +58,7 @@ export function ConversationDetail({
 
       <details className="group mb-8 border-y border-border py-3">
         <summary className="flex cursor-pointer list-none items-center justify-between text-sm outline-none focus-visible:ring-2 focus-visible:ring-ring">
-          元のやりとり{' '}
+          Original messages{' '}
           <ChevronDown className="size-4 text-muted-foreground transition-transform group-open:rotate-180" />
         </summary>
         <div className="space-y-5 pt-5">
@@ -70,7 +70,7 @@ export function ConversationDetail({
               tabIndex={-1}
             >
               <p className="mb-2 text-xs text-muted-foreground">
-                {message.direction === 'in' ? conversation.name : '自分'} ·{' '}
+                {message.direction === 'in' ? conversation.name : 'You'} ·{' '}
                 {message.channel} · {message.time}
               </p>
               <p className="whitespace-pre-wrap text-sm leading-7">
@@ -81,13 +81,13 @@ export function ConversationDetail({
         </div>
       </details>
 
-      <section aria-label="返信を作る" className="space-y-3">
+      <section aria-label="Compose a reply" className="space-y-3">
         <div className="flex flex-wrap items-center justify-between gap-2">
           <label
             htmlFor={`support-reply-${conversation.id}`}
             className="text-sm font-medium"
           >
-            返信
+            Reply
           </label>
           <span className="text-xs text-muted-foreground">
             {conversation.replyChannel} → {conversation.name}
@@ -122,11 +122,11 @@ export function ConversationDetail({
         {conversation.scheduleOptions.length > 0 && (
           <div className="flex flex-wrap items-center gap-2">
             <NativeSelect
-              aria-label="日程候補"
+              aria-label="Suggested times"
               value={slot}
               onChange={(event) => setSlot(event.target.value)}
             >
-              <NativeSelectOption value="">候補日時を選ぶ</NativeSelectOption>
+              <NativeSelectOption value="">Choose a time</NativeSelectOption>
               {conversation.scheduleOptions.map((option) => (
                 <NativeSelectOption key={option} value={option}>
                   {option}
@@ -139,18 +139,18 @@ export function ConversationDetail({
               disabled={!slot}
               onClick={() => {
                 setDraft(
-                  (current) => `${current}\n\n${slot}はいかがでしょうか。`,
+                  (current) => `${current}\n\nWould ${slot} work for you?`,
                 )
                 setTone('')
               }}
             >
-              返信に入れる
+              Add to reply
             </Button>
             <Button
               size="icon-sm"
               variant="ghost"
               disabled={!slot}
-              aria-label="予定を仮置きする"
+              aria-label="Preview calendar hold"
               onClick={() => setReview('schedule')}
             >
               <CalendarPlus />
@@ -163,13 +163,13 @@ export function ConversationDetail({
             className="flex items-center gap-2 text-xs text-muted-foreground"
           >
             <Check className="size-3" />
-            {scheduled} をこの画面に仮置きしました
+            {scheduled} held in this preview
           </p>
         )}
         <div className="flex flex-wrap items-center justify-between gap-3 pt-2">
           <Button disabled={!draft.trim()} onClick={() => setReview('send')}>
             <Send />
-            送信内容を確認
+            Review reply
           </Button>
           <div className="flex flex-wrap gap-1">
             <Button
@@ -177,21 +177,21 @@ export function ConversationDetail({
               size="sm"
               onClick={() => onResolve('later')}
             >
-              今は置いておく
+              Leave for later
             </Button>
             <Button
               variant="ghost"
               size="sm"
               onClick={() => onResolve('waiting')}
             >
-              相手待ち
+              Waiting
             </Button>
             <Button
               variant="ghost"
               size="sm"
               onClick={() => onResolve('dismissed')}
             >
-              返信せず閉じる
+              Close without replying
             </Button>
           </div>
         </div>
@@ -199,7 +199,7 @@ export function ConversationDetail({
 
       <details className="group mt-10 border-t border-border pt-4">
         <summary className="flex cursor-pointer list-none items-center justify-between text-xs text-muted-foreground outline-none focus-visible:ring-2 focus-visible:ring-ring">
-          人物メモ{' '}
+          About this person{' '}
           <ChevronDown className="size-3 transition-transform group-open:rotate-180" />
         </summary>
         <ul className="mt-4 space-y-3 text-sm leading-6">
@@ -221,7 +221,7 @@ export function ConversationDetail({
                   source?.focus()
                 }}
               >
-                出典
+                Source
               </a>
             </li>
           ))}
@@ -237,12 +237,12 @@ export function ConversationDetail({
         <DialogContent className="sm:max-w-xl">
           <DialogHeader>
             <DialogTitle>
-              {review === 'schedule' ? '予定の確認' : '送信内容の確認'}
+              {review === 'schedule' ? 'Review calendar hold' : 'Review reply'}
             </DialogTitle>
             <DialogDescription>
               {review === 'schedule'
-                ? '外部カレンダーには登録せず、この画面だけに仮置きします。'
-                : '外部には送信されません。完了後の表示を試せます。'}
+                ? 'This creates a hold in this preview only. Your calendar will not change.'
+                : 'Try the completed state. No message will be sent.'}
             </DialogDescription>
           </DialogHeader>
           <div className="space-y-3 py-2">
@@ -260,7 +260,7 @@ export function ConversationDetail({
           </div>
           <DialogFooter>
             <Button variant="outline" onClick={() => setReview(null)}>
-              戻る
+              Back
             </Button>
             <Button
               onClick={() => {
@@ -268,12 +268,12 @@ export function ConversationDetail({
                 else
                   onResolve(
                     'sent',
-                    `${conversation.replyChannel} → ${conversation.name}（送信プレビュー）\n${draft}`,
+                    `${conversation.replyChannel} → ${conversation.name} (reply preview)\n${draft}`,
                   )
                 setReview(null)
               }}
             >
-              {review === 'schedule' ? '仮置きを試す' : '送信を試す'}
+              {review === 'schedule' ? 'Try calendar hold' : 'Try sending'}
             </Button>
           </DialogFooter>
         </DialogContent>

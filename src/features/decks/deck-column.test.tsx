@@ -19,7 +19,7 @@ vi.mock('./research-post-card', () => ({
   }) => (
     <article>
       {post.text}
-      {citationSnapshot ? '調査時に取得した投稿' : ''}
+      {citationSnapshot ? 'Post saved during research' : ''}
     </article>
   ),
 }))
@@ -71,11 +71,11 @@ it('temporarily renders missing evidence without inserting it into feed pages or
     />,
   )
   expect(screen.getByRole('article')).toHaveTextContent(
-    'Snapshot調査時に取得した投稿',
+    'SnapshotPost saved during research',
   )
   expect(page.posts).toHaveLength(0)
   expect(page.nextCursor).toBe('original-cursor')
-  fireEvent.click(screen.getByRole('button', { name: '続きを読み込む' }))
+  fireEvent.click(screen.getByRole('button', { name: 'Load more' }))
   expect(feed.next).toHaveBeenCalledWith({ cancelRefetch: false })
 })
 
@@ -110,6 +110,6 @@ it('keeps the live post instead of a duplicate snapshot with a Twitter URL alias
   expect(screen.getAllByRole('article')).toHaveLength(1)
   expect(screen.getByRole('article')).toHaveTextContent('Live')
   expect(
-    screen.queryByText(/Snapshot|調査時に取得した投稿/),
+    screen.queryByText(/Snapshot|Post saved during research/),
   ).not.toBeInTheDocument()
 })

@@ -17,7 +17,7 @@ test('filters body systems and opens lab history', async ({ page, a11y }) => {
   const dialog = page.getByRole('dialog', { name: 'Cardiovascular' })
   await expect(dialog).toContainText('68')
   await dialog
-    .getByRole('button', { name: '閉じる', exact: true })
+    .getByRole('button', { name: 'Close', exact: true })
     .last()
     .click()
   await page.getByRole('button', { name: 'Lab history', exact: true }).click()
@@ -38,7 +38,7 @@ test('explores environment charts and simulated climate controls', async ({
 }) => {
   await page.goto('/vitals')
   await page.waitForLoadState('networkidle')
-  const menu = page.getByRole('button', { name: 'Healthメニューを開く' })
+  const menu = page.getByRole('button', { name: 'Open Health menu' })
   if (await menu.isVisible()) await menu.click()
   await page
     .getByRole('complementary', { name: 'Health navigation' })
@@ -95,7 +95,7 @@ test('keeps both dashboards within the viewport', async ({
       await page.evaluate(() => document.documentElement.scrollWidth),
     ).toBe(width)
     await page.screenshot({ path: testInfo.outputPath(`body-${width}.png`) })
-    const menu = page.getByRole('button', { name: 'Healthメニューを開く' })
+    const menu = page.getByRole('button', { name: 'Open Health menu' })
     if (await menu.isVisible()) await menu.click()
     const navigation = page.getByRole('complementary', {
       name: 'Health navigation',

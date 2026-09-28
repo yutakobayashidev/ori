@@ -43,7 +43,7 @@ function RootContent() {
 
 function RootDocument({ children }: { children: React.ReactNode }) {
   return (
-    <html lang="ja" className="dark">
+    <html lang="en" className="dark">
       <head>
         <HeadContent />
       </head>

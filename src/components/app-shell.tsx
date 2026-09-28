@@ -46,8 +46,8 @@ function Workspace({
   const [panel, setPanel] = useState<'chat' | 'decks'>('chat')
   const { setOpen, setOpenMobile, isMobile } = useSidebar()
   const navigation = [
-    { id: 'chat', title: '調査チャット', icon: MessageSquare },
-    { id: 'decks', title: 'デッキ管理', icon: Columns3 },
+    { id: 'chat', title: 'Research chat', icon: MessageSquare },
+    { id: 'decks', title: 'Deck manager', icon: Columns3 },
   ] as const
 
   return (
@@ -61,8 +61,8 @@ function Workspace({
           footer={
             <SidebarMenuItem>
               <SidebarMenuButton
-                aria-label="サイドバーを閉じる"
-                tooltip={{ children: 'サイドバーを閉じる', hidden: false }}
+                aria-label="Close sidebar"
+                tooltip={{ children: 'Close sidebar', hidden: false }}
                 onClick={() =>
                   isMobile ? setOpenMobile(false) : setOpen(false)
                 }
@@ -104,29 +104,29 @@ function Workspace({
             {researchChat(() => setOpenMobile(false))}
           </div>
           <section
-            aria-label="デッキ管理"
+            aria-label="Deck manager"
             className={
               panel === 'decks'
                 ? 'flex min-h-0 flex-1 flex-col overflow-y-auto p-4'
                 : 'hidden'
             }
           >
-            <h2 className="mb-4 text-base font-semibold">デッキ</h2>
+            <h2 className="mb-4 text-base font-semibold">Decks</h2>
             <div className="flex flex-col gap-4">{sidebar}</div>
           </section>
         </Sidebar>
       </Sidebar>
       <SidebarInset className="min-w-0 overflow-hidden">
         <header className="flex h-12 shrink-0 items-center gap-2 border-b px-3">
-          <SidebarTrigger aria-label="サイドバーを切り替え" />
+          <SidebarTrigger aria-label="Toggle sidebar" />
           <span className="text-sm font-medium">Twitter Lite</span>
           <span className="ml-auto text-xs text-muted-foreground">
-            調査ワークスペース
+            Research workspace
           </span>
         </header>
         <section
           className="reader flex min-h-0 min-w-0 flex-1 flex-col"
-          aria-label="デッキ"
+          aria-label="Decks"
         >
           {children}
         </section>

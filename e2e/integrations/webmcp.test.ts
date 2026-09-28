@@ -117,9 +117,9 @@ test('creates temporary research, edits it, persists explicitly and reopens it o
   ).toBeVisible()
   await page
     .getByRole('region', { name: '日本語', exact: true })
-    .getByRole('button', { name: '日本語の操作' })
+    .getByRole('button', { name: 'Actions for 日本語' })
     .click()
-  await page.getByRole('menuitem', { name: '編集', exact: true }).click()
+  await page.getByRole('menuitem', { name: 'Edit', exact: true }).click()
   const replaced = await executeTool(page, 'set_deck', {
     deckId: deck.id,
     title: '更新した調査',
@@ -234,7 +234,9 @@ test('keeps temporary views independent and loses only unsaved views on reload',
   ).toBe(false)
   expect(savedCount()).toEqual({ count: 0 })
   await page.reload()
-  await expect(page.getByRole('heading', { level: 1 })).toHaveText('新しい調査')
+  await expect(page.getByRole('heading', { level: 1 })).toHaveText(
+    'New research',
+  )
 })
 
 test('rejects invalid input without changing the active view', async ({

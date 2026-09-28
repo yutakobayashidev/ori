@@ -10,25 +10,25 @@ export function describeSource(source: DeckColumn['source']): {
       switch (source.kind) {
         case 'search':
           return {
-            label: `${source.product === 'Latest' ? '最新' : '話題'}${source.following ? ' · フォロー中' : ''}`,
+            label: `${source.product === 'Latest' ? 'Latest' : 'Top'}${source.following ? ' · Following' : ''}`,
             query: source.query,
           }
         case 'user':
-          return { label: 'ユーザー投稿', query: source.target }
+          return { label: 'User posts', query: source.target }
         case 'list':
-          return { label: 'リスト', query: source.target }
+          return { label: 'List', query: source.target }
       }
       break
     case 'mastodon':
       switch (source.kind) {
         case 'search':
-          return { label: '全文検索', query: source.query }
+          return { label: 'Full-text search', query: source.query }
         case 'user':
-          return { label: 'ユーザー投稿', query: source.target }
+          return { label: 'User posts', query: source.target }
         case 'list':
-          return { label: 'リスト', query: source.target }
+          return { label: 'List', query: source.target }
         case 'hashtag':
-          return { label: 'ハッシュタグ', query: `#${source.target}` }
+          return { label: 'Hashtag', query: `#${source.target}` }
       }
       break
   }

@@ -78,8 +78,7 @@ export function createResearchStore(database = getDatabase()): ResearchStore {
     },
     activate(id) {
       database.transaction(() => {
-        if (id !== null && !load(id))
-          throw new Error('この会話は見つかりません。')
+        if (id !== null && !load(id)) throw new Error('Conversation not found.')
         setActive(id)
       })
     },

@@ -6,7 +6,7 @@ import { Badge } from '#/components/ui/badge'
 import { Button } from '#/components/ui/button'
 import type { ResearchPost } from '#/features/platforms/types'
 
-const dateFormatter = new Intl.DateTimeFormat('ja-JP', {
+const dateFormatter = new Intl.DateTimeFormat('en-US', {
   month: 'numeric',
   day: 'numeric',
   hour: '2-digit',
@@ -53,10 +53,10 @@ export function ResearchPostCard({
       data-post-url={post.url}
     >
       {citationSnapshot ? (
-        <Badge variant="secondary">調査時に取得した投稿</Badge>
+        <Badge variant="secondary">Post saved during research</Badge>
       ) : null}
       {post.boostedBy ? (
-        <p className="handle">{post.boostedBy.name} がブースト</p>
+        <p className="handle">Boosted by {post.boostedBy.name}</p>
       ) : null}
       <header>
         <Avatar className="size-9 shrink-0">
@@ -77,7 +77,7 @@ export function ResearchPostCard({
       </header>
       {concealed ? (
         <div>
-          <p>{post.contentWarning || 'センシティブなメディアを含む投稿'}</p>
+          <p>{post.contentWarning || 'This post contains sensitive media'}</p>
           <Button
             variant="outline"
             size="sm"
@@ -85,7 +85,7 @@ export function ResearchPostCard({
             aria-expanded={revealed}
             onClick={() => setRevealed(!revealed)}
           >
-            {revealed ? '内容を隠す' : '内容を表示'}
+            {revealed ? 'Hide content' : 'Show content'}
           </Button>
         </div>
       ) : null}
@@ -118,7 +118,7 @@ export function ResearchPostCard({
                 target="_blank"
                 rel="noreferrer noopener"
               >
-                動画を開く
+                Open video
               </a>
             ),
           )}
@@ -133,7 +133,7 @@ export function ResearchPostCard({
                 target="_blank"
                 rel="noreferrer noopener"
               >
-                引用元を開く
+                Open quoted post
               </a>
             </blockquote>
           ) : null}
@@ -141,7 +141,7 @@ export function ResearchPostCard({
       ) : null}
       <footer>
         <a href={post.url} target="_blank" rel="noreferrer noopener">
-          元の投稿を開く <Icon name="arrow" />
+          Open original post <Icon name="arrow" />
         </a>
       </footer>
     </article>

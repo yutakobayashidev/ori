@@ -35,8 +35,8 @@ it('focuses and briefly highlights a cited card without revealing sensitive cont
     inline: 'center',
     behavior: 'instant',
   })
-  expect(screen.getByText('調査時に取得した投稿')).toBeInTheDocument()
-  expect(screen.getByRole('button', { name: '内容を表示' })).toHaveAttribute(
+  expect(screen.getByText('Post saved during research')).toBeInTheDocument()
+  expect(screen.getByRole('button', { name: 'Show content' })).toHaveAttribute(
     'aria-expanded',
     'false',
   )
@@ -44,7 +44,9 @@ it('focuses and briefly highlights a cited card without revealing sensitive cont
   rerender(<ResearchPostCard post={post} citationRequest={1} />)
   expect(scroll).toHaveBeenCalledTimes(2)
   expect(article).toHaveFocus()
-  expect(screen.queryByText('調査時に取得した投稿')).not.toBeInTheDocument()
+  expect(
+    screen.queryByText('Post saved during research'),
+  ).not.toBeInTheDocument()
   act(() => {
     vi.advanceTimersByTime(2500)
   })
@@ -76,12 +78,12 @@ it('waits for reveal before mounting CW content or sensitive media', () => {
     ],
   }
   render(<ResearchPostCard post={post} />)
-  expect(screen.getByText('Bob がブースト')).toBeInTheDocument()
+  expect(screen.getByText('Boosted by Bob')).toBeInTheDocument()
   expect(screen.queryByAltText('Hidden image')).not.toBeInTheDocument()
   expect(screen.queryByText('content')).not.toBeInTheDocument()
-  fireEvent.click(screen.getByRole('button', { name: '内容を表示' }))
+  fireEvent.click(screen.getByRole('button', { name: 'Show content' }))
   expect(screen.getByAltText('Hidden image')).toBeInTheDocument()
   expect(screen.getByText('content').tagName).toBe('STRONG')
-  fireEvent.click(screen.getByRole('button', { name: '内容を隠す' }))
+  fireEvent.click(screen.getByRole('button', { name: 'Hide content' }))
   expect(screen.queryByAltText('Hidden image')).not.toBeInTheDocument()
 })

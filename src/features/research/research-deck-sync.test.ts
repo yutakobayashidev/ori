@@ -104,7 +104,7 @@ it('propagates failed saves so the user can retry instead of reporting successfu
   actions.save.mockResolvedValueOnce(false)
   await expect(
     syncResearchDeck(plan, false, bindings, actions),
-  ).rejects.toThrow('一時デッキを更新できませんでした')
+  ).rejects.toThrow('Unable to update the temporary deck')
   await expect(
     syncResearchDeck(plan, true, bindings, actions),
   ).resolves.toBeUndefined()

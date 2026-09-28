@@ -22,7 +22,7 @@ export async function syncResearchDeck(
   if (existing && !existing.persisted) {
     if (!(await workspace.save({ ...plan, id: existing.id }))) {
       throw new Error(
-        '一時デッキを更新できませんでした。保存処理の完了後に再試行してください。',
+        'Unable to update the temporary deck. Try again after saving finishes.',
       )
     }
     viewId = existing.id

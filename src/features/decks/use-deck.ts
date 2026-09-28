@@ -88,7 +88,7 @@ export function useDeck(editing = false) {
         const id = newId()
         if (preferred === view.id) preferred = id
         setStorageError(
-          '保存済みの内容と異なる編集を、一時コピーとして残しました。',
+          'Your unsaved changes have been kept as a temporary copy.',
         )
         return [{ ...view, id }]
       })
@@ -106,7 +106,7 @@ export function useDeck(editing = false) {
         ? preferred
         : (all[0]?.id ?? '')
       if (initialized.current && activeDeckId !== preferred)
-        setStorageError('表示中のデッキが別の端末で削除されました。')
+        setStorageError('This deck was deleted on another device.')
       initialized.current = true
       apply({ activeDeckId, decks: all })
     },
@@ -138,9 +138,7 @@ export function useDeck(editing = false) {
           requestGeneration !== generation.current
         )
           return false
-        setStorageError(
-          '保存済みデッキを読み込めませんでした。再試行してください。',
-        )
+        setStorageError('Unable to load saved decks. Please try again.')
         return false
       }
     },
@@ -156,7 +154,7 @@ export function useDeck(editing = false) {
       }
     } catch {
       setStorageError(
-        '旧デッキを読み込めませんでした。ブラウザの保存内容は変更していません。',
+        'Unable to load legacy decks. Your browser data has not been changed.',
       )
     }
     void refresh()
@@ -176,7 +174,7 @@ export function useDeck(editing = false) {
     accept: (value: T) => void,
   ) {
     if (busy.current) {
-      setStorageError('保存処理が完了するまでお待ちください。')
+      setStorageError('Please wait until saving finishes.')
       return false
     }
     busy.current = true
@@ -191,7 +189,7 @@ export function useDeck(editing = false) {
       setStorageError(
         error instanceof Error
           ? error.message
-          : '保存できませんでした。再試行してください。',
+          : 'Unable to save. Please try again.',
       )
       return false
     } finally {
@@ -233,7 +231,7 @@ export function useDeck(editing = false) {
   }
   function select(id: string) {
     if (!current.current.decks.some((deck) => deck.id === id))
-      throw new Error('デッキが見つかりません。')
+      throw new Error('Deck not found.')
     apply({ ...current.current, activeDeckId: id })
     return true
   }
@@ -247,7 +245,7 @@ export function useDeck(editing = false) {
   }
   async function persist(id: string) {
     const view = current.current.decks.find((deck) => deck.id === id)
-    if (!view) throw new Error('デッキが見つかりません。')
+    if (!view) throw new Error('Deck not found.')
     if (view.persisted) return true
     return mutate(
       async () => {
@@ -266,7 +264,7 @@ export function useDeck(editing = false) {
   }
   async function remove(id: string, expectedRevision?: number) {
     const view = current.current.decks.find((deck) => deck.id === id)
-    if (!view) throw new Error('デッキが見つかりません。')
+    if (!view) throw new Error('Deck not found.')
     const accept = () => {
       const previous = current.current
       const decks = previous.decks.filter((deck) => deck.id !== id)

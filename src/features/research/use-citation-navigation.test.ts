@@ -119,7 +119,7 @@ it.each([
   act(() => {
     expect(result.current.navigate(citation.post.url, [citation])).toBe(true)
   })
-  expect(createTemporary).toHaveBeenCalledWith('引用元の投稿', [column])
+  expect(createTemporary).toHaveBeenCalledWith('Cited posts', [column])
   expect(result.current.target?.deckId).toBe('created')
 })
 

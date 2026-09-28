@@ -41,7 +41,7 @@ export function Dialog({
               variant="ghost"
               size="icon-sm"
               className="absolute right-2 top-2"
-              aria-label="閉じる"
+              aria-label="Close"
             />
           }
         >

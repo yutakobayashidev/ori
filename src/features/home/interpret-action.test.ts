@@ -122,7 +122,7 @@ describe('home natural-language proposals', () => {
     ['メモ：散歩でアイデアを思いついた', 'メモ', '散歩でアイデアを思いついた'],
     ['再開地点：レビューの続き', '再開地点', 'レビューの続き'],
     ['体重は65.2kg', '体重', '65.2'],
-    ['薬を飲んだ', '服薬', '服薬した'],
+    ['薬を飲んだ', '服薬', 'Took medication'],
   ])('records explicit user statements: %s', (input, kind, text) => {
     expect(interpretAction(input, tasks, contacts)).toMatchObject({
       action: { type: 'journal', kind, text },
@@ -153,5 +153,58 @@ describe('home natural-language proposals', () => {
     expect(interpretAction(input, tasks, contacts)).toMatchObject({
       action: { type: 'navigate', to },
     })
+  })
+})
+
+describe('English home commands', () => {
+  const tasks = [{ id: 'shop', title: 'grocery shopping' }]
+  const contacts = [{ id: 'aoki', name: 'Haruka Aoki' }]
+  it.each([
+    [
+      'Add grocery shopping',
+      { type: 'add-task', title: 'grocery shopping', section: 'focus' },
+    ],
+    [
+      'Add routine: Stretch',
+      { type: 'add-task', title: 'Stretch', section: 'routine' },
+    ],
+    [
+      'Optional: Read',
+      { type: 'add-task', title: 'Read', section: 'optional' },
+    ],
+    ['Reply to Aoki', { type: 'contact', id: 'aoki' }],
+    [
+      'Note: Resume on page 2',
+      { type: 'journal', kind: 'メモ', text: 'Resume on page 2' },
+    ],
+    ['Resume: Page 2', { type: 'journal', kind: '再開地点', text: 'Page 2' }],
+    ['Weight: 65.2 kg', { type: 'journal', kind: '体重', text: '65.2' }],
+    [
+      'Complete grocery shopping',
+      { type: 'task-status', id: 'shop', status: 'done' },
+    ],
+    [
+      'Defer grocery shopping',
+      { type: 'task-status', id: 'shop', status: 'later' },
+    ],
+    [
+      'Restore grocery shopping',
+      { type: 'task-status', id: 'shop', status: 'todo' },
+    ],
+    [
+      'Move grocery shopping up',
+      { type: 'task-move', id: 'shop', direction: -1 },
+    ],
+    ['Open reader', { type: 'navigate', to: '/inbox' }],
+  ])('interprets %s', (input, action) => {
+    expect(interpretAction(input as string, tasks, contacts)).toMatchObject({
+      action,
+    })
+  })
+  it.each([
+    "Don't complete grocery shopping",
+    'Send a reply to Aoki',
+  ])('rejects %s', (input) => {
+    expect(interpretAction(input, tasks, contacts)).toHaveProperty('error')
   })
 })

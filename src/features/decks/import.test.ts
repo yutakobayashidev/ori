@@ -77,7 +77,7 @@ it('blocks a different browser snapshot after the one-time import', () => {
       database,
       'https://relay.invalid',
     ),
-  ).toThrow('旧デッキはすでに取り込み済みです')
+  ).toThrow('Legacy decks have already been imported')
   expect(listDecks(database)).toEqual(result)
 })
 it('rolls back all imported decks and marker when any profile is unavailable', () => {
@@ -92,7 +92,7 @@ it('rolls back all imported decks and marker when any profile is unavailable', (
       database,
       'https://relay.invalid',
     ),
-  ).toThrow('対応する接続がありません')
+  ).toThrow('No connection matches')
   expect(listDecks(database)).toEqual([])
   expect(database.select().from(legacyImports).all()).toEqual([])
 })

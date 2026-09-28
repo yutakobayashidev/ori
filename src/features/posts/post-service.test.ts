@@ -81,7 +81,7 @@ describe('loadListChoices', () => {
         ok: false,
         error: {
           code: 'upstream',
-          message: 'X から投稿を取得できませんでした。',
+          message: 'Could not load posts from X.',
           retryable: true,
         },
       })
@@ -123,7 +123,7 @@ describe('loadUserPage', () => {
       ok: false,
       error: {
         code: 'user-not-found',
-        message: 'ユーザーが見つかりませんでした。',
+        message: 'User not found.',
         retryable: false,
       },
     })
@@ -164,7 +164,7 @@ describe('loadListPage', () => {
       ok: false,
       error: {
         code: 'invalid-input',
-        message: 'リスト ID は数字で入力してください。',
+        message: 'List IDs must contain only numbers.',
         retryable: false,
       },
     })
@@ -182,7 +182,7 @@ describe('loadListPage', () => {
       ok: false,
       error: {
         code: 'list-not-found',
-        message: 'リストが見つかりませんでした。',
+        message: 'List not found.',
         retryable: false,
       },
     })
@@ -199,7 +199,7 @@ describe('loadListPage', () => {
       ok: false,
       error: {
         code: 'list-unavailable',
-        message: 'このリストは取得できません。',
+        message: 'This list is unavailable.',
         retryable: false,
       },
     })
@@ -310,7 +310,7 @@ describe('searchPage', () => {
         ok: false,
         error: {
           code: 'upstream',
-          message: 'X から投稿を取得できませんでした。',
+          message: 'Could not load posts from X.',
           retryable: true,
         },
       })

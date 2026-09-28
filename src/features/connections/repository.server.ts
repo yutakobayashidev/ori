@@ -9,9 +9,7 @@ import type { Connection } from './model'
 function relayOrigin(): string {
   const configured = process.env.TWITTER_RELAY_BASE_URL
   if (!configured)
-    throw new ProfileUnavailableError(
-      'TWITTER_RELAY_BASE_URL を設定してください。',
-    )
+    throw new ProfileUnavailableError('Set TWITTER_RELAY_BASE_URL.')
   return new URL(configured).origin
 }
 
@@ -23,7 +21,7 @@ async function syncTwitterConnections(
   const profiles = new Set(
     await fetchProfiles(origin).catch(() => {
       throw new ProfileUnavailableError(
-        '接続プロファイルを確認できませんでした。Relay への接続を確認して再試行してください。',
+        'Could not verify connection profiles. Check the relay connection and try again.',
       )
     }),
   )
@@ -118,7 +116,7 @@ export async function requireTwitterConnection(
     !connection.relayProfile
   ) {
     throw new ProfileUnavailableError(
-      'この接続は利用できません。カラムの接続アカウントを確認してください。',
+      'This connection is unavailable. Check the connected account for this column.',
     )
   }
   return connection.relayProfile

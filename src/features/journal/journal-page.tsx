@@ -10,6 +10,7 @@ import { WorkspaceNavigation } from '#/components/workspace-navigation'
 import {
   type JournalEntry as Entry,
   type EntryKind,
+  entryKindLabels,
   useWorkspaceState,
 } from '#/features/workspace/workspace-state'
 import './journal.css'
@@ -19,8 +20,8 @@ const emptyDraft: Draft = { kind: 'メモ', text: '', source: '', occurredAt: ''
 const kinds: EntryKind[] = ['メモ', '再開地点', '服薬', '体重']
 
 function formatTime(value: string | undefined) {
-  if (!value) return '不明'
-  return new Date(value).toLocaleString('ja-JP', {
+  if (!value) return 'Unknown'
+  return new Date(value).toLocaleString('en-US', {
     year: 'numeric',
     month: 'numeric',
     day: 'numeric',
@@ -58,7 +59,7 @@ export function JournalPage() {
         <WorkspaceNavigation />
         <SidebarInset className="journal-main">
           <header className="journal-header">
-            <h1 className="text-base font-semibold">記録</h1>
+            <h1 className="text-base font-semibold">Journal</h1>
             <Button
               variant="outline"
               disabled={current.length === 0}
@@ -67,7 +68,7 @@ export function JournalPage() {
                 setReviewing(true)
               }}
             >
-              記録をまとめる
+              Summarize entries
             </Button>
           </header>
           <div className="journal-scroll">
@@ -79,28 +80,30 @@ export function JournalPage() {
                   append(draft)
                   setDraft(emptyDraft)
                 }}
-                submitLabel="記録する"
+                submitLabel="Save entry"
               />
-              <section className="journal-entries" aria-label="記録一覧">
+              <section className="journal-entries" aria-label="Journal entries">
                 {entries.length === 0 && (
-                  <p className="journal-empty">まだ記録はありません</p>
+                  <p className="journal-empty">No entries yet</p>
                 )}
                 {entries.map((entry) => (
                   <article
                     key={entry.id}
                     className="journal-entry"
-                    aria-label={`${entry.kind}の記録`}
+                    aria-label={`${entryKindLabels[entry.kind]} entry`}
                   >
                     <div className="journal-entry-heading">
-                      <span className="text-sm font-medium">{entry.kind}</span>
+                      <span className="text-sm font-medium">
+                        {entryKindLabels[entry.kind]}
+                      </span>
                       {superseded.has(entry.id) && (
                         <span className="text-xs text-muted-foreground">
-                          訂正前
+                          Original
                         </span>
                       )}
                       {entry.correctionOf && (
                         <span className="text-xs text-muted-foreground">
-                          訂正
+                          Correction
                         </span>
                       )}
                       {!superseded.has(entry.id) && (
@@ -110,7 +113,7 @@ export function JournalPage() {
                           className="ml-auto"
                           onClick={() => setCorrecting(entry)}
                         >
-                          訂正する
+                          Correct
                         </Button>
                       )}
                     </div>
@@ -119,12 +122,12 @@ export function JournalPage() {
                       {entry.kind === '体重' ? ' kg' : ''}
                     </p>
                     <p className="text-xs text-muted-foreground">
-                      発生日時: {formatTime(entry.occurredAt)} · 記録日時:{' '}
+                      Occurred: {formatTime(entry.occurredAt)} · Recorded:{' '}
                       {formatTime(entry.recordedAt)}
                     </p>
                     {(entry.kind === '体重' || entry.source) && (
                       <p className="mt-2 text-xs text-muted-foreground">
-                        記録元: {entry.source || '不明'}
+                        Source: {entry.source || 'Unknown'}
                       </p>
                     )}
                   </article>
@@ -146,12 +149,12 @@ export function JournalPage() {
       )}
       {reviewing && (
         <Dialog
-          title="記録をまとめる"
+          title="Summarize entries"
           className="sm:max-w-2xl"
           onClose={() => setReviewing(false)}
         >
           <p className="text-sm text-muted-foreground">
-            含める記録を選んで確認できます。外部には送信されません。
+            Select the entries to include. Nothing is sent externally.
           </p>
           <div className="journal-review-list">
             {current.map((entry) => (
@@ -174,7 +177,8 @@ export function JournalPage() {
                 />
                 <span>
                   <span className="text-xs text-muted-foreground">
-                    {entry.kind} · {formatTime(entry.occurredAt)}
+                    {entryKindLabels[entry.kind]} ·{' '}
+                    {formatTime(entry.occurredAt)}
                   </span>
                   <span className="block text-sm">
                     {entry.text}
@@ -185,7 +189,7 @@ export function JournalPage() {
             ))}
           </div>
           <Textarea
-            aria-label="記録のまとめ"
+            aria-label="Entry summary"
             className="journal-summary"
             readOnly
             value={buildSummary(
@@ -222,7 +226,7 @@ function EntryEditor({
         if (valid) onSubmit()
       }}
     >
-      <fieldset className="journal-kind-switch" aria-label="記録の種類">
+      <fieldset className="journal-kind-switch" aria-label="Entry type">
         {kinds.map((kind) => (
           <Button
             key={kind}
@@ -232,7 +236,7 @@ function EntryEditor({
             aria-pressed={draft.kind === kind}
             onClick={() => onChange({ ...draft, kind })}
           >
-            {kind}
+            {entryKindLabels[kind]}
           </Button>
         ))}
       </fieldset>
@@ -242,8 +246,8 @@ function EntryEditor({
             type="number"
             step="any"
             min="0.1"
-            aria-label="体重"
-            placeholder="体重"
+            aria-label="Weight"
+            placeholder="Weight"
             value={draft.text}
             onChange={(event) =>
               onChange({ ...draft, text: event.target.value })
@@ -253,13 +257,13 @@ function EntryEditor({
         </div>
       ) : (
         <Textarea
-          aria-label="記録内容"
+          aria-label="Entry text"
           placeholder={
             draft.kind === '服薬'
-              ? '服用した薬の名前'
+              ? 'Name of the medication taken'
               : draft.kind === '再開地点'
-                ? '次にすること、開いておく場所'
-                : '自由なメモ、次にすること'
+                ? 'What to do next and where to pick up'
+                : 'A thought or your next step'
           }
           value={draft.text}
           onChange={(event) => onChange({ ...draft, text: event.target.value })}
@@ -267,8 +271,8 @@ function EntryEditor({
       )}
       {draft.kind === '体重' && (
         <Input
-          aria-label="記録元"
-          placeholder="記録元（体重計など・任意）"
+          aria-label="Source"
+          placeholder="Source (e.g. scale, optional)"
           value={draft.source}
           onChange={(event) =>
             onChange({ ...draft, source: event.target.value })
@@ -277,11 +281,11 @@ function EntryEditor({
       )}
       <div className="journal-editor-footer">
         <label className="journal-date-label" htmlFor={dateId}>
-          発生日時（任意）
+          When it happened (optional)
           <Input
             id={dateId}
             type="datetime-local"
-            aria-label="発生日時"
+            aria-label="When it happened"
             value={draft.occurredAt}
             onChange={(event) =>
               onChange({ ...draft, occurredAt: event.target.value })
@@ -307,38 +311,38 @@ function CorrectionDialog({
 }) {
   const [draft, setDraft] = useState<Draft>(entry)
   return (
-    <Dialog title="記録を訂正" onClose={onClose} className="sm:max-w-xl">
+    <Dialog title="Correct entry" onClose={onClose} className="sm:max-w-xl">
       <p className="text-sm text-muted-foreground">
-        元の記録を残して、訂正を追加します。
+        Add a correction while keeping the original entry.
       </p>
       <EntryEditor
         draft={draft}
         onChange={setDraft}
         onSubmit={() => onSave(draft)}
-        submitLabel="訂正を追加"
+        submitLabel="Add correction"
       />
     </Dialog>
   )
 }
 
 function buildSummary(entries: Entry[]) {
-  if (!entries.length) return '記録を選択してください。'
+  if (!entries.length) return 'Select an entry.'
   const dates = entries
     .map((entry) => entry.occurredAt)
     .filter(Boolean)
     .sort()
   const period = dates.length
     ? `${formatTime(dates[0])} 〜 ${formatTime(dates[dates.length - 1])}`
-    : '不明'
+    : 'Unknown'
   return [
-    `発生日時の期間: ${period}`,
-    `発生日時が不明の記録: ${entries.filter((entry) => !entry.occurredAt).length}件`,
+    `Period covered: ${period}`,
+    `Entries with an unknown event time: ${entries.filter((entry) => !entry.occurredAt).length} entries`,
     '',
     ...entries.map(
       (entry) =>
-        `[${entry.kind}] ${entry.text}${entry.kind === '体重' ? ' kg' : ''}\n発生日時: ${formatTime(entry.occurredAt)} / 記録日時: ${formatTime(entry.recordedAt)}${entry.kind === '体重' ? ` / 記録元: ${entry.source || '不明'}` : ''}`,
+        `[${entryKindLabels[entry.kind]}] ${entry.text}${entry.kind === '体重' ? ' kg' : ''}\nOccurred: ${formatTime(entry.occurredAt)} / Recorded: ${formatTime(entry.recordedAt)}${entry.kind === '体重' ? ` / Source: ${entry.source || 'Unknown'}` : ''}`,
     ),
     '',
-    '記録のない期間の服薬・体重は不明です。',
+    'Medication and weight are unknown for periods without entries.',
   ].join('\n')
 }

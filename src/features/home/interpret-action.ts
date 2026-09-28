@@ -20,7 +20,7 @@ type Interpretation = { action: HomeAction; label: string } | { error: string }
 
 const unsupported = {
   error:
-    'まだ読み取れません。「買い物を追加」「青木さんに返信」「メモ：気づいたこと」のように、ひとつずつ入力してください。',
+    'Try one action at a time, such as “Add grocery shopping”, “Reply to Aoki”, or “Note: A thought”.',
 }
 
 /** Local, deterministic prototype. Returns a proposal; never performs an action. */
@@ -29,18 +29,50 @@ export function interpretAction(
   tasks: Array<{ id: string; title: string; steps?: string[] }>,
   contacts: Array<{ id: string; name: string }>,
 ): Interpretation {
-  const text = input
+  let text = input
     .trim()
     .replace(/[。！!]$/, '')
     .trim()
-  if (!text) return { error: 'やりたいことを入力してください。' }
+  // Normalize English commands into the same small, deterministic grammar.
+  if (/\b(?:don't|do not|cancel|send)\b/i.test(text))
+    return { error: 'Please review this action in the relevant screen.' }
+  text = text
+    .replace(
+      /^open (messages|journal|reader|twitter lite|deck)$/i,
+      (_, name: string) =>
+        ({
+          messages: '連絡',
+          journal: '記録',
+          reader: 'リーダー',
+          'twitter lite': 'Twitter Lite',
+          deck: 'デッキ',
+        })[name.toLowerCase()] ?? name,
+    )
+    .replace(/^note\s*:/i, 'メモ:')
+    .replace(/^resume(?: point)?\s*:/i, '再開地点:')
+    .replace(/^weight\s*:?\s*/i, '体重:')
+    .replace(/^log medication$|^took (?:my )?medication$/i, '服薬した')
+    .replace(/^reply to (.+)$/i, '$1に返信')
+    .replace(/^defer (.+)$/i, '$1を保留')
+    .replace(/^mark (.+) (?:as )?waiting$/i, '$1を相手待ち')
+    .replace(
+      /^move (.+) (up|down)$/i,
+      (_, title: string, direction: string) =>
+        `${title}を${direction.toLowerCase() === 'up' ? '上' : '下'}に移動`,
+    )
+    .replace(/^complete (.+)$/i, '$1を完了')
+    .replace(/^restore (.+)$/i, '$1を未完了')
+    .replace(/^add routine\s*:\s*(.+)$/i, '$1をルーティンに追加')
+    .replace(/^optional\s*:\s*(.+)$/i, '余裕があれば $1')
+    .replace(/^add\s*:?\s+(.+)$/i, '$1を追加')
+  if (!text) return { error: 'Enter what you would like to do.' }
   if (
     /しない|しなく|せず|しないで|やめ|取り消|取消|ではなく|じゃなく|不要|送信|送って|送る/.test(
       text,
     )
   ) {
     return {
-      error: 'この内容は自動で変更できません。対象の画面で確認してください。',
+      error: 'Please review this action in the relevant screen.',
     }
   }
 
@@ -61,7 +93,7 @@ export function interpretAction(
   if (route)
     return {
       action: { type: 'navigate', to: route },
-      label: `${destination}を開く`,
+      label: `Open ${{ '/support': 'Messages', '/journal': 'Journal', '/inbox': 'Reader', '/deck': 'Twitter Lite' }[route]}`,
     }
 
   const note = text.match(/^(メモ|再開地点)[：:\s]+(.+)$/s)
@@ -71,7 +103,7 @@ export function interpretAction(
     if (!body) return unsupported
     return {
       action: { type: 'journal', kind, text: body },
-      label: `${kind}を記録する`,
+      label: `Save ${kind === 'メモ' ? 'note' : 'resume point'}`,
     }
   }
   const weight = text.match(
@@ -80,7 +112,7 @@ export function interpretAction(
   if (weight?.[1])
     return {
       action: { type: 'journal', kind: '体重', text: weight[1] },
-      label: `体重 ${weight[1]} kg を記録する`,
+      label: `Log weight: ${weight[1]} kg`,
     }
   if (
     /^(?:薬を飲んだ|服薬した|服薬を記録)(?:ので記録して|と記録して)?$/.test(
@@ -88,8 +120,8 @@ export function interpretAction(
     )
   ) {
     return {
-      action: { type: 'journal', kind: '服薬', text: '服薬した' },
-      label: '服薬したことを記録する',
+      action: { type: 'journal', kind: '服薬', text: 'Took medication' },
+      label: 'Log medication',
     }
   }
 
@@ -102,7 +134,9 @@ export function interpretAction(
       (item) =>
         item.name === name ||
         item.name.replace(/\s/g, '') === name ||
-        item.name.split(/\s+/)[0] === name,
+        item.name
+          .split(/\s+/)
+          .some((part) => part.toLowerCase() === name.toLowerCase()),
     )
     const matchingTasks = tasks.filter((task) => task.title === name)
     const matchingTask = matchingTasks[0]
@@ -118,28 +152,28 @@ export function interpretAction(
           id: matchingTask.id,
           status: 'later',
         },
-        label: `${name}をあとでにする`,
+        label: `Defer ${name}`,
       }
     }
     if (matches.length > 0 && matchingTasks.length > 0 && /保留/.test(text)) {
       return {
         error:
-          'タスクと連絡先の両方に当てはまります。対象の画面で確認してください。',
+          'This matches both a task and a contact. Please use the relevant screen.',
       }
     }
     const person = matches[0]
     if (matches.length !== 1 || !person)
-      return { error: '連絡先をひとりに絞れません。氏名を入力してください。' }
+      return { error: 'Please enter the full name of one contact.' }
     if (/相手待ち|保留/.test(text)) {
       const status = text.includes('相手待ち') ? 'waiting' : 'later'
       return {
         action: { type: 'contact-status', id: person.id, status },
-        label: `${person.name}との連絡を${status === 'waiting' ? '相手待ち' : '保留'}にする`,
+        label: `Mark the conversation with ${person.name} as ${status === 'waiting' ? 'waiting' : 'later'}`,
       }
     }
     return {
       action: { type: 'contact', id: person.id },
-      label: `${person.name}への返信を確認する`,
+      label: `Review reply to ${person.name}`,
     }
   }
 
@@ -150,8 +184,7 @@ export function interpretAction(
     const task = matches[0]
     if (matches.length !== 1 || !task)
       return {
-        error:
-          'タスクをひとつに絞れません。一覧の名前をそのまま指定してください。',
+        error: 'Please use the exact name of one task from the list.',
       }
     return {
       action: {
@@ -159,7 +192,7 @@ export function interpretAction(
         id: task.id,
         direction: move[2] === '上' ? -1 : 1,
       },
-      label: `${task.title}をひとつ${move[2]}に移動する`,
+      label: `Move ${task.title} ${move[2] === '上' ? 'up' : 'down'}`,
     }
   }
 
@@ -176,8 +209,7 @@ export function interpretAction(
     )
     if (matches.length + steps.length !== 1)
       return {
-        error:
-          'タスクをひとつに絞れません。一覧の名前をそのまま指定してください。',
+        error: 'Please use the exact name of one task from the list.',
       }
     const status = /未完了|戻して/.test(change[2])
       ? 'todo'
@@ -187,7 +219,7 @@ export function interpretAction(
     const step = steps[0]
     if (steps.length === 1 && step) {
       if (status === 'later')
-        return { error: 'ルーティンの手順は完了・未完了に変更できます。' }
+        return { error: 'Routine steps can be marked done or incomplete.' }
       return {
         action: {
           type: 'routine-step',
@@ -195,14 +227,14 @@ export function interpretAction(
           step: step.step,
           done: status === 'done',
         },
-        label: `${title}を${status === 'done' ? '完了' : '未完了'}にする`,
+        label: `Mark ${title} as ${status === 'done' ? 'done' : 'incomplete'}`,
       }
     }
     const task = matches[0]
     if (!task) return unsupported
     return {
       action: { type: 'task-status', id: task.id, status },
-      label: `${title}を${status === 'done' ? '完了' : status === 'later' ? 'あとで' : '未完了'}にする`,
+      label: `Mark ${title} as ${status === 'done' ? 'done' : status === 'later' ? 'later' : 'incomplete'}`,
     }
   }
 
@@ -218,7 +250,7 @@ export function interpretAction(
     const section = routine ? 'routine' : optional ? 'optional' : 'focus'
     return {
       action: { type: 'add-task', title, section },
-      label: `「${title}」を${section === 'routine' ? 'ルーティン' : section === 'optional' ? '余裕があれば' : '今日のタスク'}に追加する`,
+      label: `Add “${title}” to ${section === 'routine' ? 'Routines' : section === 'optional' ? 'If there’s room' : 'Start here'}`,
     }
   }
   return unsupported

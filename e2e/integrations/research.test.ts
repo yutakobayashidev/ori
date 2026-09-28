@@ -43,9 +43,9 @@ test('restores the conversation and growing temporary deck from reconnect snapsh
 }) => {
   await page.goto('/deck')
   await showDeckManagement(page)
-  await page.getByRole('button', { name: 'カラムを追加', exact: true }).click()
+  await page.getByRole('button', { name: 'Add column', exact: true }).click()
   const accounts = page.getByRole('combobox', {
-    name: '接続プロファイル',
+    name: 'Connection profile',
     exact: true,
   })
   await accounts.selectOption({ label: 'e2e' })
@@ -98,7 +98,7 @@ test('restores the conversation and growing temporary deck from reconnect snapsh
   )
   await page.reload()
   await showResearch(page)
-  const conversation = page.getByRole('log', { name: '調査の会話' })
+  const conversation = page.getByRole('log', { name: 'Research conversation' })
   await expect(conversation).toContainText('既存の観点を使って調査して')
   await expect(conversation).toContainText('list_decks: 完了')
   await expect(conversation).toContainText('既存の検索条件を再利用しています。')
@@ -135,11 +135,11 @@ test('restores the conversation and growing temporary deck from reconnect snapsh
   ])
   await closeMobileSidebar(page)
   await expect(
-    page.getByRole('button', { name: 'デッキとして保存', exact: true }),
+    page.getByRole('button', { name: 'Save as deck', exact: true }),
   ).toBeEnabled()
   await showResearch(page)
   const accountPicker = page.getByRole('button', {
-    name: '接続アカウント · 1件',
+    name: 'Connected accounts · 1',
   })
   await accountPicker.click()
   await expect(accountPicker).toHaveAttribute('aria-expanded', 'true')
@@ -148,13 +148,11 @@ test('restores the conversation and growing temporary deck from reconnect snapsh
   ).toBeChecked()
   await accountPicker.click()
   await expect(accountPicker).toHaveAttribute('aria-expanded', 'false')
-  await page.getByLabel('メッセージ', { exact: true }).fill('この観点を詳しく')
+  await page.getByLabel('Message', { exact: true }).fill('この観点を詳しく')
   await expect(
-    page.getByRole('button', { name: '送信', exact: true }),
+    page.getByRole('button', { name: 'Send', exact: true }),
   ).toBeEnabled()
-  await page
-    .getByRole('button', { name: 'サイドバーを閉じる', exact: true })
-    .click()
+  await page.getByRole('button', { name: 'Close sidebar', exact: true }).click()
   run.deckVersion = 3
   if (run.deck) run.deck.title = '閉じている間に更新された調査'
   await expect(page.getByRole('heading', { level: 1 })).toHaveText(
@@ -162,7 +160,7 @@ test('restores the conversation and growing temporary deck from reconnect snapsh
     { timeout: 15000 },
   )
   await showResearch(page)
-  await expect(page.getByLabel('メッセージ', { exact: true })).toHaveValue(
+  await expect(page.getByLabel('Message', { exact: true })).toHaveValue(
     'この観点を詳しく',
   )
   await page.setViewportSize({ width: 600, height: 900 })
@@ -170,20 +168,20 @@ test('restores the conversation and growing temporary deck from reconnect snapsh
     page.locator('[data-sidebar="sidebar"][data-mobile="true"]'),
   ).toHaveCount(1)
   await showResearch(page)
-  await expect(page.getByLabel('メッセージ', { exact: true })).toHaveValue(
+  await expect(page.getByLabel('Message', { exact: true })).toHaveValue(
     'この観点を詳しく',
   )
-  await page.getByRole('button', { name: '接続アカウント · 1件' }).click()
+  await page.getByRole('button', { name: 'Connected accounts · 1' }).click()
   await page.getByRole('checkbox', { name: 'e2e · Twitter' }).uncheck()
   await page.setViewportSize({ width: 1100, height: 900 })
   await expect(
     page.locator('[data-sidebar="sidebar"][data-mobile="true"]'),
   ).toHaveCount(0)
   await showResearch(page)
-  await expect(page.getByLabel('メッセージ', { exact: true })).toHaveValue(
+  await expect(page.getByLabel('Message', { exact: true })).toHaveValue(
     'この観点を詳しく',
   )
-  await page.getByRole('button', { name: '接続アカウント · 0件' }).click()
+  await page.getByRole('button', { name: 'Connected accounts · 0' }).click()
   await expect(
     page.getByRole('checkbox', { name: 'e2e · Twitter' }),
   ).not.toBeChecked()
@@ -192,10 +190,10 @@ test('restores the conversation and growing temporary deck from reconnect snapsh
     page.locator('[data-sidebar="sidebar"][data-mobile="true"]'),
   ).toHaveCount(1)
   await showResearch(page)
-  await expect(page.getByLabel('メッセージ', { exact: true })).toHaveValue(
+  await expect(page.getByLabel('Message', { exact: true })).toHaveValue(
     'この観点を詳しく',
   )
-  await page.getByRole('button', { name: '接続アカウント · 0件' }).click()
+  await page.getByRole('button', { name: 'Connected accounts · 0' }).click()
   await expect(
     page.getByRole('checkbox', { name: 'e2e · Twitter' }),
   ).not.toBeChecked()
@@ -217,9 +215,9 @@ test('renders Markdown and reveals an unloaded citation in an offscreen deck col
   await page.emulateMedia({ reducedMotion: 'reduce' })
   await page.goto('/deck')
   await showDeckManagement(page)
-  await page.getByRole('button', { name: 'カラムを追加', exact: true }).click()
+  await page.getByRole('button', { name: 'Add column', exact: true }).click()
   const accounts = page.getByRole('combobox', {
-    name: '接続プロファイル',
+    name: 'Connection profile',
     exact: true,
   })
   await accounts.selectOption({ label: 'e2e' })
@@ -288,7 +286,7 @@ test('renders Markdown and reveals an unloaded citation in an offscreen deck col
   )
   await page.reload()
   await showResearch(page)
-  const chat = page.getByRole('log', { name: '調査の会話' })
+  const chat = page.getByRole('log', { name: 'Research conversation' })
   await expect(chat.getByRole('heading', { name: '調査結果' })).toBeVisible()
   await expect(chat.getByRole('heading', { name: '調査結果' })).toHaveCSS(
     'font-weight',
@@ -309,7 +307,7 @@ test('renders Markdown and reveals an unloaded citation in an offscreen deck col
   await expect(card).toBeVisible()
   await expect(card).toHaveClass(/citation-highlight/)
   await expect(card).toBeFocused()
-  await expect(card).toContainText('調査時に取得した投稿')
+  await expect(card).toContainText('Post saved during research')
   await expect(card).toContainText('AIが調査時に取得した引用本文')
   expect(
     await page.locator('.deck-board').evaluate((element) => element.scrollLeft),
@@ -327,23 +325,25 @@ test('explains unconfigured Codex and prevents starting research without affecti
   await expect(heading).toBeVisible()
   const originalTitle = await heading.textContent()
   await showResearch(page)
-  const panel = page.getByRole('complementary', { name: '調査チャット' })
+  const panel = page.getByRole('complementary', { name: 'Research chat' })
   await expect(panel).toBeVisible()
   await expect(
-    panel.getByText('自宅のCodexへの接続が設定されていません。'),
+    panel.getByText(
+      'The connection to Codex on your home server is not configured.',
+    ),
   ).toBeVisible()
   await expect(
-    panel.getByRole('button', { name: '送信', exact: true }),
+    panel.getByRole('button', { name: 'Send', exact: true }),
   ).toBeDisabled()
-  await expect(panel.getByLabel('メッセージ', { exact: true })).toBeDisabled()
+  await expect(panel.getByLabel('Message', { exact: true })).toBeDisabled()
   const accessibility = await a11y().analyze()
   expect(accessibility.violations).toEqual([])
   await closeMobileSidebar(page)
   await expect(heading).toHaveText(originalTitle ?? '')
   await showDeckManagement(page)
-  await page.getByRole('button', { name: 'デッキを作成', exact: true }).click()
-  await page.getByLabel('新しいデッキ名').fill('手動の調査')
-  await page.getByRole('button', { name: '作成', exact: true }).click()
+  await page.getByRole('button', { name: 'Create deck', exact: true }).click()
+  await page.getByLabel('New deck name').fill('手動の調査')
+  await page.getByRole('button', { name: 'Create', exact: true }).click()
   await closeMobileSidebar(page)
   await expect(heading).toHaveText('手動の調査')
   await showResearch(page)

@@ -141,9 +141,7 @@ describe('research history persistence', () => {
   it('rejects a missing conversation without changing the active conversation', () => {
     const store = createResearchStore(open())
     store.save(run)
-    expect(() => store.activate('missing')).toThrow(
-      'この会話は見つかりません。',
-    )
+    expect(() => store.activate('missing')).toThrow('Conversation not found.')
     expect(store.loadActive()).toEqual(run)
   })
 

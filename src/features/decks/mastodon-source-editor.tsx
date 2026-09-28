@@ -37,7 +37,7 @@ export function MastodonSourceEditor({
   return (
     <>
       <Label htmlFor={id}>
-        カラムの種類
+        Column type
         <NativeSelect
           className="w-full"
           id={id}
@@ -50,10 +50,10 @@ export function MastodonSourceEditor({
             )
           }
         >
-          <NativeSelectOption value="search">検索</NativeSelectOption>
-          <NativeSelectOption value="user">ユーザー投稿</NativeSelectOption>
-          <NativeSelectOption value="list">リスト</NativeSelectOption>
-          <NativeSelectOption value="hashtag">ハッシュタグ</NativeSelectOption>
+          <NativeSelectOption value="search">Search</NativeSelectOption>
+          <NativeSelectOption value="user">User posts</NativeSelectOption>
+          <NativeSelectOption value="list">List</NativeSelectOption>
+          <NativeSelectOption value="hashtag">Hashtag</NativeSelectOption>
         </NativeSelect>
       </Label>
       <MastodonSourceFields
@@ -96,7 +96,7 @@ function MastodonSearchEditor({
   return (
     <div className="deck-source-fields">
       <Label htmlFor={id}>
-        Mastodonの検索条件
+        Mastodon search query
         <Input
           id={id}
           value={source.query}
@@ -104,12 +104,13 @@ function MastodonSearchEditor({
             onChange({ ...source, query: event.target.value })
           }
           maxLength={512}
-          placeholder="例：WebMCP"
+          placeholder="e.g. WebMCP"
           required
         />
       </Label>
       <p className="deck-help">
-        全文検索の対象はサーバーの設定によって異なります。結果が0件でも、検索に対応しているとは限りません。
+        Full-text search depends on server settings. Zero results do not
+        necessarily mean search is supported.
       </p>
     </div>
   )
@@ -123,14 +124,14 @@ function MastodonUserEditor({
   return (
     <div className="deck-source-fields">
       <Label htmlFor={id}>
-        ユーザー
+        User
         <Input
           id={id}
           value={source.target}
           onChange={(event) =>
             onChange({ ...source, target: event.target.value })
           }
-          placeholder="user@server またはアカウントID"
+          placeholder="user@server or account ID"
           maxLength={256}
           required
         />
@@ -147,14 +148,14 @@ function MastodonHashtagEditor({
   return (
     <div className="deck-source-fields">
       <Label htmlFor={id}>
-        ハッシュタグ
+        Hashtag
         <Input
           id={id}
           value={source.target}
           onChange={(event) =>
             onChange({ ...source, target: event.target.value })
           }
-          placeholder="# を除いたタグ名"
+          placeholder="Tag without #"
           maxLength={128}
           required
         />
@@ -174,14 +175,14 @@ function MastodonListEditor({
   return (
     <div className="deck-source-fields">
       <Label htmlFor={id}>
-        リスト
+        List
         <Input
           id={id}
           value={source.target}
           onChange={(event) =>
             onChange({ ...source, target: event.target.value })
           }
-          placeholder="このアカウントのリストID"
+          placeholder="List ID for this account"
           maxLength={32}
           required
         />
@@ -209,24 +210,24 @@ function MastodonListChoices({
     queryFn: () => fetchLists({ data: { connectionId } }),
     retry: false,
   })
-  if (lists.isPending) return <p role="status">リストを取得しています…</p>
+  if (lists.isPending) return <p role="status">Loading lists…</p>
   if (lists.isError)
     return (
       <p role="alert">
-        リストを取得できませんでした。
+        Unable to load lists.
         <Button
           variant="outline"
           type="button"
           onClick={() => void lists.refetch()}
         >
-          再試行
+          Retry
         </Button>
       </p>
     )
   return (
-    <section className="deck-list-choices" aria-label="このアカウントのリスト">
+    <section className="deck-list-choices" aria-label="Lists for this account">
       {lists.data.lists.length === 0 ? (
-        <p>このアカウントのリストはありません。</p>
+        <p>This account has no lists.</p>
       ) : (
         lists.data.lists.map((list) => (
           <Button

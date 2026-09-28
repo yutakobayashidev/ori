@@ -2,7 +2,7 @@
 
 `/vitals` recreates the Body and Environment screenshots attached to
 [Alan Shiflett’s post](https://x.com/AlanShiflett/status/2103524300158366183).
-The shared sidebar opens it as バイタル. Body categories and history, environment
+The shared sidebar opens it as Vitals. Body categories and history, environment
 metric details, chart period/series selection, and simulated climate controls
 are interactive. Other screenshot navigation entries open a preview explanation.
 

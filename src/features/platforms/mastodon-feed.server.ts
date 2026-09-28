@@ -26,21 +26,21 @@ async function requireOk(response: Response, search = false) {
   if (response.status === 401)
     throw new MastodonFeedError(
       'account-unavailable',
-      'アカウントを再接続してください。',
+      'Reconnect your account.',
     )
   if (response.status === 429)
     throw new MastodonFeedError(
       'rate-limit',
-      '取得回数の制限に達しました。しばらく待ってから再試行してください。',
+      'Rate limit reached. Wait a moment and try again.',
     )
   if (search && [400, 422, 501, 503].includes(response.status))
     throw new MastodonFeedError(
       'search-unavailable',
-      '検索を実行できません。接続先の対応状況と検索条件を確認してください。',
+      'Search is unavailable. Check server support and your search query.',
     )
   throw new MastodonFeedError(
     'request-failed',
-    'Mastodonから取得できませんでした。接続と対象を確認してください。',
+    'Could not load from Mastodon. Check the connection and requested resource.',
   )
 }
 
@@ -83,7 +83,7 @@ export async function fetchMastodonPage(
   if (connection?.platform !== 'mastodon' || connection.status !== 'connected')
     throw new MastodonFeedError(
       'account-unavailable',
-      'Mastodonアカウントを接続してください。',
+      'Connect a Mastodon account.',
     )
   const params = new URLSearchParams({ limit: String(PAGE_SIZE) })
   let path: string

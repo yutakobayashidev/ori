@@ -16,7 +16,7 @@ const legacyDeck = z
     (deck) =>
       new Set(deck.columns.map((column) => column.id)).size ===
       deck.columns.length,
-    'カラム ID が重複しています。',
+    'Column IDs must be unique.',
   )
 export const legacyWorkspaceSchema = z
   .object({
@@ -28,5 +28,5 @@ export const legacyWorkspaceSchema = z
   .refine(
     (value) =>
       new Set(value.decks.map((deck) => deck.id)).size === value.decks.length,
-    'デッキ ID が重複しています。',
+    'Deck IDs must be unique.',
   )

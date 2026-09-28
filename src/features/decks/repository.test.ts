@@ -84,7 +84,7 @@ it('makes retried creation idempotent but rejects different content using the sa
   expect(createDeck(deck, second)).toEqual(saved)
   expect(() =>
     createDeck({ ...deck, title: 'Different request' }, second),
-  ).toThrow('別の端末で変更されました')
+  ).toThrow('This deck changed on another device')
   expect(listDecks(database)).toEqual([saved])
 })
 
@@ -105,7 +105,7 @@ it('replaces title, ordered columns and bindings atomically, then rejects stale 
     createdAt: initial.createdAt,
   })
   expect(() => replaceDeck({ deck, expectedRevision: 1 }, second)).toThrow(
-    '別の端末で変更されました',
+    'This deck changed on another device',
   )
   expect(loadDeck(deck.id, second)).toEqual(saved)
 })
@@ -119,7 +119,7 @@ it('clears all columns and prevents stale deletion from another device', () => {
   expect(loadDeck(deck.id, second)?.columns).toEqual([])
   expect(() =>
     deleteDeck({ id: deck.id, expectedRevision: 1 }, second),
-  ).toThrow('別の端末で変更されました')
+  ).toThrow('This deck changed on another device')
   expect(loadDeck(deck.id, second)).toEqual(saved)
   expect(deleteDeck({ id: deck.id, expectedRevision: 2 }, second)).toBe(deck.id)
   expect(loadDeck(deck.id, database)).toBeNull()
@@ -130,11 +130,11 @@ it('cascades deleted deck columns and reports already-deleted decks', () => {
   deleteDeck({ id: deck.id, expectedRevision: 1 }, database)
   expect(database.select().from(deckColumns).all()).toEqual([])
   expect(() => replaceDeck({ deck, expectedRevision: 1 }, second)).toThrow(
-    'このデッキは削除されたか',
+    'This deck was deleted',
   )
   expect(() =>
     deleteDeck({ id: deck.id, expectedRevision: 1 }, second),
-  ).toThrow('このデッキは削除されたか')
+  ).toThrow('This deck was deleted')
 })
 
 it.each([
@@ -152,7 +152,7 @@ it.each([
       { deck: { ...deck, title: 'Should not save' }, expectedRevision: 1 },
       database,
     ),
-  ).toThrow('カラムの接続アカウントが利用できません')
+  ).toThrow('The account for this column is unavailable')
   expect(loadDeck(deck.id, second)).toEqual(initial)
 })
 
@@ -163,7 +163,7 @@ it('rejects a connection from another platform', () => {
     .where(eq(connections.id, 'twitter-one'))
     .run()
   expect(() => createDeck(deck, database)).toThrow(
-    'カラムの接続アカウントが利用できません',
+    'The account for this column is unavailable',
   )
   expect(listDecks(database)).toEqual([])
 })
@@ -171,7 +171,7 @@ it('rejects a connection from another platform', () => {
 it('rejects unknown connections without creating rows', () => {
   database.delete(connections).where(eq(connections.id, 'twitter-two')).run()
   expect(() => createDeck(deck, database)).toThrow(
-    'カラムの接続アカウントが利用できません',
+    'The account for this column is unavailable',
   )
   expect(listDecks(database)).toEqual([])
 })
@@ -186,7 +186,7 @@ it('rejects duplicate column IDs without changing the saved version', () => {
       },
       database,
     ),
-  ).toThrow('カラム ID が重複しています')
+  ).toThrow('Column IDs must be unique')
   expect(loadDeck(deck.id, database)).toEqual(saved)
 })
 

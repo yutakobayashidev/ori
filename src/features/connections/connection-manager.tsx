@@ -14,9 +14,9 @@ import type { Connection } from './model'
 import './connection-manager.css'
 
 const statusNames = {
-  connected: '接続済み',
-  disconnected: '未接続',
-  expired: '再接続が必要',
+  connected: 'Connected',
+  disconnected: 'Disconnected',
+  expired: 'Reconnect required',
 }
 
 export function ConnectionManager({
@@ -52,7 +52,7 @@ export function ConnectionManager({
       window.location.assign(result.authorizationUrl)
     } catch {
       setError(
-        'Mastodonの認可を開始できませんでした。接続先を確認して再試行してください。',
+        'Could not start Mastodon authorization. Check the server and try again.',
       )
     } finally {
       setBusy(false)
@@ -68,24 +68,27 @@ export function ConnectionManager({
         await onChanged()
       } catch {
         setError(
-          '接続は解除しましたが、一覧を更新できませんでした。画面を再読み込みしてください。',
+          'Account disconnected, but the list could not be refreshed. Reload the page.',
         )
       }
     } catch {
-      setError('接続を解除できませんでした。時間をおいて再試行してください。')
+      setError('Could not disconnect the account. Try again later.')
     } finally {
       setBusy(false)
     }
   }
 
   return (
-    <section className="connection-manager" aria-label="接続アカウント管理">
+    <section
+      className="connection-manager"
+      aria-label="Connected account management"
+    >
       <p className="connection-manager-description">
-        追加したアカウントは、どの端末のカラムからも選べます。
+        Connected accounts are available in columns on all your devices.
       </p>
       {error && <p role="alert">{error}</p>}
       {connections.length === 0 ? (
-        <p>接続アカウントはまだありません。</p>
+        <p>No connected accounts yet.</p>
       ) : (
         <ul className="connection-manager-list">
           {connections.map((connection) => (
@@ -110,22 +113,22 @@ export function ConnectionManager({
                     variant="outline"
                     type="button"
                     disabled={busy}
-                    aria-label={`${connection.displayName}を再接続`}
+                    aria-label={`Reconnect ${connection.displayName}`}
                     onClick={() =>
                       void connect(connection.origin, connection.id)
                     }
                   >
-                    再接続
+                    Reconnect
                   </Button>
                   {connection.status !== 'disconnected' && (
                     <Button
                       variant="destructive"
                       type="button"
                       disabled={busy}
-                      aria-label={`${connection.displayName}の接続を解除`}
+                      aria-label={`Disconnect ${connection.displayName}`}
                       onClick={() => void remove(connection.id)}
                     >
-                      接続解除
+                      Disconnect
                     </Button>
                   )}
                 </div>
@@ -141,25 +144,25 @@ export function ConnectionManager({
           if (origin) void connect(origin)
         }}
       >
-        <h3>Mastodonアカウントを追加</h3>
+        <h3>Add a Mastodon account</h3>
         {instances.isPending ? (
-          <p role="status">接続先を確認しています…</p>
+          <p role="status">Checking servers…</p>
         ) : instances.isError ? (
           <p role="alert">
-            接続先を取得できませんでした。
+            Could not load servers.
             <Button
               variant="outline"
               type="button"
               onClick={() => void instances.refetch()}
             >
-              再試行
+              Retry
             </Button>
           </p>
         ) : instances.data.origins.length === 0 ? (
-          <p>利用するMastodonサーバーがまだ設定されていません。</p>
+          <p>No Mastodon servers have been configured yet.</p>
         ) : (
           <>
-            <Label htmlFor={selectId}>Mastodonサーバー</Label>
+            <Label htmlFor={selectId}>Mastodon server</Label>
             <NativeSelect
               className="w-full"
               id={selectId}
@@ -174,16 +177,17 @@ export function ConnectionManager({
               ))}
             </NativeSelect>
             <Button type="submit" disabled={busy || !origin}>
-              Mastodonで認可する
+              Authorize with Mastodon
             </Button>
           </>
         )}
         {hasTemporaryDecks && (
           <p className="connection-manager-note">
-            認可画面へ移動すると、一時デッキは消えます。残したいデッキは先に保存してください。
+            Temporary decks will be lost when you leave to authorize. Save any
+            decks you want to keep first.
           </p>
         )}
-        {busy && <p role="status">処理しています…</p>}
+        {busy && <p role="status">Working…</p>}
       </form>
     </section>
   )

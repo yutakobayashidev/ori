@@ -31,7 +31,7 @@ describe('requireProfileName', () => {
     )
 
     await expect(requireProfileName('work')).rejects.toThrow(
-      'プロファイルを確認できませんでした。',
+      'Could not verify profiles.',
     )
   })
 })

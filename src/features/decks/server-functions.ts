@@ -24,14 +24,14 @@ async function run<T>(
         ok: false,
         error: {
           code: 'invalid-input',
-          message: 'デッキの入力内容を確認してください。',
+          message: 'Check the deck details.',
         },
       }
     return {
       ok: false,
       error: {
         code: 'storage-unavailable',
-        message: 'デッキを保存・取得できませんでした。再試行してください。',
+        message: 'Unable to save or load the deck. Please try again.',
       },
     }
   }

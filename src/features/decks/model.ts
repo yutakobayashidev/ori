@@ -24,9 +24,7 @@ const searchSourceSchema = z
       ctx.addIssue({
         code: 'custom',
         message:
-          error instanceof Error
-            ? error.message
-            : '検索条件を確認してください。',
+          error instanceof Error ? error.message : 'Check the search query.',
       })
     }
   })
@@ -43,8 +41,7 @@ function targetSchema(normalize: (target: string) => string) {
       } catch (error) {
         ctx.addIssue({
           code: 'custom',
-          message:
-            error instanceof Error ? error.message : '対象を確認してください。',
+          message: error instanceof Error ? error.message : 'Check the target.',
         })
         return z.NEVER
       }
@@ -93,7 +90,7 @@ export const deckSchema = z
     (deck) =>
       new Set(deck.columns.map((column) => column.id)).size ===
       deck.columns.length,
-    'カラム ID が重複しています。',
+    'Column IDs must be unique.',
   )
 
 export type Deck = z.infer<typeof deckSchema>
@@ -102,7 +99,7 @@ export type DeckView = Deck & { persisted: boolean; revision?: number }
 export type Workspace = { activeDeckId: string; decks: DeckView[] }
 export const EMPTY_DECK: Deck = {
   id: 'initial',
-  title: '新しい調査',
+  title: 'New research',
   columns: [],
 }
 export const EMPTY_WORKSPACE: Workspace = {
