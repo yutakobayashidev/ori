@@ -5,7 +5,7 @@
 .connection-manager-description,
 .connection-manager-note {
   margin: 0;
-  color: #aab8c2;
+  color: var(--muted-foreground);
   font-size: 0.875rem;
 }
 .connection-manager-list {
@@ -21,7 +21,7 @@
   justify-content: space-between;
   gap: 0.75rem;
   padding-block: 0.75rem;
-  border-bottom: 1px solid #38444d;
+  border-bottom: 1px solid var(--border);
 }
 .connection-manager-account {
   display: grid;
@@ -29,15 +29,9 @@
   min-width: 0;
   overflow-wrap: anywhere;
 }
-.connection-manager-account > span {
+.connection-manager-account > span:not([data-slot="badge"]) {
   font-size: 0.8rem;
-  color: #aab8c2;
-}
-.connection-manager-account > .connection-manager-status-connected {
-  color: #71d6ad;
-}
-.connection-manager-account > .connection-manager-status-expired {
-  color: #f2c66d;
+  color: var(--muted-foreground);
 }
 .connection-manager-actions {
   display: flex;
@@ -52,18 +46,6 @@
 .connection-manager-add h3 {
   margin: 0;
   font-size: 1rem;
-}
-.connection-manager select {
-  width: 100%;
-  min-width: 0;
-  background: #15202b;
-  color: #e7e9ea;
-  border: 1px solid #536471;
-  border-radius: 0.25rem;
-  padding: 0.6rem;
-}
-.connection-manager button {
-  min-height: 2.5rem;
 }
 @media (max-width: 480px) {
   .connection-manager-list > li {

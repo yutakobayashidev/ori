@@ -117,12 +117,9 @@ test('creates temporary research, edits it, persists explicitly and reopens it o
   ).toBeVisible()
   await page
     .getByRole('region', { name: '日本語', exact: true })
-    .locator('summary')
+    .getByRole('button', { name: '日本語の操作' })
     .click()
-  await page
-    .getByRole('region', { name: '日本語', exact: true })
-    .getByRole('button', { name: '編集', exact: true })
-    .click()
+  await page.getByRole('menuitem', { name: '編集', exact: true }).click()
   const replaced = await executeTool(page, 'set_deck', {
     deckId: deck.id,
     title: '更新した調査',

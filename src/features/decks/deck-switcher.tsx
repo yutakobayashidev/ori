@@ -1,6 +1,10 @@
-import { useEffect, useState } from 'react'
+import type { ReactNode } from 'react'
 import { Dialog } from '#/components/dialog'
 import { Icon } from '#/components/icon'
+import { Button } from '#/components/ui/button'
+import { Input } from '#/components/ui/input'
+import { Label } from '#/components/ui/label'
+import { NativeSelect, NativeSelectOption } from '#/components/ui/native-select'
 import type { DeckView } from './model'
 
 export function DeckSwitcher({
@@ -10,7 +14,11 @@ export function DeckSwitcher({
   onSelect,
   onCreate,
   onDelete,
-  onEditingChange,
+  dialog,
+  onDialogChange,
+  newTitle,
+  onNewTitleChange,
+  errorNotice,
 }: {
   decks: DeckView[]
   activeId: string
@@ -18,109 +26,118 @@ export function DeckSwitcher({
   onSelect: (id: string) => void
   onCreate: (title: string) => Promise<boolean>
   onDelete: () => Promise<boolean>
-  onEditingChange: (editing: boolean) => void
+  dialog: 'create' | 'delete' | null
+  onDialogChange: (dialog: 'create' | 'delete' | null) => void
+  newTitle: string
+  onNewTitleChange: (title: string) => void
+  errorNotice?: ReactNode
 }) {
-  const [creating, setCreating] = useState(false)
-  const [deleting, setDeleting] = useState(false)
-  useEffect(() => {
-    onEditingChange(creating || deleting)
-    return () => onEditingChange(false)
-  }, [creating, deleting, onEditingChange])
   return (
     <div className="deck-workspaces">
       <div className="deck-actions">
-        <label htmlFor="deck-selection">デッキプロファイル</label>
-        <select
+        <Label htmlFor="deck-selection">デッキプロファイル</Label>
+        <NativeSelect
+          className="w-full"
           id="deck-selection"
           value={activeId}
           disabled={!ready}
           onChange={(event) => {
             onSelect(event.target.value)
-            setCreating(false)
-            setDeleting(false)
+            onDialogChange(null)
           }}
         >
           {decks.map((deck) => (
-            <option key={deck.id} value={deck.id}>
+            <NativeSelectOption key={deck.id} value={deck.id}>
               {deck.title}
               {deck.persisted ? '' : '（一時）'}
-            </option>
+            </NativeSelectOption>
           ))}
-        </select>
-        <button
+        </NativeSelect>
+        <Button
+          variant="outline"
           className="workspace-create"
           aria-label="デッキを作成"
           title="デッキを作成"
           type="button"
           disabled={!ready}
           onClick={() => {
-            setCreating(!creating)
-            setDeleting(false)
+            onDialogChange('create')
           }}
         >
           <Icon name="plus" />
           <span>デッキを作成</span>
-        </button>
-        <button
+        </Button>
+        <Button
+          variant="ghost"
           className="workspace-delete"
           aria-label="デッキを削除"
           title="デッキを削除"
           type="button"
           disabled={!ready}
           onClick={() => {
-            setDeleting(!deleting)
-            setCreating(false)
+            onDialogChange('delete')
           }}
         >
           <Icon name="trash" />
           <span>デッキを削除</span>
-        </button>
+        </Button>
       </div>
-      {creating ? (
-        <Dialog title="デッキを作成" onClose={() => setCreating(false)}>
+      {dialog === 'create' ? (
+        <Dialog title="デッキを作成" onClose={() => onDialogChange(null)}>
           <form
             className="deck-rename"
             onSubmit={async (event) => {
               event.preventDefault()
-              const title = String(
-                new FormData(event.currentTarget).get('title') ?? '',
-              ).trim()
+              const title = newTitle.trim()
               if (!title) return
-              if (await onCreate(title)) setCreating(false)
+              if (await onCreate(title)) onDialogChange(null)
             }}
           >
-            <label htmlFor="new-deck-title">
+            <Label htmlFor="new-deck-title">
               新しいデッキ名
-              <input
+              <Input
                 id="new-deck-title"
                 name="title"
+                value={newTitle}
+                onChange={(event) => onNewTitleChange(event.target.value)}
                 maxLength={120}
                 required
               />
-            </label>
-            <button type="submit">作成</button>
-            <button type="button" onClick={() => setCreating(false)}>
+            </Label>
+            <Button type="submit">作成</Button>
+            <Button
+              variant="outline"
+              type="button"
+              onClick={() => onDialogChange(null)}
+            >
               キャンセル
-            </button>
+            </Button>
           </form>
+          {errorNotice}
         </Dialog>
       ) : null}
-      {deleting ? (
-        <Dialog title="デッキを削除" onClose={() => setDeleting(false)}>
+      {dialog === 'delete' ? (
+        <Dialog title="デッキを削除" onClose={() => onDialogChange(null)}>
           <div className="deck-undo">
             <p>このデッキとカラムの設定を削除します。</p>
-            <button
+            <Button
+              variant="destructive"
               type="button"
               onClick={async () => {
-                if (await onDelete()) setDeleting(false)
+                if (await onDelete()) onDialogChange(null)
               }}
             >
               削除する
-            </button>
-            <button type="button" onClick={() => setDeleting(false)}>
+            </Button>
+            <Button
+              variant="outline"
+              type="button"
+              onClick={() => onDialogChange(null)}
+            >
               キャンセル
-            </button>
+            </Button>
           </div>
+          {errorNotice}
         </Dialog>
       ) : null}
     </div>

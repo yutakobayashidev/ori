@@ -1,10 +1,10 @@
 .research-post.citation-highlight {
-  outline: 2px solid var(--accent, #67b7ff);
+  outline: 2px solid var(--primary);
   outline-offset: -2px;
-  background-color: color-mix(in srgb, var(--accent, #67b7ff) 14%, transparent);
+  background-color: color-mix(in srgb, var(--primary) 14%, transparent);
 }
 
 .research-post:focus-visible {
-  outline: 2px solid var(--accent, #67b7ff);
+  outline: 2px solid var(--primary);
   outline-offset: -2px;
 }

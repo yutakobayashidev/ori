@@ -1,6 +1,10 @@
 import { useQuery } from '@tanstack/react-query'
 import { useServerFn } from '@tanstack/react-start'
 import { useId, useState } from 'react'
+import { Badge } from '#/components/ui/badge'
+import { Button } from '#/components/ui/button'
+import { Label } from '#/components/ui/label'
+import { NativeSelect, NativeSelectOption } from '#/components/ui/native-select'
 import {
   disconnectMastodonAccount,
   loadMastodonInstances,
@@ -92,15 +96,18 @@ export function ConnectionManager({
                   {connection.platform === 'twitter' ? 'Twitter' : 'Mastodon'} ·{' '}
                   {new URL(connection.origin).hostname}
                 </span>
-                <span
-                  className={`connection-manager-status connection-manager-status-${connection.status}`}
+                <Badge
+                  variant={
+                    connection.status === 'connected' ? 'secondary' : 'outline'
+                  }
                 >
                   {statusNames[connection.status]}
-                </span>
+                </Badge>
               </div>
               {connection.platform === 'mastodon' && (
                 <div className="connection-manager-actions">
-                  <button
+                  <Button
+                    variant="outline"
                     type="button"
                     disabled={busy}
                     aria-label={`${connection.displayName}を再接続`}
@@ -109,16 +116,17 @@ export function ConnectionManager({
                     }
                   >
                     再接続
-                  </button>
+                  </Button>
                   {connection.status !== 'disconnected' && (
-                    <button
+                    <Button
+                      variant="destructive"
                       type="button"
                       disabled={busy}
                       aria-label={`${connection.displayName}の接続を解除`}
                       onClick={() => void remove(connection.id)}
                     >
                       接続解除
-                    </button>
+                    </Button>
                   )}
                 </div>
               )}
@@ -139,30 +147,35 @@ export function ConnectionManager({
         ) : instances.isError ? (
           <p role="alert">
             接続先を取得できませんでした。
-            <button type="button" onClick={() => void instances.refetch()}>
+            <Button
+              variant="outline"
+              type="button"
+              onClick={() => void instances.refetch()}
+            >
               再試行
-            </button>
+            </Button>
           </p>
         ) : instances.data.origins.length === 0 ? (
           <p>利用するMastodonサーバーがまだ設定されていません。</p>
         ) : (
           <>
-            <label htmlFor={selectId}>Mastodonサーバー</label>
-            <select
+            <Label htmlFor={selectId}>Mastodonサーバー</Label>
+            <NativeSelect
+              className="w-full"
               id={selectId}
               value={origin}
               onChange={(event) => setSelected(event.target.value)}
               disabled={busy}
             >
               {instances.data.origins.map((value) => (
-                <option key={value} value={value}>
+                <NativeSelectOption key={value} value={value}>
                   {new URL(value).hostname}
-                </option>
+                </NativeSelectOption>
               ))}
-            </select>
-            <button type="submit" disabled={busy || !origin}>
+            </NativeSelect>
+            <Button type="submit" disabled={busy || !origin}>
               Mastodonで認可する
-            </button>
+            </Button>
           </>
         )}
         {hasTemporaryDecks && (

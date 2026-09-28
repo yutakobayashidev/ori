@@ -1,6 +1,38 @@
 import { useQuery, useQueryClient } from '@tanstack/react-query'
 import { useServerFn } from '@tanstack/react-start'
-import { useCallback, useEffect, useId, useRef, useState } from 'react'
+import {
+  type ReactNode,
+  useCallback,
+  useEffect,
+  useId,
+  useRef,
+  useState,
+} from 'react'
+import { Bubble, BubbleContent } from '#/components/ui/bubble'
+import { Button } from '#/components/ui/button'
+import { Checkbox } from '#/components/ui/checkbox'
+import {
+  Collapsible,
+  CollapsibleContent,
+  CollapsibleTrigger,
+} from '#/components/ui/collapsible'
+import {
+  InputGroup,
+  InputGroupAddon,
+  InputGroupButton,
+  InputGroupTextarea,
+} from '#/components/ui/input-group'
+import { Marker, MarkerContent } from '#/components/ui/marker'
+import { Message, MessageContent, MessageHeader } from '#/components/ui/message'
+import {
+  MessageScroller,
+  MessageScrollerButton,
+  MessageScrollerContent,
+  MessageScrollerItem,
+  MessageScrollerProvider,
+  MessageScrollerViewport,
+} from '#/components/ui/message-scroller'
+import { NativeSelect, NativeSelectOption } from '#/components/ui/native-select'
 import type { Connection } from '../connections/model'
 import type { Deck } from '../decks/model'
 import {
@@ -28,6 +60,12 @@ const statusNames: Record<ResearchRun['status'], string> = {
   interrupted: '中断しました・続きから再開できます',
 }
 type ResearchInput = { topic: string; connectionIds: string[] }
+type ResearchDraft = {
+  runId: string | null
+  topic: string
+  selected: string[] | null
+}
+type RenderResearchPanel = (onCitationNavigated?: () => void) => ReactNode
 
 export function ResearchPanel({
   ready,
@@ -35,12 +73,14 @@ export function ResearchPanel({
   connections,
   onOpenDeck,
   onNavigateCitation,
+  children,
 }: {
   ready: boolean
   contextDeck: Deck
   connections: Connection[]
   onOpenDeck: (deck: Deck, activate?: boolean) => unknown
   onNavigateCitation?: (url: string, citations: ResearchCitation[]) => boolean
+  children?: (renderPanel: RenderResearchPanel) => ReactNode
 }) {
   const fetchStatus = useServerFn(loadResearchStatus)
   const start = useServerFn(startResearch)
@@ -48,16 +88,33 @@ export function ResearchPanel({
   const reset = useServerFn(resetResearch)
   const select = useServerFn(selectResearch)
   const client = useQueryClient()
+  const historyId = useId()
   const status = useQuery({
     queryKey: ['research-status'],
     queryFn: () => fetchStatus(),
     retry: false,
   })
   const run = status.data?.run ?? null
+  const runId = run?.id ?? null
+  const [draft, setDraft] = useState<ResearchDraft>({
+    runId,
+    topic: '',
+    selected: run?.connectionIds ?? null,
+  })
+  // Conversation changes reset the draft; responsive view remounts do not.
+  if (draft.runId !== runId) {
+    setDraft({ runId, topic: '', selected: run?.connectionIds ?? null })
+  }
+  function updateDraft(
+    update: Partial<Pick<ResearchDraft, 'topic' | 'selected'>>,
+  ) {
+    setDraft((current) =>
+      current.runId === runId ? { ...current, ...update } : current,
+    )
+  }
   const [busy, setBusy] = useState(false)
   const [error, setError] = useState<string>()
   const [reconnecting, setReconnecting] = useState(false)
-  const [draftResetVersion, setDraftResetVersion] = useState(0)
   const previousRunId = useRef<string | null>(null)
   const syncedRunId = useRef<string | null>(null)
   const attemptedVersion = useRef<string | null>(null)
@@ -79,7 +136,6 @@ export function ResearchPanel({
 
   useEffect(() => {
     if (previousRunId.current && previousRunId.current !== run?.id) {
-      setDraftResetVersion((value) => value + 1)
       request.current = null
       pendingTurn.current = null
     }
@@ -209,7 +265,7 @@ export function ResearchPanel({
       )
       request.current = null
       pendingTurn.current = null
-      setDraftResetVersion((value) => value + 1)
+      updateDraft({ topic: '' })
     } catch {
       setError(
         '新しいチャットを開始できませんでした。会話と入力内容は残っています。もう一度お試しください。',
@@ -252,11 +308,13 @@ export function ResearchPanel({
     }
   }
 
-  return (
+  const renderPanel: RenderResearchPanel = (onCitationNavigated) => (
     <aside className="research-panel" aria-label="調査チャット">
       <header className="research-heading">
         <h2>調査チャット</h2>
-        <button
+        <Button
+          variant="ghost"
+          size="sm"
           type="button"
           disabled={busy || !run || isResearchActive(run)}
           title={
@@ -267,24 +325,26 @@ export function ResearchPanel({
           onClick={() => void newChat()}
         >
           新しいチャット
-        </button>
+        </Button>
         {(status.data?.history?.length ?? 0) > 0 && (
-          <label className="research-history">
+          <label className="research-history" htmlFor={historyId}>
             <span>チャット履歴</span>
-            <select
+            <NativeSelect
+              id={historyId}
+              size="sm"
               value={run?.id ?? ''}
               disabled={busy || isResearchActive(run)}
               onChange={(event) => void selectChat(event.target.value)}
             >
-              <option value="" disabled>
+              <NativeSelectOption value="" disabled>
                 新しいチャット
-              </option>
+              </NativeSelectOption>
               {status.data?.history?.map((entry) => (
-                <option key={entry.id} value={entry.id}>
+                <NativeSelectOption key={entry.id} value={entry.id}>
                   {entry.title}
-                </option>
+                </NativeSelectOption>
               ))}
-            </select>
+            </NativeSelect>
           </label>
         )}
       </header>
@@ -296,9 +356,9 @@ export function ResearchPanel({
       {status.isError && (
         <p className="deck-error" role="alert">
           調査状況を取得できませんでした。
-          <button type="button" onClick={() => void status.refetch()}>
+          <Button type="button" onClick={() => void status.refetch()}>
             再試行
-          </button>
+          </Button>
         </p>
       )}
       {error && (
@@ -315,7 +375,11 @@ export function ResearchPanel({
         key={`conversation:${run?.id ?? 'new'}`}
         messages={run?.messages ?? []}
         citations={run?.citations ?? []}
-        onNavigateCitation={onNavigateCitation}
+        onNavigateCitation={(url, citations) => {
+          const navigated = onNavigateCitation?.(url, citations) ?? false
+          if (navigated) onCitationNavigated?.()
+          return navigated
+        }}
       />
       {run && (
         <ResearchRunStatus
@@ -327,8 +391,10 @@ export function ResearchPanel({
       )}
       <ResearchComposer
         key={run?.id ?? 'new'}
-        initialConnectionIds={run?.connectionIds}
-        resetVersion={draftResetVersion}
+        topic={draft.topic}
+        selected={draft.selected}
+        onTopicChange={(topic) => updateDraft({ topic })}
+        onSelectionChange={(selected) => updateDraft({ selected })}
         connections={connections}
         contextTitle={contextDeck.title}
         disabled={
@@ -338,6 +404,7 @@ export function ResearchPanel({
       />
     </aside>
   )
+  return children ? children(renderPanel) : renderPanel()
 }
 
 function ResearchConversation({
@@ -349,66 +416,81 @@ function ResearchConversation({
   citations: ResearchCitation[]
   onNavigateCitation?: (url: string, citations: ResearchCitation[]) => boolean
 }) {
-  const container = useRef<HTMLDivElement>(null)
-  const follow = useRef(true)
-  useEffect(() => {
-    const element = container.current
-    if (element && follow.current && messages.length > 0)
-      element.scrollTop = element.scrollHeight
-  }, [messages])
   const names = { user: 'あなた', assistant: 'Codex', tool: 'ツール実行' }
   return (
-    <div
-      className="research-conversation"
-      role="log"
-      aria-label="調査の会話"
-      aria-live="polite"
-      ref={container}
-      onScroll={() => {
-        const element = container.current
-        if (element)
-          follow.current =
-            element.scrollHeight - element.scrollTop - element.clientHeight < 60
-      }}
-    >
-      {messages.length === 0 ? (
-        <p className="research-empty">
-          気になる話題や調べたいことを送ってください。検索を進めながらカラムを追加し、レポートを自宅サーバーに保存します。
-        </p>
-      ) : (
-        messages.map((message) => (
-          <article
-            className={`research-message research-message-${message.role}`}
-            key={message.id}
-          >
-            <strong>{names[message.role]}</strong>
-            {message.role === 'assistant' ? (
-              <ResearchMarkdown
-                text={message.text}
-                onNavigateCitation={(url) =>
-                  onNavigateCitation?.(url, citations) ?? false
-                }
-              />
+    <MessageScrollerProvider autoScroll>
+      <MessageScroller className="research-conversation">
+        <MessageScrollerViewport aria-label="調査メッセージ">
+          <MessageScrollerContent aria-label="調査の会話" className="gap-5 p-4">
+            {messages.length === 0 ? (
+              <MessageScrollerItem messageId="empty">
+                <p className="research-empty">
+                  気になる話題や調べたいことを送ってください。検索を進めながらカラムを追加し、レポートを自宅サーバーに保存します。
+                </p>
+              </MessageScrollerItem>
             ) : (
-              <p>{message.text}</p>
+              messages.map((message) => (
+                <MessageScrollerItem
+                  key={message.id}
+                  messageId={message.id}
+                  scrollAnchor={message.role === 'user'}
+                >
+                  {message.role === 'tool' ? (
+                    <Marker className="research-tool-message">
+                      <MarkerContent>
+                        <span className="sr-only">{names.tool}: </span>
+                        {message.text}
+                      </MarkerContent>
+                    </Marker>
+                  ) : (
+                    <Message
+                      align={message.role === 'user' ? 'end' : 'start'}
+                      className="research-message"
+                    >
+                      <MessageContent>
+                        <MessageHeader>{names[message.role]}</MessageHeader>
+                        {message.role === 'assistant' ? (
+                          <ResearchMarkdown
+                            text={message.text}
+                            onNavigateCitation={(url) =>
+                              onNavigateCitation?.(url, citations) ?? false
+                            }
+                          />
+                        ) : (
+                          <Bubble align="end">
+                            <BubbleContent>
+                              <p>{message.text}</p>
+                            </BubbleContent>
+                          </Bubble>
+                        )}
+                      </MessageContent>
+                    </Message>
+                  )}
+                </MessageScrollerItem>
+              ))
             )}
-          </article>
-        ))
-      )}
-    </div>
+          </MessageScrollerContent>
+        </MessageScrollerViewport>
+        <MessageScrollerButton aria-label="最新のメッセージへ" />
+      </MessageScroller>
+    </MessageScrollerProvider>
   )
 }
 
 function ResearchComposer({
-  initialConnectionIds,
-  resetVersion,
+  topic,
+  selected,
+  onTopicChange,
+  onSelectionChange,
   connections,
   contextTitle,
   disabled,
   onSend,
 }: {
-  initialConnectionIds?: string[]
-  resetVersion: number
+  topic: string
+  selected: string[] | null
+  onTopicChange: (topic: string) => void
+  onSelectionChange: (selected: string[]) => void
   connections: Connection[]
   contextTitle: string
   disabled: boolean
@@ -416,13 +498,6 @@ function ResearchComposer({
 }) {
   const available = connections.filter(
     (connection) => connection.status === 'connected',
-  )
-  const [topic, setTopic] = useState('')
-  useEffect(() => {
-    if (resetVersion > 0) setTopic('')
-  }, [resetVersion])
-  const [selected, setSelected] = useState<string[] | null>(
-    initialConnectionIds ?? null,
   )
   const selectedIds =
     selected ?? available.slice(0, 6).map((connection) => connection.id)
@@ -441,7 +516,7 @@ function ResearchComposer({
           topic: topic.trim(),
           connectionIds: validSelection,
         }).then((sent) => {
-          if (sent) setTopic('')
+          if (sent) onTopicChange('')
         })
       }}
     >
@@ -449,56 +524,69 @@ function ResearchComposer({
         送信するデッキ: <strong>{contextTitle}</strong>
       </p>
       <fieldset disabled={disabled}>
-        <details className="research-account-picker">
-          <summary>接続アカウント · {validSelection.length}件</summary>
-          <fieldset className="research-accounts">
-            <legend>調査に使う接続アカウント（最大6件）</legend>
-            {available.length === 0 ? (
-              <p>接続アカウントを先に追加してください。</p>
-            ) : (
-              available.map((connection) => (
-                <label key={connection.id}>
-                  <input
-                    type="checkbox"
-                    checked={selectedIds.includes(connection.id)}
-                    disabled={
-                      !selectedIds.includes(connection.id) &&
-                      validSelection.length >= 6
-                    }
-                    onChange={(event) =>
-                      setSelected(
-                        event.target.checked
-                          ? [...selectedIds, connection.id]
-                          : selectedIds.filter(
-                              (value) => value !== connection.id,
-                            ),
-                      )
-                    }
-                  />
-                  {connection.displayName} ·{' '}
-                  {connection.platform === 'twitter' ? 'Twitter' : 'Mastodon'}
-                </label>
-              ))
-            )}
-          </fieldset>
-        </details>
+        <Collapsible className="research-account-picker" disabled={disabled}>
+          <CollapsibleTrigger render={<Button variant="ghost" size="sm" />}>
+            接続アカウント · {validSelection.length}件
+          </CollapsibleTrigger>
+          <CollapsibleContent>
+            <fieldset className="research-accounts">
+              <legend>調査に使う接続アカウント（最大6件）</legend>
+              {available.length === 0 ? (
+                <p>接続アカウントを先に追加してください。</p>
+              ) : (
+                available.map((connection) => (
+                  <label key={connection.id} htmlFor={`${id}-${connection.id}`}>
+                    <Checkbox
+                      id={`${id}-${connection.id}`}
+                      checked={selectedIds.includes(connection.id)}
+                      disabled={
+                        disabled ||
+                        (!selectedIds.includes(connection.id) &&
+                          validSelection.length >= 6)
+                      }
+                      onCheckedChange={(checked) =>
+                        onSelectionChange(
+                          checked
+                            ? [...selectedIds, connection.id]
+                            : selectedIds.filter(
+                                (value) => value !== connection.id,
+                              ),
+                        )
+                      }
+                    />
+                    {connection.displayName} ·{' '}
+                    {connection.platform === 'twitter' ? 'Twitter' : 'Mastodon'}
+                  </label>
+                ))
+              )}
+            </fieldset>
+          </CollapsibleContent>
+        </Collapsible>
         <label htmlFor={id}>メッセージ</label>
-        <textarea
-          id={id}
-          value={topic}
-          onChange={(event) => setTopic(event.target.value)}
-          maxLength={1000}
-          rows={3}
-          placeholder="例：WebMCPの反応を比較して。その後、このデッキを絞り込んで。"
-          required
-        />
-        <button
-          type="submit"
-          className="deck-primary"
-          disabled={disabled || !topic.trim() || validSelection.length === 0}
-        >
-          送信
-        </button>
+        <InputGroup>
+          <InputGroupTextarea
+            id={id}
+            value={topic}
+            onChange={(event) => onTopicChange(event.target.value)}
+            maxLength={1000}
+            rows={3}
+            placeholder="例：WebMCPの反応を比較して。その後、このデッキを絞り込んで。"
+            required
+            disabled={disabled}
+          />
+          <InputGroupAddon align="block-end" className="justify-end">
+            <InputGroupButton
+              type="submit"
+              variant="default"
+              size="sm"
+              disabled={
+                disabled || !topic.trim() || validSelection.length === 0
+              }
+            >
+              送信
+            </InputGroupButton>
+          </InputGroupAddon>
+        </InputGroup>
       </fieldset>
     </form>
   )
@@ -518,7 +606,9 @@ function ResearchRunStatus({
   const deck = run.deck ?? run.contextDeck
   return (
     <section className="research-run" aria-label="調査状況">
-      <p role="status">{statusNames[run.status]}</p>
+      <Marker role="status">
+        <MarkerContent>{statusNames[run.status]}</MarkerContent>
+      </Marker>
       {run.error && (
         <p className="deck-error" role="alert">
           {run.error}
@@ -533,19 +623,27 @@ function ResearchRunStatus({
       )}
       <div className="deck-actions">
         {isResearchActive(run) && (
-          <button type="button" disabled={busy} onClick={onCancel}>
+          <Button
+            variant="outline"
+            size="sm"
+            type="button"
+            disabled={busy}
+            onClick={onCancel}
+          >
             調査を中止
-          </button>
+          </Button>
         )}
         {deck && (
-          <button
+          <Button
+            variant="outline"
+            size="sm"
             type="button"
             onClick={() => {
               onOpenDeck(deck)
             }}
           >
             一時デッキで開く
-          </button>
+          </Button>
         )}
       </div>
     </section>

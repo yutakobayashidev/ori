@@ -1,4 +1,8 @@
 import { useId, useState } from 'react'
+import { Button } from '#/components/ui/button'
+import { Input } from '#/components/ui/input'
+import { Label } from '#/components/ui/label'
+import { NativeSelect, NativeSelectOption } from '#/components/ui/native-select'
 import type { Connection } from '#/features/connections/model'
 import {
   ColumnSourceEditor,
@@ -60,9 +64,9 @@ export function ColumnEditor({
       }}
     >
       <div className="deck-editor-fields">
-        <label htmlFor={`${formId}-title`}>
+        <Label htmlFor={`${formId}-title`}>
           カラム名
-          <input
+          <Input
             id={`${formId}-title`}
             name="title"
             defaultValue={column?.title ?? ''}
@@ -70,10 +74,11 @@ export function ColumnEditor({
             placeholder="例：発表元の投稿"
             required
           />
-        </label>
-        <label htmlFor={`${formId}-profile`}>
+        </Label>
+        <Label htmlFor={`${formId}-profile`}>
           接続プロファイル
-          <select
+          <NativeSelect
+            className="w-full"
             id={`${formId}-profile`}
             value={connectionId}
             required
@@ -86,22 +91,22 @@ export function ColumnEditor({
               setSource(rebindColumnSource(source, connection.platform))
             }}
           >
-            <option value="" disabled>
+            <NativeSelectOption value="" disabled>
               選択してください
-            </option>
+            </NativeSelectOption>
             {connectionId && !validConnection && (
-              <option value={connectionId} disabled>
+              <NativeSelectOption value={connectionId} disabled>
                 {connectionId}（利用不可）
-              </option>
+              </NativeSelectOption>
             )}
             {available.map((connection) => (
-              <option key={connection.id} value={connection.id}>
+              <NativeSelectOption key={connection.id} value={connection.id}>
                 {connection.displayName}
                 {connection.platform === 'mastodon' ? ' · Mastodon' : ''}
-              </option>
+              </NativeSelectOption>
             ))}
-          </select>
-        </label>
+          </NativeSelect>
+        </Label>
       </div>
       <ColumnSourceEditor
         source={source}
@@ -117,16 +122,12 @@ export function ColumnEditor({
         </p>
       )}
       <div className="deck-actions">
-        <button
-          type="submit"
-          className="deck-primary"
-          disabled={!validConnection}
-        >
+        <Button type="submit" disabled={!validConnection}>
           {column ? '変更を保存' : '追加して検索'}
-        </button>
-        <button type="button" onClick={onCancel}>
+        </Button>
+        <Button variant="outline" type="button" onClick={onCancel}>
           キャンセル
-        </button>
+        </Button>
       </div>
     </form>
   )

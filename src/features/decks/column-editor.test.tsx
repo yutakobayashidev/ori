@@ -162,7 +162,7 @@ it('preserves title and Twitter search options after a rejected save', async () 
   fireEvent.change(screen.getByLabelText('表示順'), {
     target: { value: 'Top' },
   })
-  fireEvent.click(screen.getByLabelText('フォロー中のみ'))
+  fireEvent.click(screen.getByRole('checkbox', { name: 'フォロー中のみ' }))
   fireEvent.submit(screen.getByRole('form', { name: 'カラムを追加' }))
   await waitFor(() => expect(save).toHaveBeenCalledOnce())
   expect(screen.getByLabelText('カラム名')).toHaveValue('調査')
@@ -170,7 +170,7 @@ it('preserves title and Twitter search options after a rejected save', async () 
     'from:owner WebMCP',
   )
   expect(screen.getByLabelText('表示順')).toHaveValue('Top')
-  expect(screen.getByLabelText('フォロー中のみ')).toBeChecked()
+  expect(screen.getByRole('checkbox', { name: 'フォロー中のみ' })).toBeChecked()
   fireEvent.submit(screen.getByRole('form', { name: 'カラムを追加' }))
   await waitFor(() => expect(save).toHaveBeenCalledTimes(2))
   expect(save.mock.calls[1]?.[0].source).toEqual(save.mock.calls[0]?.[0].source)

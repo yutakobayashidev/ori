@@ -66,6 +66,9 @@ profiles; Mastodon credentials never go to the browser.
 nix develop -c pnpm dev
 nix develop -c pnpm dev:tailscale
 nix develop -c pnpm generate:e2e-openapi
+nix develop -c pnpm lint
+nix develop -c pnpm lint:ui
+nix develop -c pnpm typecheck
 nix develop -c pnpm knip
 nix develop -c pnpm test
 nix develop -c pnpm test:e2e
@@ -163,11 +166,31 @@ and `TWITTER_LITE_LIVE_QUERY` overrides the search text.
 
 ## Deck workspace
 
-The interface uses a full-height, dark TweetDeck-style workbench: a deck sidebar,
-compact column headers, and independently scrolling post columns. On narrow
-screens, the sidebar becomes a compact top bar. Add/edit forms open in native
-dialogs; Escape closes them and returns focus. Column menus contain editing,
-ordering, and deletion; refresh stays available directly in each header.
+The interface uses shadcn/ui's Base UI components and Tailwind CSS v4, with a
+collapsible sidebar based on
+[sidebar-09](https://github.com/shadcn-ui/ui/tree/98a1fe67b439324ddc857f47fbdce056600a4329/apps/v4/registry/bases/base/blocks/sidebar-09).
+The workspace retains compact column headers and independently scrolling post
+columns. On narrow screens, the sidebar opens as a sheet. Add/edit forms use
+shadcn dialogs with Escape handling and focus restoration. Column menus contain
+editing, ordering, and deletion; refresh stays available directly in each header.
+
+Shared UI components live in `src/components/ui`; `components.json` configures
+the registry and theme entrypoint. Chat uses MessageScroller, Message, Bubble,
+Marker and InputGroup while retaining the existing Codex transport and saved
+conversation model. The icon rail switches between chat and deck management;
+closing the mobile sheet or crossing the desktop breakpoint preserves chat
+drafts, selected accounts and live deck updates. Theme colors are declared in
+`src/ui.css`.
+
+`pnpm lint` runs Biome and the UI checks. `pnpm lint:ui` runs
+[@shadcn/lint](https://github.com/shadcn-ui/lint) through Oxlint. The
+`shadcn/no-raw-colors` rule in `.oxlintrc.json` requires theme colors in JSX and
+class helpers, including shared UI components. Layout values remain available
+for the sidebar and deck. Biome continues to handle formatting and general
+code checks. Knip checks application usage while retaining the public exports
+of registry components for composition. Additional design rules can be configured
+in `.oxlintrc.json`;
+see the [available rules](https://github.com/shadcn-ui/lint#rules).
 
 Create a deck for an investigation, then add columns for each perspective.
 Choose a connected account and one of its supported sources. Account

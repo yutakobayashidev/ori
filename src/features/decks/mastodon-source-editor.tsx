@@ -1,6 +1,10 @@
 import { useQuery } from '@tanstack/react-query'
 import { useServerFn } from '@tanstack/react-start'
 import { type ReactElement, useId } from 'react'
+import { Button } from '#/components/ui/button'
+import { Input } from '#/components/ui/input'
+import { Label } from '#/components/ui/label'
+import { NativeSelect, NativeSelectOption } from '#/components/ui/native-select'
 import { loadMastodonLists } from '../platforms/mastodon-server-functions'
 import type { MastodonSource } from '../platforms/mastodon-source'
 
@@ -32,9 +36,10 @@ export function MastodonSourceEditor({
   const id = useId()
   return (
     <>
-      <label htmlFor={id}>
+      <Label htmlFor={id}>
         カラムの種類
-        <select
+        <NativeSelect
+          className="w-full"
           id={id}
           value={source.kind}
           onChange={(event) =>
@@ -45,12 +50,12 @@ export function MastodonSourceEditor({
             )
           }
         >
-          <option value="search">検索</option>
-          <option value="user">ユーザー投稿</option>
-          <option value="list">リスト</option>
-          <option value="hashtag">ハッシュタグ</option>
-        </select>
-      </label>
+          <NativeSelectOption value="search">検索</NativeSelectOption>
+          <NativeSelectOption value="user">ユーザー投稿</NativeSelectOption>
+          <NativeSelectOption value="list">リスト</NativeSelectOption>
+          <NativeSelectOption value="hashtag">ハッシュタグ</NativeSelectOption>
+        </NativeSelect>
+      </Label>
       <MastodonSourceFields
         source={source}
         connectionId={connectionId}
@@ -90,9 +95,9 @@ function MastodonSearchEditor({
   const id = useId()
   return (
     <div className="deck-source-fields">
-      <label htmlFor={id}>
+      <Label htmlFor={id}>
         Mastodonの検索条件
-        <input
+        <Input
           id={id}
           value={source.query}
           onChange={(event) =>
@@ -102,7 +107,7 @@ function MastodonSearchEditor({
           placeholder="例：WebMCP"
           required
         />
-      </label>
+      </Label>
       <p className="deck-help">
         全文検索の対象はサーバーの設定によって異なります。結果が0件でも、検索に対応しているとは限りません。
       </p>
@@ -117,9 +122,9 @@ function MastodonUserEditor({
   const id = useId()
   return (
     <div className="deck-source-fields">
-      <label htmlFor={id}>
+      <Label htmlFor={id}>
         ユーザー
-        <input
+        <Input
           id={id}
           value={source.target}
           onChange={(event) =>
@@ -129,7 +134,7 @@ function MastodonUserEditor({
           maxLength={256}
           required
         />
-      </label>
+      </Label>
     </div>
   )
 }
@@ -141,9 +146,9 @@ function MastodonHashtagEditor({
   const id = useId()
   return (
     <div className="deck-source-fields">
-      <label htmlFor={id}>
+      <Label htmlFor={id}>
         ハッシュタグ
-        <input
+        <Input
           id={id}
           value={source.target}
           onChange={(event) =>
@@ -153,7 +158,7 @@ function MastodonHashtagEditor({
           maxLength={128}
           required
         />
-      </label>
+      </Label>
     </div>
   )
 }
@@ -168,9 +173,9 @@ function MastodonListEditor({
   const id = useId()
   return (
     <div className="deck-source-fields">
-      <label htmlFor={id}>
+      <Label htmlFor={id}>
         リスト
-        <input
+        <Input
           id={id}
           value={source.target}
           onChange={(event) =>
@@ -180,7 +185,7 @@ function MastodonListEditor({
           maxLength={32}
           required
         />
-      </label>
+      </Label>
       {connectionId && (
         <MastodonListChoices
           connectionId={connectionId}
@@ -209,9 +214,13 @@ function MastodonListChoices({
     return (
       <p role="alert">
         リストを取得できませんでした。
-        <button type="button" onClick={() => void lists.refetch()}>
+        <Button
+          variant="outline"
+          type="button"
+          onClick={() => void lists.refetch()}
+        >
           再試行
-        </button>
+        </Button>
       </p>
     )
   return (
@@ -220,9 +229,14 @@ function MastodonListChoices({
         <p>このアカウントのリストはありません。</p>
       ) : (
         lists.data.lists.map((list) => (
-          <button type="button" key={list.id} onClick={() => onSelect(list.id)}>
+          <Button
+            variant="outline"
+            type="button"
+            key={list.id}
+            onClick={() => onSelect(list.id)}
+          >
             {list.name}
-          </button>
+          </Button>
         ))
       )}
     </section>

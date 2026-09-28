@@ -1,4 +1,13 @@
 import { Icon } from '#/components/icon'
+import { Badge } from '#/components/ui/badge'
+import { Button } from '#/components/ui/button'
+import {
+  DropdownMenu,
+  DropdownMenuContent,
+  DropdownMenuItem,
+  DropdownMenuSeparator,
+  DropdownMenuTrigger,
+} from '#/components/ui/dropdown-menu'
 import {
   flattenResearchPages,
   useResearchFeed,
@@ -53,8 +62,9 @@ export function ResearchColumn({
         <div className="deck-column-title">
           <PlatformIcon platform={column.source.platform} />
           <h2 id={headingId}>{column.title}</h2>
-          <button
-            className="icon-button"
+          <Button
+            variant="ghost"
+            size="icon-sm"
             aria-label="更新"
             title="更新"
             type="button"
@@ -62,55 +72,46 @@ export function ResearchColumn({
             disabled={query.isFetching}
           >
             <Icon name="refresh" />
-          </button>
-          <details className="column-menu">
-            <summary
-              className="icon-button"
-              aria-label={`${column.title}の操作`}
-              title="カラムの操作"
+          </Button>
+          <DropdownMenu>
+            <DropdownMenuTrigger
+              render={
+                <Button
+                  variant="ghost"
+                  size="icon-sm"
+                  aria-label={`${column.title}の操作`}
+                  title="カラムの操作"
+                />
+              }
             >
               <Icon name="more" />
-            </summary>
-            <div className="column-menu-panel">
-              <button type="button" onClick={onEdit}>
-                編集
-              </button>
-              <button
-                type="button"
-                onClick={(event) => {
-                  onMove(-1)
-                  event.currentTarget
-                    .closest('details')
-                    ?.removeAttribute('open')
-                }}
+            </DropdownMenuTrigger>
+            <DropdownMenuContent align="end">
+              <DropdownMenuItem onClick={onEdit}>編集</DropdownMenuItem>
+              <DropdownMenuItem
+                onClick={() => onMove(-1)}
                 disabled={first}
                 aria-label={`${column.title}を左へ`}
               >
                 ← 左へ移動
-              </button>
-              <button
-                type="button"
-                onClick={(event) => {
-                  onMove(1)
-                  event.currentTarget
-                    .closest('details')
-                    ?.removeAttribute('open')
-                }}
+              </DropdownMenuItem>
+              <DropdownMenuItem
+                onClick={() => onMove(1)}
                 disabled={last}
                 aria-label={`${column.title}を右へ`}
               >
                 右へ移動 →
-              </button>
-              <button
-                type="button"
-                className="danger"
+              </DropdownMenuItem>
+              <DropdownMenuSeparator />
+              <DropdownMenuItem
+                variant="destructive"
                 onClick={onRemove}
                 aria-label={`${column.title}を削除`}
               >
                 カラムを削除
-              </button>
-            </div>
-          </details>
+              </DropdownMenuItem>
+            </DropdownMenuContent>
+          </DropdownMenu>
         </div>
         <div className="deck-column-label">
           <span
@@ -118,10 +119,10 @@ export function ResearchColumn({
           >
             {connectionLabel ?? '接続が見つかりません'}
           </span>
-          <span className="deck-source-label">
+          <Badge variant="outline" className="deck-source-label">
             <Icon name={column.source.kind} />
             {sourceDescription.label}
-          </span>
+          </Badge>
         </div>
         <p className="deck-query">{sourceDescription.query}</p>
         <p className="deck-column-status" role="status">
@@ -152,7 +153,8 @@ export function ResearchColumn({
           <div className="deck-message" role="alert">
             <p>{error.message}</p>
             {error.retryable ? (
-              <button
+              <Button
+                variant="outline"
                 type="button"
                 disabled={query.isFetching}
                 onClick={() =>
@@ -162,7 +164,7 @@ export function ResearchColumn({
                 }
               >
                 再試行
-              </button>
+              </Button>
             ) : null}
           </div>
         ) : null}
@@ -171,13 +173,14 @@ export function ResearchColumn({
         ) : null}
         {query.hasNextPage && !query.isFetchNextPageError ? (
           <div className="deck-message">
-            <button
+            <Button
+              variant="outline"
               type="button"
               disabled={query.isFetching}
               onClick={() => void query.fetchNextPage({ cancelRefetch: false })}
             >
               続きを読み込む
-            </button>
+            </Button>
           </div>
         ) : null}
         {!query.isPending &&

@@ -1,5 +1,12 @@
-import { useEffect, useId, useRef } from 'react'
 import { Icon } from './icon'
+import { Button } from './ui/button'
+import {
+  DialogClose,
+  DialogContent,
+  DialogHeader,
+  Dialog as DialogRoot,
+  DialogTitle,
+} from './ui/dialog'
 
 export function Dialog({
   title,
@@ -10,42 +17,35 @@ export function Dialog({
   onClose: () => void
   children: React.ReactNode
 }) {
-  const dialog = useRef<HTMLDialogElement>(null)
-  const headingId = useId()
-  useEffect(() => {
-    const element = dialog.current
-    const opener =
-      document.activeElement instanceof HTMLElement
-        ? document.activeElement
-        : null
-    element?.showModal()
-    return () => {
-      element?.close()
-      if (opener?.isConnected) opener.focus({ preventScroll: true })
-    }
-  }, [])
   return (
-    <dialog
-      ref={dialog}
-      className="deck-dialog"
-      aria-labelledby={headingId}
-      onCancel={(event) => {
-        event.preventDefault()
-        onClose()
+    <DialogRoot
+      open
+      onOpenChange={(open) => {
+        if (!open) onClose()
       }}
     >
-      <div className="dialog-heading">
-        <h2 id={headingId}>{title}</h2>
-        <button
-          type="button"
-          className="icon-button"
-          aria-label="閉じる"
-          onClick={onClose}
+      <DialogContent
+        showCloseButton={false}
+        className="max-h-[calc(100dvh-2rem)] overflow-y-auto"
+        aria-describedby={undefined}
+      >
+        <DialogHeader>
+          <DialogTitle>{title}</DialogTitle>
+        </DialogHeader>
+        <DialogClose
+          render={
+            <Button
+              variant="ghost"
+              size="icon-sm"
+              className="absolute right-2 top-2"
+              aria-label="閉じる"
+            />
+          }
         >
           <Icon name="close" />
-        </button>
-      </div>
-      {children}
-    </dialog>
+        </DialogClose>
+        {children}
+      </DialogContent>
+    </DialogRoot>
   )
 }

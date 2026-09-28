@@ -83,6 +83,7 @@ function show(connections = [connection], ready = true) {
   const ui = (
     ready = true,
     contextDeck = { id: 'manual', title: '手動デッキ', columns: [] },
+    presentation = 'desktop',
   ) => (
     <QueryClientProvider client={client}>
       <ResearchPanel
@@ -91,16 +92,23 @@ function show(connections = [connection], ready = true) {
         connections={connections}
         onOpenDeck={onOpenDeck}
         onNavigateCitation={onNavigateCitation}
-      />
+      >
+        {(renderPanel) => <div key={presentation}>{renderPanel()}</div>}
+      </ResearchPanel>
     </QueryClientProvider>
   )
   return { ...render(ui(ready)), client, ui, onOpenDeck, onNavigateCitation }
 }
 
-it('retains input and uses the same request ID when retrying a failed start', async () => {
+it('retains input, selected accounts, and the request ID across responsive view remounts after a failed start', async () => {
   actions.start.mockRejectedValue(new Error('internal credential detail'))
-  show()
+  const view = show([
+    connection,
+    { ...connection, id: 'second', displayName: 'second' },
+  ])
   await waitFor(() => expect(screen.getByLabelText('メッセージ')).toBeEnabled())
+  fireEvent.click(screen.getByRole('button', { name: '接続アカウント · 2件' }))
+  fireEvent.click(screen.getByRole('checkbox', { name: 'second · Twitter' }))
   fireEvent.change(screen.getByLabelText('メッセージ'), {
     target: { value: 'WebMCPの反応' },
   })
@@ -110,6 +118,15 @@ it('retains input and uses the same request ID when retrying a failed start', as
   )
   expect(screen.getByLabelText('メッセージ')).toHaveValue('WebMCPの反応')
   expect(screen.queryByText(/internal credential/)).toBeNull()
+  view.rerender(view.ui(true, undefined, 'mobile'))
+  expect(screen.getByRole('alert')).toHaveTextContent('入力内容は残っています')
+  expect(screen.getByLabelText('メッセージ')).toHaveValue('WebMCPの反応')
+  fireEvent.click(screen.getByRole('button', { name: '接続アカウント · 1件' }))
+  expect(
+    screen.getByRole('checkbox', { name: 'second · Twitter' }),
+  ).not.toBeChecked()
+  expect(MockEventSource.instances).toHaveLength(1)
+  expect(MockEventSource.instances[0]?.close).not.toHaveBeenCalled()
   fireEvent.click(screen.getByRole('button', { name: '送信' }))
   await waitFor(() => expect(actions.start).toHaveBeenCalledTimes(2))
   expect(actions.start.mock.calls[1]?.[0]).toEqual(
@@ -197,9 +214,13 @@ it('limits account selection to six and shows the host report path on completion
   )
   await screen.findByText('/home/owner/reports/webmcp.md')
   fireEvent.click(screen.getByText('接続アカウント · 6件'))
-  expect(screen.getByLabelText('account6 · Twitter')).toBeDisabled()
-  fireEvent.click(screen.getByLabelText('account0 · Twitter'))
-  expect(screen.getByLabelText('account6 · Twitter')).toBeEnabled()
+  expect(
+    screen.getByRole('checkbox', { name: 'account6 · Twitter' }),
+  ).toHaveAttribute('aria-disabled', 'true')
+  fireEvent.click(screen.getByRole('checkbox', { name: 'account0 · Twitter' }))
+  expect(
+    screen.getByRole('checkbox', { name: 'account6 · Twitter' }),
+  ).not.toHaveAttribute('aria-disabled', 'true')
 })
 
 it('waits for the workspace before restoring a completed plan from the stream', async () => {
@@ -369,6 +390,8 @@ it('shows streamed conversation and sends follow-up input with the current deck 
 
 it('selects newly loaded connected accounts until the user changes their selection', async () => {
   const view = show([])
+  await waitFor(() => expect(screen.getByLabelText('メッセージ')).toBeEnabled())
+  fireEvent.click(screen.getByRole('button', { name: '接続アカウント · 0件' }))
   await screen.findByText('接続アカウントを先に追加してください。')
   view.rerender(
     <QueryClientProvider client={view.client}>
@@ -595,9 +618,15 @@ it('opens a saved chat with its context deck and selected accounts, preserving l
   expect(screen.getByLabelText('メッセージ')).toHaveValue('')
   expect(screen.getByText('中断しました・続きから再開できます')).toBeVisible()
   fireEvent.click(screen.getByText('接続アカウント · 1件'))
-  expect(screen.getByLabelText('調査用アカウント · Twitter')).not.toBeChecked()
-  expect(screen.getByLabelText('account2 · Twitter')).toBeChecked()
-  fireEvent.click(screen.getByLabelText('調査用アカウント · Twitter'))
+  expect(
+    screen.getByRole('checkbox', { name: '調査用アカウント · Twitter' }),
+  ).not.toBeChecked()
+  expect(
+    screen.getByRole('checkbox', { name: 'account2 · Twitter' }),
+  ).toBeChecked()
+  fireEvent.click(
+    screen.getByRole('checkbox', { name: '調査用アカウント · Twitter' }),
+  )
   act(() =>
     MockEventSource.instances[0]?.onmessage?.({
       data: JSON.stringify({
@@ -612,7 +641,9 @@ it('opens a saved chat with its context deck and selected accounts, preserving l
       run: { message: '更新' },
     }),
   )
-  expect(screen.getByLabelText('調査用アカウント · Twitter')).toBeChecked()
+  expect(
+    screen.getByRole('checkbox', { name: '調査用アカウント · Twitter' }),
+  ).toBeChecked()
   expect(view.onOpenDeck).toHaveBeenCalledOnce()
   fireEvent.change(screen.getByLabelText('メッセージ'), {
     target: { value: '続きを調べて' },

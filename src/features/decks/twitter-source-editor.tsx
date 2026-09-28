@@ -1,4 +1,9 @@
 import { type ReactElement, useId } from 'react'
+import { Button } from '#/components/ui/button'
+import { Checkbox } from '#/components/ui/checkbox'
+import { Input } from '#/components/ui/input'
+import { Label } from '#/components/ui/label'
+import { NativeSelect, NativeSelectOption } from '#/components/ui/native-select'
 import { useListChoices } from '../posts/use-list-choices'
 import type { DeckColumn } from './model'
 
@@ -33,20 +38,21 @@ export function TwitterSourceEditor({
   const id = useId()
   return (
     <>
-      <label htmlFor={id}>
+      <Label htmlFor={id}>
         カラムの種類
-        <select
+        <NativeSelect
+          className="w-full"
           id={id}
           value={source.kind}
           onChange={(event) =>
             onChange(defaultTwitterSource(event.target.value as Source['kind']))
           }
         >
-          <option value="search">検索</option>
-          <option value="user">ユーザー投稿</option>
-          <option value="list">リスト</option>
-        </select>
-      </label>
+          <NativeSelectOption value="search">検索</NativeSelectOption>
+          <NativeSelectOption value="user">ユーザー投稿</NativeSelectOption>
+          <NativeSelectOption value="list">リスト</NativeSelectOption>
+        </NativeSelect>
+      </Label>
       <TwitterSourceFields
         source={source}
         connectionId={connectionId}
@@ -84,9 +90,9 @@ function TwitterSearchEditor({
   const id = useId()
   return (
     <div className="deck-source-fields">
-      <label htmlFor={`${id}-query`}>
+      <Label htmlFor={`${id}-query`}>
         Twitterの検索条件
-        <input
+        <Input
           id={`${id}-query`}
           value={source.query}
           onChange={(event) =>
@@ -96,10 +102,11 @@ function TwitterSearchEditor({
           placeholder="例：WebMCP lang:ja"
           required
         />
-      </label>
-      <label htmlFor={`${id}-product`}>
+      </Label>
+      <Label htmlFor={`${id}-product`}>
         表示順
-        <select
+        <NativeSelect
+          className="w-full"
           id={`${id}-product`}
           value={source.product}
           onChange={(event) =>
@@ -109,23 +116,22 @@ function TwitterSearchEditor({
             })
           }
         >
-          <option value="Latest">最新</option>
-          <option value="Top">話題</option>
-        </select>
-      </label>
+          <NativeSelectOption value="Latest">最新</NativeSelectOption>
+          <NativeSelectOption value="Top">話題</NativeSelectOption>
+        </NativeSelect>
+      </Label>
       <p className="deck-help">
         from:、lang:、since: など、Twitterの検索構文を使えます。
       </p>
-      <label className="deck-checkbox">
-        <input
-          type="checkbox"
+      <Label className="deck-checkbox">
+        <Checkbox
           checked={source.following}
-          onChange={(event) =>
-            onChange({ ...source, following: event.target.checked })
+          onCheckedChange={(checked) =>
+            onChange({ ...source, following: checked })
           }
         />
         フォロー中のみ
-      </label>
+      </Label>
     </div>
   )
 }
@@ -137,9 +143,9 @@ function TwitterUserEditor({
   const id = useId()
   return (
     <div className="deck-source-fields">
-      <label htmlFor={id}>
+      <Label htmlFor={id}>
         ユーザー
-        <input
+        <Input
           id={id}
           value={source.target}
           onChange={(event) =>
@@ -149,7 +155,7 @@ function TwitterUserEditor({
           maxLength={256}
           required
         />
-      </label>
+      </Label>
     </div>
   )
 }
@@ -162,9 +168,9 @@ function TwitterListEditor({
   const id = useId()
   return (
     <div className="deck-source-fields">
-      <label htmlFor={id}>
+      <Label htmlFor={id}>
         リスト
-        <input
+        <Input
           id={id}
           value={source.target}
           onChange={(event) =>
@@ -174,7 +180,7 @@ function TwitterListEditor({
           maxLength={256}
           required
         />
-      </label>
+      </Label>
       {connectionId && (
         <TwitterListChoices
           connectionId={connectionId}
@@ -198,9 +204,13 @@ function TwitterListChoices({
     return (
       <p role="alert">
         リストを取得できませんでした。
-        <button type="button" onClick={() => void lists.refetch()}>
+        <Button
+          variant="outline"
+          type="button"
+          onClick={() => void lists.refetch()}
+        >
           再試行
-        </button>
+        </Button>
       </p>
     )
   return (
@@ -212,10 +222,15 @@ function TwitterListChoices({
         <p>リストはありません。URLまたはIDでも指定できます。</p>
       ) : (
         lists.data.map((list) => (
-          <button type="button" key={list.id} onClick={() => onSelect(list.id)}>
+          <Button
+            variant="outline"
+            type="button"
+            key={list.id}
+            onClick={() => onSelect(list.id)}
+          >
             {list.name}
             {list.isPrivate ? ' · 非公開' : ''}
-          </button>
+          </Button>
         ))
       )}
     </section>

@@ -1,9 +1,11 @@
 import { expect, test } from '../fixtures'
+import { showDeckManagement } from '../workspace'
 
 test('opens account management after hydration without inheriting real OAuth configuration', async ({
   page,
 }) => {
   await page.goto('/')
+  await showDeckManagement(page)
   const manage = page.getByRole('button', { name: '接続アカウントを管理' })
   await expect(manage).toBeEnabled()
   await manage.click()
@@ -28,6 +30,7 @@ test('rejects an unbound OAuth callback without contacting an instance', async (
   await expect(page.getByRole('alert')).toContainText(
     'Mastodonの認可を完了できませんでした。',
   )
+  await showDeckManagement(page)
   await expect(
     page.getByRole('button', { name: '接続アカウントを管理' }),
   ).toBeEnabled()

@@ -1,16 +1,14 @@
-.app.app-deck {
-  grid-template-columns: 340px minmax(0, 1fr);
-}
 .research-panel {
   display: flex;
   flex-direction: column;
+  height: 100%;
   min-height: 0;
   min-width: 0;
-  border-right: 1px solid var(--border);
-  background: var(--paper);
+  background: var(--background);
   overflow: hidden;
 }
 .research-heading {
+  flex-shrink: 0;
   display: flex;
   align-items: center;
   justify-content: space-between;
@@ -23,13 +21,11 @@
   margin: 0;
   font-size: 1rem;
 }
-.research-heading button {
-  font-size: 0.75rem;
-}
 .research-context {
-  margin: 0.5rem 0 0;
-  color: var(--secondary);
+  margin: 0 0 0.75rem;
+  color: var(--muted-foreground);
   font-size: 0.75rem;
+  overflow-wrap: anywhere;
 }
 .research-history {
   display: flex;
@@ -38,20 +34,14 @@
   width: 100%;
   min-width: 0;
   font-size: 0.75rem;
-  color: var(--secondary);
+  color: var(--muted-foreground);
 }
 .research-history span {
   flex-shrink: 0;
 }
-.research-history select {
+.research-history > [data-slot="native-select-wrapper"] {
   flex: 1;
   min-width: 0;
-  font-size: 0.75rem;
-  color: var(--ink);
-  background: var(--canvas);
-  border: 1px solid var(--control-border);
-  border-radius: 0.25rem;
-  padding: 0.4rem;
 }
 .research-panel > p {
   padding: 0.5rem 1rem;
@@ -61,44 +51,31 @@
 .research-conversation {
   flex: 1;
   min-height: 80px;
-  overflow-y: auto;
-  overscroll-behavior: contain;
-  padding: 1rem;
 }
 .research-empty {
-  color: var(--secondary);
+  color: var(--muted-foreground);
   font-size: 0.85rem;
   line-height: 1.8;
 }
 .research-message {
-  margin-bottom: 1.25rem;
   font-size: 0.875rem;
   line-height: 1.65;
   overflow-wrap: anywhere;
-}
-.research-message strong {
-  font-size: 0.7rem;
-  color: var(--secondary);
 }
 .research-message p {
   margin: 0.35rem 0 0;
   white-space: pre-wrap;
 }
-.research-message-user {
-  border-left: 2px solid var(--accent);
-  padding-left: 0.75rem;
-}
-.research-message-tool {
-  color: var(--secondary);
+.research-tool-message {
+  color: var(--muted-foreground);
   font-size: 0.75rem;
+  white-space: pre-wrap;
+  overflow-wrap: anywhere;
 }
 .research-start-form {
+  flex-shrink: 0;
   padding: 0.75rem;
   border-top: 1px solid var(--border);
-}
-.research-context {
-  margin: 0 0 0.75rem;
-  overflow-wrap: anywhere;
 }
 .research-start-form > fieldset {
   border: 0;
@@ -111,20 +88,8 @@
 .research-start-form label {
   font-size: 0.8rem;
 }
-.research-start-form textarea {
-  width: 100%;
-  resize: vertical;
-  color: var(--ink);
-  background: var(--canvas);
-  border: 1px solid var(--control-border);
-  border-radius: 0.25rem;
-  padding: 0.6rem;
-}
 .research-account-picker {
   font-size: 0.75rem;
-}
-.research-account-picker summary {
-  cursor: pointer;
 }
 .research-accounts {
   display: grid;
@@ -141,10 +106,8 @@
   align-items: center;
   overflow-wrap: anywhere;
 }
-.research-accounts input {
-  width: auto;
-}
 .research-run {
+  flex-shrink: 0;
   border-top: 1px solid var(--border);
   padding: 0.5rem 0.75rem;
   font-size: 0.75rem;
@@ -159,73 +122,6 @@
   overflow-wrap: anywhere;
   font-size: 0.75rem;
 }
-.deck-toolbar {
-  display: flex;
-  flex-wrap: wrap;
-  align-items: center;
-  gap: 0.4rem;
-  padding: 0.5rem;
-  border-bottom: 1px solid var(--border);
-  flex-shrink: 0;
-}
-.deck-toolbar .deck-workspaces {
-  flex: 1;
-}
-.deck-toolbar .deck-workspaces > .deck-actions {
-  flex-wrap: nowrap;
-}
-.deck-toolbar .deck-workspaces > .deck-actions > label {
-  position: absolute;
-  width: 1px;
-  height: 1px;
-  overflow: hidden;
-  clip-path: inset(50%);
-}
-.deck-toolbar .deck-workspaces > .deck-actions > select {
-  flex: 1;
-  width: 0;
-}
-.deck-toolbar .deck-workspaces > .deck-actions > button {
-  flex: none;
-  width: 36px;
-  padding: 0.25rem;
-}
-.deck-toolbar .workspace-create span,
-.deck-toolbar .workspace-delete span,
-.deck-toolbar .sidebar-add span,
-.deck-toolbar .sidebar-note {
-  display: none;
-}
-.app-deck .deck-toolbar .sidebar-add {
-  width: 36px;
-}
-@media (max-width: 767px) {
-  .app.app-deck {
-    grid-template-columns: minmax(0, 1fr);
-    grid-template-rows: 44dvh minmax(0, 1fr);
-  }
-  .research-panel {
-    border-right: 0;
-    border-bottom: 1px solid var(--border);
-    overflow-y: auto;
-  }
-  .research-heading {
-    padding: 0.5rem 0.75rem;
-  }
-  .research-conversation {
-    flex: 1 0 80px;
-    min-height: 80px;
-  }
-  .research-start-form {
-    padding: 0.5rem 0.75rem;
-  }
-  .research-run {
-    flex-shrink: 0;
-  }
-  .deck-toolbar > button:last-child {
-    width: 100%;
-  }
-}
 .research-markdown {
   min-width: 0;
   overflow-wrap: anywhere;
@@ -238,11 +134,18 @@
 .research-markdown h5,
 .research-markdown h6 {
   font-size: 1em;
+  font-weight: 600;
   margin: 1em 0 0.4em;
 }
 .research-markdown ul,
 .research-markdown ol {
   padding-left: 1.4rem;
+}
+.research-markdown ul {
+  list-style: disc;
+}
+.research-markdown ol {
+  list-style: decimal;
 }
 .research-markdown li + li {
   margin-top: 0.25rem;
@@ -250,14 +153,14 @@
 .research-markdown blockquote {
   margin: 0.75rem 0;
   padding-left: 0.75rem;
-  border-left: 2px solid var(--control-border);
-  color: var(--secondary);
+  border-left: 2px solid var(--border);
+  color: var(--muted-foreground);
 }
 .research-markdown pre {
   max-width: 100%;
   overflow-x: auto;
   padding: 0.75rem;
-  background: var(--canvas);
+  background: var(--muted);
   white-space: pre;
   font-size: 0.75rem;
 }
@@ -281,7 +184,7 @@
   text-align: left;
 }
 .research-markdown a {
-  color: var(--accent);
+  color: var(--primary);
   text-decoration: underline;
   text-underline-offset: 0.15em;
 }

@@ -1,6 +1,9 @@
 import { useEffect, useRef, useState } from 'react'
 import { Icon } from '#/components/icon'
 import { PostText } from '#/components/post-text'
+import { Avatar, AvatarFallback, AvatarImage } from '#/components/ui/avatar'
+import { Badge } from '#/components/ui/badge'
+import { Button } from '#/components/ui/button'
 import type { ResearchPost } from '#/features/platforms/types'
 
 const dateFormatter = new Intl.DateTimeFormat('ja-JP', {
@@ -49,20 +52,17 @@ export function ResearchPostCard({
       className={`research-post${highlighted ? ' citation-highlight' : ''}`}
       data-post-url={post.url}
     >
-      {citationSnapshot ? <p className="handle">調査時に取得した投稿</p> : null}
+      {citationSnapshot ? (
+        <Badge variant="secondary">調査時に取得した投稿</Badge>
+      ) : null}
       {post.boostedBy ? (
         <p className="handle">{post.boostedBy.name} がブースト</p>
       ) : null}
       <header>
-        {post.author.avatarUrl ? (
-          <img
-            src={post.author.avatarUrl}
-            alt=""
-            width={36}
-            height={36}
-            loading="lazy"
-          />
-        ) : null}
+        <Avatar className="size-9 shrink-0">
+          <AvatarImage src={post.author.avatarUrl} alt="" loading="lazy" />
+          <AvatarFallback>{post.author.name.slice(0, 1)}</AvatarFallback>
+        </Avatar>
         <div>
           <strong>{post.author.name}</strong>
           <span className="handle">
@@ -78,13 +78,15 @@ export function ResearchPostCard({
       {concealed ? (
         <div>
           <p>{post.contentWarning || 'センシティブなメディアを含む投稿'}</p>
-          <button
+          <Button
+            variant="outline"
+            size="sm"
             type="button"
             aria-expanded={revealed}
             onClick={() => setRevealed(!revealed)}
           >
             {revealed ? '内容を隠す' : '内容を表示'}
-          </button>
+          </Button>
         </div>
       ) : null}
       {!concealed || revealed ? (

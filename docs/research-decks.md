@@ -2,12 +2,14 @@
 
 ## Workspace
 
-Both `/` and `/deck` render the deck-only application. A dark sidebar switches
-decks, adds columns, and jumps to a column. Up to six ordered columns scroll
-independently; only the active deck mounts and fetches its columns. On mobile,
-the sidebar becomes a compact top bar. Native dialogs handle creation and
-editing, with Escape and focus restoration. Column menus offer editing,
-ordering, and deletion; refresh and pagination are manual.
+Both `/` and `/deck` render the research workspace. A collapsible shadcn/ui
+sidebar based on `sidebar-09` switches between research chat and deck management.
+Deck management switches decks, adds columns, and manages connected accounts. Up to six ordered columns scroll independently; only the active deck
+mounts and fetches its columns. On mobile, the sidebar opens as a sheet.
+shadcn Base UI dialogs handle creation and editing, with Escape and focus
+restoration. Column menus offer editing, ordering, and deletion; refresh and
+pagination are manual. The adjacent chat uses MessageScroller, Message, Bubble,
+Marker and InputGroup with the existing research backend.
 
 Twitter and Mastodon can appear together, with different accounts in each
 column. Original-post links open their source site. Separate reader, search,
