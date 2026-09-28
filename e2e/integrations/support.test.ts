@@ -17,6 +17,7 @@ test("reviews an edited reply and keeps the simulated result in history", async 
   await expect(reply).toHaveValue(/Thank you for sharing/);
   const edited = "I reviewed the materials. Let’s discuss the first-time experience.";
   await reply.fill(edited);
+  await page.locator(".conversation-scheduling summary:visible").click();
   const slot = "Mon, Oct 5, 14:00–14:30";
   await page.getByRole("combobox", { name: "Suggested times" }).selectOption(slot);
   await page.getByRole("button", { name: "Add to reply" }).click();
@@ -33,7 +34,7 @@ test("reviews an edited reply and keeps the simulated result in history", async 
   await dialog.getByRole("button", { name: "Try sending" }).click();
   await expect(dialog).toHaveCount(0);
   await expect(rows.filter({ hasText: reviewSubject })).toHaveCount(0);
-  await page.getByRole("button", { name: "History", exact: true }).click();
+  await page.getByRole("button", { name: "Archive", exact: true }).click();
   await rows.filter({ hasText: reviewSubject }).click();
   await expect(page.locator(".support-outcome")).toContainText(edited);
   await expect(page.locator(".support-outcome")).toContainText(slot);
@@ -49,16 +50,16 @@ test("defers a conversation and restores it to the current queue", async ({ page
     .fill("土曜の予定を確認してから返事するね。");
   await page.getByRole("button", { name: "Leave for later" }).click();
   await expect(rows.filter({ hasText: coffeeSubject })).toHaveCount(0);
-  await page.getByRole("button", { name: "Later", exact: true }).click();
+  await page.getByRole("button", { name: "Set aside", exact: true }).click();
   await rows.filter({ hasText: coffeeSubject }).click();
   await expect(page.getByRole("textbox", { name: "Reply", exact: true })).toHaveValue(
     "土曜の予定を確認してから返事するね。",
   );
-  await page.getByRole("button", { name: "Move to Now" }).click();
+  await page.getByRole("button", { name: "Move to Inbox" }).click();
   const back = page.getByRole("button", { name: "Back to messages" });
   if (await back.isVisible()) await back.click();
   await expect(rows.filter({ hasText: coffeeSubject })).toBeVisible();
-  await expect(page.getByRole("button", { name: "Now", exact: true })).toHaveAttribute(
+  await expect(page.getByRole("button", { name: "Inbox", exact: true })).toHaveAttribute(
     "aria-pressed",
     "true",
   );
@@ -107,7 +108,7 @@ test("keeps corrections as new records and summarizes only selected current fact
 });
 
 test("fits communication and journal interactions in narrow screens", async ({ page, a11y }) => {
-  for (const width of [320, 375, 768]) {
+  for (const width of [320, 375, 414, 768]) {
     await page.setViewportSize({ width, height: 850 });
     await page.goto("/support");
     await page.waitForLoadState("networkidle");

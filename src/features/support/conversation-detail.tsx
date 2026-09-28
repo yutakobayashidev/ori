@@ -1,5 +1,5 @@
-import { CalendarPlus, Check, ChevronDown, Send } from "lucide-react";
-import { useState } from "react";
+import { CalendarPlus, Check, ChevronDown, CornerDownRight, Send } from "lucide-react";
+import { useId, useState } from "react";
 import { Button } from "#/components/ui/button";
 import {
   Dialog,
@@ -20,182 +20,199 @@ export function ConversationDetail({
   conversation: Conversation;
   onResolve: (result: "sent" | "waiting" | "later" | "dismissed", note?: string) => void;
 }) {
+  const instanceId = useId();
   const [draft, setDraft] = useState(conversation.drafts[0]?.text ?? "");
   const [tone, setTone] = useState(conversation.drafts[0]?.label ?? "");
   const [review, setReview] = useState<"send" | "schedule" | null>(null);
   const [slot, setSlot] = useState("");
   const [scheduled, setScheduled] = useState("");
-
   return (
     <article
-      className="mx-auto w-full max-w-3xl px-5 py-8 sm:px-10 sm:py-10"
+      className="conversation-workbench"
       aria-label={`Conversation with ${conversation.name}`}
     >
-      <header className="mb-8 space-y-2">
-        <p className="text-xs text-muted-foreground">
-          {conversation.channels.join(" / ")} · {conversation.role}
-        </p>
-        <h1 className="text-2xl font-medium tracking-tight">{conversation.name}</h1>
-        <p className="text-sm text-muted-foreground">{conversation.subject}</p>
-      </header>
-
-      <section className="mb-8 space-y-4" aria-label="Conversation summary">
-        <p className="text-sm leading-7">{conversation.summary}</p>
-        <div className="border-l-2 border-border pl-4">
-          <p className="text-sm leading-6">{conversation.nextStep}</p>
-          {conversation.deadline && (
-            <p className="mt-1 text-xs text-muted-foreground">
-              Requested deadline · {conversation.deadline}
-            </p>
-          )}
-        </div>
-      </section>
-
-      <details className="group mb-8 border-y border-border py-3">
-        <summary className="flex cursor-pointer list-none items-center justify-between text-sm outline-none focus-visible:ring-2 focus-visible:ring-ring">
-          Original messages{" "}
-          <ChevronDown className="size-4 text-muted-foreground transition-transform group-open:rotate-180" />
-        </summary>
-        <div className="space-y-5 pt-5">
+      <div className="conversation-thread">
+        <header className="conversation-summary">
+          <span className="conversation-eyebrow">At a glance</span>
+          <h2>{conversation.subject}</h2>
+          <p>{conversation.summary}</p>
+        </header>
+        <section className="conversation-messages" aria-label="Original messages">
           {conversation.messages.map((message) => (
             <div
               key={message.id}
-              id={`source-${message.id}`}
-              className="scroll-mt-5 rounded-lg bg-muted/40 p-4 focus:outline-none"
+              id={`${instanceId}-source-${message.id}`}
+              className="conversation-message"
+              data-direction={message.direction}
               tabIndex={-1}
             >
-              <p className="mb-2 text-xs text-muted-foreground">
-                {message.direction === "in" ? conversation.name : "You"} · {message.channel} ·{" "}
-                {message.time}
+              <p className="conversation-message-meta">
+                {message.direction === "in" ? conversation.name.split(" ")[0] : "You"}
+                <span>
+                  {message.channel} · {message.time}
+                </span>
               </p>
-              <p className="whitespace-pre-wrap text-sm leading-7">{message.text}</p>
+              <div className="conversation-bubble">{message.text}</div>
             </div>
           ))}
-        </div>
-      </details>
-
-      <section aria-label="Compose a reply" className="space-y-3">
-        <div className="flex flex-wrap items-center justify-between gap-2">
-          <label htmlFor={`support-reply-${conversation.id}`} className="text-sm font-medium">
-            Reply
-          </label>
-          <span className="text-xs text-muted-foreground">
-            {conversation.replyChannel} → {conversation.name}
-          </span>
-        </div>
-        <div className="flex flex-wrap gap-1">
-          {conversation.drafts.map((option) => (
-            <Button
-              key={option.label}
-              variant={tone === option.label ? "secondary" : "ghost"}
-              size="sm"
-              aria-pressed={tone === option.label}
-              onClick={() => {
-                setDraft(option.text);
-                setTone(option.label);
-              }}
-            >
-              {option.label}
-            </Button>
-          ))}
-        </div>
-        <Textarea
-          id={`support-reply-${conversation.id}`}
-          value={draft}
-          className="min-h-36 resize-y text-sm leading-7"
-          onChange={(event) => {
-            setDraft(event.target.value);
-            setTone("");
-          }}
-        />
-
-        {conversation.scheduleOptions.length > 0 && (
-          <div className="flex flex-wrap items-center gap-2">
-            <NativeSelect
-              aria-label="Suggested times"
-              value={slot}
-              onChange={(event) => setSlot(event.target.value)}
-            >
-              <NativeSelectOption value="">Choose a time</NativeSelectOption>
-              {conversation.scheduleOptions.map((option) => (
-                <NativeSelectOption key={option} value={option}>
-                  {option}
-                </NativeSelectOption>
-              ))}
-            </NativeSelect>
-            <Button
-              size="sm"
-              variant="ghost"
-              disabled={!slot}
-              onClick={() => {
-                setDraft((current) => `${current}\n\nWould ${slot} work for you?`);
-                setTone("");
-              }}
-            >
-              Add to reply
-            </Button>
-            <Button
-              size="icon-sm"
-              variant="ghost"
-              disabled={!slot}
-              aria-label="Preview calendar hold"
-              onClick={() => setReview("schedule")}
-            >
-              <CalendarPlus />
-            </Button>
+        </section>
+        <section aria-label="Compose a reply" className="conversation-compose">
+          <div className="conversation-compose-heading">
+            <label htmlFor={`${instanceId}-reply`}>Reply</label>
+            <span>via {conversation.replyChannel}</span>
           </div>
-        )}
-        {scheduled && (
-          <p role="status" className="flex items-center gap-2 text-xs text-muted-foreground">
-            <Check className="size-3" />
-            {scheduled} held in this preview
-          </p>
-        )}
-        <div className="flex flex-wrap items-center justify-between gap-3 pt-2">
-          <Button disabled={!draft.trim()} onClick={() => setReview("send")}>
-            <Send />
-            Review reply
-          </Button>
-          <div className="flex flex-wrap gap-1">
-            <Button variant="ghost" size="sm" onClick={() => onResolve("later")}>
-              Leave for later
-            </Button>
-            <Button variant="ghost" size="sm" onClick={() => onResolve("waiting")}>
-              Waiting
-            </Button>
-            <Button variant="ghost" size="sm" onClick={() => onResolve("dismissed")}>
-              Close without replying
-            </Button>
-          </div>
-        </div>
-      </section>
-
-      <details className="group mt-10 border-t border-border pt-4">
-        <summary className="flex cursor-pointer list-none items-center justify-between text-xs text-muted-foreground outline-none focus-visible:ring-2 focus-visible:ring-ring">
-          About this person{" "}
-          <ChevronDown className="size-3 transition-transform group-open:rotate-180" />
-        </summary>
-        <ul className="mt-4 space-y-3 text-sm leading-6">
-          {conversation.facts.map((fact) => (
-            <li key={fact.sourceId} className="flex items-start justify-between gap-3">
-              <span>{fact.text}</span>
-              <a
-                className="shrink-0 text-xs text-muted-foreground underline underline-offset-4"
-                href={`#source-${fact.sourceId}`}
+          <div className="conversation-draft-options" aria-label="Reply suggestions">
+            {conversation.drafts.map((option) => (
+              <button
+                key={option.label}
+                type="button"
+                aria-pressed={tone === option.label}
                 onClick={() => {
-                  const source = document.getElementById(`source-${fact.sourceId}`);
-                  const details = source?.closest("details");
-                  if (details) details.open = true;
-                  source?.focus();
+                  setDraft(option.text);
+                  setTone(option.label);
                 }}
               >
-                Source
-              </a>
-            </li>
-          ))}
-        </ul>
-      </details>
-
+                {option.label}
+              </button>
+            ))}
+          </div>
+          <Textarea
+            id={`${instanceId}-reply`}
+            value={draft}
+            className="min-h-28 resize-y text-sm leading-7"
+            onChange={(event) => {
+              setDraft(event.target.value);
+              setTone("");
+            }}
+          />
+          {conversation.scheduleOptions.length > 0 && (
+            <details className="conversation-scheduling">
+              <summary>
+                <CalendarPlus aria-hidden="true" />
+                Suggest a time
+                <ChevronDown aria-hidden="true" />
+              </summary>
+              <div>
+                <NativeSelect
+                  aria-label="Suggested times"
+                  value={slot}
+                  onChange={(event) => setSlot(event.target.value)}
+                >
+                  <NativeSelectOption value="">Choose a time</NativeSelectOption>
+                  {conversation.scheduleOptions.map((option) => (
+                    <NativeSelectOption key={option} value={option}>
+                      {option}
+                    </NativeSelectOption>
+                  ))}
+                </NativeSelect>
+                <Button
+                  size="sm"
+                  variant="ghost"
+                  disabled={!slot}
+                  onClick={() => {
+                    setDraft((current) => `${current}\n\nWould ${slot} work for you?`);
+                    setTone("");
+                  }}
+                >
+                  Add to reply
+                </Button>
+                <Button
+                  size="icon-sm"
+                  variant="ghost"
+                  disabled={!slot}
+                  aria-label="Preview calendar hold"
+                  onClick={() => setReview("schedule")}
+                >
+                  <CalendarPlus />
+                </Button>
+              </div>
+            </details>
+          )}
+          {scheduled && (
+            <p role="status" className="flex items-center gap-2 text-xs text-muted-foreground">
+              <Check className="size-3" />
+              {scheduled} held in this preview
+            </p>
+          )}
+          <div className="conversation-compose-footer">
+            <span>Nothing sends without review</span>
+            <Button disabled={!draft.trim()} onClick={() => setReview("send")}>
+              <Send />
+              Review reply
+            </Button>
+          </div>
+          <div className="conversation-triage">
+            <Button
+              variant="ghost"
+              size="sm"
+              aria-label="Leave for later"
+              onClick={() => onResolve("later")}
+            >
+              Set aside
+            </Button>
+            <Button variant="ghost" size="sm" onClick={() => onResolve("waiting")}>
+              Awaiting reply
+            </Button>
+            <Button variant="ghost" size="sm" onClick={() => onResolve("dismissed")}>
+              No reply needed
+            </Button>
+          </div>
+        </section>
+      </div>
+      <aside className="conversation-context" aria-label="Person and conversation context">
+        <details open className="conversation-context-details">
+          <summary>
+            Context
+            <ChevronDown aria-hidden="true" />
+          </summary>
+          <div className="conversation-person">
+            <span className="support-avatar" aria-hidden="true">
+              {conversation.name
+                .split(" ")
+                .map((part) => part[0])
+                .join("")}
+            </span>
+            <h3>{conversation.name}</h3>
+            <p>{conversation.role}</p>
+          </div>
+          <section className="conversation-next">
+            <h3>
+              <CornerDownRight aria-hidden="true" />
+              Next step
+            </h3>
+            <p>{conversation.nextStep}</p>
+            {conversation.deadline && (
+              <div className="conversation-deadline">
+                <span>Requested by</span>
+                <strong>{conversation.deadline}</strong>
+              </div>
+            )}
+          </section>
+          <section className="conversation-facts">
+            <h3>From the conversation</h3>
+            <ul>
+              {conversation.facts.map((fact) => (
+                <li key={fact.sourceId}>
+                  <p>{fact.text}</p>
+                  <a
+                    href={`#${instanceId}-source-${fact.sourceId}`}
+                    onClick={(event) => {
+                      event.preventDefault();
+                      const source = document.getElementById(
+                        `${instanceId}-source-${fact.sourceId}`,
+                      );
+                      source?.scrollIntoView({ block: "nearest", behavior: "smooth" });
+                      source?.focus({ preventScroll: true });
+                    }}
+                  >
+                    View message ↗
+                  </a>
+                </li>
+              ))}
+            </ul>
+          </section>
+        </details>
+      </aside>
       <Dialog
         open={review !== null}
         onOpenChange={(open) => {

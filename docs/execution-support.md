@@ -36,12 +36,29 @@ the new communication and journal prototypes do not consume those accounts.
 
 ## Daily home
 
-`/` presents a greeting, a large input, and a flexible plan grouped as
+`/` presents a greeting, a large input, and a Tiimo-inspired flexible day flow grouped as
 Start here, Routines, and If there’s room. There are no fixed time slots.
 Tasks can be reordered, completed, deferred, restored, or followed as routine
 steps. Communications can be reviewed directly in a home dialog; changes also
 appear in `/support`. Journal entries and corrections appear on the home, and
 reader samples open for reading. Research remains a separate work surface.
+
+Activity blocks expand in place into controls suited to their content: routine
+steps, a task's next action and resumption note, or a weight input that records
+an entry in Journal. Completed and deferred activities stay in their original positions with visible
+status and undo controls. Measurements retain the recorded value in place, and
+reply previews retain their outcome, so the user need not remember what was done. Expanded activity selection
+uses the `activity` URL parameter. This remains a session-only mock; a reload
+restores navigation, not recorded activity data.
+
+Messages uses a Beeper-inspired person list and visible original conversation,
+with reply drafting and review next to source-backed context. On narrow screens
+the list and conversation become separate views. Inbox, set-aside, waiting and
+archive filters describe communication state; a simulated reply does not prove
+that a separate promise was fulfilled. References include the saved
+[Beeper Copilot captures](references/beeper-copilot/README.md),
+[Beeper Desktop](https://blog.beeper.com/2025/02/24/try-out-the-new-beeper-desktop-and-ios-beta/),
+and [open-loop research](gbrain-open-loops-research.md).
 
 The input currently uses a deterministic English/Japanese mock interpreter, not an LLM.
 It proposes typed actions for task creation/status/reordering, routine steps,

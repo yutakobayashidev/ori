@@ -14,9 +14,9 @@
   overflow-y: auto;
 }
 .home-content {
-  max-width: 1140px;
+  max-width: 1200px;
   margin: auto;
-  padding: 64px 48px 80px;
+  padding: 40px 48px 80px;
 }
 .home-greeting {
   margin-bottom: 32px;
@@ -88,8 +88,8 @@
 }
 .home-columns {
   display: grid;
-  grid-template-columns: minmax(0, 1.65fr) minmax(240px, 1fr);
-  gap: 64px;
+  grid-template-columns: minmax(0, 2.5fr) minmax(190px, 1fr);
+  gap: 40px;
   margin-top: 24px;
 }
 .home-section {

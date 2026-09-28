@@ -7,6 +7,7 @@ export type Conversation = {
   subject: string;
   channels: Channel[];
   replyChannel: Channel;
+  replyRequired: boolean;
   updatedAt: string;
   deadline?: string;
   summary: string;
@@ -32,6 +33,7 @@ export const conversations: Conversation[] = [
     subject: "Schedule next week’s design review",
     channels: ["Slack", "Gmail"],
     replyChannel: "Slack",
+    replyRequired: true,
     updatedAt: "10:42",
     deadline: "Sep 29, 17:00",
     summary:
@@ -86,6 +88,7 @@ export const conversations: Conversation[] = [
     subject: "Catch up over coffee",
     channels: ["LINE"],
     replyChannel: "LINE",
+    replyRequired: true,
     updatedAt: "Yesterday",
     summary: "An invitation to meet for coffee while Naoto is nearby. There is no rush to reply.",
     nextStep:
@@ -128,6 +131,7 @@ export const conversations: Conversation[] = [
     subject: "Confirm the scope for an estimate",
     channels: ["Gmail"],
     replyChannel: "Gmail",
+    replyRequired: true,
     updatedAt: "9:10",
     deadline: "Sep 30, 12:00",
     summary:
@@ -171,6 +175,7 @@ export const conversations: Conversation[] = [
     subject: "The article we talked about",
     channels: ["Slack"],
     replyChannel: "Slack",
+    replyRequired: false,
     updatedAt: "Friday",
     summary:
       "Yu shared an article discussed at the last study group. There are no questions or requests for a reply.",

@@ -5,7 +5,11 @@ export function DailyBrief({ onOpenContact }: { onOpenContact: (id: string) => v
   const { tasks, statuses, entries } = useWorkspaceState();
   const focus = tasks.find((task) => task.section === "focus" && task.status === "todo");
   const optional = tasks.find((task) => task.section === "optional" && task.status === "todo");
-  const contacts = conversations.filter((person) => (statuses[person.id] ?? "now") === "now");
+  const contacts = conversations.filter(
+    (person) =>
+      (statuses[person.id] ?? "now") === "now" &&
+      (person.replyRequired || statuses[person.id] === "now"),
+  );
   const firstContact = contacts[0];
   const resume = entries.find(
     (entry) =>

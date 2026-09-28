@@ -8,6 +8,12 @@ each dedicated workspace; its bottom avatar manages connected accounts.
 The interface is in English. User-entered text and external posts retain their
 original language.
 
+Home uses a Tiimo-inspired day flow with expandable activities and direct
+controls for routine steps, tasks, replies and weight entries. Messages uses
+a Beeper-inspired conversation layout with visible source messages, editable
+drafts and a contextual side panel. These execution surfaces remain mocks;
+their records share browser-session state and external sending is simulated.
+
 ## Workspaces and current status
 
 | Workspace | Route      | Current implementation                                                                                                 |

@@ -15,6 +15,9 @@
   --color-control-rule: var(--input);
   --color-focus: var(--ring);
   --color-error: var(--destructive);
+  --color-activity-lilac: oklch(78% 0.09 295);
+  --color-activity-sage: oklch(80% 0.07 155);
+  --color-activity-peach: oklch(82% 0.08 60);
   --color-success: oklch(78% 0.13 155);
   --color-shadow: oklch(10% 0.015 250 / 45%);
   --color-overlay: oklch(10% 0.015 250 / 70%);

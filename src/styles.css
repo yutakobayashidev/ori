@@ -11,4 +11,5 @@
 @import "./features/journal/journal.css";
 @import "./features/support/support.css";
 @import "./features/home/home.css";
+@import "./features/home/execution-workbench.css";
 @import "./features/vitals/vitals.css";

@@ -1,21 +1,8 @@
 import { Link, useNavigate, useRouteContext } from "@tanstack/react-router";
-import {
-  ArrowDown,
-  ArrowUp,
-  ArrowUpRight,
-  Check,
-  ChevronRight,
-  Circle,
-  Coffee,
-  MessagesSquare,
-  Plus,
-  RotateCcw,
-  X,
-} from "lucide-react";
+import { ArrowUp, ArrowUpRight, Plus, X } from "lucide-react";
 import { useRef, useState } from "react";
 import { Dialog } from "#/components/dialog";
 import { Button } from "#/components/ui/button";
-import { Checkbox } from "#/components/ui/checkbox";
 import { SidebarInset, SidebarProvider } from "#/components/ui/sidebar";
 import { Textarea } from "#/components/ui/textarea";
 import { TooltipProvider } from "#/components/ui/tooltip";
@@ -26,11 +13,12 @@ import { ConversationDetail } from "#/features/support/conversation-detail";
 import { conversations } from "#/features/support/mock-conversations";
 import { entryKindLabels, useWorkspaceState } from "#/features/workspace/workspace-state";
 import { DailyBrief } from "./daily-brief";
+import { ExecutionWorkbench } from "./execution-workbench";
 import { type HomeAction, interpretAction } from "./interpret-action";
 
 export function HomePage() {
   const { auth } = useRouteContext({ from: "__root__" });
-  const { tasks, setTasks, statuses, setStatuses, outcomes, setOutcomes, entries, setEntries } =
+  const { tasks, setTasks, setStatuses, outcomes, setOutcomes, entries, setEntries } =
     useWorkspaceState();
   const navigate = useNavigate();
   const input = useRef<HTMLTextAreaElement>(null);
@@ -49,11 +37,9 @@ export function HomePage() {
     updateSearch({ article: id, conversation: undefined });
   const contact = conversations.find((item) => item.id === contactId);
   const article = articles.find((item) => item.id === articleId);
-  const waiting = conversations.filter((item) => (statuses[item.id] ?? "now") === "now");
   const currentEntries = entries.filter(
     (entry) => !entries.some((other) => other.correctionOf === entry.id),
   );
-  const rest = tasks.filter((task) => task.status !== "todo");
 
   function suggest(text: string) {
     setPrompt(text);
@@ -230,215 +216,12 @@ export function HomePage() {
                 {notice}
               </p>
               <div className="home-columns">
-                <section aria-label="Today’s plan">
-                  {(
-                    [
-                      { id: "focus", label: "Start here" },
-                      { id: "routine", label: "Routines" },
-                      { id: "optional", label: "If there’s room" },
-                    ] as const
-                  ).map((section) => (
-                    <section key={section.id} className="home-section">
-                      <header className="home-section-heading">
-                        <h2>{section.label}</h2>
-                        <Button
-                          variant="ghost"
-                          size="icon-sm"
-                          aria-label={`Add to ${section.label}`}
-                          onClick={() =>
-                            suggest(
-                              section.id === "routine"
-                                ? "Add routine:"
-                                : section.id === "optional"
-                                  ? "Optional: "
-                                  : "Add:",
-                            )
-                          }
-                        >
-                          <Plus />
-                        </Button>
-                      </header>
-                      {tasks
-                        .filter((task) => task.section === section.id && task.status === "todo")
-                        .map((task) => (
-                          <div className="home-task" key={task.id}>
-                            <button
-                              type="button"
-                              className="home-check"
-                              aria-label={`Complete ${task.title}`}
-                              onClick={() =>
-                                setTasks((current) =>
-                                  current.map((item) =>
-                                    item.id === task.id ? { ...item, status: "done" } : item,
-                                  ),
-                                )
-                              }
-                            >
-                              <Circle className="size-5" />
-                            </button>
-                            <div className="home-task-body">
-                              <p>{task.title}</p>
-                              {task.steps && (
-                                <details>
-                                  <summary>One step at a time</summary>
-                                  <div className="home-steps">
-                                    {task.steps.map((step) => (
-                                      <label
-                                        key={step}
-                                        htmlFor={`step-${task.id}-${step}`}
-                                        className="flex items-center gap-3"
-                                      >
-                                        <Checkbox
-                                          id={`step-${task.id}-${step}`}
-                                          checked={task.completedSteps?.includes(step) ?? false}
-                                          onCheckedChange={(checked) =>
-                                            setTasks((current) =>
-                                              current.map((item) =>
-                                                item.id === task.id
-                                                  ? {
-                                                      ...item,
-                                                      completedSteps: checked
-                                                        ? [...(item.completedSteps ?? []), step]
-                                                        : (item.completedSteps ?? []).filter(
-                                                            (value) => value !== step,
-                                                          ),
-                                                    }
-                                                  : item,
-                                              ),
-                                            )
-                                          }
-                                        />
-                                        <span>{step}</span>
-                                      </label>
-                                    ))}
-                                  </div>
-                                </details>
-                              )}
-                            </div>
-                            <div className="home-task-actions">
-                              <Button
-                                variant="ghost"
-                                size="icon-sm"
-                                aria-label={`Move ${task.title} up`}
-                                onClick={() => moveTask(task.id, -1)}
-                              >
-                                <ArrowUp />
-                              </Button>
-                              <Button
-                                variant="ghost"
-                                size="icon-sm"
-                                aria-label={`Move ${task.title} down`}
-                                onClick={() => moveTask(task.id, 1)}
-                              >
-                                <ArrowDown />
-                              </Button>
-                              <Button
-                                variant="ghost"
-                                size="sm"
-                                aria-label={`Defer ${task.title}`}
-                                onClick={() =>
-                                  setTasks((current) =>
-                                    current.map((item) =>
-                                      item.id === task.id ? { ...item, status: "later" } : item,
-                                    ),
-                                  )
-                                }
-                              >
-                                Later
-                              </Button>
-                            </div>
-                          </div>
-                        ))}
-                      {section.id === "focus" &&
-                        waiting.slice(0, 2).map((item) => (
-                          <div className="home-task" key={item.id}>
-                            <MessagesSquare className="size-5 text-muted-foreground mt-1" />
-                            <button
-                              type="button"
-                              className="home-task-body text-left"
-                              onClick={() => setContactId(item.id)}
-                            >
-                              <span className="block">Reply to {item.name}</span>
-                              <span className="text-xs text-muted-foreground">{item.subject}</span>
-                            </button>
-                            <Button
-                              variant="ghost"
-                              size="icon-sm"
-                              aria-label={`Open conversation with ${item.name}`}
-                              onClick={() => setContactId(item.id)}
-                            >
-                              <ChevronRight />
-                            </Button>
-                          </div>
-                        ))}
-                      {!tasks.some(
-                        (task) => task.section === section.id && task.status === "todo",
-                      ) &&
-                        (section.id !== "focus" || !waiting.length) && (
-                          <p className="home-empty">It’s okay to leave some room.</p>
-                        )}
-                    </section>
-                  ))}
-                  {rest.length > 0 && (
-                    <details className="home-rest">
-                      <summary>
-                        Later & done <span>{rest.length}</span>
-                      </summary>
-                      {rest.map((task) => (
-                        <div className="home-task" key={task.id}>
-                          {task.status === "done" ? (
-                            <Check className="size-4" />
-                          ) : (
-                            <Coffee className="size-4" />
-                          )}
-                          <span className="flex-1 text-sm">{task.title}</span>
-                          <Button
-                            variant="ghost"
-                            size="icon-sm"
-                            aria-label={`Restore ${task.title}`}
-                            onClick={() =>
-                              setTasks((current) =>
-                                current.map((item) =>
-                                  item.id === task.id ? { ...item, status: "todo" } : item,
-                                ),
-                              )
-                            }
-                          >
-                            <RotateCcw />
-                          </Button>
-                        </div>
-                      ))}
-                    </details>
-                  )}
-                </section>
+                <ExecutionWorkbench
+                  selectedId={search.activity}
+                  onSelect={(id) => updateSearch({ activity: id || undefined })}
+                  onOpenContact={setContactId}
+                />
                 <aside aria-label="Today’s context">
-                  <section className="home-section">
-                    <header className="home-section-heading">
-                      <h2>Messages</h2>
-                      <Link to="/support" aria-label="View all messages">
-                        <ArrowUpRight className="size-4" />
-                      </Link>
-                    </header>
-                    {conversations
-                      .filter((item) => !["sent", "dismissed"].includes(statuses[item.id] ?? "now"))
-                      .map((item) => (
-                        <button
-                          className="home-context-row"
-                          type="button"
-                          key={item.id}
-                          onClick={() => setContactId(item.id)}
-                        >
-                          <span>{item.name}</span>
-                          <span className="text-xs text-muted-foreground">
-                            {statuses[item.id] === "waiting"
-                              ? "Waiting"
-                              : statuses[item.id] === "later"
-                                ? "Later"
-                                : item.channels.join(" / ")}
-                          </span>
-                        </button>
-                      ))}
-                  </section>
                   <section className="home-section">
                     <header className="home-section-heading">
                       <h2>Journal</h2>

@@ -5,6 +5,7 @@ const flag = z.literal(true).optional().catch(undefined);
 const workspaceSearch = z.object({
   q: text,
   article: text,
+  activity: text,
   conversation: text,
   view: z.enum(["now", "later", "waiting", "done", "all"]).optional().catch(undefined),
   accounts: flag,
