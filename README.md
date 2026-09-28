@@ -30,6 +30,11 @@ Articles are fictional samples; search and article selection work locally.
 On mobile, the article list and reader switch views. The shared sidebar’s bottom
 avatar opens connected-account management from either workspace.
 
+The shared sidebar also contains `/support` (communication support) and `/journal`
+(notes and health records). These use fictional conversations and local session
+state to preview reply review, scheduling, deferral, recording, and corrections.
+See [execution support](docs/execution-support.md) for scope and limitations.
+
 The former SNS reader, search,
 list, user-profile, and conversation routes have been removed. Original-post
 links on post cards open their source site; SNS reply threads are not rendered

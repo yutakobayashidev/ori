@@ -1,5 +1,11 @@
 import { Link, useLocation } from '@tanstack/react-router'
-import { Inbox, Layers3, Search } from 'lucide-react'
+import {
+  Inbox,
+  Layers3,
+  MessagesSquare,
+  NotebookPen,
+  Search,
+} from 'lucide-react'
 import { type ReactNode, useState } from 'react'
 import { Avatar, AvatarFallback } from '#/components/ui/avatar'
 import {
@@ -30,6 +36,18 @@ export function WorkspaceNavigation({
   const [managingAccounts, setManagingAccounts] = useState(false)
   const pathname = useLocation({ select: (location) => location.pathname })
   const navigation = [
+    {
+      title: '連絡',
+      to: '/support',
+      icon: MessagesSquare,
+      active: pathname === '/support',
+    },
+    {
+      title: '記録',
+      to: '/journal',
+      icon: NotebookPen,
+      active: pathname === '/journal',
+    },
     {
       title: 'リーダー',
       to: '/inbox',

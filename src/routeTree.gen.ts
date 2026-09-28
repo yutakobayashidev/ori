@@ -9,12 +9,24 @@
 // Additionally, you should also exclude this file from your linter and/or formatter to prevent it from being checked or modified.
 
 import { Route as rootRouteImport } from './routes/__root'
+import { Route as SupportRouteImport } from './routes/support'
+import { Route as JournalRouteImport } from './routes/journal'
 import { Route as InboxRouteImport } from './routes/inbox'
 import { Route as DeckRouteImport } from './routes/deck'
 import { Route as IndexRouteImport } from './routes/index'
 import { Route as OauthMastodonCallbackRouteImport } from './routes/oauth/mastodon/callback'
 import { Route as ApiResearchEventsRouteImport } from './routes/api/research/events'
 
+const SupportRoute = SupportRouteImport.update({
+  id: '/support',
+  path: '/support',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const JournalRoute = JournalRouteImport.update({
+  id: '/journal',
+  path: '/journal',
+  getParentRoute: () => rootRouteImport,
+} as any)
 const InboxRoute = InboxRouteImport.update({
   id: '/inbox',
   path: '/inbox',
@@ -45,6 +57,8 @@ export interface FileRoutesByFullPath {
   '/': typeof IndexRoute
   '/deck': typeof DeckRoute
   '/inbox': typeof InboxRoute
+  '/journal': typeof JournalRoute
+  '/support': typeof SupportRoute
   '/api/research/events': typeof ApiResearchEventsRoute
   '/oauth/mastodon/callback': typeof OauthMastodonCallbackRoute
 }
@@ -52,6 +66,8 @@ export interface FileRoutesByTo {
   '/': typeof IndexRoute
   '/deck': typeof DeckRoute
   '/inbox': typeof InboxRoute
+  '/journal': typeof JournalRoute
+  '/support': typeof SupportRoute
   '/api/research/events': typeof ApiResearchEventsRoute
   '/oauth/mastodon/callback': typeof OauthMastodonCallbackRoute
 }
@@ -60,6 +76,8 @@ export interface FileRoutesById {
   '/': typeof IndexRoute
   '/deck': typeof DeckRoute
   '/inbox': typeof InboxRoute
+  '/journal': typeof JournalRoute
+  '/support': typeof SupportRoute
   '/api/research/events': typeof ApiResearchEventsRoute
   '/oauth/mastodon/callback': typeof OauthMastodonCallbackRoute
 }
@@ -69,6 +87,8 @@ export interface FileRouteTypes {
     | '/'
     | '/deck'
     | '/inbox'
+    | '/journal'
+    | '/support'
     | '/api/research/events'
     | '/oauth/mastodon/callback'
   fileRoutesByTo: FileRoutesByTo
@@ -76,6 +96,8 @@ export interface FileRouteTypes {
     | '/'
     | '/deck'
     | '/inbox'
+    | '/journal'
+    | '/support'
     | '/api/research/events'
     | '/oauth/mastodon/callback'
   id:
@@ -83,6 +105,8 @@ export interface FileRouteTypes {
     | '/'
     | '/deck'
     | '/inbox'
+    | '/journal'
+    | '/support'
     | '/api/research/events'
     | '/oauth/mastodon/callback'
   fileRoutesById: FileRoutesById
@@ -91,12 +115,28 @@ export interface RootRouteChildren {
   IndexRoute: typeof IndexRoute
   DeckRoute: typeof DeckRoute
   InboxRoute: typeof InboxRoute
+  JournalRoute: typeof JournalRoute
+  SupportRoute: typeof SupportRoute
   ApiResearchEventsRoute: typeof ApiResearchEventsRoute
   OauthMastodonCallbackRoute: typeof OauthMastodonCallbackRoute
 }
 
 declare module '@tanstack/react-router' {
   interface FileRoutesByPath {
+    '/support': {
+      id: '/support'
+      path: '/support'
+      fullPath: '/support'
+      preLoaderRoute: typeof SupportRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/journal': {
+      id: '/journal'
+      path: '/journal'
+      fullPath: '/journal'
+      preLoaderRoute: typeof JournalRouteImport
+      parentRoute: typeof rootRouteImport
+    }
     '/inbox': {
       id: '/inbox'
       path: '/inbox'
@@ -139,6 +179,8 @@ const rootRouteChildren: RootRouteChildren = {
   IndexRoute: IndexRoute,
   DeckRoute: DeckRoute,
   InboxRoute: InboxRoute,
+  JournalRoute: JournalRoute,
+  SupportRoute: SupportRoute,
   ApiResearchEventsRoute: ApiResearchEventsRoute,
   OauthMastodonCallbackRoute: OauthMastodonCallbackRoute,
 }

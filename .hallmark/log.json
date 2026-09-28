@@ -1,6 +1,14 @@
 [
   {
     "date": "2026-09-28",
+    "macrostructure": "communication workbench and append-only journal",
+    "theme": "shadcn base-nova neutral",
+    "scope": "support",
+    "enrichment": "none",
+    "brief": "Compact execution support integrated with common sidebar, editable reply review and journal corrections"
+  },
+  {
+    "date": "2026-09-28",
     "macrostructure": "sidebar-09 Inbox",
     "theme": "shadcn base-nova neutral",
     "scope": "inbox",
