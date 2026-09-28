@@ -1,6 +1,14 @@
 [
   {
     "date": "2026-09-28",
+    "macrostructure": "daily home with natural-language composer and flexible plan",
+    "theme": "shadcn base-nova neutral",
+    "scope": "home",
+    "enrichment": "none",
+    "brief": "Greeting and large composer above time-free routines, tasks, contact actions and context; shared session state"
+  },
+  {
+    "date": "2026-09-28",
     "macrostructure": "communication workbench and append-only journal",
     "theme": "shadcn base-nova neutral",
     "scope": "support",

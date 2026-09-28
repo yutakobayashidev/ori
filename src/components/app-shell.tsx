@@ -54,7 +54,7 @@ function Workspace({
     <>
       <Sidebar
         collapsible="icon"
-        className="overflow-hidden *:data-[sidebar=sidebar]:flex-row"
+        className="overflow-hidden transition-none *:data-[sidebar=sidebar]:flex-row"
       >
         <WorkspaceNavigation
           hasTemporaryDecks={hasTemporaryDecks}

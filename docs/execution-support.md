@@ -2,7 +2,8 @@
 
 The shared sidebar opens `/support` (連絡) and `/journal` (記録), alongside
 リーダー and Twitter Lite. These are UI-only prototypes with fictional contacts
-and in-memory state. Reloading or leaving the route resets the prototype state.
+and in-memory state. Reloading resets the prototype state. Tasks, communication status, outcomes, and
+journal entries are shared between routes for the current browser session.
 No messages, calendar events, medical records, or Rensheng pages are written.
 
 ## Reference and scope
@@ -32,3 +33,32 @@ dose, weight-target, or treatment recommendations.
 The UI uses existing shadcn Base UI components and neutral theme tokens.
 Shared account management continues to use the existing connection system;
 the new communication and journal prototypes do not consume those accounts.
+
+## Daily home
+
+`/` presents a greeting, a large input, and a flexible plan grouped as
+「まずこれ」「いつものこと」「余裕があれば」. There are no fixed time slots.
+Tasks can be reordered, completed, deferred, restored, or followed as routine
+steps. Communications can be reviewed directly in a home dialog; changes also
+appear in `/support`. Journal entries and corrections appear on the home, and
+reader samples open for reading. Twitter Lite remains a separate work surface.
+
+The input currently uses a deterministic Japanese mock interpreter, not an LLM.
+It proposes typed actions for task creation/status/reordering, routine steps,
+contact reply/review or deferral, notes/weight/medication records, and navigation.
+Confirming a proposal dispatches the corresponding operation. Unknown or
+ambiguous input does not change state. Message sending still goes through the
+existing simulated review UI; this prototype performs no external send.
+
+Examples: 「買い物を追加」「朝の支度をあとで」「青木さんに返信」
+「メモ：次は資料の2ページ目から」「体重は65.2kg」「リーダーを開く」.
+
+The interaction reference is [Tiimo visual planning](https://www.tiimoapp.com/product/visual-planning),
+reviewed on 2026-09-28: combined routines and tasks, flexible reordering, small
+steps, and natural-language planning. Unlike its timed scheduling options, this
+prototype deliberately keeps the day free of precise times as requested.
+
+The home greeting includes a short prose brief derived from current task and
+communication state. Completed or deferred items leave the brief; the next
+contact opens directly from the text. A current resumption note takes precedence
+over the optional-task suggestion. This is local templated copy, not an LLM report.

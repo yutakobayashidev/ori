@@ -29,7 +29,7 @@ export const Route = createFileRoute('/oauth/mastodon/callback')({
         return new Response(null, {
           status: 303,
           headers: {
-            location: `/?mastodon=${outcome}`,
+            location: `/deck?mastodon=${outcome}`,
             'cache-control': 'no-store',
             'referrer-policy': 'no-referrer',
           },

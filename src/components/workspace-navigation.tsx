@@ -1,5 +1,7 @@
 import { Link, useLocation } from '@tanstack/react-router'
 import {
+  Activity,
+  House,
   Inbox,
   Layers3,
   MessagesSquare,
@@ -36,6 +38,13 @@ export function WorkspaceNavigation({
   const [managingAccounts, setManagingAccounts] = useState(false)
   const pathname = useLocation({ select: (location) => location.pathname })
   const navigation = [
+    { title: 'ホーム', to: '/', icon: House, active: pathname === '/' },
+    {
+      title: 'バイタル',
+      to: '/vitals',
+      icon: Activity,
+      active: pathname === '/vitals',
+    },
     {
       title: '連絡',
       to: '/support',
@@ -58,7 +67,7 @@ export function WorkspaceNavigation({
       title: 'Twitter Lite',
       to: '/deck',
       icon: Search,
-      active: pathname === '/' || pathname === '/deck',
+      active: pathname === '/deck',
     },
   ] as const
 

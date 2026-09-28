@@ -40,7 +40,7 @@ async function addColumn(
 }
 
 test.beforeEach(async ({ page }) => {
-  await page.goto('/')
+  await page.goto('/deck')
   await expect(
     page.getByRole('button', { name: 'デッキとして保存', exact: true }),
   ).toBeEnabled()
@@ -301,7 +301,7 @@ test('keeps an open draft through remote edits and rejects its stale save', asyn
   })
   try {
     const device = await other.newPage()
-    await device.goto('/')
+    await device.goto('/deck')
     await page.getByRole('button', { name: '名前を変更' }).click()
     await page.getByLabel('調査テーマ・デッキ名').fill('編集中の名前')
     await device.getByRole('button', { name: '名前を変更' }).click()

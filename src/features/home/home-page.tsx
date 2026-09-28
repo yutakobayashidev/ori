@@ -1,0 +1,597 @@
+import { Link, useNavigate } from '@tanstack/react-router'
+import {
+  ArrowDown,
+  ArrowUp,
+  ArrowUpRight,
+  Check,
+  ChevronRight,
+  Circle,
+  Coffee,
+  MessagesSquare,
+  Plus,
+  RotateCcw,
+  X,
+} from 'lucide-react'
+import { useRef, useState } from 'react'
+import { Dialog } from '#/components/dialog'
+import { Button } from '#/components/ui/button'
+import { Checkbox } from '#/components/ui/checkbox'
+import { SidebarInset, SidebarProvider } from '#/components/ui/sidebar'
+import { Textarea } from '#/components/ui/textarea'
+import { TooltipProvider } from '#/components/ui/tooltip'
+import { WorkspaceNavigation } from '#/components/workspace-navigation'
+import { articles } from '#/features/inbox/mock-articles'
+import { ConversationDetail } from '#/features/support/conversation-detail'
+import { conversations } from '#/features/support/mock-conversations'
+import { useWorkspaceState } from '#/features/workspace/workspace-state'
+import { DailyBrief } from './daily-brief'
+import { type HomeAction, interpretAction } from './interpret-action'
+import './home.css'
+
+export function HomePage() {
+  const {
+    tasks,
+    setTasks,
+    statuses,
+    setStatuses,
+    outcomes,
+    setOutcomes,
+    entries,
+    setEntries,
+  } = useWorkspaceState()
+  const navigate = useNavigate()
+  const input = useRef<HTMLTextAreaElement>(null)
+  const [prompt, setPrompt] = useState('')
+  const [proposal, setProposal] = useState<{
+    action: HomeAction
+    label: string
+  } | null>(null)
+  const [notice, setNotice] = useState('')
+  const [contactId, setContactId] = useState<string>()
+  const [articleId, setArticleId] = useState<string>()
+  const contact = conversations.find((item) => item.id === contactId)
+  const article = articles.find((item) => item.id === articleId)
+  const waiting = conversations.filter(
+    (item) => (statuses[item.id] ?? 'now') === 'now',
+  )
+  const currentEntries = entries.filter(
+    (entry) => !entries.some((other) => other.correctionOf === entry.id),
+  )
+  const rest = tasks.filter((task) => task.status !== 'todo')
+
+  function suggest(text: string) {
+    setPrompt(text)
+    setProposal(null)
+    input.current?.focus()
+  }
+  function interpret() {
+    const result = interpretAction(prompt, tasks, conversations)
+    if ('error' in result) {
+      setNotice(result.error)
+      setProposal(null)
+    } else {
+      setProposal(result)
+      setNotice('')
+    }
+  }
+  function apply(action: HomeAction) {
+    switch (action.type) {
+      case 'add-task':
+        setTasks((current) => [
+          ...current,
+          {
+            id: crypto.randomUUID(),
+            title: action.title,
+            section: action.section,
+            status: 'todo',
+          },
+        ])
+        break
+      case 'task-status':
+        setTasks((current) =>
+          current.map((task) =>
+            task.id === action.id ? { ...task, status: action.status } : task,
+          ),
+        )
+        break
+      case 'task-move':
+        moveTask(action.id, action.direction)
+        break
+      case 'routine-step':
+        setTasks((current) =>
+          current.map((task) =>
+            task.id === action.id
+              ? {
+                  ...task,
+                  completedSteps: action.done
+                    ? Array.from(
+                        new Set([...(task.completedSteps ?? []), action.step]),
+                      )
+                    : (task.completedSteps ?? []).filter(
+                        (step) => step !== action.step,
+                      ),
+                }
+              : task,
+          ),
+        )
+        break
+      case 'contact':
+        setContactId(action.id)
+        break
+      case 'contact-status':
+        setStatuses((current) => ({ ...current, [action.id]: action.status }))
+        break
+      case 'journal':
+        setEntries((current) => [
+          {
+            id: crypto.randomUUID(),
+            kind: action.kind,
+            text: action.text,
+            source: '',
+            occurredAt: '',
+            recordedAt: new Date().toISOString(),
+          },
+          ...current,
+        ])
+        break
+      case 'navigate':
+        void navigate({ to: action.to })
+        break
+    }
+    setNotice(proposal?.label ?? '反映しました')
+    setProposal(null)
+    setPrompt('')
+  }
+  function moveTask(id: string, direction: -1 | 1) {
+    setTasks((current) => {
+      const index = current.findIndex((task) => task.id === id)
+      const siblings = current
+        .map((task, i) => ({ task, i }))
+        .filter(
+          ({ task }) =>
+            task.section === current[index]?.section && task.status === 'todo',
+        )
+      const position = siblings.findIndex(({ task }) => task.id === id)
+      const target = siblings[position + direction]?.i
+      if (target === undefined) return current
+      const sourceTask = current[index]
+      const targetTask = current[target]
+      if (!sourceTask || !targetTask) return current
+      const updated = [...current]
+      updated[index] = targetTask
+      updated[target] = sourceTask
+      return updated
+    })
+  }
+  return (
+    <TooltipProvider delay={500}>
+      <SidebarProvider className="home-workspace">
+        <WorkspaceNavigation />
+        <SidebarInset className="home-main">
+          <div className="home-scroll">
+            <div className="home-content">
+              <header className="home-greeting">
+                <p className="text-sm text-muted-foreground">今日</p>
+                <h1>おはようございます、Yutaさん</h1>
+                <DailyBrief onOpenContact={setContactId} />
+              </header>
+              <form
+                className="home-composer"
+                onSubmit={(event) => {
+                  event.preventDefault()
+                  interpret()
+                }}
+              >
+                <Textarea
+                  ref={input}
+                  aria-label="ホームへの入力"
+                  placeholder="頭にあることを、そのまま。"
+                  value={prompt}
+                  onChange={(event) => {
+                    setPrompt(event.target.value)
+                    setProposal(null)
+                    setNotice('')
+                  }}
+                  onKeyDown={(event) => {
+                    if (
+                      (event.metaKey || event.ctrlKey) &&
+                      event.key === 'Enter' &&
+                      !event.nativeEvent.isComposing
+                    ) {
+                      event.preventDefault()
+                      interpret()
+                    }
+                  }}
+                />
+                <div className="home-composer-footer">
+                  <span className="text-xs text-muted-foreground">
+                    やること、返信、メモ。
+                  </span>
+                  <Button
+                    type="submit"
+                    size="icon"
+                    aria-label="候補を表示"
+                    disabled={!prompt.trim()}
+                  >
+                    <ArrowUp />
+                  </Button>
+                </div>
+              </form>
+              <div className="home-suggestions">
+                {[
+                  '買い物を追加',
+                  '青木さんに返信',
+                  'メモ：次は資料の2ページ目から',
+                ].map((text) => (
+                  <button
+                    type="button"
+                    key={text}
+                    onClick={() => suggest(text)}
+                  >
+                    {text}
+                    <ArrowUpRight className="size-3" />
+                  </button>
+                ))}
+              </div>
+              {proposal && (
+                <div className="home-proposal">
+                  <p>{proposal.label}</p>
+                  <Button onClick={() => apply(proposal.action)}>
+                    実行する
+                  </Button>
+                  <Button
+                    variant="ghost"
+                    size="icon"
+                    aria-label="候補を取り消す"
+                    onClick={() => setProposal(null)}
+                  >
+                    <X />
+                  </Button>
+                </div>
+              )}
+              <p className="home-status" role="status">
+                {notice}
+              </p>
+              <div className="home-columns">
+                <section className="home-plan" aria-label="今日の予定">
+                  {(
+                    [
+                      { id: 'focus', label: 'まずこれ' },
+                      { id: 'routine', label: 'いつものこと' },
+                      { id: 'optional', label: '余裕があれば' },
+                    ] as const
+                  ).map((section) => (
+                    <section key={section.id} className="home-section">
+                      <header className="home-section-heading">
+                        <h2>{section.label}</h2>
+                        <Button
+                          variant="ghost"
+                          size="icon-sm"
+                          aria-label={`${section.label}に追加`}
+                          onClick={() =>
+                            suggest(
+                              section.id === 'routine'
+                                ? 'ルーティンに追加：'
+                                : section.id === 'optional'
+                                  ? '余裕があれば '
+                                  : '追加：',
+                            )
+                          }
+                        >
+                          <Plus />
+                        </Button>
+                      </header>
+                      {tasks
+                        .filter(
+                          (task) =>
+                            task.section === section.id &&
+                            task.status === 'todo',
+                        )
+                        .map((task) => (
+                          <div className="home-task" key={task.id}>
+                            <button
+                              type="button"
+                              className="home-check"
+                              aria-label={`${task.title}を完了`}
+                              onClick={() =>
+                                setTasks((current) =>
+                                  current.map((item) =>
+                                    item.id === task.id
+                                      ? { ...item, status: 'done' }
+                                      : item,
+                                  ),
+                                )
+                              }
+                            >
+                              <Circle className="size-5" />
+                            </button>
+                            <div className="home-task-body">
+                              <p>{task.title}</p>
+                              {task.steps && (
+                                <details>
+                                  <summary>小さく進める</summary>
+                                  <div className="home-steps">
+                                    {task.steps.map((step) => (
+                                      <label
+                                        key={step}
+                                        htmlFor={`step-${task.id}-${step}`}
+                                        className="flex items-center gap-3"
+                                      >
+                                        <Checkbox
+                                          id={`step-${task.id}-${step}`}
+                                          checked={
+                                            task.completedSteps?.includes(
+                                              step,
+                                            ) ?? false
+                                          }
+                                          onCheckedChange={(checked) =>
+                                            setTasks((current) =>
+                                              current.map((item) =>
+                                                item.id === task.id
+                                                  ? {
+                                                      ...item,
+                                                      completedSteps: checked
+                                                        ? [
+                                                            ...(item.completedSteps ??
+                                                              []),
+                                                            step,
+                                                          ]
+                                                        : (
+                                                            item.completedSteps ??
+                                                            []
+                                                          ).filter(
+                                                            (value) =>
+                                                              value !== step,
+                                                          ),
+                                                    }
+                                                  : item,
+                                              ),
+                                            )
+                                          }
+                                        />
+                                        <span>{step}</span>
+                                      </label>
+                                    ))}
+                                  </div>
+                                </details>
+                              )}
+                            </div>
+                            <div className="home-task-actions">
+                              <Button
+                                variant="ghost"
+                                size="icon-sm"
+                                aria-label={`${task.title}を上へ`}
+                                onClick={() => moveTask(task.id, -1)}
+                              >
+                                <ArrowUp />
+                              </Button>
+                              <Button
+                                variant="ghost"
+                                size="icon-sm"
+                                aria-label={`${task.title}を下へ`}
+                                onClick={() => moveTask(task.id, 1)}
+                              >
+                                <ArrowDown />
+                              </Button>
+                              <Button
+                                variant="ghost"
+                                size="sm"
+                                aria-label={`${task.title}をあとで`}
+                                onClick={() =>
+                                  setTasks((current) =>
+                                    current.map((item) =>
+                                      item.id === task.id
+                                        ? { ...item, status: 'later' }
+                                        : item,
+                                    ),
+                                  )
+                                }
+                              >
+                                あとで
+                              </Button>
+                            </div>
+                          </div>
+                        ))}
+                      {section.id === 'focus' &&
+                        waiting.slice(0, 2).map((item) => (
+                          <div className="home-task" key={item.id}>
+                            <MessagesSquare className="size-5 text-muted-foreground mt-1" />
+                            <button
+                              type="button"
+                              className="home-task-body text-left"
+                              onClick={() => setContactId(item.id)}
+                            >
+                              <span className="block">
+                                {item.name}さんに返信
+                              </span>
+                              <span className="text-xs text-muted-foreground">
+                                {item.subject}
+                              </span>
+                            </button>
+                            <Button
+                              variant="ghost"
+                              size="icon-sm"
+                              aria-label={`${item.name}との会話を開く`}
+                              onClick={() => setContactId(item.id)}
+                            >
+                              <ChevronRight />
+                            </Button>
+                          </div>
+                        ))}
+                      {!tasks.some(
+                        (task) =>
+                          task.section === section.id && task.status === 'todo',
+                      ) &&
+                        (section.id !== 'focus' || !waiting.length) && (
+                          <p className="home-empty">
+                            ここは空けておいても大丈夫。
+                          </p>
+                        )}
+                    </section>
+                  ))}
+                  {rest.length > 0 && (
+                    <details className="home-rest">
+                      <summary>
+                        あとで・終えたこと <span>{rest.length}</span>
+                      </summary>
+                      {rest.map((task) => (
+                        <div className="home-task" key={task.id}>
+                          {task.status === 'done' ? (
+                            <Check className="size-4" />
+                          ) : (
+                            <Coffee className="size-4" />
+                          )}
+                          <span className="flex-1 text-sm">{task.title}</span>
+                          <Button
+                            variant="ghost"
+                            size="icon-sm"
+                            aria-label={`${task.title}を戻す`}
+                            onClick={() =>
+                              setTasks((current) =>
+                                current.map((item) =>
+                                  item.id === task.id
+                                    ? { ...item, status: 'todo' }
+                                    : item,
+                                ),
+                              )
+                            }
+                          >
+                            <RotateCcw />
+                          </Button>
+                        </div>
+                      ))}
+                    </details>
+                  )}
+                </section>
+                <aside className="home-context" aria-label="今日のつながり">
+                  <section className="home-section">
+                    <header className="home-section-heading">
+                      <h2>連絡</h2>
+                      <Link to="/support" aria-label="連絡をすべて見る">
+                        <ArrowUpRight className="size-4" />
+                      </Link>
+                    </header>
+                    {conversations
+                      .filter(
+                        (item) =>
+                          !['sent', 'dismissed'].includes(
+                            statuses[item.id] ?? 'now',
+                          ),
+                      )
+                      .map((item) => (
+                        <button
+                          className="home-context-row"
+                          type="button"
+                          key={item.id}
+                          onClick={() => setContactId(item.id)}
+                        >
+                          <span>{item.name}</span>
+                          <span className="text-xs text-muted-foreground">
+                            {statuses[item.id] === 'waiting'
+                              ? '相手待ち'
+                              : statuses[item.id] === 'later'
+                                ? 'あとで'
+                                : item.channels.join(' / ')}
+                          </span>
+                        </button>
+                      ))}
+                  </section>
+                  <section className="home-section">
+                    <header className="home-section-heading">
+                      <h2>記録</h2>
+                      <Link to="/journal" aria-label="記録を開く">
+                        <ArrowUpRight className="size-4" />
+                      </Link>
+                    </header>
+                    {currentEntries.slice(0, 2).map((entry) => (
+                      <p className="home-record" key={entry.id}>
+                        <span className="text-xs text-muted-foreground">
+                          {entry.kind}
+                        </span>
+                        <span>
+                          {entry.text}
+                          {entry.kind === '体重' ? ' kg' : ''}
+                        </span>
+                      </p>
+                    ))}
+                    {!currentEntries.length && (
+                      <button
+                        type="button"
+                        className="home-context-row"
+                        onClick={() => suggest('メモ：')}
+                      >
+                        <span>ひとこと残す</span>
+                        <Plus className="size-4" />
+                      </button>
+                    )}
+                  </section>
+                  <section className="home-section">
+                    <header className="home-section-heading">
+                      <h2>読みもの</h2>
+                      <Link to="/inbox" aria-label="リーダーを開く">
+                        <ArrowUpRight className="size-4" />
+                      </Link>
+                    </header>
+                    {articles.slice(0, 2).map((item) => (
+                      <button
+                        type="button"
+                        className="home-reading"
+                        key={item.id}
+                        onClick={() => setArticleId(item.id)}
+                      >
+                        <span className="text-xs text-muted-foreground">
+                          {item.source}
+                        </span>
+                        <span>{item.title}</span>
+                      </button>
+                    ))}
+                  </section>
+                  <Link to="/deck" className="home-deck-link">
+                    Twitter Liteで調べる
+                    <ArrowUpRight className="size-4" />
+                  </Link>
+                </aside>
+              </div>
+            </div>
+          </div>
+        </SidebarInset>
+        {contact && (
+          <Dialog
+            title={`${contact.name}との連絡`}
+            className="sm:max-w-3xl"
+            onClose={() => setContactId(undefined)}
+          >
+            <ConversationDetail
+              conversation={contact}
+              onResolve={(status, note) => {
+                setStatuses((current) => ({ ...current, [contact.id]: status }))
+                if (note)
+                  setOutcomes((current) => ({ ...current, [contact.id]: note }))
+                setContactId(undefined)
+              }}
+            />
+            {outcomes[contact.id] && (
+              <p className="text-sm whitespace-pre-wrap">
+                {outcomes[contact.id]}
+              </p>
+            )}
+          </Dialog>
+        )}
+        {article && (
+          <Dialog
+            title={article.title}
+            className="sm:max-w-3xl"
+            onClose={() => setArticleId(undefined)}
+          >
+            <p className="text-xs text-muted-foreground">{article.source}</p>
+            {article.paragraphs.map((text) => (
+              <p className="text-sm leading-8" key={text}>
+                {text}
+              </p>
+            ))}
+          </Dialog>
+        )}
+      </SidebarProvider>
+    </TooltipProvider>
+  )
+}

@@ -1,0 +1,254 @@
+/* Hallmark · daily workbench · neutral / quiet · P5 H5 E4 S5 R5 V4 */
+.home-workspace {
+  height: 100dvh;
+  min-height: 0;
+  overflow: hidden;
+}
+.home-main {
+  min-width: 0;
+  overflow: hidden;
+}
+.home-scroll {
+  flex: 1;
+  min-height: 0;
+  overflow-y: auto;
+}
+.home-content {
+  max-width: 1140px;
+  margin: auto;
+  padding: 64px 48px 80px;
+}
+.home-greeting {
+  margin-bottom: 32px;
+}
+.home-greeting h1 {
+  font-size: clamp(24px, 3vw, 34px);
+  font-weight: 550;
+  letter-spacing: -0.035em;
+  line-height: 1.5;
+  margin-top: 12px;
+}
+.home-composer {
+  border: 1px solid var(--border);
+  border-radius: 20px;
+  background: var(--muted);
+  padding: 16px;
+}
+.home-composer textarea {
+  min-height: 130px;
+  resize: vertical;
+  border: 0;
+  box-shadow: none;
+  background: transparent;
+  padding: 8px;
+  font-size: 16px;
+  line-height: 1.8;
+}
+.home-composer-footer {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 8px;
+}
+.home-suggestions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px 20px;
+  margin-top: 16px;
+}
+.home-suggestions button {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  color: var(--muted-foreground);
+  font-size: 12px;
+  text-align: left;
+  cursor: pointer;
+}
+.home-proposal {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  flex-wrap: wrap;
+  margin-top: 20px;
+  padding: 16px;
+  border: 1px solid var(--border);
+  border-radius: 12px;
+}
+.home-proposal p {
+  flex: 1;
+  font-size: 14px;
+  min-width: 140px;
+}
+.home-status {
+  min-height: 36px;
+  padding-top: 12px;
+  color: var(--muted-foreground);
+  font-size: 12px;
+}
+.home-columns {
+  display: grid;
+  grid-template-columns: minmax(0, 1.65fr) minmax(240px, 1fr);
+  gap: 64px;
+  margin-top: 24px;
+}
+.home-section {
+  margin-bottom: 36px;
+}
+.home-section-heading {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  margin-bottom: 12px;
+}
+.home-section-heading h2 {
+  font-size: 14px;
+  font-weight: 600;
+}
+.home-section-heading a {
+  color: var(--muted-foreground);
+  padding: 6px;
+}
+.home-task {
+  display: flex;
+  align-items: flex-start;
+  gap: 12px;
+  padding: 18px 0;
+  border-bottom: 1px solid var(--border);
+}
+.home-check {
+  padding-top: 2px;
+  color: var(--muted-foreground);
+  cursor: pointer;
+}
+.home-task-body {
+  flex: 1;
+  min-width: 0;
+  font-size: 14px;
+  line-height: 1.8;
+}
+.home-task-body summary {
+  margin-top: 6px;
+  font-size: 12px;
+  color: var(--muted-foreground);
+  cursor: pointer;
+}
+.home-steps {
+  display: grid;
+  gap: 12px;
+  padding-top: 14px;
+  font-size: 13px;
+}
+.home-task-actions {
+  display: flex;
+  align-items: center;
+  flex-wrap: wrap;
+  justify-content: flex-end;
+  max-width: 115px;
+}
+.home-rest summary {
+  font-size: 13px;
+  color: var(--muted-foreground);
+  cursor: pointer;
+}
+.home-rest summary span {
+  margin-left: 8px;
+}
+.home-empty {
+  font-size: 12px;
+  color: var(--muted-foreground);
+  padding: 16px 0;
+}
+.home-context-row {
+  display: flex;
+  width: 100%;
+  align-items: center;
+  justify-content: space-between;
+  gap: 10px;
+  padding: 12px 0;
+  font-size: 13px;
+  text-align: left;
+  cursor: pointer;
+}
+.home-record,
+.home-reading {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  padding: 12px 0;
+  text-align: left;
+  font-size: 13px;
+  line-height: 1.8;
+  overflow-wrap: anywhere;
+}
+.home-reading {
+  width: 100%;
+  cursor: pointer;
+}
+.home-deck-link {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  font-size: 12px;
+  color: var(--muted-foreground);
+}
+@media (max-width: 1000px) {
+  .home-content {
+    padding: 40px 28px;
+  }
+  .home-columns {
+    gap: 32px;
+  }
+  .home-task-actions {
+    max-width: 70px;
+  }
+}
+@media (max-width: 767px) {
+  .home-content {
+    padding: 32px 20px;
+  }
+  .home-columns {
+    grid-template-columns: minmax(0, 1fr);
+    gap: 24px;
+  }
+  .home-greeting h1 {
+    font-size: 25px;
+  }
+  .home-composer {
+    padding: 10px;
+  }
+  .home-composer textarea {
+    min-height: 150px;
+  }
+  .home-task {
+    gap: 10px;
+  }
+  .home-task-actions {
+    max-width: 60px;
+  }
+  .home-suggestions {
+    gap: 12px;
+  }
+}
+
+.home-brief {
+  margin-top: 20px;
+  max-width: 760px;
+  font-size: 15px;
+  line-height: 1.95;
+  overflow-wrap: anywhere;
+}
+.home-brief button {
+  text-decoration: underline;
+  text-decoration-color: var(--border);
+  text-underline-offset: 4px;
+  cursor: pointer;
+}
+.home-brief button:hover {
+  text-decoration-color: var(--foreground);
+}
+.home-brief-secondary {
+  margin-top: 8px;
+  color: var(--muted-foreground);
+  font-size: 13px;
+}

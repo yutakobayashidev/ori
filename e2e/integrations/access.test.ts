@@ -41,7 +41,7 @@ test('server functions also reject foreign identity and cross-site calls', async
   const serverRequest = page.waitForRequest((request) =>
     request.url().includes('/_serverFn/'),
   )
-  await page.goto('/')
+  await page.goto('/deck')
   const url = (await serverRequest).url()
   expect(
     (

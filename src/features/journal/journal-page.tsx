@@ -7,18 +7,13 @@ import { SidebarInset, SidebarProvider } from '#/components/ui/sidebar'
 import { Textarea } from '#/components/ui/textarea'
 import { TooltipProvider } from '#/components/ui/tooltip'
 import { WorkspaceNavigation } from '#/components/workspace-navigation'
+import {
+  type JournalEntry as Entry,
+  type EntryKind,
+  useWorkspaceState,
+} from '#/features/workspace/workspace-state'
 import './journal.css'
 
-type EntryKind = 'メモ' | '再開地点' | '服薬' | '体重'
-type Entry = {
-  id: string
-  kind: EntryKind
-  text: string
-  source: string
-  occurredAt: string
-  recordedAt: string
-  correctionOf?: string
-}
 type Draft = Pick<Entry, 'kind' | 'text' | 'source' | 'occurredAt'>
 const emptyDraft: Draft = { kind: 'メモ', text: '', source: '', occurredAt: '' }
 const kinds: EntryKind[] = ['メモ', '再開地点', '服薬', '体重']
@@ -35,7 +30,7 @@ function formatTime(value: string | undefined) {
 }
 
 export function JournalPage() {
-  const [entries, setEntries] = useState<Entry[]>([])
+  const { entries, setEntries } = useWorkspaceState()
   const [draft, setDraft] = useState<Draft>(emptyDraft)
   const [correcting, setCorrecting] = useState<Entry | null>(null)
   const [reviewing, setReviewing] = useState(false)

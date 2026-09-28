@@ -64,7 +64,7 @@ let pageErrors: string[]
 test.beforeEach(async ({ page }) => {
   pageErrors = []
   page.on('pageerror', (error) => pageErrors.push(error.message))
-  await page.goto('/')
+  await page.goto('/deck')
   await expect
     .poll(() => toolNames(page))
     .toEqual([
@@ -141,7 +141,7 @@ test('creates temporary research, edits it, persists explicitly and reopens it o
   })
   try {
     const device = await other.newPage()
-    await device.goto('/')
+    await device.goto('/deck')
     await expect(device.getByRole('heading', { level: 1 })).toHaveText(
       '更新した調査',
     )

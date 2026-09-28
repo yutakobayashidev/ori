@@ -2,7 +2,7 @@
 
 ## Workspace
 
-Both `/` and `/deck` render the research workspace. A collapsible shadcn/ui
+`/deck` renders the research workspace; `/` is the integrated daily home. A collapsible shadcn/ui
 sidebar based on `sidebar-09` shares its navigation rail with the article reader
 at `/inbox`. Within Twitter Lite, it switches between research chat and deck management.
 Deck management switches decks and adds columns. The avatar at the bottom of the

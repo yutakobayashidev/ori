@@ -10,7 +10,7 @@ import {
 test('pushes the current research snapshot on each SSE connection', async ({
   page,
 }) => {
-  await page.goto('/')
+  await page.goto('/deck')
   const snapshots = await page.evaluate(async () => {
     const connect = () =>
       new Promise<unknown>((resolve, reject) => {
@@ -41,7 +41,7 @@ test('pushes the current research snapshot on each SSE connection', async ({
 test('restores the conversation and growing temporary deck from reconnect snapshots', async ({
   page,
 }) => {
-  await page.goto('/')
+  await page.goto('/deck')
   await showDeckManagement(page)
   await page.getByRole('button', { name: 'カラムを追加', exact: true }).click()
   const accounts = page.getByRole('combobox', {
@@ -215,7 +215,7 @@ test('renders Markdown and reveals an unloaded citation in an offscreen deck col
   a11y,
 }) => {
   await page.emulateMedia({ reducedMotion: 'reduce' })
-  await page.goto('/')
+  await page.goto('/deck')
   await showDeckManagement(page)
   await page.getByRole('button', { name: 'カラムを追加', exact: true }).click()
   const accounts = page.getByRole('combobox', {
@@ -322,7 +322,7 @@ test('explains unconfigured Codex and prevents starting research without affecti
   page,
   a11y,
 }) => {
-  await page.goto('/')
+  await page.goto('/deck')
   const heading = page.getByRole('heading', { level: 1 })
   await expect(heading).toBeVisible()
   const originalTitle = await heading.textContent()

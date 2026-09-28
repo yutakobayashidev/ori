@@ -5,6 +5,7 @@ import {
   Outlet,
   Scripts,
 } from '@tanstack/react-router'
+import { WorkspaceStateProvider } from '#/features/workspace/workspace-state'
 import appCss from '../styles.css?url'
 
 type RouterContext = { queryClient: QueryClient }
@@ -33,7 +34,11 @@ export const Route = createRootRouteWithContext<RouterContext>()({
 })
 
 function RootContent() {
-  return <Outlet />
+  return (
+    <WorkspaceStateProvider>
+      <Outlet />
+    </WorkspaceStateProvider>
+  )
 }
 
 function RootDocument({ children }: { children: React.ReactNode }) {

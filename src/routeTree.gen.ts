@@ -9,6 +9,7 @@
 // Additionally, you should also exclude this file from your linter and/or formatter to prevent it from being checked or modified.
 
 import { Route as rootRouteImport } from './routes/__root'
+import { Route as VitalsRouteImport } from './routes/vitals'
 import { Route as SupportRouteImport } from './routes/support'
 import { Route as JournalRouteImport } from './routes/journal'
 import { Route as InboxRouteImport } from './routes/inbox'
@@ -17,6 +18,11 @@ import { Route as IndexRouteImport } from './routes/index'
 import { Route as OauthMastodonCallbackRouteImport } from './routes/oauth/mastodon/callback'
 import { Route as ApiResearchEventsRouteImport } from './routes/api/research/events'
 
+const VitalsRoute = VitalsRouteImport.update({
+  id: '/vitals',
+  path: '/vitals',
+  getParentRoute: () => rootRouteImport,
+} as any)
 const SupportRoute = SupportRouteImport.update({
   id: '/support',
   path: '/support',
@@ -59,6 +65,7 @@ export interface FileRoutesByFullPath {
   '/inbox': typeof InboxRoute
   '/journal': typeof JournalRoute
   '/support': typeof SupportRoute
+  '/vitals': typeof VitalsRoute
   '/api/research/events': typeof ApiResearchEventsRoute
   '/oauth/mastodon/callback': typeof OauthMastodonCallbackRoute
 }
@@ -68,6 +75,7 @@ export interface FileRoutesByTo {
   '/inbox': typeof InboxRoute
   '/journal': typeof JournalRoute
   '/support': typeof SupportRoute
+  '/vitals': typeof VitalsRoute
   '/api/research/events': typeof ApiResearchEventsRoute
   '/oauth/mastodon/callback': typeof OauthMastodonCallbackRoute
 }
@@ -78,6 +86,7 @@ export interface FileRoutesById {
   '/inbox': typeof InboxRoute
   '/journal': typeof JournalRoute
   '/support': typeof SupportRoute
+  '/vitals': typeof VitalsRoute
   '/api/research/events': typeof ApiResearchEventsRoute
   '/oauth/mastodon/callback': typeof OauthMastodonCallbackRoute
 }
@@ -89,6 +98,7 @@ export interface FileRouteTypes {
     | '/inbox'
     | '/journal'
     | '/support'
+    | '/vitals'
     | '/api/research/events'
     | '/oauth/mastodon/callback'
   fileRoutesByTo: FileRoutesByTo
@@ -98,6 +108,7 @@ export interface FileRouteTypes {
     | '/inbox'
     | '/journal'
     | '/support'
+    | '/vitals'
     | '/api/research/events'
     | '/oauth/mastodon/callback'
   id:
@@ -107,6 +118,7 @@ export interface FileRouteTypes {
     | '/inbox'
     | '/journal'
     | '/support'
+    | '/vitals'
     | '/api/research/events'
     | '/oauth/mastodon/callback'
   fileRoutesById: FileRoutesById
@@ -117,12 +129,20 @@ export interface RootRouteChildren {
   InboxRoute: typeof InboxRoute
   JournalRoute: typeof JournalRoute
   SupportRoute: typeof SupportRoute
+  VitalsRoute: typeof VitalsRoute
   ApiResearchEventsRoute: typeof ApiResearchEventsRoute
   OauthMastodonCallbackRoute: typeof OauthMastodonCallbackRoute
 }
 
 declare module '@tanstack/react-router' {
   interface FileRoutesByPath {
+    '/vitals': {
+      id: '/vitals'
+      path: '/vitals'
+      fullPath: '/vitals'
+      preLoaderRoute: typeof VitalsRouteImport
+      parentRoute: typeof rootRouteImport
+    }
     '/support': {
       id: '/support'
       path: '/support'
@@ -181,6 +201,7 @@ const rootRouteChildren: RootRouteChildren = {
   InboxRoute: InboxRoute,
   JournalRoute: JournalRoute,
   SupportRoute: SupportRoute,
+  VitalsRoute: VitalsRoute,
   ApiResearchEventsRoute: ApiResearchEventsRoute,
   OauthMastodonCallbackRoute: OauthMastodonCallbackRoute,
 }

@@ -23,7 +23,9 @@ bound to a connection account, so platforms and multiple accounts work side by s
 - Saved chat history with deck, account and citation restoration across devices
   and backend restarts
 
-Both `/` and `/deck` open the deck workspace. A shared sidebar also opens
+`/` opens the daily home with a greeting, natural-language action proposals,
+flexible tasks/routines, messages, notes, and reading. `/deck` opens Twitter Lite.
+The shared sidebar also opens
 the article reader at `/inbox`. This UI-only prototype shows articles inferred
 from past reading, searches, and research, with no manual interest settings.
 Articles are fictional samples; search and article selection work locally.
@@ -34,6 +36,9 @@ The shared sidebar also contains `/support` (communication support) and `/journa
 (notes and health records). These use fictional conversations and local session
 state to preview reply review, scheduling, deferral, recording, and corrections.
 See [execution support](docs/execution-support.md) for scope and limitations.
+
+`/vitals` is a separate [health/environment reference preview](docs/vitals-preview.md)
+with sample scores, body systems, environmental charts, and simulated controls.
 
 The former SNS reader, search,
 list, user-profile, and conversation routes have been removed. Original-post
@@ -225,7 +230,7 @@ data is left untouched. See [the deck model and persistence contract](docs/resea
 
 A WebMCP-enabled browser exposes `list_connections`, `list_decks`, `get_deck`,
 `set_deck`, `save_deck`, `select_deck`, `delete_deck`, `get_column_posts`, and
-`load_more_column` on both deck routes. Discover connection IDs first.
+`load_more_column` on `/deck`. Discover connection IDs first.
 `set_deck` creates a temporary view when `deckId` is omitted. `save_deck`
 persists it. Replacing or deleting a saved deck requires its `expectedRevision`.
 

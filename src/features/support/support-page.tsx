@@ -11,11 +11,14 @@ import {
 } from '#/components/ui/sidebar'
 import { TooltipProvider } from '#/components/ui/tooltip'
 import { WorkspaceNavigation } from '#/components/workspace-navigation'
+import {
+  type Status,
+  useWorkspaceState,
+} from '#/features/workspace/workspace-state'
 import { ConversationDetail } from './conversation-detail'
 import { conversations } from './mock-conversations'
 import './support.css'
 
-type Status = 'now' | 'later' | 'waiting' | 'sent' | 'dismissed'
 const views = [
   { id: 'now', label: '今' },
   { id: 'later', label: 'あとで' },
@@ -26,10 +29,9 @@ const views = [
 export function SupportPage() {
   const [view, setView] = useState<string>('now')
   const [query, setQuery] = useState('')
-  const [statuses, setStatuses] = useState<Record<string, Status>>({})
+  const { statuses, setStatuses, outcomes, setOutcomes } = useWorkspaceState()
   const [selectedId, setSelectedId] = useState<string>()
   const [reading, setReading] = useState(false)
-  const [outcomes, setOutcomes] = useState<Record<string, string>>({})
   const [notice, setNotice] = useState('')
   const matches = conversations.filter((item) => {
     const status = statuses[item.id] ?? 'now'

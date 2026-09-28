@@ -5,7 +5,7 @@ test('keeps the sidebar, composer and deck reachable at compact widths', async (
   page,
   a11y,
 }, testInfo) => {
-  await page.goto('/')
+  await page.goto('/deck')
   for (const width of [320, 375, 414, 768]) {
     await page.setViewportSize({ width, height: 850 })
     await showResearch(page)
