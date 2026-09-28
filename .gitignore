@@ -4,6 +4,7 @@
 .env*
 !.env.example
 .output/
+.tanstack/
 dist/
 node_modules/
 playwright-report/

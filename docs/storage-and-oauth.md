@@ -9,12 +9,12 @@ tailnet HTTPS address after Mastodon authorization.
 
 ## Runtime configuration
 
-| Variable | Value |
-| --- | --- |
-| `TWITTER_LITE_ORIGIN` | Exact Serve HTTPS origin, without a trailing slash |
-| `TWITTER_LITE_ALLOWED_LOGIN` | Owner's Tailscale login |
-| `TWITTER_LITE_DB_PATH` | Absolute path to the SQLite database on local disk |
-| `TWITTER_LITE_MASTODON_ORIGINS` | Comma-separated approved HTTPS instance origins |
+| Variable                           | Value                                                     |
+| ---------------------------------- | --------------------------------------------------------- |
+| `TWITTER_LITE_ORIGIN`              | Exact Serve HTTPS origin, without a trailing slash        |
+| `TWITTER_LITE_ALLOWED_LOGIN`       | Owner's Tailscale login                                   |
+| `TWITTER_LITE_DB_PATH`             | Absolute path to the SQLite database on local disk        |
+| `TWITTER_LITE_MASTODON_ORIGINS`    | Comma-separated approved HTTPS instance origins           |
 | `TWITTER_LITE_CREDENTIAL_KEY_FILE` | Runtime file containing 32 random bytes encoded as base64 |
 
 The credential key is required for Mastodon, but not for Twitter-only use.

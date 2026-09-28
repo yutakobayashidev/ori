@@ -1,5 +1,9 @@
 # Twitter Lite Implementation Plan
 
+> Tooling update: the Biome configuration and commands below are historical.
+> Current development uses Oxlint for linting and Oxfmt for formatting; see
+> README for current commands.
+
 > **For agentic workers:** REQUIRED SUB-SKILL: Use superpowers:subagent-driven-development (recommended) or superpowers:executing-plans to implement this plan task-by-task. Steps use checkbox (`- [ ]`) syntax for tracking.
 
 > Subsequent extension: tweet detail and conversation loading are implemented
@@ -61,6 +65,7 @@
 ### Task 1: Extend Bird with Top/Latest search products
 
 **Files:**
+
 - Clone: `../bird` from `https://git.yutakobayashi.com/yuta/bird`
 - Modify: `../bird/src/lib/twitter-client-search.ts`
 - Modify: `../bird/src/lib/index.ts`
@@ -72,6 +77,7 @@
 - Modify: `../bird/CHANGELOG.md`
 
 **Interfaces:**
+
 - Produces: `SearchProduct = 'Top' | 'Latest'`.
 - Produces: `SearchFetchOptions.product?: SearchProduct`.
 - Produces: `TwitterClient.search(query, count, { product })` and `getAllSearchResults(query, { product })`.
@@ -99,31 +105,27 @@ In `tests/twitter-client.search-bookmarks.test.ts`, extend `retries on 404 and p
 
 ```ts
 const parsed = JSON.parse(urlVars as string) as {
-  rawQuery?: string
-  product?: string
-}
-expect(parsed.rawQuery).toBe('needle')
-expect(parsed.product).toBe('Latest')
+  rawQuery?: string;
+  product?: string;
+};
+expect(parsed.rawQuery).toBe("needle");
+expect(parsed.product).toBe("Latest");
 ```
 
 Change `paginates search results using the bottom cursor` to call and assert:
 
 ```ts
-const result = await client.search('needle', 3, { product: 'Top' })
+const result = await client.search("needle", 3, { product: "Top" });
 
 const firstVars = JSON.parse(
-  new URL(mockFetch.mock.calls[0][0] as string).searchParams.get(
-    'variables',
-  ) as string,
-) as { cursor?: string; product?: string }
+  new URL(mockFetch.mock.calls[0][0] as string).searchParams.get("variables") as string,
+) as { cursor?: string; product?: string };
 const secondVars = JSON.parse(
-  new URL(mockFetch.mock.calls[1][0] as string).searchParams.get(
-    'variables',
-  ) as string,
-) as { cursor?: string; product?: string }
+  new URL(mockFetch.mock.calls[1][0] as string).searchParams.get("variables") as string,
+) as { cursor?: string; product?: string };
 
-expect(firstVars.product).toBe('Top')
-expect(secondVars.product).toBe('Top')
+expect(firstVars.product).toBe("Top");
+expect(secondVars.product).toBe("Top");
 ```
 
 - [ ] **Step 3: Run the library tests and verify RED**
@@ -141,28 +143,28 @@ Expected: TypeScript reports that `product` is not part of `SearchFetchOptions`,
 In `src/lib/twitter-client-search.ts`, replace the search option definitions with:
 
 ```ts
-export type SearchProduct = 'Top' | 'Latest'
+export type SearchProduct = "Top" | "Latest";
 
 /** Options for search methods */
 export interface SearchFetchOptions {
   /** Include raw GraphQL response in `_raw` field */
-  includeRaw?: boolean
+  includeRaw?: boolean;
   /** Search result ranking (default: Latest) */
-  product?: SearchProduct
+  product?: SearchProduct;
 }
 
 /** Options for paged search methods */
 export interface SearchPaginationOptions extends SearchFetchOptions {
-  maxPages?: number
+  maxPages?: number;
   /** Starting cursor for pagination (resume from previous fetch) */
-  cursor?: string
+  cursor?: string;
 }
 ```
 
 In `searchPaged()`, destructure once:
 
 ```ts
-const { includeRaw = false, maxPages, product = 'Latest' } = options
+const { includeRaw = false, maxPages, product = "Latest" } = options;
 ```
 
 Use the captured value in every request:
@@ -171,10 +173,10 @@ Use the captured value in every request:
 const variables = {
   rawQuery: query,
   count: pageCount,
-  querySource: 'typed_query',
+  querySource: "typed_query",
   product,
   ...(pageCursor ? { cursor: pageCursor } : {}),
-}
+};
 ```
 
 In `src/lib/index.ts`, export the public types:
@@ -184,7 +186,7 @@ export type {
   SearchFetchOptions,
   SearchPaginationOptions,
   SearchProduct,
-} from './twitter-client-search.js'
+} from "./twitter-client-search.js";
 ```
 
 - [ ] **Step 5: Run the library tests and verify GREEN**
@@ -202,29 +204,22 @@ Expected: every search/bookmark test passes.
 Add to `tests/commands.search.test.ts`:
 
 ```ts
-it('passes --product to non-paged search', async () => {
-  registerSearchCommands(program, mockContext as CliContext)
+it("passes --product to non-paged search", async () => {
+  registerSearchCommands(program, mockContext as CliContext);
   const searchSpy = vi
-    .spyOn(TwitterClient.prototype, 'search')
-    .mockResolvedValue({ success: true, tweets: [] })
+    .spyOn(TwitterClient.prototype, "search")
+    .mockResolvedValue({ success: true, tweets: [] });
 
   try {
-    await program.parseAsync([
-      'node',
-      'bird',
-      'search',
-      'cats',
-      '--product',
-      'Top',
-    ])
-    expect(searchSpy).toHaveBeenCalledWith('cats', 10, {
+    await program.parseAsync(["node", "bird", "search", "cats", "--product", "Top"]);
+    expect(searchSpy).toHaveBeenCalledWith("cats", 10, {
       includeRaw: false,
-      product: 'Top',
-    })
+      product: "Top",
+    });
   } finally {
-    searchSpy.mockRestore()
+    searchSpy.mockRestore();
   }
-})
+});
 ```
 
 Update the existing paged-search test to pass `--product Top` and require `product: 'Top'` in the expected options.
@@ -232,38 +227,27 @@ Update the existing paged-search test to pass `--product Top` and require `produ
 Add explicit invalid-choice coverage:
 
 ```ts
-it('rejects unsupported search products', async () => {
-  registerSearchCommands(program, mockContext as CliContext)
-  program.exitOverride()
+it("rejects unsupported search products", async () => {
+  registerSearchCommands(program, mockContext as CliContext);
+  program.exitOverride();
 
   await expect(
-    program.parseAsync([
-      'node',
-      'bird',
-      'search',
-      'cats',
-      '--product',
-      'Media',
-    ]),
-  ).rejects.toMatchObject({ code: 'commander.invalidArgument' })
-})
+    program.parseAsync(["node", "bird", "search", "cats", "--product", "Media"]),
+  ).rejects.toMatchObject({ code: "commander.invalidArgument" });
+});
 ```
 
 In `tests/library-exports.test.ts`, import and exercise the types:
 
 ```ts
-import {
-  type SearchFetchOptions,
-  type SearchProduct,
-  TwitterClient,
-} from '../src/index.js'
+import { type SearchFetchOptions, type SearchProduct, TwitterClient } from "../src/index.js";
 
-it('exposes search product types', () => {
-  const product: SearchProduct = 'Top'
-  const options: SearchFetchOptions = { product }
+it("exposes search product types", () => {
+  const product: SearchProduct = "Top";
+  const options: SearchFetchOptions = { product };
 
-  expect(options.product).toBe('Top')
-})
+  expect(options.product).toBe("Top");
+});
 ```
 
 - [ ] **Step 7: Run the CLI/export tests and verify RED**
@@ -283,8 +267,8 @@ Expected: the CLI rejects or ignores `--product` before the command implementati
 In `src/commands/search.ts`, use Commander's choice validation:
 
 ```ts
-import { type Command, Option } from 'commander'
-import type { SearchProduct } from '../lib/twitter-client-search.js'
+import { type Command, Option } from "commander";
+import type { SearchProduct } from "../lib/twitter-client-search.js";
 ```
 
 Register the option after `--cursor`:
@@ -300,15 +284,15 @@ Register the option after `--cursor`:
 Add `product?: SearchProduct` to the search command option type, then construct:
 
 ```ts
-const includeRaw = cmdOpts.jsonFull ?? false
-const product = cmdOpts.product ?? 'Latest'
-const searchOptions = { includeRaw, product }
+const includeRaw = cmdOpts.jsonFull ?? false;
+const product = cmdOpts.product ?? "Latest";
+const searchOptions = { includeRaw, product };
 const paginationOptions = {
   includeRaw,
   maxPages,
   cursor: pagination.cursor,
   product,
-}
+};
 ```
 
 Leave `mentions` unchanged so it continues using Bird's Latest default.
@@ -322,7 +306,7 @@ bird search "AI lang:ja" --product Top -n 20
 bird search "from:steipete" --product Latest -n 20
 
 const popular = await client.search('AI lang:ja', 20, {
-  product: 'Top',
+product: 'Top',
 })
 ```
 
@@ -368,6 +352,7 @@ git commit -m "feat: support ranked tweet search"
 ### Task 2: Create the reproducible TanStack Start foundation
 
 **Files:**
+
 - Create: `flake.nix`
 - Generate: `flake.lock`
 - Create: `package.json`
@@ -385,6 +370,7 @@ git commit -m "feat: support ranked tweet search"
 - Create: `tests/setup.ts`
 
 **Interfaces:**
+
 - Consumes: published `@yuta/bird@0.10.0` through Gitea Packages.
 - Produces: `getRouter()` with an SSR-aware QueryClient.
 - Produces: a buildable TanStack Start/Nitro application at `http://127.0.0.1:3000`.
@@ -516,44 +502,40 @@ Create `tsconfig.json`:
 Create `vite.config.ts`:
 
 ```ts
-import { tanstackStart } from '@tanstack/react-start/plugin/vite'
-import viteReact from '@vitejs/plugin-react'
-import { defineConfig } from 'vite'
-import { nitro } from 'nitro/vite'
+import { tanstackStart } from "@tanstack/react-start/plugin/vite";
+import viteReact from "@vitejs/plugin-react";
+import { defineConfig } from "vite";
+import { nitro } from "nitro/vite";
 
 export default defineConfig({
-  plugins: [
-    nitro(),
-    tanstackStart(),
-    viteReact(),
-  ],
-})
+  plugins: [nitro(), tanstackStart(), viteReact()],
+});
 ```
 
 Create `vitest.config.ts`:
 
 ```ts
-import path from 'node:path'
-import { defineConfig } from 'vitest/config'
+import path from "node:path";
+import { defineConfig } from "vitest/config";
 
 export default defineConfig({
-  resolve: { alias: { '#': path.resolve(import.meta.dirname, 'src') } },
+  resolve: { alias: { "#": path.resolve(import.meta.dirname, "src") } },
   test: {
-    environment: 'jsdom',
-    setupFiles: ['./tests/setup.ts'],
-    exclude: ['tests/e2e/**'],
+    environment: "jsdom",
+    setupFiles: ["./tests/setup.ts"],
+    exclude: ["tests/e2e/**"],
   },
-})
+});
 ```
 
 Create `tests/setup.ts`:
 
 ```ts
-import '@testing-library/jest-dom/vitest'
-import { cleanup } from '@testing-library/react'
-import { afterEach } from 'vitest'
+import "@testing-library/jest-dom/vitest";
+import { cleanup } from "@testing-library/react";
+import { afterEach } from "vitest";
 
-afterEach(cleanup)
+afterEach(cleanup);
 ```
 
 Create `biome.json`:
@@ -586,18 +568,18 @@ Expected: `pnpm-lock.yaml` and `src/routeTree.gen.ts` are generated without igno
 Create `src/routes/index.test.tsx`:
 
 ```tsx
-import { render, screen } from '@testing-library/react'
-import { describe, expect, it } from 'vitest'
-import { Home } from './index'
+import { render, screen } from "@testing-library/react";
+import { describe, expect, it } from "vitest";
+import { Home } from "./index";
 
-describe('Home', () => {
-  it('starts without ambient post content', () => {
-    render(<Home />)
+describe("Home", () => {
+  it("starts without ambient post content", () => {
+    render(<Home />);
 
-    expect(screen.getByText('目的を決めてから開く')).toBeInTheDocument()
-    expect(screen.queryByRole('article')).not.toBeInTheDocument()
-  })
-})
+    expect(screen.getByText("目的を決めてから開く")).toBeInTheDocument();
+    expect(screen.queryByRole("article")).not.toBeInTheDocument();
+  });
+});
 ```
 
 Run:
@@ -613,31 +595,31 @@ Expected: FAIL because `Home` and its intentional-reading copy do not exist.
 Create `src/router.tsx`:
 
 ```tsx
-import { QueryClient } from '@tanstack/react-query'
-import { createRouter } from '@tanstack/react-router'
-import { setupRouterSsrQueryIntegration } from '@tanstack/react-router-ssr-query'
-import { routeTree } from './routeTree.gen'
+import { QueryClient } from "@tanstack/react-query";
+import { createRouter } from "@tanstack/react-router";
+import { setupRouterSsrQueryIntegration } from "@tanstack/react-router-ssr-query";
+import { routeTree } from "./routeTree.gen";
 
 export function getRouter() {
   const queryClient = new QueryClient({
     defaultOptions: {
       queries: { retry: false, staleTime: 0, gcTime: 0 },
     },
-  })
+  });
   const router = createRouter({
     routeTree,
     context: { queryClient },
     scrollRestoration: true,
     defaultPreload: false,
-  })
+  });
 
-  setupRouterSsrQueryIntegration({ router, queryClient })
-  return router
+  setupRouterSsrQueryIntegration({ router, queryClient });
+  return router;
 }
 
-declare module '@tanstack/react-router' {
+declare module "@tanstack/react-router" {
   interface Register {
-    router: ReturnType<typeof getRouter>
+    router: ReturnType<typeof getRouter>;
   }
 }
 ```
@@ -645,30 +627,26 @@ declare module '@tanstack/react-router' {
 Create `src/routes/__root.tsx`:
 
 ```tsx
-import type { QueryClient } from '@tanstack/react-query'
-import {
-  HeadContent,
-  Scripts,
-  createRootRouteWithContext,
-} from '@tanstack/react-router'
-import appCss from '../styles.css?url'
+import type { QueryClient } from "@tanstack/react-query";
+import { HeadContent, Scripts, createRootRouteWithContext } from "@tanstack/react-router";
+import appCss from "../styles.css?url";
 
-type RouterContext = { queryClient: QueryClient }
+type RouterContext = { queryClient: QueryClient };
 
 export const Route = createRootRouteWithContext<RouterContext>()({
   head: () => ({
     meta: [
-      { charSet: 'utf-8' },
+      { charSet: "utf-8" },
       {
-        name: 'viewport',
-        content: 'width=device-width, initial-scale=1',
+        name: "viewport",
+        content: "width=device-width, initial-scale=1",
       },
-      { title: 'Twitter Lite' },
+      { title: "Twitter Lite" },
     ],
-    links: [{ rel: 'stylesheet', href: appCss }],
+    links: [{ rel: "stylesheet", href: appCss }],
   }),
   shellComponent: RootDocument,
-})
+});
 
 function RootDocument({ children }: { children: React.ReactNode }) {
   return (
@@ -681,16 +659,16 @@ function RootDocument({ children }: { children: React.ReactNode }) {
         <Scripts />
       </body>
     </html>
-  )
+  );
 }
 ```
 
 Create `src/routes/index.tsx`:
 
 ```tsx
-import { createFileRoute } from '@tanstack/react-router'
+import { createFileRoute } from "@tanstack/react-router";
 
-export const Route = createFileRoute('/')({ component: Home })
+export const Route = createFileRoute("/")({ component: Home });
 
 export function Home() {
   return (
@@ -699,7 +677,7 @@ export function Home() {
       <h1>目的を決めてから開く</h1>
       <p>ユーザー名か検索語を入力するまで、投稿は表示しません。</p>
     </main>
-  )
+  );
 }
 ```
 
@@ -771,6 +749,7 @@ git commit -m "chore: scaffold twitter lite"
 ### Task 3: Define validated inputs and page merging
 
 **Files:**
+
 - Create: `src/features/posts/types.ts`
 - Create: `src/features/posts/inputs.ts`
 - Create: `src/features/posts/inputs.test.ts`
@@ -778,6 +757,7 @@ git commit -m "chore: scaffold twitter lite"
 - Create: `src/features/posts/page.test.ts`
 
 **Interfaces:**
+
 - Produces: `normalizeUserTarget(value: string): string`.
 - Produces: `buildSearchQuery(value: string, following: boolean): string`.
 - Produces: `userPageInputSchema` and `searchPageInputSchema`.
@@ -788,47 +768,41 @@ git commit -m "chore: scaffold twitter lite"
 Create `src/features/posts/inputs.test.ts`:
 
 ```ts
-import { describe, expect, it } from 'vitest'
-import { buildSearchQuery, normalizeUserTarget } from './inputs'
+import { describe, expect, it } from "vitest";
+import { buildSearchQuery, normalizeUserTarget } from "./inputs";
 
-describe('normalizeUserTarget', () => {
+describe("normalizeUserTarget", () => {
   it.each([
-    ['@tan_stack', 'tan_stack'],
-    ['tan_stack', 'tan_stack'],
-    ['https://x.com/tan_stack', 'tan_stack'],
-    ['https://twitter.com/tan_stack/', 'tan_stack'],
-  ])('normalizes %s', (input, expected) => {
-    expect(normalizeUserTarget(input)).toBe(expected)
-  })
+    ["@tan_stack", "tan_stack"],
+    ["tan_stack", "tan_stack"],
+    ["https://x.com/tan_stack", "tan_stack"],
+    ["https://twitter.com/tan_stack/", "tan_stack"],
+  ])("normalizes %s", (input, expected) => {
+    expect(normalizeUserTarget(input)).toBe(expected);
+  });
 
-  it.each([
-    '',
-    'not valid',
-    'https://example.com/tan_stack',
-    'https://x.com/tan_stack/status/1',
-  ])('rejects %s', (input) => {
-    expect(() => normalizeUserTarget(input)).toThrow()
-  })
-})
+  it.each(["", "not valid", "https://example.com/tan_stack", "https://x.com/tan_stack/status/1"])(
+    "rejects %s",
+    (input) => {
+      expect(() => normalizeUserTarget(input)).toThrow();
+    },
+  );
+});
 
-describe('buildSearchQuery', () => {
-  it('keeps a deliberate query unchanged', () => {
-    expect(buildSearchQuery('  AI lang:ja  ', false)).toBe('AI lang:ja')
-  })
+describe("buildSearchQuery", () => {
+  it("keeps a deliberate query unchanged", () => {
+    expect(buildSearchQuery("  AI lang:ja  ", false)).toBe("AI lang:ja");
+  });
 
-  it('adds the follows operator once', () => {
-    expect(buildSearchQuery('AI lang:ja', true)).toBe(
-      'AI lang:ja filter:follows',
-    )
-    expect(buildSearchQuery('AI filter:follows', true)).toBe(
-      'AI filter:follows',
-    )
-  })
+  it("adds the follows operator once", () => {
+    expect(buildSearchQuery("AI lang:ja", true)).toBe("AI lang:ja filter:follows");
+    expect(buildSearchQuery("AI filter:follows", true)).toBe("AI filter:follows");
+  });
 
-  it('rejects an empty query', () => {
-    expect(() => buildSearchQuery('   ', false)).toThrow()
-  })
-})
+  it("rejects an empty query", () => {
+    expect(() => buildSearchQuery("   ", false)).toThrow();
+  });
+});
 ```
 
 - [ ] **Step 2: Run the input tests and verify RED**
@@ -846,124 +820,115 @@ Expected: FAIL because `./inputs` does not exist.
 Create `src/features/posts/types.ts`:
 
 ```ts
-import type { SearchProduct, TweetData } from '@yuta/bird'
+import type { SearchProduct, TweetData } from "@yuta/bird";
 
-export type Post = TweetData
+export type Post = TweetData;
 
 export type PostPage = {
-  tweets: Post[]
-  nextCursor?: string
-}
+  tweets: Post[];
+  nextCursor?: string;
+};
 
 export type LoadErrorCode =
-  | 'invalid-input'
-  | 'user-not-found'
-  | 'user-unavailable'
-  | 'relay-config'
-  | 'timeout'
-  | 'upstream'
+  "invalid-input" | "user-not-found" | "user-unavailable" | "relay-config" | "timeout" | "upstream";
 
 export type LoadError = {
-  code: LoadErrorCode
-  message: string
-  retryable: boolean
-}
+  code: LoadErrorCode;
+  message: string;
+  retryable: boolean;
+};
 
-export type LoadResult =
-  | { ok: true; page: PostPage }
-  | { ok: false; error: LoadError }
+export type LoadResult = { ok: true; page: PostPage } | { ok: false; error: LoadError };
 
 export type UserPageInput = {
-  target: string
-  cursor?: string
-}
+  target: string;
+  cursor?: string;
+};
 
 export type SearchPageInput = {
-  query: string
-  product: SearchProduct
-  following: boolean
-  cursor?: string
-}
+  query: string;
+  product: SearchProduct;
+  following: boolean;
+  cursor?: string;
+};
 ```
 
 Create `src/features/posts/inputs.ts`:
 
 ```ts
-import { z } from 'zod'
+import { z } from "zod";
 
-const HANDLE = /^[A-Za-z0-9_]{1,15}$/
-const FOLLOWS = /(?:^|\s)filter:follows(?:\s|$)/i
+const HANDLE = /^[A-Za-z0-9_]{1,15}$/;
+const FOLLOWS = /(?:^|\s)filter:follows(?:\s|$)/i;
 
 export class InputError extends Error {}
 
 export const userPageInputSchema = z.object({
   target: z.string().trim().min(1).max(256),
   cursor: z.string().min(1).optional(),
-})
+});
 
 export const searchPageInputSchema = z.object({
   query: z.string().trim().min(1).max(512),
-  product: z.enum(['Top', 'Latest']),
+  product: z.enum(["Top", "Latest"]),
   following: z.boolean(),
   cursor: z.string().min(1).optional(),
-})
+});
 
 export const userRouteSearchSchema = z.object({
-  target: z.string().catch(''),
-})
+  target: z.string().catch(""),
+});
 
 export const postSearchRouteSchema = z.object({
-  q: z.string().catch(''),
-  product: z.enum(['Top', 'Latest']).catch('Latest'),
+  q: z.string().catch(""),
+  product: z.enum(["Top", "Latest"]).catch("Latest"),
   following: z.boolean().catch(false),
-})
+});
 
 function requireHandle(value: string): string {
   if (!HANDLE.test(value)) {
-    throw new InputError('ハンドルは英数字とアンダースコアで入力してください。')
+    throw new InputError("ハンドルは英数字とアンダースコアで入力してください。");
   }
-  return value
+  return value;
 }
 
 export function normalizeUserTarget(raw: string): string {
-  const value = raw.trim()
+  const value = raw.trim();
   if (!value) {
-    throw new InputError('ハンドルまたはプロフィール URL を入力してください。')
+    throw new InputError("ハンドルまたはプロフィール URL を入力してください。");
   }
-  if (value.startsWith('@')) {
-    return requireHandle(value.slice(1))
+  if (value.startsWith("@")) {
+    return requireHandle(value.slice(1));
   }
-  if (!value.includes('://')) {
-    return requireHandle(value)
+  if (!value.includes("://")) {
+    return requireHandle(value);
   }
 
-  let url: URL
+  let url: URL;
   try {
-    url = new URL(value)
+    url = new URL(value);
   } catch {
-    throw new InputError('プロフィール URL の形式を確認してください。')
+    throw new InputError("プロフィール URL の形式を確認してください。");
   }
-  if (!['x.com', 'twitter.com'].includes(url.hostname.toLowerCase())) {
-    throw new InputError('x.com または twitter.com の URL を入力してください。')
+  if (!["x.com", "twitter.com"].includes(url.hostname.toLowerCase())) {
+    throw new InputError("x.com または twitter.com の URL を入力してください。");
   }
-  const segments = url.pathname.split('/').filter(Boolean)
+  const segments = url.pathname.split("/").filter(Boolean);
   if (segments.length !== 1) {
-    throw new InputError('プロフィール URL を入力してください。')
+    throw new InputError("プロフィール URL を入力してください。");
   }
-  return requireHandle(segments[0] ?? '')
+  return requireHandle(segments[0] ?? "");
 }
 
 export function buildSearchQuery(raw: string, following: boolean): string {
-  const query = raw.trim()
+  const query = raw.trim();
   if (!query) {
-    throw new InputError('検索語を入力してください。')
+    throw new InputError("検索語を入力してください。");
   }
   if (query.length > 512) {
-    throw new InputError('検索語は 512 文字以内で入力してください。')
+    throw new InputError("検索語は 512 文字以内で入力してください。");
   }
-  return following && !FOLLOWS.test(query)
-    ? `${query} filter:follows`
-    : query
+  return following && !FOLLOWS.test(query) ? `${query} filter:follows` : query;
 }
 ```
 
@@ -982,30 +947,26 @@ Expected: all normalization and query-building tests pass.
 Create `src/features/posts/page.test.ts`:
 
 ```ts
-import { describe, expect, it } from 'vitest'
-import { flattenPostPages } from './page'
-import type { Post, PostPage } from './types'
+import { describe, expect, it } from "vitest";
+import { flattenPostPages } from "./page";
+import type { Post, PostPage } from "./types";
 
 const post = (id: string): Post => ({
   id,
   text: `post-${id}`,
   author: { username: `user-${id}`, name: `User ${id}` },
-})
+});
 
-describe('flattenPostPages', () => {
-  it('preserves API order and removes duplicate IDs', () => {
+describe("flattenPostPages", () => {
+  it("preserves API order and removes duplicate IDs", () => {
     const pages: PostPage[] = [
-      { tweets: [post('1'), post('2')], nextCursor: 'next' },
-      { tweets: [post('2'), post('3')] },
-    ]
+      { tweets: [post("1"), post("2")], nextCursor: "next" },
+      { tweets: [post("2"), post("3")] },
+    ];
 
-    expect(flattenPostPages(pages).map(({ id }) => id)).toEqual([
-      '1',
-      '2',
-      '3',
-    ])
-  })
-})
+    expect(flattenPostPages(pages).map(({ id }) => id)).toEqual(["1", "2", "3"]);
+  });
+});
 ```
 
 Run:
@@ -1021,17 +982,17 @@ Expected: FAIL because `flattenPostPages` does not exist.
 Create `src/features/posts/page.ts`:
 
 ```ts
-import type { Post, PostPage } from './types'
+import type { Post, PostPage } from "./types";
 
 export function flattenPostPages(pages: PostPage[]): Post[] {
-  const seen = new Set<string>()
+  const seen = new Set<string>();
   return pages.flatMap(({ tweets }) =>
     tweets.filter(({ id }) => {
-      if (seen.has(id)) return false
-      seen.add(id)
-      return true
+      if (seen.has(id)) return false;
+      seen.add(id);
+      return true;
     }),
-  )
+  );
 }
 ```
 
@@ -1056,12 +1017,14 @@ git commit -m "feat: validate intentional post requests"
 ### Task 4: Add the read-only Bird server boundary
 
 **Files:**
+
 - Create: `src/features/posts/post-service.ts`
 - Create: `src/features/posts/post-service.test.ts`
 - Create: `src/features/posts/bird-client.server.ts`
 - Create: `src/features/posts/server-functions.ts`
 
 **Interfaces:**
+
 - Consumes: `normalizeUserTarget`, `buildSearchQuery`, and Bird's read methods.
 - Produces: `loadUserPage(reader, input): Promise<LoadResult>`.
 - Produces: `searchPage(reader, input): Promise<LoadResult>`.
@@ -1072,81 +1035,78 @@ git commit -m "feat: validate intentional post requests"
 Create `src/features/posts/post-service.test.ts`:
 
 ```ts
-import { describe, expect, it, vi } from 'vitest'
-import { loadUserPage, searchPage, type BirdReader } from './post-service'
+import { describe, expect, it, vi } from "vitest";
+import { loadUserPage, searchPage, type BirdReader } from "./post-service";
 
 const reader = (): BirdReader => ({
-  getUserIdByUsername: vi
-    .fn()
-    .mockResolvedValue({ success: true, userId: '42' }),
+  getUserIdByUsername: vi.fn().mockResolvedValue({ success: true, userId: "42" }),
   getUserTweetsPaged: vi.fn().mockResolvedValue({
     success: true,
-    tweets: [
-      { id: '1', text: 'hello', author: { username: 'yuta', name: 'Yuta' } },
-    ],
-    nextCursor: 'user-next',
+    tweets: [{ id: "1", text: "hello", author: { username: "yuta", name: "Yuta" } }],
+    nextCursor: "user-next",
   }),
   getAllSearchResults: vi.fn().mockResolvedValue({
     success: true,
     tweets: [],
-    nextCursor: 'search-next',
+    nextCursor: "search-next",
   }),
-})
+});
 
-describe('loadUserPage', () => {
-  it('resolves a handle and fetches exactly one page', async () => {
-    const client = reader()
+describe("loadUserPage", () => {
+  it("resolves a handle and fetches exactly one page", async () => {
+    const client = reader();
     const result = await loadUserPage(client, {
-      target: 'https://x.com/yuta',
-      cursor: 'cursor-1',
-    })
+      target: "https://x.com/yuta",
+      cursor: "cursor-1",
+    });
 
-    expect(client.getUserIdByUsername).toHaveBeenCalledWith('yuta')
-    expect(client.getUserTweetsPaged).toHaveBeenCalledWith('42', 20, {
-      cursor: 'cursor-1',
+    expect(client.getUserIdByUsername).toHaveBeenCalledWith("yuta");
+    expect(client.getUserTweetsPaged).toHaveBeenCalledWith("42", 20, {
+      cursor: "cursor-1",
       maxPages: 1,
       pageDelayMs: 0,
-    })
+    });
     expect(result).toMatchObject({
       ok: true,
-      page: { nextCursor: 'user-next' },
-    })
-  })
+      page: { nextCursor: "user-next" },
+    });
+  });
 
-  it('returns a safe not-found error', async () => {
-    const client = reader()
+  it("returns a safe not-found error", async () => {
+    const client = reader();
     vi.mocked(client.getUserIdByUsername).mockResolvedValue({
       success: false,
-      error: 'User not found: private relay detail',
-    })
+      error: "User not found: private relay detail",
+    });
 
-    expect(await loadUserPage(client, { target: 'missing' })).toEqual({
+    expect(await loadUserPage(client, { target: "missing" })).toEqual({
       ok: false,
       error: {
-        code: 'user-not-found',
-        message: 'ユーザーが見つかりませんでした。',
+        code: "user-not-found",
+        message: "ユーザーが見つかりませんでした。",
         retryable: false,
       },
-    })
-  })
-})
+    });
+  });
+});
 
-describe('searchPage', () => {
-  it('forwards Top and appends follows once', async () => {
-    const client = reader()
+describe("searchPage", () => {
+  it("forwards Top and appends follows once", async () => {
+    const client = reader();
     await searchPage(client, {
-      query: 'AI lang:ja',
-      product: 'Top',
+      query: "AI lang:ja",
+      product: "Top",
       following: true,
-      cursor: 'cursor-2',
-    })
+      cursor: "cursor-2",
+    });
 
-    expect(client.getAllSearchResults).toHaveBeenCalledWith(
-      'AI lang:ja filter:follows',
-      { product: 'Top', cursor: 'cursor-2', maxPages: 1 },
-    )
-  })
-})
+    expect(client.getAllSearchResults).toHaveBeenCalledWith("AI lang:ja filter:follows", {
+      product: "Top",
+      cursor: "cursor-2",
+      maxPages: 1,
+    });
+  });
+});
 ```
 
 - [ ] **Step 2: Run the service tests and verify RED**
@@ -1164,60 +1124,54 @@ Expected: FAIL because `post-service.ts` does not exist.
 Create `src/features/posts/post-service.ts`:
 
 ```ts
-import type { SearchProduct, SearchResult } from '@yuta/bird'
-import { InputError, buildSearchQuery, normalizeUserTarget } from './inputs'
-import type {
-  LoadError,
-  LoadResult,
-  SearchPageInput,
-  UserPageInput,
-} from './types'
+import type { SearchProduct, SearchResult } from "@yuta/bird";
+import { InputError, buildSearchQuery, normalizeUserTarget } from "./inputs";
+import type { LoadError, LoadResult, SearchPageInput, UserPageInput } from "./types";
 
 type UserLookupResult = {
-  success: boolean
-  userId?: string
-  error?: string
-}
+  success: boolean;
+  userId?: string;
+  error?: string;
+};
 
 export interface BirdReader {
-  getUserIdByUsername(username: string): Promise<UserLookupResult>
+  getUserIdByUsername(username: string): Promise<UserLookupResult>;
   getUserTweetsPaged(
     userId: string,
     limit: number,
     options: {
-      cursor?: string
-      maxPages: number
-      pageDelayMs: number
+      cursor?: string;
+      maxPages: number;
+      pageDelayMs: number;
     },
-  ): Promise<SearchResult>
+  ): Promise<SearchResult>;
   getAllSearchResults(
     query: string,
     options: {
-      product: SearchProduct
-      cursor?: string
-      maxPages: number
+      product: SearchProduct;
+      cursor?: string;
+      maxPages: number;
     },
-  ): Promise<SearchResult>
+  ): Promise<SearchResult>;
 }
 
-const failure = (
-  code: LoadError['code'],
-  message: string,
-  retryable: boolean,
-): LoadResult => ({ ok: false, error: { code, message, retryable } })
+const failure = (code: LoadError["code"], message: string, retryable: boolean): LoadResult => ({
+  ok: false,
+  error: { code, message, retryable },
+});
 
-function upstreamFailure(message = ''): LoadResult {
-  const lower = message.toLowerCase()
-  if (lower.includes('timeout') || lower.includes('aborted')) {
-    return failure('timeout', '取得がタイムアウトしました。', true)
+function upstreamFailure(message = ""): LoadResult {
+  const lower = message.toLowerCase();
+  if (lower.includes("timeout") || lower.includes("aborted")) {
+    return failure("timeout", "取得がタイムアウトしました。", true);
   }
-  if (lower.includes('not found')) {
-    return failure('user-not-found', 'ユーザーが見つかりませんでした。', false)
+  if (lower.includes("not found")) {
+    return failure("user-not-found", "ユーザーが見つかりませんでした。", false);
   }
-  if (lower.includes('suspended') || lower.includes('protected')) {
-    return failure('user-unavailable', 'このユーザーの投稿は取得できません。', false)
+  if (lower.includes("suspended") || lower.includes("protected")) {
+    return failure("user-unavailable", "このユーザーの投稿は取得できません。", false);
   }
-  return failure('upstream', 'X から投稿を取得できませんでした。', true)
+  return failure("upstream", "X から投稿を取得できませんでした。", true);
 }
 
 function resultPage(result: SearchResult): LoadResult {
@@ -1226,18 +1180,15 @@ function resultPage(result: SearchResult): LoadResult {
         ok: true,
         page: { tweets: result.tweets, nextCursor: result.nextCursor },
       }
-    : upstreamFailure(result.error)
+    : upstreamFailure(result.error);
 }
 
-export async function loadUserPage(
-  reader: BirdReader,
-  input: UserPageInput,
-): Promise<LoadResult> {
+export async function loadUserPage(reader: BirdReader, input: UserPageInput): Promise<LoadResult> {
   try {
-    const handle = normalizeUserTarget(input.target)
-    const user = await reader.getUserIdByUsername(handle)
+    const handle = normalizeUserTarget(input.target);
+    const user = await reader.getUserIdByUsername(handle);
     if (!user.success || !user.userId) {
-      return upstreamFailure(user.error)
+      return upstreamFailure(user.error);
     }
     return resultPage(
       await reader.getUserTweetsPaged(user.userId, 20, {
@@ -1245,41 +1196,35 @@ export async function loadUserPage(
         maxPages: 1,
         pageDelayMs: 0,
       }),
-    )
+    );
   } catch (error) {
-    if (error instanceof Error && error.name === 'AbortError') {
-      return failure('timeout', '取得がタイムアウトしました。', true)
+    if (error instanceof Error && error.name === "AbortError") {
+      return failure("timeout", "取得がタイムアウトしました。", true);
     }
     if (error instanceof InputError) {
-      return failure('invalid-input', error.message, false)
+      return failure("invalid-input", error.message, false);
     }
-    return upstreamFailure(error instanceof Error ? error.message : '')
+    return upstreamFailure(error instanceof Error ? error.message : "");
   }
 }
 
-export async function searchPage(
-  reader: BirdReader,
-  input: SearchPageInput,
-): Promise<LoadResult> {
+export async function searchPage(reader: BirdReader, input: SearchPageInput): Promise<LoadResult> {
   try {
     return resultPage(
-      await reader.getAllSearchResults(
-        buildSearchQuery(input.query, input.following),
-        {
-          product: input.product,
-          cursor: input.cursor,
-          maxPages: 1,
-        },
-      ),
-    )
+      await reader.getAllSearchResults(buildSearchQuery(input.query, input.following), {
+        product: input.product,
+        cursor: input.cursor,
+        maxPages: 1,
+      }),
+    );
   } catch (error) {
-    if (error instanceof Error && error.name === 'AbortError') {
-      return failure('timeout', '取得がタイムアウトしました。', true)
+    if (error instanceof Error && error.name === "AbortError") {
+      return failure("timeout", "取得がタイムアウトしました。", true);
     }
     if (error instanceof InputError) {
-      return failure('invalid-input', error.message, false)
+      return failure("invalid-input", error.message, false);
     }
-    return upstreamFailure(error instanceof Error ? error.message : '')
+    return upstreamFailure(error instanceof Error ? error.message : "");
   }
 }
 ```
@@ -1299,62 +1244,62 @@ Expected: all service behavior passes without a relay.
 Create `src/features/posts/bird-client.server.ts`:
 
 ```ts
-import { TwitterClient } from '@yuta/bird'
-import type { BirdReader } from './post-service'
+import { TwitterClient } from "@yuta/bird";
+import type { BirdReader } from "./post-service";
 
-let client: TwitterClient | undefined
+let client: TwitterClient | undefined;
 
 export function getBirdReader(): BirdReader {
   client ??= new TwitterClient({
     relayBaseUrl: process.env.TWITTER_RELAY_BASE_URL,
     profileName: process.env.BIRD_PROFILE_NAME,
     timeoutMs: 20_000,
-  })
-  return client
+  });
+  return client;
 }
 ```
 
 Create `src/features/posts/server-functions.ts`:
 
 ```ts
-import { createServerFn } from '@tanstack/react-start'
-import { searchPageInputSchema, userPageInputSchema } from './inputs'
-import { loadUserPage, searchPage } from './post-service'
-import type { LoadResult } from './types'
+import { createServerFn } from "@tanstack/react-start";
+import { searchPageInputSchema, userPageInputSchema } from "./inputs";
+import { loadUserPage, searchPage } from "./post-service";
+import type { LoadResult } from "./types";
 
 const configFailure = (): LoadResult => ({
   ok: false,
   error: {
-    code: 'relay-config',
-    message: 'TWITTER_RELAY_BASE_URL を設定してください。',
+    code: "relay-config",
+    message: "TWITTER_RELAY_BASE_URL を設定してください。",
     retryable: false,
   },
-})
+});
 
 async function reader() {
-  const { getBirdReader } = await import('./bird-client.server')
-  return getBirdReader()
+  const { getBirdReader } = await import("./bird-client.server");
+  return getBirdReader();
 }
 
-export const loadUserPosts = createServerFn({ method: 'GET' })
+export const loadUserPosts = createServerFn({ method: "GET" })
   .validator(userPageInputSchema)
   .handler(async ({ data }) => {
     try {
-      return await loadUserPage(await reader(), data)
+      return await loadUserPage(await reader(), data);
     } catch {
-      return configFailure()
+      return configFailure();
     }
-  })
+  });
 
-export const searchPosts = createServerFn({ method: 'GET' })
+export const searchPosts = createServerFn({ method: "GET" })
   .validator(searchPageInputSchema)
   .handler(async ({ data }) => {
     try {
-      return await searchPage(await reader(), data)
+      return await searchPage(await reader(), data);
     } catch {
-      return configFailure()
+      return configFailure();
     }
-  })
+  });
 ```
 
 - [ ] **Step 6: Prove Bird stays server-only**
@@ -1379,6 +1324,7 @@ git commit -m "feat: add read-only bird boundary"
 ### Task 5: Add intentional User and Search routes
 
 **Files:**
+
 - Create: `src/components/app-shell.tsx`
 - Create: `src/features/posts/components/user-form.tsx`
 - Create: `src/features/posts/components/search-form.tsx`
@@ -1389,6 +1335,7 @@ git commit -m "feat: add read-only bird boundary"
 - Delete: `src/routes/index.test.tsx`
 
 **Interfaces:**
+
 - Consumes: typed route schemas from Task 3.
 - Produces: `UserForm({ initialTarget, onSubmit })`.
 - Produces: `SearchForm({ initialQuery, initialProduct, initialFollowing, onSubmit })`.
@@ -1399,40 +1346,40 @@ git commit -m "feat: add read-only bird boundary"
 Create `src/features/posts/components/forms.test.tsx`:
 
 ```tsx
-import { fireEvent, render, screen } from '@testing-library/react'
-import { describe, expect, it, vi } from 'vitest'
-import { SearchForm } from './search-form'
-import { UserForm } from './user-form'
+import { fireEvent, render, screen } from "@testing-library/react";
+import { describe, expect, it, vi } from "vitest";
+import { SearchForm } from "./search-form";
+import { UserForm } from "./user-form";
 
-describe('UserForm', () => {
-  it('submits only after the user enters a target', () => {
-    const onSubmit = vi.fn()
-    render(<UserForm initialTarget="" onSubmit={onSubmit} />)
+describe("UserForm", () => {
+  it("submits only after the user enters a target", () => {
+    const onSubmit = vi.fn();
+    render(<UserForm initialTarget="" onSubmit={onSubmit} />);
 
-    fireEvent.change(screen.getByLabelText('ハンドルまたはプロフィール URL'), {
-      target: { value: '@yuta' },
-    })
-    fireEvent.click(screen.getByRole('button', { name: '表示' }))
+    fireEvent.change(screen.getByLabelText("ハンドルまたはプロフィール URL"), {
+      target: { value: "@yuta" },
+    });
+    fireEvent.click(screen.getByRole("button", { name: "表示" }));
 
-    expect(onSubmit).toHaveBeenCalledWith('yuta')
-  })
+    expect(onSubmit).toHaveBeenCalledWith("yuta");
+  });
 
-  it('explains invalid input beside the field', () => {
-    const onSubmit = vi.fn()
-    render(<UserForm initialTarget="" onSubmit={onSubmit} />)
+  it("explains invalid input beside the field", () => {
+    const onSubmit = vi.fn();
+    render(<UserForm initialTarget="" onSubmit={onSubmit} />);
 
-    fireEvent.click(screen.getByRole('button', { name: '表示' }))
+    fireEvent.click(screen.getByRole("button", { name: "表示" }));
 
-    expect(screen.getByRole('alert')).toHaveTextContent(
-      'ハンドルまたはプロフィール URL を入力してください。',
-    )
-    expect(onSubmit).not.toHaveBeenCalled()
-  })
-})
+    expect(screen.getByRole("alert")).toHaveTextContent(
+      "ハンドルまたはプロフィール URL を入力してください。",
+    );
+    expect(onSubmit).not.toHaveBeenCalled();
+  });
+});
 
-describe('SearchForm', () => {
-  it('submits the selected ranking and follows filter', () => {
-    const onSubmit = vi.fn()
+describe("SearchForm", () => {
+  it("submits the selected ranking and follows filter", () => {
+    const onSubmit = vi.fn();
     render(
       <SearchForm
         initialQuery=""
@@ -1440,22 +1387,22 @@ describe('SearchForm', () => {
         initialFollowing={false}
         onSubmit={onSubmit}
       />,
-    )
+    );
 
-    fireEvent.change(screen.getByLabelText('検索語'), {
-      target: { value: 'AI lang:ja' },
-    })
-    fireEvent.click(screen.getByLabelText('人気順'))
-    fireEvent.click(screen.getByLabelText('フォロー中のみ'))
-    fireEvent.click(screen.getByRole('button', { name: '検索' }))
+    fireEvent.change(screen.getByLabelText("検索語"), {
+      target: { value: "AI lang:ja" },
+    });
+    fireEvent.click(screen.getByLabelText("人気順"));
+    fireEvent.click(screen.getByLabelText("フォロー中のみ"));
+    fireEvent.click(screen.getByRole("button", { name: "検索" }));
 
     expect(onSubmit).toHaveBeenCalledWith({
-      q: 'AI lang:ja',
-      product: 'Top',
+      q: "AI lang:ja",
+      product: "Top",
       following: true,
-    })
-  })
-})
+    });
+  });
+});
 ```
 
 Run:
@@ -1471,31 +1418,27 @@ Expected: FAIL because both form components are missing.
 Create `src/features/posts/components/user-form.tsx`:
 
 ```tsx
-import { type FormEvent, useState } from 'react'
-import { normalizeUserTarget } from '../inputs'
+import { type FormEvent, useState } from "react";
+import { normalizeUserTarget } from "../inputs";
 
 type Props = {
-  initialTarget: string
-  onSubmit: (target: string) => void
-}
+  initialTarget: string;
+  onSubmit: (target: string) => void;
+};
 
 export function UserForm({ initialTarget, onSubmit }: Props) {
-  const [target, setTarget] = useState(initialTarget)
-  const [error, setError] = useState('')
+  const [target, setTarget] = useState(initialTarget);
+  const [error, setError] = useState("");
   const submit = (event: FormEvent) => {
-    event.preventDefault()
+    event.preventDefault();
     try {
-      const handle = normalizeUserTarget(target)
-      setError('')
-      onSubmit(handle)
+      const handle = normalizeUserTarget(target);
+      setError("");
+      onSubmit(handle);
     } catch (cause) {
-      setError(
-        cause instanceof Error
-          ? cause.message
-          : '入力内容を確認してください。',
-      )
+      setError(cause instanceof Error ? cause.message : "入力内容を確認してください。");
     }
-  }
+  };
 
   return (
     <form className="intent-form" onSubmit={submit}>
@@ -1503,7 +1446,7 @@ export function UserForm({ initialTarget, onSubmit }: Props) {
         <span>ハンドルまたはプロフィール URL</span>
         <input
           autoComplete="off"
-          aria-describedby={error ? 'target-error' : undefined}
+          aria-describedby={error ? "target-error" : undefined}
           aria-invalid={Boolean(error)}
           name="target"
           value={target}
@@ -1518,55 +1461,46 @@ export function UserForm({ initialTarget, onSubmit }: Props) {
       </label>
       <button type="submit">表示</button>
     </form>
-  )
+  );
 }
 ```
 
 Create `src/features/posts/components/search-form.tsx`:
 
 ```tsx
-import type { SearchProduct } from '@yuta/bird'
-import { type FormEvent, useState } from 'react'
-import { buildSearchQuery } from '../inputs'
+import type { SearchProduct } from "@yuta/bird";
+import { type FormEvent, useState } from "react";
+import { buildSearchQuery } from "../inputs";
 
 type SearchValues = {
-  q: string
-  product: SearchProduct
-  following: boolean
-}
+  q: string;
+  product: SearchProduct;
+  following: boolean;
+};
 
 type Props = {
-  initialQuery: string
-  initialProduct: SearchProduct
-  initialFollowing: boolean
-  onSubmit: (values: SearchValues) => void
-}
+  initialQuery: string;
+  initialProduct: SearchProduct;
+  initialFollowing: boolean;
+  onSubmit: (values: SearchValues) => void;
+};
 
-export function SearchForm({
-  initialQuery,
-  initialProduct,
-  initialFollowing,
-  onSubmit,
-}: Props) {
-  const [q, setQuery] = useState(initialQuery)
-  const [product, setProduct] = useState(initialProduct)
-  const [following, setFollowing] = useState(initialFollowing)
-  const [error, setError] = useState('')
+export function SearchForm({ initialQuery, initialProduct, initialFollowing, onSubmit }: Props) {
+  const [q, setQuery] = useState(initialQuery);
+  const [product, setProduct] = useState(initialProduct);
+  const [following, setFollowing] = useState(initialFollowing);
+  const [error, setError] = useState("");
 
   const submit = (event: FormEvent) => {
-    event.preventDefault()
+    event.preventDefault();
     try {
-      const query = buildSearchQuery(q, false)
-      setError('')
-      onSubmit({ q: query, product, following })
+      const query = buildSearchQuery(q, false);
+      setError("");
+      onSubmit({ q: query, product, following });
     } catch (cause) {
-      setError(
-        cause instanceof Error
-          ? cause.message
-          : '入力内容を確認してください。',
-      )
+      setError(cause instanceof Error ? cause.message : "入力内容を確認してください。");
     }
-  }
+  };
 
   return (
     <form className="intent-form" onSubmit={submit}>
@@ -1574,7 +1508,7 @@ export function SearchForm({
         <span>検索語</span>
         <input
           autoComplete="off"
-          aria-describedby={error ? 'query-error' : undefined}
+          aria-describedby={error ? "query-error" : undefined}
           aria-invalid={Boolean(error)}
           name="q"
           value={q}
@@ -1589,7 +1523,7 @@ export function SearchForm({
       </label>
       <fieldset className="segmented">
         <legend>並び順</legend>
-        {(['Top', 'Latest'] as const).map((value) => (
+        {(["Top", "Latest"] as const).map((value) => (
           <label key={value}>
             <input
               checked={product === value}
@@ -1598,7 +1532,7 @@ export function SearchForm({
               type="radio"
               value={value}
             />
-            {value === 'Top' ? '人気順' : '最新順'}
+            {value === "Top" ? "人気順" : "最新順"}
           </label>
         ))}
       </fieldset>
@@ -1612,7 +1546,7 @@ export function SearchForm({
       </label>
       <button type="submit">検索</button>
     </form>
-  )
+  );
 }
 ```
 
@@ -1631,14 +1565,14 @@ Expected: both form behaviors pass.
 Create `src/components/app-shell.tsx`:
 
 ```tsx
-import { Link } from '@tanstack/react-router'
+import { Link } from "@tanstack/react-router";
 
 export function AppShell({
   active,
   children,
 }: {
-  active: 'user' | 'search'
-  children: React.ReactNode
+  active: "user" | "search";
+  children: React.ReactNode;
 }) {
   return (
     <main className="app">
@@ -1646,15 +1580,15 @@ export function AppShell({
         <p className="brand">TWITTER LITE</p>
         <nav aria-label="閲覧方法" className="tabs">
           <Link
-            aria-current={active === 'user' ? 'page' : undefined}
-            search={{ target: '' }}
+            aria-current={active === "user" ? "page" : undefined}
+            search={{ target: "" }}
             to="/user"
           >
             ユーザー
           </Link>
           <Link
-            aria-current={active === 'search' ? 'page' : undefined}
-            search={{ q: '', product: 'Latest', following: false }}
+            aria-current={active === "search" ? "page" : undefined}
+            search={{ q: "", product: "Latest", following: false }}
             to="/search"
           >
             検索
@@ -1663,38 +1597,38 @@ export function AppShell({
       </header>
       <section className="reader">{children}</section>
     </main>
-  )
+  );
 }
 ```
 
 Replace `src/routes/index.tsx` with:
 
 ```tsx
-import { createFileRoute, redirect } from '@tanstack/react-router'
+import { createFileRoute, redirect } from "@tanstack/react-router";
 
-export const Route = createFileRoute('/')({
+export const Route = createFileRoute("/")({
   beforeLoad: () => {
-    throw redirect({ to: '/user', search: { target: '' } })
+    throw redirect({ to: "/user", search: { target: "" } });
   },
-})
+});
 ```
 
 Create `src/routes/user.tsx`:
 
 ```tsx
-import { createFileRoute } from '@tanstack/react-router'
-import { AppShell } from '#/components/app-shell'
-import { UserForm } from '#/features/posts/components/user-form'
-import { userRouteSearchSchema } from '#/features/posts/inputs'
+import { createFileRoute } from "@tanstack/react-router";
+import { AppShell } from "#/components/app-shell";
+import { UserForm } from "#/features/posts/components/user-form";
+import { userRouteSearchSchema } from "#/features/posts/inputs";
 
-export const Route = createFileRoute('/user')({
+export const Route = createFileRoute("/user")({
   validateSearch: (search) => userRouteSearchSchema.parse(search),
   component: UserRoute,
-})
+});
 
 function UserRoute() {
-  const { target } = Route.useSearch()
-  const navigate = Route.useNavigate()
+  const { target } = Route.useSearch();
+  const navigate = Route.useNavigate();
   return (
     <AppShell active="user">
       <h1>誰の投稿を見ますか？</h1>
@@ -1702,31 +1636,29 @@ function UserRoute() {
       <UserForm
         initialTarget={target}
         key={target}
-        onSubmit={(nextTarget) =>
-          navigate({ search: { target: nextTarget } })
-        }
+        onSubmit={(nextTarget) => navigate({ search: { target: nextTarget } })}
       />
     </AppShell>
-  )
+  );
 }
 ```
 
 Create `src/routes/search.tsx`:
 
 ```tsx
-import { createFileRoute } from '@tanstack/react-router'
-import { AppShell } from '#/components/app-shell'
-import { SearchForm } from '#/features/posts/components/search-form'
-import { postSearchRouteSchema } from '#/features/posts/inputs'
+import { createFileRoute } from "@tanstack/react-router";
+import { AppShell } from "#/components/app-shell";
+import { SearchForm } from "#/features/posts/components/search-form";
+import { postSearchRouteSchema } from "#/features/posts/inputs";
 
-export const Route = createFileRoute('/search')({
+export const Route = createFileRoute("/search")({
   validateSearch: (search) => postSearchRouteSchema.parse(search),
   component: SearchRoute,
-})
+});
 
 function SearchRoute() {
-  const values = Route.useSearch()
-  const navigate = Route.useNavigate()
+  const values = Route.useSearch();
+  const navigate = Route.useNavigate();
   return (
     <AppShell active="search">
       <h1>何を確認しますか？</h1>
@@ -1739,7 +1671,7 @@ function SearchRoute() {
         onSubmit={(search) => navigate({ search })}
       />
     </AppShell>
-  )
+  );
 }
 ```
 
@@ -1767,11 +1699,13 @@ git commit -m "feat: add intentional reader routes"
 ### Task 6: Render rich read-only post cards
 
 **Files:**
+
 - Create: `src/features/posts/components/post-card.tsx`
 - Create: `src/features/posts/components/post-media.tsx`
 - Create: `src/features/posts/components/post-card.test.tsx`
 
 **Interfaces:**
+
 - Consumes: `Post` from Task 3.
 - Produces: `PostCard({ post, quoted? })` with text, media, quote, article, counts, and an explicit original link.
 
@@ -1780,63 +1714,63 @@ git commit -m "feat: add intentional reader routes"
 Create `src/features/posts/components/post-card.test.tsx`:
 
 ```tsx
-import { render, screen } from '@testing-library/react'
-import { describe, expect, it } from 'vitest'
-import { PostCard } from './post-card'
-import type { Post } from '../types'
+import { render, screen } from "@testing-library/react";
+import { describe, expect, it } from "vitest";
+import { PostCard } from "./post-card";
+import type { Post } from "../types";
 
 const richPost: Post = {
-  id: '123',
-  text: '詳細 https://example.com/article',
+  id: "123",
+  text: "詳細 https://example.com/article",
   author: {
-    username: 'yuta',
-    name: 'Yuta',
-    profileImageUrl: 'https://pbs.twimg.com/avatar.jpg',
+    username: "yuta",
+    name: "Yuta",
+    profileImageUrl: "https://pbs.twimg.com/avatar.jpg",
   },
-  createdAt: '2026-07-13T00:00:00.000Z',
+  createdAt: "2026-07-13T00:00:00.000Z",
   replyCount: 3,
   retweetCount: 4,
   likeCount: 5,
   media: [
     {
-      type: 'photo',
-      url: 'https://pbs.twimg.com/photo.jpg',
+      type: "photo",
+      url: "https://pbs.twimg.com/photo.jpg",
       width: 1200,
       height: 800,
     },
   ],
-  article: { title: 'Article title', previewText: 'Preview' },
+  article: { title: "Article title", previewText: "Preview" },
   quotedTweet: {
-    id: '122',
-    text: 'quoted',
-    author: { username: 'other', name: 'Other' },
+    id: "122",
+    text: "quoted",
+    author: { username: "other", name: "Other" },
   },
-}
+};
 
-describe('PostCard', () => {
-  it('renders rich content without mutation controls', () => {
-    render(<PostCard post={richPost} />)
+describe("PostCard", () => {
+  it("renders rich content without mutation controls", () => {
+    render(<PostCard post={richPost} />);
 
-    expect(screen.getByText('Yuta')).toBeInTheDocument()
-    expect(screen.getByRole('img', { name: '投稿画像' })).toBeInTheDocument()
-    expect(screen.getByText('Article title')).toBeInTheDocument()
-    expect(screen.getByText('quoted')).toBeInTheDocument()
-    expect(screen.queryByRole('button', { name: /いいね/ })).not.toBeInTheDocument()
-  })
+    expect(screen.getByText("Yuta")).toBeInTheDocument();
+    expect(screen.getByRole("img", { name: "投稿画像" })).toBeInTheDocument();
+    expect(screen.getByText("Article title")).toBeInTheDocument();
+    expect(screen.getByText("quoted")).toBeInTheDocument();
+    expect(screen.queryByRole("button", { name: /いいね/ })).not.toBeInTheDocument();
+  });
 
-  it('uses deliberate safe external links', () => {
-    render(<PostCard post={richPost} />)
+  it("uses deliberate safe external links", () => {
+    render(<PostCard post={richPost} />);
 
-    expect(screen.getByRole('link', { name: '元の投稿を開く' })).toHaveAttribute(
-      'href',
-      'https://x.com/yuta/status/123',
-    )
-    expect(screen.getByRole('link', { name: '元の投稿を開く' })).toHaveAttribute(
-      'rel',
-      'noreferrer noopener',
-    )
-  })
-})
+    expect(screen.getByRole("link", { name: "元の投稿を開く" })).toHaveAttribute(
+      "href",
+      "https://x.com/yuta/status/123",
+    );
+    expect(screen.getByRole("link", { name: "元の投稿を開く" })).toHaveAttribute(
+      "rel",
+      "noreferrer noopener",
+    );
+  });
+});
 ```
 
 Run:
@@ -1852,16 +1786,16 @@ Expected: FAIL because `PostCard` does not exist.
 Create `src/features/posts/components/post-media.tsx`:
 
 ```tsx
-import type { Post } from '../types'
+import type { Post } from "../types";
 
-type Media = NonNullable<Post['media']>[number]
+type Media = NonNullable<Post["media"]>[number];
 
 export function PostMedia({ media }: { media: Media[] }) {
-  if (media.length === 0) return null
+  if (media.length === 0) return null;
   return (
     <div className="media-grid">
       {media.map((item) =>
-        item.type === 'photo' ? (
+        item.type === "photo" ? (
           <img
             alt="投稿画像"
             className="media"
@@ -1876,7 +1810,7 @@ export function PostMedia({ media }: { media: Media[] }) {
             className="media"
             controls
             key={item.videoUrl ?? item.url}
-            loop={item.type === 'animated_gif'}
+            loop={item.type === "animated_gif"}
             poster={item.previewUrl ?? item.url}
             preload="metadata"
             src={item.videoUrl ?? item.url}
@@ -1884,7 +1818,7 @@ export function PostMedia({ media }: { media: Media[] }) {
         ),
       )}
     </div>
-  )
+  );
 }
 ```
 
@@ -1893,34 +1827,28 @@ export function PostMedia({ media }: { media: Media[] }) {
 Create `src/features/posts/components/post-card.tsx`:
 
 ```tsx
-import type { ReactNode } from 'react'
-import type { Post } from '../types'
-import { PostMedia } from './post-media'
+import type { ReactNode } from "react";
+import type { Post } from "../types";
+import { PostMedia } from "./post-media";
 
-const URL = /(https?:\/\/[^\s]+)/g
+const URL = /(https?:\/\/[^\s]+)/g;
 
 function linkedText(text: string): ReactNode[] {
   return text.split(URL).map((part, index) =>
-    part.startsWith('http://') || part.startsWith('https://') ? (
+    part.startsWith("http://") || part.startsWith("https://") ? (
       <a href={part} key={`link-${index}`} rel="noreferrer noopener" target="_blank">
         {part}
       </a>
     ) : (
       part
     ),
-  )
+  );
 }
 
-export function PostCard({
-  post,
-  quoted = false,
-}: {
-  post: Post
-  quoted?: boolean
-}) {
-  const original = `https://x.com/${post.author.username}/status/${post.id}`
+export function PostCard({ post, quoted = false }: { post: Post; quoted?: boolean }) {
+  const original = `https://x.com/${post.author.username}/status/${post.id}`;
   return (
-    <article className={quoted ? 'post quote' : 'post'}>
+    <article className={quoted ? "post quote" : "post"}>
       <header className="post-header">
         {post.author.profileImageUrl ? (
           <img
@@ -1938,10 +1866,10 @@ export function PostCard({
         </div>
         {post.createdAt ? (
           <time dateTime={post.createdAt}>
-            {new Intl.DateTimeFormat('ja-JP', {
-              dateStyle: 'medium',
-              timeStyle: 'short',
-              timeZone: 'Asia/Tokyo',
+            {new Intl.DateTimeFormat("ja-JP", {
+              dateStyle: "medium",
+              timeStyle: "short",
+              timeZone: "Asia/Tokyo",
             }).format(new Date(post.createdAt))}
           </time>
         ) : null}
@@ -1954,13 +1882,11 @@ export function PostCard({
           {post.article.previewText ? <p>{post.article.previewText}</p> : null}
         </section>
       ) : null}
-      {post.quotedTweet && !quoted ? (
-        <PostCard post={post.quotedTweet} quoted />
-      ) : null}
+      {post.quotedTweet && !quoted ? <PostCard post={post.quotedTweet} quoted /> : null}
       {!quoted ? (
         <footer className="post-footer">
           <span className="counts">
-            返信 {post.replyCount ?? 0}　再投稿 {post.retweetCount ?? 0}　いいね{' '}
+            返信 {post.replyCount ?? 0}　再投稿 {post.retweetCount ?? 0}　いいね{" "}
             {post.likeCount ?? 0}
           </span>
           <a href={original} rel="noreferrer noopener" target="_blank">
@@ -1969,7 +1895,7 @@ export function PostCard({
         </footer>
       ) : null}
     </article>
-  )
+  );
 }
 ```
 
@@ -1994,6 +1920,7 @@ git commit -m "feat: render rich read-only posts"
 ### Task 7: Add infinite cursor loading and feed states
 
 **Files:**
+
 - Create: `src/features/posts/use-post-feed.ts`
 - Create: `src/features/posts/use-post-feed.test.ts`
 - Create: `src/features/posts/components/post-feed.tsx`
@@ -2002,6 +1929,7 @@ git commit -m "feat: render rich read-only posts"
 - Modify: `src/routes/search.tsx`
 
 **Interfaces:**
+
 - Consumes: `loadUserPosts`, `searchPosts`, `PostPage`, and `flattenPostPages`.
 - Produces: `FeedRequest` and `usePostFeed(request)`.
 - Produces: `PostFeed({ request })` with loading, empty, error, retry, auto-page, and end states.
@@ -2011,47 +1939,47 @@ git commit -m "feat: render rich read-only posts"
 Create `src/features/posts/use-post-feed.test.ts`:
 
 ```ts
-import { describe, expect, it, vi } from 'vitest'
-import { createPostFeedOptions } from './use-post-feed'
+import { describe, expect, it, vi } from "vitest";
+import { createPostFeedOptions } from "./use-post-feed";
 
-describe('createPostFeedOptions', () => {
-  it('loads the next user cursor and does not retry automatically', async () => {
+describe("createPostFeedOptions", () => {
+  it("loads the next user cursor and does not retry automatically", async () => {
     const loadUser = vi.fn().mockResolvedValue({
       ok: true,
-      page: { tweets: [], nextCursor: 'next' },
-    })
+      page: { tweets: [], nextCursor: "next" },
+    });
     const options = createPostFeedOptions(
-      { kind: 'user', target: '@yuta' },
+      { kind: "user", target: "@yuta" },
       { loadUser, search: vi.fn() },
-    )
+    );
 
     const page = await options.queryFn({
-      pageParam: 'cursor',
-    } as never)
+      pageParam: "cursor",
+    } as never);
     expect(loadUser).toHaveBeenCalledWith({
-      data: { target: '@yuta', cursor: 'cursor' },
-    })
-    expect(options.getNextPageParam(page)).toBe('next')
-    expect(options.retry).toBe(false)
-  })
+      data: { target: "@yuta", cursor: "cursor" },
+    });
+    expect(options.getNextPageParam(page)).toBe("next");
+    expect(options.retry).toBe(false);
+  });
 
-  it('includes every search control in the query key', () => {
+  it("includes every search control in the query key", () => {
     const options = createPostFeedOptions(
       {
-        kind: 'search',
-        query: 'AI',
-        product: 'Top',
+        kind: "search",
+        query: "AI",
+        product: "Top",
         following: true,
       },
       { loadUser: vi.fn(), search: vi.fn() },
-    )
+    );
 
     expect(options.queryKey).toEqual([
-      'posts',
-      { kind: 'search', query: 'AI', product: 'Top', following: true },
-    ])
-  })
-})
+      "posts",
+      { kind: "search", query: "AI", product: "Top", following: true },
+    ]);
+  });
+});
 ```
 
 Run:
@@ -2067,56 +1995,51 @@ Expected: FAIL because query options do not exist.
 Create `src/features/posts/use-post-feed.ts`:
 
 ```ts
-import type { SearchProduct } from '@yuta/bird'
-import { useInfiniteQuery } from '@tanstack/react-query'
-import { useServerFn } from '@tanstack/react-start'
-import { loadUserPosts, searchPosts } from './server-functions'
-import type { LoadError, LoadResult, PostPage } from './types'
+import type { SearchProduct } from "@yuta/bird";
+import { useInfiniteQuery } from "@tanstack/react-query";
+import { useServerFn } from "@tanstack/react-start";
+import { loadUserPosts, searchPosts } from "./server-functions";
+import type { LoadError, LoadResult, PostPage } from "./types";
 
 export type FeedRequest =
-  | { kind: 'user'; target: string }
+  | { kind: "user"; target: string }
   | {
-      kind: 'search'
-      query: string
-      product: SearchProduct
-      following: boolean
-    }
+      kind: "search";
+      query: string;
+      product: SearchProduct;
+      following: boolean;
+    };
 
 type Loaders = {
-  loadUser: (options: {
-    data: { target: string; cursor?: string }
-  }) => Promise<LoadResult>
+  loadUser: (options: { data: { target: string; cursor?: string } }) => Promise<LoadResult>;
   search: (options: {
     data: {
-      query: string
-      product: SearchProduct
-      following: boolean
-      cursor?: string
-    }
-  }) => Promise<LoadResult>
-}
+      query: string;
+      product: SearchProduct;
+      following: boolean;
+      cursor?: string;
+    };
+  }) => Promise<LoadResult>;
+};
 
 export class PostLoadError extends Error {
   constructor(readonly detail: LoadError) {
-    super(detail.message)
+    super(detail.message);
   }
 }
 
 const unwrap = (result: LoadResult): PostPage => {
-  if (!result.ok) throw new PostLoadError(result.error)
-  return result.page
-}
+  if (!result.ok) throw new PostLoadError(result.error);
+  return result.page;
+};
 
-export function createPostFeedOptions(
-  request: FeedRequest,
-  loaders: Loaders,
-) {
+export function createPostFeedOptions(request: FeedRequest, loaders: Loaders) {
   return {
-    queryKey: ['posts', request] as const,
+    queryKey: ["posts", request] as const,
     initialPageParam: undefined as string | undefined,
     retry: false as const,
     queryFn: async ({ pageParam }: { pageParam: string | undefined }) =>
-      request.kind === 'user'
+      request.kind === "user"
         ? unwrap(
             await loaders.loadUser({
               data: { target: request.target, cursor: pageParam },
@@ -2133,21 +2056,21 @@ export function createPostFeedOptions(
             }),
           ),
     getNextPageParam: (page: PostPage) => page.nextCursor,
-  }
+  };
 }
 
 export function usePostFeed(request: FeedRequest | undefined) {
-  const loadUser = useServerFn(loadUserPosts)
-  const search = useServerFn(searchPosts)
+  const loadUser = useServerFn(loadUserPosts);
+  const search = useServerFn(searchPosts);
   const disabled = {
-    kind: 'user',
-    target: '',
-  } satisfies FeedRequest
+    kind: "user",
+    target: "",
+  } satisfies FeedRequest;
 
   return useInfiniteQuery({
     ...createPostFeedOptions(request ?? disabled, { loadUser, search }),
     enabled: request !== undefined,
-  })
+  });
 }
 ```
 
@@ -2166,15 +2089,15 @@ Expected: query key, cursor forwarding, and retry behavior pass.
 Create `src/features/posts/components/post-feed.test.tsx` using a module mock:
 
 ```tsx
-import { fireEvent, render, screen } from '@testing-library/react'
-import { beforeEach, describe, expect, it, vi } from 'vitest'
-import { PostFeed } from './post-feed'
-import { usePostFeed } from '../use-post-feed'
+import { fireEvent, render, screen } from "@testing-library/react";
+import { beforeEach, describe, expect, it, vi } from "vitest";
+import { PostFeed } from "./post-feed";
+import { usePostFeed } from "../use-post-feed";
 
-vi.mock('../use-post-feed', async (importOriginal) => {
-  const original = await importOriginal<typeof import('../use-post-feed')>()
-  return { ...original, usePostFeed: vi.fn() }
-})
+vi.mock("../use-post-feed", async (importOriginal) => {
+  const original = await importOriginal<typeof import("../use-post-feed")>();
+  return { ...original, usePostFeed: vi.fn() };
+});
 
 const result = {
   data: undefined,
@@ -2186,60 +2109,58 @@ const result = {
   isFetchingNextPage: false,
   isPending: false,
   refetch: vi.fn(),
-}
+};
 
-describe('PostFeed', () => {
-  beforeEach(() => vi.mocked(usePostFeed).mockReturnValue(result as never))
+describe("PostFeed", () => {
+  beforeEach(() => vi.mocked(usePostFeed).mockReturnValue(result as never));
 
-  it('renders no posts before a deliberate request', () => {
-    render(<PostFeed request={undefined} />)
-    expect(screen.queryByRole('article')).not.toBeInTheDocument()
-  })
+  it("renders no posts before a deliberate request", () => {
+    render(<PostFeed request={undefined} />);
+    expect(screen.queryByRole("article")).not.toBeInTheDocument();
+  });
 
-  it('renders a deduplicated page and a quiet end', () => {
+  it("renders a deduplicated page and a quiet end", () => {
     vi.mocked(usePostFeed).mockReturnValue({
       ...result,
       data: {
         pages: [
           {
             tweets: [
-              { id: '1', text: 'first', author: { username: 'a', name: 'A' } },
-              { id: '1', text: 'first', author: { username: 'a', name: 'A' } },
+              { id: "1", text: "first", author: { username: "a", name: "A" } },
+              { id: "1", text: "first", author: { username: "a", name: "A" } },
             ],
           },
         ],
       },
-    } as never)
+    } as never);
 
-    render(<PostFeed request={{ kind: 'user', target: 'a' }} />)
-    expect(screen.getAllByRole('article')).toHaveLength(1)
-    expect(screen.getByText('これ以上の投稿はありません。')).toBeInTheDocument()
-  })
+    render(<PostFeed request={{ kind: "user", target: "a" }} />);
+    expect(screen.getAllByRole("article")).toHaveLength(1);
+    expect(screen.getByText("これ以上の投稿はありません。")).toBeInTheDocument();
+  });
 
-  it('keeps loaded posts while retrying a later page', () => {
-    const fetchNextPage = vi.fn()
+  it("keeps loaded posts while retrying a later page", () => {
+    const fetchNextPage = vi.fn();
     vi.mocked(usePostFeed).mockReturnValue({
       ...result,
       data: {
         pages: [
           {
-            tweets: [
-              { id: '1', text: 'kept', author: { username: 'a', name: 'A' } },
-            ],
+            tweets: [{ id: "1", text: "kept", author: { username: "a", name: "A" } }],
           },
         ],
       },
       fetchNextPage,
       hasNextPage: true,
       isFetchNextPageError: true,
-    } as never)
+    } as never);
 
-    render(<PostFeed request={{ kind: 'user', target: 'a' }} />)
-    expect(screen.getByText('kept')).toBeInTheDocument()
-    fireEvent.click(screen.getByRole('button', { name: '再試行' }))
-    expect(fetchNextPage).toHaveBeenCalledOnce()
-  })
-})
+    render(<PostFeed request={{ kind: "user", target: "a" }} />);
+    expect(screen.getByText("kept")).toBeInTheDocument();
+    fireEvent.click(screen.getByRole("button", { name: "再試行" }));
+    expect(fetchNextPage).toHaveBeenCalledOnce();
+  });
+});
 ```
 
 Run:
@@ -2255,43 +2176,39 @@ Expected: FAIL because `PostFeed` does not exist.
 Create `src/features/posts/components/post-feed.tsx`:
 
 ```tsx
-import { useEffect, useRef } from 'react'
-import { flattenPostPages } from '../page'
-import {
-  PostLoadError,
-  type FeedRequest,
-  usePostFeed,
-} from '../use-post-feed'
-import { PostCard } from './post-card'
+import { useEffect, useRef } from "react";
+import { flattenPostPages } from "../page";
+import { PostLoadError, type FeedRequest, usePostFeed } from "../use-post-feed";
+import { PostCard } from "./post-card";
 
 export function PostFeed({ request }: { request: FeedRequest | undefined }) {
-  const query = usePostFeed(request)
-  const sentinel = useRef<HTMLDivElement>(null)
-  const posts = query.data ? flattenPostPages(query.data.pages) : []
+  const query = usePostFeed(request);
+  const sentinel = useRef<HTMLDivElement>(null);
+  const posts = query.data ? flattenPostPages(query.data.pages) : [];
 
   useEffect(() => {
-    if (!sentinel.current || !query.hasNextPage) return
+    if (!sentinel.current || !query.hasNextPage) return;
     const observer = new IntersectionObserver(
       ([entry]) => {
         if (entry?.isIntersecting && !query.isFetchingNextPage) {
-          void query.fetchNextPage()
+          void query.fetchNextPage();
         }
       },
-      { rootMargin: '600px 0px' },
-    )
-    observer.observe(sentinel.current)
-    return () => observer.disconnect()
-  }, [query.fetchNextPage, query.hasNextPage, query.isFetchingNextPage])
+      { rootMargin: "600px 0px" },
+    );
+    observer.observe(sentinel.current);
+    return () => observer.disconnect();
+  }, [query.fetchNextPage, query.hasNextPage, query.isFetchingNextPage]);
 
-  if (!request) return null
+  if (!request) return null;
   if (query.isPending) {
-    return <p className="state">投稿を取得しています…</p>
+    return <p className="state">投稿を取得しています…</p>;
   }
   if (query.isError && posts.length === 0) {
     const error =
       query.error instanceof PostLoadError
         ? query.error.detail
-        : { message: '投稿を取得できませんでした。', retryable: true }
+        : { message: "投稿を取得できませんでした。", retryable: true };
     return (
       <div className="state" role="alert">
         <p>{error.message}</p>
@@ -2301,10 +2218,10 @@ export function PostFeed({ request }: { request: FeedRequest | undefined }) {
           </button>
         ) : null}
       </div>
-    )
+    );
   }
   if (posts.length === 0) {
-    return <p className="state">条件に一致する投稿はありません。</p>
+    return <p className="state">条件に一致する投稿はありません。</p>;
   }
 
   return (
@@ -2326,11 +2243,9 @@ export function PostFeed({ request }: { request: FeedRequest | undefined }) {
           </button>
         </div>
       ) : null}
-      {!query.hasNextPage ? (
-        <p className="state">これ以上の投稿はありません。</p>
-      ) : null}
+      {!query.hasNextPage ? <p className="state">これ以上の投稿はありません。</p> : null}
     </section>
-  )
+  );
 }
 ```
 
@@ -2339,9 +2254,7 @@ export function PostFeed({ request }: { request: FeedRequest | undefined }) {
 In `src/routes/user.tsx`, import `PostFeed` and render after the form:
 
 ```tsx
-<PostFeed
-  request={target ? { kind: 'user', target } : undefined}
-/>
+<PostFeed request={target ? { kind: "user", target } : undefined} />
 ```
 
 In `src/routes/search.tsx`, render:
@@ -2351,7 +2264,7 @@ In `src/routes/search.tsx`, render:
   request={
     values.q
       ? {
-          kind: 'search',
+          kind: "search",
           query: values.q,
           product: values.product,
           following: values.following,
@@ -2385,11 +2298,13 @@ git commit -m "feat: load post cursors infinitely"
 ### Task 8: Apply the Mist Instrument responsive interface
 
 **Files:**
+
 - Modify: `src/styles.css`
 - Modify: `src/features/posts/components/forms.test.tsx`
 - Modify: `src/features/posts/components/post-card.test.tsx`
 
 **Interfaces:**
+
 - Consumes: existing semantic class names and controls.
 - Produces: responsive Mist Instrument layout, visible keyboard focus, stable media geometry, and reduced-motion behavior.
 
@@ -2398,7 +2313,7 @@ git commit -m "feat: load post cursors infinitely"
 Extend `forms.test.tsx` with:
 
 ```tsx
-it('uses a labelled grouping for ranking controls', () => {
+it("uses a labelled grouping for ranking controls", () => {
   render(
     <SearchForm
       initialQuery=""
@@ -2406,22 +2321,20 @@ it('uses a labelled grouping for ranking controls', () => {
       initialFollowing={false}
       onSubmit={vi.fn()}
     />,
-  )
+  );
 
-  expect(
-    screen.getByRole('group', { name: '並び順' }),
-  ).toBeInTheDocument()
-})
+  expect(screen.getByRole("group", { name: "並び順" })).toBeInTheDocument();
+});
 ```
 
 Extend `post-card.test.tsx` with:
 
 ```tsx
-it('does not turn the author into a discovery link', () => {
-  render(<PostCard post={richPost} />)
+it("does not turn the author into a discovery link", () => {
+  render(<PostCard post={richPost} />);
 
-  expect(screen.queryByRole('link', { name: 'Yuta' })).not.toBeInTheDocument()
-})
+  expect(screen.queryByRole("link", { name: "Yuta" })).not.toBeInTheDocument();
+});
 ```
 
 Run:
@@ -2759,12 +2672,7 @@ a {
   bottom: 0;
   left: 0;
   height: 3px;
-  background: linear-gradient(
-    90deg,
-    transparent 0%,
-    var(--accent) 45%,
-    transparent 100%
-  );
+  background: linear-gradient(90deg, transparent 0%, var(--accent) 45%, transparent 100%);
   content: "";
   animation: rail 1.1s ease-in-out infinite;
 }
@@ -2851,6 +2759,7 @@ git commit -m "feat: apply mist instrument interface"
 ### Task 9: Verify browser flows, live relay reads, and documentation
 
 **Files:**
+
 - Create: `playwright.config.ts`
 - Create: `tests/e2e/mock-relay.mjs`
 - Create: `tests/e2e/reader.spec.ts`
@@ -2861,6 +2770,7 @@ git commit -m "feat: apply mist instrument interface"
 - Verify: `docs/superpowers/specs/2026-07-13-twitter-lite-design.md`
 
 **Interfaces:**
+
 - Consumes: the complete app and published Bird package.
 - Produces: deterministic desktop/mobile browser coverage and an opt-in read-only live smoke test.
 
@@ -2869,25 +2779,25 @@ git commit -m "feat: apply mist instrument interface"
 Create `playwright.config.ts`:
 
 ```ts
-import { defineConfig, devices } from '@playwright/test'
+import { defineConfig, devices } from "@playwright/test";
 
-const appPort = 4173
-const relayPort = 6911
-const chromiumExecutable = process.env.PLAYWRIGHT_CHROMIUM_EXECUTABLE
+const appPort = 4173;
+const relayPort = 6911;
+const chromiumExecutable = process.env.PLAYWRIGHT_CHROMIUM_EXECUTABLE;
 
 if (!chromiumExecutable) {
-  throw new Error('Run E2E tests through `nix develop` to provide Chromium.')
+  throw new Error("Run E2E tests through `nix develop` to provide Chromium.");
 }
 
 export default defineConfig({
-  testDir: './tests/e2e',
+  testDir: "./tests/e2e",
   fullyParallel: false,
   workers: 1,
   use: {
     baseURL: `http://127.0.0.1:${appPort}`,
     launchOptions: { executablePath: chromiumExecutable },
-    screenshot: 'only-on-failure',
-    trace: 'retain-on-failure',
+    screenshot: "only-on-failure",
+    trace: "retain-on-failure",
   },
   webServer: [
     {
@@ -2904,10 +2814,10 @@ export default defineConfig({
     },
   ],
   projects: [
-    { name: 'desktop', use: { ...devices['Desktop Chrome'] } },
-    { name: 'mobile', use: { ...devices['Pixel 7'] } },
+    { name: "desktop", use: { ...devices["Desktop Chrome"] } },
+    { name: "mobile", use: { ...devices["Pixel 7"] } },
   ],
-})
+});
 ```
 
 - [ ] **Step 2: Create a deterministic read-only relay**
@@ -2917,7 +2827,7 @@ part of the mock: the executable implementation must also enforce the request
 contract listed after it.
 
 ```js
-const tweet = (id, text, username = 'yuta') => ({
+const tweet = (id, text, username = "yuta") => ({
   entryId: `tweet-${id}`,
   content: {
     itemContent: {
@@ -2926,7 +2836,7 @@ const tweet = (id, text, username = 'yuta') => ({
           rest_id: id,
           legacy: {
             full_text: text,
-            created_at: 'Mon Jul 13 00:00:00 +0000 2026',
+            created_at: "Mon Jul 13 00:00:00 +0000 2026",
             reply_count: 1,
             retweet_count: 2,
             favorite_count: 3,
@@ -2937,7 +2847,7 @@ const tweet = (id, text, username = 'yuta') => ({
               result: {
                 legacy: {
                   screen_name: username,
-                  name: 'Yuta',
+                  name: "Yuta",
                 },
               },
             },
@@ -2946,12 +2856,12 @@ const tweet = (id, text, username = 'yuta') => ({
       },
     },
   },
-})
+});
 
 const cursor = (value) => ({
-  entryId: 'cursor-bottom',
-  content: { cursorType: 'Bottom', value },
-})
+  entryId: "cursor-bottom",
+  content: { cursorType: "Bottom", value },
+});
 ```
 
 Route by the operation-name suffix, never the query ID. Require
@@ -2973,60 +2883,58 @@ omits the cursor.
 Create `tests/e2e/reader.spec.ts`:
 
 ```ts
-import { expect, test } from '@playwright/test'
+import { expect, test } from "@playwright/test";
 
-let consoleErrors: string[]
-let pageErrors: string[]
+let consoleErrors: string[];
+let pageErrors: string[];
 
 test.beforeEach(async ({ page }) => {
-  consoleErrors = []
-  pageErrors = []
-  page.on('console', (message) => {
-    if (message.type() === 'error') consoleErrors.push(message.text())
-  })
-  page.on('pageerror', (error) => pageErrors.push(error.message))
-})
+  consoleErrors = [];
+  pageErrors = [];
+  page.on("console", (message) => {
+    if (message.type() === "error") consoleErrors.push(message.text());
+  });
+  page.on("pageerror", (error) => pageErrors.push(error.message));
+});
 
 test.afterEach(() => {
-  expect(consoleErrors).toEqual([])
-  expect(pageErrors).toEqual([])
-})
+  expect(consoleErrors).toEqual([]);
+  expect(pageErrors).toEqual([]);
+});
 
-test('requires intent and infinitely loads a user timeline', async ({ page }) => {
-  await page.goto('/')
-  await expect(page).toHaveURL(/\/user\?target=/)
-  await expect(page.locator('article')).toHaveCount(0)
+test("requires intent and infinitely loads a user timeline", async ({ page }) => {
+  await page.goto("/");
+  await expect(page).toHaveURL(/\/user\?target=/);
+  await expect(page.locator("article")).toHaveCount(0);
 
-  await page.getByLabel('ハンドルまたはプロフィール URL').fill('@yuta')
-  await page.getByRole('button', { name: '表示' }).click()
+  await page.getByLabel("ハンドルまたはプロフィール URL").fill("@yuta");
+  await page.getByRole("button", { name: "表示" }).click();
 
-  await expect(page.getByText('user page 1')).toBeVisible()
-  await expect(page.getByText('user page 2')).toBeVisible()
-  await expect(page.getByText('これ以上の投稿はありません。')).toBeVisible()
-  await expect(page).toHaveScreenshot('mist-user.png', {
-    animations: 'disabled',
+  await expect(page.getByText("user page 1")).toBeVisible();
+  await expect(page.getByText("user page 2")).toBeVisible();
+  await expect(page.getByText("これ以上の投稿はありません。")).toBeVisible();
+  await expect(page).toHaveScreenshot("mist-user.png", {
+    animations: "disabled",
     fullPage: true,
-  })
-})
+  });
+});
 
-test('searches Top posts from followed accounts', async ({ page }) => {
-  await page.goto('/search?q=&product=Latest&following=false')
-  await page.getByLabel('検索語').fill('AI lang:ja')
-  await page.getByLabel('人気順').check()
-  await page.getByLabel('フォロー中のみ').check()
-  await page.getByRole('button', { name: '検索' }).click()
+test("searches Top posts from followed accounts", async ({ page }) => {
+  await page.goto("/search?q=&product=Latest&following=false");
+  await page.getByLabel("検索語").fill("AI lang:ja");
+  await page.getByLabel("人気順").check();
+  await page.getByLabel("フォロー中のみ").check();
+  await page.getByRole("button", { name: "検索" }).click();
 
-  await expect(page.getByText('Top · follows page 1')).toBeVisible()
-  await expect(page.getByText('Top · follows page 2')).toBeVisible()
-})
+  await expect(page.getByText("Top · follows page 1")).toBeVisible();
+  await expect(page.getByText("Top · follows page 2")).toBeVisible();
+});
 
-test('keeps discovery surfaces absent', async ({ page }) => {
-  await page.goto('/user?target=')
-  await expect(
-    page.getByRole('link', { name: /おすすめ|トレンド|通知/ }),
-  ).toHaveCount(0)
-  await expect(page.getByRole('button', { name: /いいね|再投稿|フォロー/ })).toHaveCount(0)
-})
+test("keeps discovery surfaces absent", async ({ page }) => {
+  await page.goto("/user?target=");
+  await expect(page.getByRole("link", { name: /おすすめ|トレンド|通知/ })).toHaveCount(0);
+  await expect(page.getByRole("button", { name: /いいね|再投稿|フォロー/ })).toHaveCount(0);
+});
 ```
 
 Wait for the cold SSR page to hydrate before manipulating controlled fields.
@@ -3063,32 +2971,25 @@ Create `tests/live/relay.test.ts`:
 ```ts
 // @vitest-environment node
 
-import { TwitterClient } from '@yuta/bird'
-import { describe, expect, it } from 'vitest'
+import { TwitterClient } from "@yuta/bird";
+import { describe, expect, it } from "vitest";
 
-describe.runIf(process.env.TWITTER_LITE_LIVE === '1')(
-  'configured relay',
-  () => {
-    it(
-      'performs one read-only Top search',
-      async () => {
-        const relayBaseUrl = process.env.TWITTER_RELAY_BASE_URL
-        if (!relayBaseUrl) {
-          throw new Error('TWITTER_RELAY_BASE_URL is required for the live test')
-        }
-        const client = new TwitterClient({
-          relayBaseUrl,
-          profileName: process.env.BIRD_PROFILE_NAME,
-          timeoutMs: 20_000,
-        })
-        const query = process.env.TWITTER_LITE_LIVE_QUERY ?? 'OpenAI'
-        const result = await client.search(query, 1, { product: 'Top' })
-        expect(result.success).toBe(true)
-      },
-      30_000,
-    )
-  },
-)
+describe.runIf(process.env.TWITTER_LITE_LIVE === "1")("configured relay", () => {
+  it("performs one read-only Top search", async () => {
+    const relayBaseUrl = process.env.TWITTER_RELAY_BASE_URL;
+    if (!relayBaseUrl) {
+      throw new Error("TWITTER_RELAY_BASE_URL is required for the live test");
+    }
+    const client = new TwitterClient({
+      relayBaseUrl,
+      profileName: process.env.BIRD_PROFILE_NAME,
+      timeoutMs: 20_000,
+    });
+    const query = process.env.TWITTER_LITE_LIVE_QUERY ?? "OpenAI";
+    const result = await client.search(query, 1, { product: "Top" });
+    expect(result.success).toBe(true);
+  }, 30_000);
+});
 ```
 
 Run:

@@ -1,9 +1,206 @@
 {
   "$schema": "./node_modules/oxlint/configuration_schema.json",
-  "categories": { "correctness": "off" },
+  "categories": {
+    "correctness": "error"
+  },
+  "options": {
+    "typeAware": true,
+    "typeCheck": true
+  },
+  "plugins": [
+    "eslint",
+    "typescript",
+    "unicorn",
+    "oxc",
+    "import",
+    "node",
+    "promise",
+    "react",
+    "react-perf",
+    "jsx-a11y"
+  ],
   "jsPlugins": ["@shadcn/lint"],
   "rules": {
-    "shadcn/no-raw-colors": "error"
+    "no-console": "error",
+    "no-unused-vars": [
+      "error",
+      {
+        "argsIgnorePattern": "^_"
+      }
+    ],
+    "typescript/consistent-type-exports": "error",
+    "typescript/consistent-type-imports": [
+      "error",
+      {
+        "disallowTypeAnnotations": false
+      }
+    ],
+    "typescript/no-non-null-assertion": "error",
+    "typescript/no-explicit-any": "error",
+    "unicorn/no-useless-spread": "error",
+    "jsx-a11y/no-autofocus": "error",
+    "jsx-a11y/no-static-element-interactions": "error",
+    "jsx-a11y/prefer-tag-over-role": "off",
+    "react/exhaustive-deps": "error",
+    "react/purity": "error",
+    "react/rules-of-hooks": "error",
+    "react/set-state-in-effect": "error",
+    "shadcn/no-arbitrary-values": [
+      "error",
+      {
+        "allow": ["layout"]
+      }
+    ],
+    "shadcn/no-inline-styles": "error",
+    "shadcn/no-raw-colors": "error",
+    "shadcn/no-restyle": [
+      "error",
+      {
+        "allow": ["layout"],
+        "contracts": [
+          {
+            "pattern": "^Sidebar$",
+            "allow": [
+              "layout",
+              "border-r",
+              "transition-none",
+              "inbox-sidebar",
+              "inbox-list-panel",
+              "support-sidebar",
+              "support-list"
+            ]
+          },
+          {
+            "pattern": "^SidebarHeader$",
+            "allow": ["layout", "py-4", "gap-4", "border-b", "p-5"]
+          },
+          {
+            "pattern": "^SidebarGroup$",
+            "allow": ["layout", "px-3"]
+          },
+          {
+            "pattern": "^SidebarFooter$",
+            "allow": ["layout", "px-3", "pb-4"]
+          },
+          {
+            "pattern": "^SidebarMenuButton$",
+            "allow": ["layout", "p-0"]
+          },
+          {
+            "pattern": "^Label$",
+            "allow": ["layout", "deck-checkbox"]
+          },
+          {
+            "pattern": "^Textarea$",
+            "allow": ["layout", "text-sm", "leading-7", "journal-summary"]
+          },
+          {
+            "pattern": "^MessageScroller$",
+            "allow": ["layout", "research-conversation"]
+          },
+          {
+            "pattern": "^MessageScrollerContent$",
+            "allow": ["layout", "gap-5", "p-4"]
+          },
+          {
+            "pattern": "^Marker$",
+            "allow": ["layout", "research-tool-message"]
+          },
+          {
+            "pattern": "^Message$",
+            "allow": ["layout", "research-message"]
+          },
+          {
+            "pattern": "^Collapsible$",
+            "allow": ["layout", "research-account-picker"]
+          },
+          {
+            "pattern": "^SidebarProvider$",
+            "allow": [
+              "layout",
+              "workspace",
+              "home-workspace",
+              "inbox-workspace",
+              "vital-workspace",
+              "support-workspace",
+              "journal-workspace"
+            ]
+          },
+          {
+            "pattern": "^Button$",
+            "allow": ["layout", "auth-submit", "inbox-back", "support-back"]
+          },
+          {
+            "pattern": "^SidebarInset$",
+            "allow": ["layout", "home-main", "inbox-reader", "support-main", "journal-main"]
+          },
+          {
+            "pattern": "^Input$",
+            "allow": ["layout", "pl-9"]
+          },
+          {
+            "pattern": "^SidebarContent$",
+            "allow": ["layout", "gap-0"]
+          },
+          {
+            "pattern": "^Badge$",
+            "allow": ["layout", "deck-source-label"]
+          }
+        ]
+      }
+    ],
+    "shadcn/no-unknown-classes": "error",
+    "shadcn/require-static-classes": "error"
   },
-  "ignorePatterns": ["src/routeTree.gen.ts"]
+  "overrides": [
+    {
+      "files": ["scripts/**"],
+      "rules": {
+        "no-console": "off"
+      }
+    },
+    {
+      "files": ["src/components/ui/**"],
+      "rules": {
+        "shadcn/no-arbitrary-values": "off",
+        "shadcn/no-restyle": "off",
+        "shadcn/require-static-classes": "off"
+      }
+    },
+    {
+      "files": ["src/**/*.{test,spec}.{ts,tsx}", "tests/**/*.{ts,tsx}"],
+      "plugins": ["vitest"],
+      "rules": {
+        "typescript/unbound-method": "error",
+        "vitest/expect-expect": "error",
+        "vitest/no-conditional-expect": "error",
+        "vitest/no-standalone-expect": "error",
+        "vitest/require-mock-type-parameters": "error"
+      }
+    },
+    {
+      "files": ["e2e/**/*.{ts,tsx}"],
+      "rules": {
+        "react/rules-of-hooks": "off"
+      }
+    }
+  ],
+  "ignorePatterns": [
+    "**/.pnpm-store/**",
+    "**/.direnv/**",
+    "**/node_modules/**",
+    "**/dist/**",
+    "**/build/**",
+    "**/coverage/**",
+    "**/playwright-report/**",
+    "**/test-results/**",
+    "**/.vercel/**",
+    "**/drizzle/**",
+    "**/*.tsbuildinfo",
+    ".output/**",
+    ".tanstack/**",
+    "src/routeTree.gen.ts",
+    "e2e/generated/**",
+    "src/features/storage/migrations.generated.ts"
+  ]
 }

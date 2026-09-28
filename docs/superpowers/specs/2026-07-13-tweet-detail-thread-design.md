@@ -89,14 +89,14 @@ The server input has two valid states:
 
 ```ts
 type InitialThreadInput = {
-  tweetId: string
-}
+  tweetId: string;
+};
 
 type ContinuedThreadInput = {
-  tweetId: string
-  conversationId: string
-  cursor: string
-}
+  tweetId: string;
+  conversationId: string;
+  cursor: string;
+};
 ```
 
 All IDs must be decimal strings. Cursor values are opaque non-empty strings.
@@ -106,11 +106,11 @@ The successful page shape is:
 
 ```ts
 type ThreadPage = {
-  tweets: Post[]
-  focalPost?: Post
-  conversationId: string
-  nextCursor?: string
-}
+  tweets: Post[];
+  focalPost?: Post;
+  conversationId: string;
+  nextCursor?: string;
+};
 ```
 
 `focalPost` is present only on the initial page. All returned posts pass through
@@ -137,7 +137,7 @@ cannot rediscover the conversation root if the cursor page omits that reply.
 
 1. Validate the supplied `tweetId`, `conversationId`, and cursor.
 2. Call `getThreadPaged(conversationId, {
-   cursor, maxPages: 1, pageDelayMs: 0 })` once.
+cursor, maxPages: 1, pageDelayMs: 0 })` once.
 3. Return the sanitized tweets with the same conversation ID and new cursor.
 
 The original `tweetId` remains part of the query identity and validation
@@ -149,7 +149,10 @@ continuation requests.
 Extend the existing feed request union with:
 
 ```ts
-{ kind: 'thread'; tweetId: string }
+{
+  kind: "thread";
+  tweetId: string;
+}
 ```
 
 The thread query key includes the focal tweet ID. Its initial page parameter is

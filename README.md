@@ -10,14 +10,14 @@ original language.
 
 ## Workspaces and current status
 
-| Workspace | Route | Current implementation |
-| --- | --- | --- |
-| Home | `/` | State-derived daily brief, flexible tasks and routines, and natural-language action proposals. Local prototype. |
-| Messages | `/support` | Sample conversations, editable replies, scheduling previews, and deferral. Sending is simulated. |
-| Journal | `/journal` | Notes, resume points, medication and weight entries, append-only corrections, and summary previews. Local prototype. |
-| Reader | `/inbox` | Searchable sample articles and a responsive article reader. Recommendation from activity history is not connected yet. |
-| Vitals | `/vitals` | Body and Environment dashboards with sample readings, charts, and simulated controls. No health or device connection. |
-| Research | `/deck` | Twitter and Mastodon columns, connected accounts, persistent decks, and optional Codex research chat. |
+| Workspace | Route      | Current implementation                                                                                                 |
+| --------- | ---------- | ---------------------------------------------------------------------------------------------------------------------- |
+| Home      | `/`        | State-derived daily brief, flexible tasks and routines, and natural-language action proposals. Local prototype.        |
+| Messages  | `/support` | Sample conversations, editable replies, scheduling previews, and deferral. Sending is simulated.                       |
+| Journal   | `/journal` | Notes, resume points, medication and weight entries, append-only corrections, and summary previews. Local prototype.   |
+| Reader    | `/inbox`   | Searchable sample articles and a responsive article reader. Recommendation from activity history is not connected yet. |
+| Vitals    | `/vitals`  | Body and Environment dashboards with sample readings, charts, and simulated controls. No health or device connection.  |
+| Research  | `/deck`    | Twitter and Mastodon columns, connected accounts, persistent decks, and optional Codex research chat.                  |
 
 Home, Messages, and Journal share in-memory state across navigation; reloading
 resets it. The home input uses a deterministic English/Japanese interpreter to
@@ -26,6 +26,21 @@ connections, and chat history use server-side persistence.
 
 See [execution support](docs/execution-support.md) and the
 [vitals preview](docs/vitals-preview.md) for prototype scope.
+
+## URL state
+
+Reader search and article selection, Messages views and conversations, Home
+previews, account management, Journal review/correction views, and Vitals
+navigation are represented in search parameters. Research uses deck, run, and
+citation IDs. Reloading or browser Back/Forward restores the view while its
+underlying data remains available. Login preserves the requested workspace URL.
+
+Explicit selections add browser history; search input replaces it after a
+300 ms debounce using TanStack Pacer. Navigation cancels pending search updates,
+and IME composition waits until confirmed. URL navigation never submits prompts,
+sends messages, or repeats device actions. Drafts, secrets, results, and task
+contents remain outside the URL. Unsaved mock records and manual temporary
+decks still disappear on reload; a URL does not persist their contents.
 
 ## Direction: personal context and execution
 
@@ -52,7 +67,7 @@ or change direction.
 - Native X search syntax, Top/Latest ranking, and optional `filter:follows`
 - List discovery for the account selected in the column editor
 - Column editing, ordering, deletion/undo, refresh, and cursor pagination
-- SQLite-backed shared decks, revision conflicts, and device-local selection
+- SQLite-backed shared decks, revision conflicts, and URL-based selection
 - Temporary views for exploration, with explicit saving
 - Server-only encrypted Mastodon credentials and configurable Tailscale owner access
 - Read-only post cards with source links, text, media, and quotes
@@ -106,7 +121,8 @@ nix develop -c pnpm dev
 nix develop -c pnpm dev:tailscale
 nix develop -c pnpm generate:e2e-openapi
 nix develop -c pnpm lint
-nix develop -c pnpm lint:ui
+nix develop -c pnpm format
+nix develop -c pnpm format:check
 nix develop -c pnpm typecheck
 nix develop -c pnpm knip
 nix develop -c pnpm test
@@ -116,26 +132,36 @@ nix develop -c pnpm build
 nix develop -c pnpm start
 nix develop -c pnpm account:setup
 nix develop -c pnpm db:generate
-nix develop -c pnpm codex:serve
 ```
 
 ## Home Codex research prototype
 
-Run `codex login` as the host user, then keep `pnpm codex:serve` running separately
-from the web server. It starts a resident app-server at `ws://127.0.0.1:4500`
-using that user's existing Codex login. The launcher passes a small environment
-allowlist, without the app's database, relay or SNS secret settings. Configured
-MCP servers are disabled for this process without changing the user's settings.
-The prototype was developed against Codex CLI 0.156.1; its WebSocket and dynamic
-tool APIs are experimental.
+Run `codex login` as the host user. The backend uses Vercel AI SDK 7 and
+`ai-sdk-provider-codex-cli` 2.3 to manage a local Codex app-server over stdio.
+A separate WebSocket service is no longer required. Use Codex CLI 0.156.0 or
+newer; set an explicit executable path if it is not on PATH.
+The child receives an environment allowlist; inherited MCP servers, hooks,
+web search and multi-agent execution are disabled for these research turns.
+The user's Codex settings are not changed.
 
-Configure the web app with these values in `.env.local` (absolute report path):
+Configure the web app in `.env.local`:
 
 ```dotenv
-TWITTER_LITE_CODEX_URL=ws://127.0.0.1:4500
 TWITTER_LITE_CODEX_MODEL=gpt-6-astra
 TWITTER_LITE_REPORT_ROOT=/absolute/path/to/twitter-lite/.data/research
+# Optional:
+# TWITTER_LITE_CODEX_PATH=/absolute/path/to/codex
 ```
+
+This provider does not register AI SDK `tools` as Codex dynamic tools.
+The existing validated, account-scoped research functions are exposed through
+its in-process `createSdkMcpServer` bridge instead. Streaming uses `streamText`
+and `smoothStream` with 15 ms pacing and Japanese-aware chunking:
+`/[\u3040-\u309F\u30A0-\u30FF]|\S+\s+/`.
+Streamdown renders the Markdown and animates new text only while the final
+assistant message is live; completed history is immediate and reduced-motion
+preferences are respected. `@shadcn/helpers/ai-sdk` supplies deterministic
+streaming fixtures for renderer tests.
 
 Use the chat on the left while browsing horizontally scrollable deck columns on
 the right. Messages continue the same Codex thread and include the currently
@@ -152,15 +178,15 @@ Manual deck creation and column editing remain
 available. The backend handles tools even when the browser is closed.
 Use **New chat** to leave the current conversation and start a fresh Codex
 thread with your next message. The open deck and host reports remain available.
-If a turn is running, stop it first. The conversation reset is shared across
-open devices. **Chat history** reopens saved conversations with their account
+A running turn continues in the background when you open another chat.
+Selection belongs to the current URL; another browser does not change it. **Chat history** reopens saved conversations with their account
 selection, deck and citations; the next message resumes the same Codex thread.
-SQLite stores conversation snapshots and the active conversation selection.
+SQLite stores conversation snapshots. Active selection is not stored globally.
 Each turn is limited to 6 columns, 12 upstream requests shared between list
 discovery and post retrieval (at most 20 posts per fetch), and 15 minutes.
 The prototype accepts up to 100 messages per backend process.
-SSE pushes conversation messages, tool activity and generated deck updates to
-open browsers, without polling.
+SSE pushes messages, tool activity and deck updates for the requested conversation
+ID, without polling. Separate conversations have independent executions.
 Codex replies render as Markdown, including tables, lists and code. Clicking a
 cited post link scrolls to its card and briefly highlights it. Loaded cards take
 priority; otherwise the app shows the post captured during research in a column
@@ -183,12 +209,11 @@ not independently verified. Report contents remain on the host filesystem;
 the app DB stores the conversation, thread ID, deck context and citation metadata.
 
 Browser disconnection does not cancel research; reconnecting restores the latest
-state through `/api/research/events`, under the same owner access checks as the
+state through `/api/research/events?run=<id>`, under the same owner access checks as the
 rest of the app. After a backend restart, unfinished turns appear as interrupted;
-sending another message resumes the same thread. Before starting that message,
-the backend checks the resumed thread and interrupts any orphaned active turn.
+sending another message explicitly resumes the same thread through the provider.
 It does not automatically rerun interrupted requests. Files already written remain.
-Cancellation is explicit. The launcher and report directory must
+Cancellation is explicit. The backend and report directory must
 run under a user able to write those files. NixOS DynamicUser service integration
 and dedicated service credentials are outside this prototype.
 
@@ -216,21 +241,30 @@ editing, ordering, and deletion; refresh stays available directly in each header
 
 Shared UI components live in `src/components/ui`; `components.json` configures
 the registry and theme entrypoint. Chat uses MessageScroller, Message, Bubble,
-Marker and InputGroup while retaining the existing Codex transport and saved
-conversation model. The icon rail switches between chat and deck management;
+Marker and InputGroup with Streamdown, reconnectable snapshot SSE, and saved
+conversations. The icon rail switches between chat and deck management;
 closing the mobile sheet or crossing the desktop breakpoint preserves chat
 drafts, selected accounts and live deck updates. Theme colors are declared in
-`src/ui.css`.
+`src/ui.css`. The shared entrypoint `src/styles.css` loads the theme, tokens,
+base styles and feature styles in that order, so the UI lint rules can resolve
+application classes through the same stylesheet used by the app.
 
-`pnpm lint` runs Biome and the UI checks. `pnpm lint:ui` runs
-[@shadcn/lint](https://github.com/shadcn-ui/lint) through Oxlint. The
+`pnpm lint` runs Oxlint with type-aware linting and TypeScript checking through
+`oxlint-tsgolint`, including the
+[@shadcn/lint](https://github.com/shadcn-ui/lint) UI checks. The
 `shadcn/no-raw-colors` rule in `.oxlintrc.json` requires theme colors in JSX and
 class helpers, including shared UI components. Layout values remain available
-for the sidebar and deck. Biome continues to handle formatting and general
-code checks. Knip checks application usage while retaining the public exports
+for the sidebar and deck. Component contracts allow only the existing workspace
+styles; Next.js-specific rules are omitted because this app uses TanStack Start.
+`pnpm format` formats files with Oxfmt defaults, and
+`pnpm format:check` checks formatting without changing files. Knip checks application usage while retaining the public exports
 of registry components for composition. Additional design rules can be configured
 in `.oxlintrc.json`;
 see the [available rules](https://github.com/shadcn-ui/lint#rules).
+
+The database and OpenAPI generators format their output with Oxfmt. TanStack
+Router owns the formatting of `src/routeTree.gen.ts`, which is excluded from
+formatting; `pnpm check:routes` verifies that regeneration leaves it unchanged.
 
 Create a deck for an investigation, then add columns for each perspective.
 Choose a connected account and one of its supported sources. Account

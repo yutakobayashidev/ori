@@ -68,16 +68,16 @@ Work spans two repositories and the Gitea package registry:
 Bird currently hard-codes `product: 'Latest'` in SearchTimeline requests. Add the following public contract:
 
 ```ts
-export type SearchProduct = 'Top' | 'Latest'
+export type SearchProduct = "Top" | "Latest";
 
 export interface SearchFetchOptions {
-  includeRaw?: boolean
-  product?: SearchProduct
+  includeRaw?: boolean;
+  product?: SearchProduct;
 }
 
 export interface SearchPaginationOptions extends SearchFetchOptions {
-  maxPages?: number
-  cursor?: string
+  maxPages?: number;
+  cursor?: string;
 }
 ```
 
@@ -126,7 +126,7 @@ new TwitterClient({
   relayBaseUrl: process.env.TWITTER_RELAY_BASE_URL,
   profileName: process.env.BIRD_PROFILE_NAME,
   timeoutMs: 20_000,
-})
+});
 ```
 
 `TWITTER_RELAY_BASE_URL` is required. `BIRD_PROFILE_NAME` is optional but must be passed explicitly because the Bird library does not read that environment variable itself.

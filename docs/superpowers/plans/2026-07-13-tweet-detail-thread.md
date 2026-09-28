@@ -45,6 +45,7 @@
 ### Task 1: Validate and Load One Conversation Page
 
 **Files:**
+
 - Modify: `src/features/posts/types.ts`
 - Modify: `src/features/posts/inputs.ts`
 - Modify: `src/features/posts/inputs.test.ts`
@@ -52,6 +53,7 @@
 - Modify: `src/features/posts/post-service.test.ts`
 
 **Interfaces:**
+
 - Consumes: Bird's exported `GetTweetResult`, `SearchResult`, and `TweetData` types plus existing `getTweet()` and `getThreadPaged()` methods.
 - Produces: `ThreadPageInput`, `ThreadPage`, `ThreadLoadResult`, `threadPageInputSchema`, `normalizeTweetId()`, the extended `BirdReader`, and `loadThreadPage(reader, input)`.
 
@@ -65,48 +67,46 @@ import {
   normalizeTweetId,
   normalizeUserTarget,
   threadPageInputSchema,
-} from './inputs'
+} from "./inputs";
 
-describe('threadPageInputSchema', () => {
-  it('accepts initial and complete continuation requests', () => {
-    expect(threadPageInputSchema.parse({ tweetId: '123' })).toEqual({
-      tweetId: '123',
-    })
+describe("threadPageInputSchema", () => {
+  it("accepts initial and complete continuation requests", () => {
+    expect(threadPageInputSchema.parse({ tweetId: "123" })).toEqual({
+      tweetId: "123",
+    });
     expect(
       threadPageInputSchema.parse({
-        tweetId: '123',
-        conversationId: '100',
-        cursor: 'thread-next',
+        tweetId: "123",
+        conversationId: "100",
+        cursor: "thread-next",
       }),
     ).toEqual({
-      tweetId: '123',
-      conversationId: '100',
-      cursor: 'thread-next',
-    })
-  })
+      tweetId: "123",
+      conversationId: "100",
+      cursor: "thread-next",
+    });
+  });
 
   it.each([
-    { tweetId: '' },
-    { tweetId: 'abc' },
-    { tweetId: '123', cursor: 'thread-next' },
-    { tweetId: '123', conversationId: '100' },
-    { tweetId: '123', conversationId: 'root', cursor: 'thread-next' },
-  ])('rejects an invalid thread request %#', (input) => {
-    expect(() => threadPageInputSchema.parse(input)).toThrow()
-  })
-})
+    { tweetId: "" },
+    { tweetId: "abc" },
+    { tweetId: "123", cursor: "thread-next" },
+    { tweetId: "123", conversationId: "100" },
+    { tweetId: "123", conversationId: "root", cursor: "thread-next" },
+  ])("rejects an invalid thread request %#", (input) => {
+    expect(() => threadPageInputSchema.parse(input)).toThrow();
+  });
+});
 
-describe('normalizeTweetId', () => {
-  it('keeps a decimal post ID', () => {
-    expect(normalizeTweetId(' 1234567890 ')).toBe('1234567890')
-  })
+describe("normalizeTweetId", () => {
+  it("keeps a decimal post ID", () => {
+    expect(normalizeTweetId(" 1234567890 ")).toBe("1234567890");
+  });
 
-  it.each(['', '123/status', '@123', '１２３'])('rejects %s', (input) => {
-    expect(() => normalizeTweetId(input)).toThrow(
-      '投稿 ID を確認してください。',
-    )
-  })
-})
+  it.each(["", "123/status", "@123", "１２３"])("rejects %s", (input) => {
+    expect(() => normalizeTweetId(input)).toThrow("投稿 ID を確認してください。");
+  });
+});
 ```
 
 - [ ] **Step 2: Run the focused input tests and verify RED**
@@ -125,29 +125,27 @@ Add to `src/features/posts/types.ts`:
 
 ```ts
 export type ThreadPage = PostPage & {
-  focalPost?: Post
-  conversationId: string
-}
+  focalPost?: Post;
+  conversationId: string;
+};
 
-export type LoadFailure = { ok: false; error: LoadError }
+export type LoadFailure = { ok: false; error: LoadError };
 
-export type LoadResult<TPage extends PostPage = PostPage> =
-  | { ok: true; page: TPage }
-  | LoadFailure
+export type LoadResult<TPage extends PostPage = PostPage> = { ok: true; page: TPage } | LoadFailure;
 
-export type ThreadLoadResult = LoadResult<ThreadPage>
+export type ThreadLoadResult = LoadResult<ThreadPage>;
 
 export type ThreadPageInput =
   | {
-      tweetId: string
-      conversationId?: never
-      cursor?: never
+      tweetId: string;
+      conversationId?: never;
+      cursor?: never;
     }
   | {
-      tweetId: string
-      conversationId: string
-      cursor: string
-    }
+      tweetId: string;
+      conversationId: string;
+      cursor: string;
+    };
 ```
 
 Replace the existing non-generic `LoadResult` declaration with `LoadFailure` and the generic declaration above. Extend `LoadErrorCode` with:
@@ -160,11 +158,8 @@ Replace the existing non-generic `LoadResult` declaration with `LoadFailure` and
 Add to `src/features/posts/inputs.ts`:
 
 ```ts
-const TWEET_ID = /^\d{1,32}$/
-const tweetIdSchema = z
-  .string()
-  .trim()
-  .regex(TWEET_ID, '投稿 ID を確認してください。')
+const TWEET_ID = /^\d{1,32}$/;
+const tweetIdSchema = z.string().trim().regex(TWEET_ID, "投稿 ID を確認してください。");
 
 export const threadPageInputSchema = z.union([
   z.object({
@@ -177,14 +172,14 @@ export const threadPageInputSchema = z.union([
     conversationId: tweetIdSchema,
     cursor: z.string().min(1),
   }),
-])
+]);
 
 export function normalizeTweetId(raw: string): string {
-  const value = raw.trim()
+  const value = raw.trim();
   if (!TWEET_ID.test(value)) {
-    throw new InputError('投稿 ID を確認してください。')
+    throw new InputError("投稿 ID を確認してください。");
   }
-  return value
+  return value;
 }
 ```
 
@@ -229,129 +224,129 @@ Extend the `reader()` fixture in `src/features/posts/post-service.test.ts` with:
 Import `loadThreadPage`, then add:
 
 ```ts
-describe('loadThreadPage', () => {
-  it('resolves the focal post and fetches one root conversation page', async () => {
-    const client = reader()
-    const result = await loadThreadPage(client, { tweetId: '123' })
+describe("loadThreadPage", () => {
+  it("resolves the focal post and fetches one root conversation page", async () => {
+    const client = reader();
+    const result = await loadThreadPage(client, { tweetId: "123" });
 
-    expect(client.getTweet).toHaveBeenCalledWith('123')
-    expect(client.getThreadPaged).toHaveBeenCalledWith('100', {
+    expect(client.getTweet).toHaveBeenCalledWith("123");
+    expect(client.getThreadPaged).toHaveBeenCalledWith("100", {
       maxPages: 1,
       pageDelayMs: 0,
-    })
+    });
     expect(result).toEqual({
       ok: true,
       page: {
         focalPost: {
-          id: '123',
-          text: 'focal',
-          conversationId: '100',
-          author: { username: 'focus', name: 'Focus' },
+          id: "123",
+          text: "focal",
+          conversationId: "100",
+          author: { username: "focus", name: "Focus" },
         },
         tweets: [
           {
-            id: '100',
-            text: 'root',
-            conversationId: '100',
-            author: { username: 'root', name: 'Root' },
+            id: "100",
+            text: "root",
+            conversationId: "100",
+            author: { username: "root", name: "Root" },
           },
         ],
-        conversationId: '100',
-        nextCursor: 'thread-next',
+        conversationId: "100",
+        nextCursor: "thread-next",
       },
-    })
-  })
+    });
+  });
 
-  it('uses the carried root for exactly one continuation read', async () => {
-    const client = reader()
+  it("uses the carried root for exactly one continuation read", async () => {
+    const client = reader();
     const result = await loadThreadPage(client, {
-      tweetId: '123',
-      conversationId: '100',
-      cursor: 'thread-next',
-    })
+      tweetId: "123",
+      conversationId: "100",
+      cursor: "thread-next",
+    });
 
-    expect(client.getTweet).not.toHaveBeenCalled()
-    expect(client.getThreadPaged).toHaveBeenCalledOnce()
-    expect(client.getThreadPaged).toHaveBeenCalledWith('100', {
-      cursor: 'thread-next',
+    expect(client.getTweet).not.toHaveBeenCalled();
+    expect(client.getThreadPaged).toHaveBeenCalledOnce();
+    expect(client.getThreadPaged).toHaveBeenCalledWith("100", {
+      cursor: "thread-next",
       maxPages: 1,
       pageDelayMs: 0,
-    })
+    });
     expect(result).toMatchObject({
       ok: true,
-      page: { conversationId: '100', focalPost: undefined },
-    })
-  })
+      page: { conversationId: "100", focalPost: undefined },
+    });
+  });
 
-  it('removes raw data from focal, conversation, and quotes', async () => {
-    const client = reader()
+  it("removes raw data from focal, conversation, and quotes", async () => {
+    const client = reader();
     vi.mocked(client.getTweet).mockResolvedValue({
       success: true,
       tweet: {
-        id: '123',
-        text: 'focal',
-        conversationId: '100',
-        author: { username: 'focus', name: 'Focus' },
+        id: "123",
+        text: "focal",
+        conversationId: "100",
+        author: { username: "focus", name: "Focus" },
         quotedTweet: {
-          id: '90',
-          text: 'quote',
-          author: { username: 'quote', name: 'Quote' },
-          _raw: { rest_id: 'private-quote' },
+          id: "90",
+          text: "quote",
+          author: { username: "quote", name: "Quote" },
+          _raw: { rest_id: "private-quote" },
         },
-        _raw: { rest_id: 'private-focal' },
+        _raw: { rest_id: "private-focal" },
       },
-    })
+    });
     vi.mocked(client.getThreadPaged).mockResolvedValue({
       success: true,
       tweets: [
         {
-          id: '100',
-          text: 'root',
-          conversationId: '100',
-          author: { username: 'root', name: 'Root' },
-          _raw: { rest_id: 'private-thread' },
+          id: "100",
+          text: "root",
+          conversationId: "100",
+          author: { username: "root", name: "Root" },
+          _raw: { rest_id: "private-thread" },
         },
       ],
-    })
+    });
 
-    const result = await loadThreadPage(client, { tweetId: '123' })
+    const result = await loadThreadPage(client, { tweetId: "123" });
 
-    expect(JSON.stringify(result)).not.toContain('private-')
-  })
+    expect(JSON.stringify(result)).not.toContain("private-");
+  });
 
-  it('returns a safe non-retryable missing-post error', async () => {
-    const client = reader()
+  it("returns a safe non-retryable missing-post error", async () => {
+    const client = reader();
     vi.mocked(client.getTweet).mockResolvedValue({
       success: false,
-      error: 'Tweet not found: private relay detail',
-    })
+      error: "Tweet not found: private relay detail",
+    });
 
-    expect(await loadThreadPage(client, { tweetId: '404' })).toEqual({
+    expect(await loadThreadPage(client, { tweetId: "404" })).toEqual({
       ok: false,
       error: {
-        code: 'post-not-found',
-        message: '投稿が見つかりませんでした。',
+        code: "post-not-found",
+        message: "投稿が見つかりませんでした。",
         retryable: false,
       },
-    })
-    expect(client.getThreadPaged).not.toHaveBeenCalled()
-  })
+    });
+    expect(client.getThreadPaged).not.toHaveBeenCalled();
+  });
 
-  it('rejects an invalid ID without a Bird call', async () => {
-    const client = reader()
+  it("rejects an invalid ID without a Bird call", async () => {
+    const client = reader();
 
-    expect(await loadThreadPage(client, { tweetId: 'not-an-id' })).toEqual({
+    expect(await loadThreadPage(client, { tweetId: "not-an-id" })).toEqual({
       ok: false,
       error: {
-        code: 'invalid-input',
-        message: '投稿 ID を確認してください。',
+        code: "invalid-input",
+        message: "投稿 ID を確認してください。",
         retryable: false,
       },
-    })
-    expect(client.getTweet).not.toHaveBeenCalled()
-    expect(client.getThreadPaged).not.toHaveBeenCalled()
-  })
-})
+    });
+    expect(client.getTweet).not.toHaveBeenCalled();
+    expect(client.getThreadPaged).not.toHaveBeenCalled();
+  });
+});
 ```
 
 - [ ] **Step 6: Run the focused service tests and verify RED**
@@ -383,36 +378,29 @@ In `src/features/posts/post-service.ts`, import `GetTweetResult`, `normalizeTwee
 Change `upstreamFailure` to accept a subject while keeping existing user/search behavior:
 
 ```ts
-function upstreamFailure(
-  diagnostic: unknown = '',
-  subject: 'user' | 'post' = 'user',
-): LoadFailure {
+function upstreamFailure(diagnostic: unknown = "", subject: "user" | "post" = "user"): LoadFailure {
   const message =
     diagnostic instanceof Error
       ? diagnostic.message
-      : typeof diagnostic === 'string'
+      : typeof diagnostic === "string"
         ? diagnostic
-        : ''
-  const lower = message.toLowerCase()
-  if (lower.includes('timeout') || lower.includes('aborted')) {
-    return failure('timeout', '取得がタイムアウトしました。', true)
+        : "";
+  const lower = message.toLowerCase();
+  if (lower.includes("timeout") || lower.includes("aborted")) {
+    return failure("timeout", "取得がタイムアウトしました。", true);
   }
-  if (lower.includes('not found')) {
-    return subject === 'post'
-      ? failure('post-not-found', '投稿が見つかりませんでした。', false)
-      : failure('user-not-found', 'ユーザーが見つかりませんでした。', false)
+  if (lower.includes("not found")) {
+    return subject === "post"
+      ? failure("post-not-found", "投稿が見つかりませんでした。", false)
+      : failure("user-not-found", "ユーザーが見つかりませんでした。", false);
   }
-  if (lower.includes('suspended') || lower.includes('protected')) {
-    return subject === 'post'
-      ? failure('post-unavailable', 'この投稿は取得できません。', false)
-      : failure(
-          'user-unavailable',
-          'このユーザーの投稿は取得できません。',
-          false,
-        )
+  if (lower.includes("suspended") || lower.includes("protected")) {
+    return subject === "post"
+      ? failure("post-unavailable", "この投稿は取得できません。", false)
+      : failure("user-unavailable", "このユーザーの投稿は取得できません。", false);
   }
-  console.error('Unexpected Bird failure:', diagnostic)
-  return failure('upstream', 'X から投稿を取得できませんでした。', true)
+  console.error("Unexpected Bird failure:", diagnostic);
+  return failure("upstream", "X から投稿を取得できませんでした。", true);
 }
 ```
 
@@ -424,30 +412,28 @@ export async function loadThreadPage(
   input: ThreadPageInput,
 ): Promise<ThreadLoadResult> {
   try {
-    const tweetId = normalizeTweetId(input.tweetId)
-    let focalPost: Post | undefined
-    let conversationId: string
+    const tweetId = normalizeTweetId(input.tweetId);
+    let focalPost: Post | undefined;
+    let conversationId: string;
 
     if (input.cursor && input.conversationId) {
-      conversationId = normalizeTweetId(input.conversationId)
+      conversationId = normalizeTweetId(input.conversationId);
     } else {
-      const focal = await reader.getTweet(tweetId)
+      const focal = await reader.getTweet(tweetId);
       if (!focal.success || !focal.tweet) {
-        return upstreamFailure(focal.error ?? 'Tweet not found', 'post')
+        return upstreamFailure(focal.error ?? "Tweet not found", "post");
       }
-      focalPost = publicPost(focal.tweet)
-      conversationId = normalizeTweetId(
-        focal.tweet.conversationId ?? focal.tweet.id,
-      )
+      focalPost = publicPost(focal.tweet);
+      conversationId = normalizeTweetId(focal.tweet.conversationId ?? focal.tweet.id);
     }
 
     const result = await reader.getThreadPaged(conversationId, {
       ...(input.cursor ? { cursor: input.cursor } : {}),
       maxPages: 1,
       pageDelayMs: 0,
-    })
+    });
     if (!result.success) {
-      return upstreamFailure(result.error, 'post')
+      return upstreamFailure(result.error, "post");
     }
 
     return {
@@ -458,12 +444,12 @@ export async function loadThreadPage(
         conversationId,
         nextCursor: result.nextCursor,
       },
-    }
+    };
   } catch (error) {
     if (error instanceof InputError) {
-      return failure('invalid-input', error.message, false)
+      return failure("invalid-input", error.message, false);
     }
-    return upstreamFailure(error, 'post')
+    return upstreamFailure(error, "post");
   }
 }
 ```
@@ -500,6 +486,7 @@ git commit -m "feat: load tweet conversations"
 ### Task 2: Carry Conversation State Through the Server and Infinite Query
 
 **Files:**
+
 - Modify: `src/features/posts/server-functions.ts`
 - Modify: `src/features/posts/use-post-feed.ts`
 - Modify: `src/features/posts/use-post-feed.test.ts`
@@ -507,6 +494,7 @@ git commit -m "feat: load tweet conversations"
 - Modify: `src/features/posts/page.test.ts`
 
 **Interfaces:**
+
 - Consumes: `loadThreadPage`, `threadPageInputSchema`, `ThreadLoadResult`, and `ThreadPage` from Task 1.
 - Produces: `loadThreadPosts`, thread `FeedRequest`, object continuation page parameters, `focalPostFromPages()`, and `flattenConversationPages()`.
 
@@ -515,38 +503,32 @@ git commit -m "feat: load tweet conversations"
 Replace the type and function imports in `src/features/posts/page.test.ts` with these imports, then add:
 
 ```ts
-import {
-  flattenConversationPages,
-  flattenPostPages,
-  focalPostFromPages,
-} from './page'
-import type { Post, PostPage, ThreadPage } from './types'
+import { flattenConversationPages, flattenPostPages, focalPostFromPages } from "./page";
+import type { Post, PostPage, ThreadPage } from "./types";
 
-describe('thread page helpers', () => {
-  const focal = post('2')
+describe("thread page helpers", () => {
+  const focal = post("2");
   const pages: ThreadPage[] = [
     {
       focalPost: focal,
-      conversationId: '1',
-      nextCursor: 'next',
-      tweets: [post('1'), focal],
+      conversationId: "1",
+      nextCursor: "next",
+      tweets: [post("1"), focal],
     },
     {
-      conversationId: '1',
-      tweets: [focal, post('3')],
+      conversationId: "1",
+      tweets: [focal, post("3")],
     },
-  ]
+  ];
 
-  it('takes the focal post from the first page', () => {
-    expect(focalPostFromPages(pages)).toEqual(focal)
-  })
+  it("takes the focal post from the first page", () => {
+    expect(focalPostFromPages(pages)).toEqual(focal);
+  });
 
-  it('deduplicates the conversation and removes the focal post', () => {
-    expect(
-      flattenConversationPages(pages, focal.id).map(({ id }) => id),
-    ).toEqual(['1', '3'])
-  })
-})
+  it("deduplicates the conversation and removes the focal post", () => {
+    expect(flattenConversationPages(pages, focal.id).map(({ id }) => id)).toEqual(["1", "3"]);
+  });
+});
 ```
 
 - [ ] **Step 2: Run the page tests and verify RED**
@@ -564,20 +546,18 @@ Expected: FAIL because the thread helpers do not exist.
 Add to `src/features/posts/page.ts`:
 
 ```ts
-import type { Post, PostPage, ThreadPage } from './types'
+import type { Post, PostPage, ThreadPage } from "./types";
 
-export function focalPostFromPages(
-  pages: Array<PostPage | ThreadPage>,
-): Post | undefined {
-  const first = pages[0]
-  return first && 'focalPost' in first ? first.focalPost : undefined
+export function focalPostFromPages(pages: Array<PostPage | ThreadPage>): Post | undefined {
+  const first = pages[0];
+  return first && "focalPost" in first ? first.focalPost : undefined;
 }
 
 export function flattenConversationPages(
   pages: Array<PostPage | ThreadPage>,
   focalPostId: string,
 ): Post[] {
-  return flattenPostPages(pages).filter(({ id }) => id !== focalPostId)
+  return flattenPostPages(pages).filter(({ id }) => id !== focalPostId);
 }
 ```
 
@@ -590,75 +570,66 @@ In `src/features/posts/use-post-feed.test.ts`, add a `thread` loader to every lo
 ```ts
 const loaders = (
   overrides: Partial<{
-    loadUser: ReturnType<typeof vi.fn>
-    search: ReturnType<typeof vi.fn>
-    thread: ReturnType<typeof vi.fn>
+    loadUser: ReturnType<typeof vi.fn>;
+    search: ReturnType<typeof vi.fn>;
+    thread: ReturnType<typeof vi.fn>;
   }> = {},
 ) => ({
   loadUser: vi.fn(),
   search: vi.fn(),
   thread: vi.fn(),
   ...overrides,
-})
+});
 ```
 
 Add:
 
 ```ts
-it('loads the initial thread and carries its root with the next cursor', async () => {
+it("loads the initial thread and carries its root with the next cursor", async () => {
   const thread = vi.fn().mockResolvedValue({
     ok: true,
     page: {
       tweets: [],
       focalPost: {
-        id: '123',
-        text: 'focal',
-        author: { username: 'focus', name: 'Focus' },
+        id: "123",
+        text: "focal",
+        author: { username: "focus", name: "Focus" },
       },
-      conversationId: '100',
-      nextCursor: 'thread-next',
+      conversationId: "100",
+      nextCursor: "thread-next",
     },
-  })
-  const options = createPostFeedOptions(
-    { kind: 'thread', tweetId: '123' },
-    loaders({ thread }),
-  )
+  });
+  const options = createPostFeedOptions({ kind: "thread", tweetId: "123" }, loaders({ thread }));
 
-  const page = await options.queryFn({ pageParam: undefined } as never)
+  const page = await options.queryFn({ pageParam: undefined } as never);
 
-  expect(thread).toHaveBeenCalledWith({ data: { tweetId: '123' } })
-  expect(options.queryKey).toEqual([
-    'posts',
-    { kind: 'thread', tweetId: '123' },
-  ])
+  expect(thread).toHaveBeenCalledWith({ data: { tweetId: "123" } });
+  expect(options.queryKey).toEqual(["posts", { kind: "thread", tweetId: "123" }]);
   expect(options.getNextPageParam(page)).toEqual({
-    cursor: 'thread-next',
-    conversationId: '100',
-  })
-})
+    cursor: "thread-next",
+    conversationId: "100",
+  });
+});
 
-it('forwards a thread continuation page parameter intact', async () => {
+it("forwards a thread continuation page parameter intact", async () => {
   const thread = vi.fn().mockResolvedValue({
     ok: true,
-    page: { tweets: [], conversationId: '100' },
-  })
-  const options = createPostFeedOptions(
-    { kind: 'thread', tweetId: '123' },
-    loaders({ thread }),
-  )
+    page: { tweets: [], conversationId: "100" },
+  });
+  const options = createPostFeedOptions({ kind: "thread", tweetId: "123" }, loaders({ thread }));
 
   await options.queryFn({
-    pageParam: { cursor: 'thread-next', conversationId: '100' },
-  } as never)
+    pageParam: { cursor: "thread-next", conversationId: "100" },
+  } as never);
 
   expect(thread).toHaveBeenCalledWith({
     data: {
-      tweetId: '123',
-      cursor: 'thread-next',
-      conversationId: '100',
+      tweetId: "123",
+      cursor: "thread-next",
+      conversationId: "100",
     },
-  })
-})
+  });
+});
 ```
 
 - [ ] **Step 5: Run the query tests and verify RED**
@@ -678,15 +649,15 @@ Expected: page helpers PASS; query tests FAIL because thread requests are unsupp
 In `src/features/posts/server-functions.ts`, import `threadPageInputSchema`, `loadThreadPage`, and `LoadFailure`. Replace the current `configFailure` return annotation with `LoadFailure`, then add:
 
 ```ts
-export const loadThreadPosts = createServerFn({ method: 'GET' })
+export const loadThreadPosts = createServerFn({ method: "GET" })
   .validator(threadPageInputSchema)
   .handler(async ({ data }) => {
     try {
-      return await loadThreadPage(await reader(), data)
+      return await loadThreadPage(await reader(), data);
     } catch (error) {
-      return configFailure(error)
+      return configFailure(error);
     }
-  })
+  });
 ```
 
 Do not create another client, dispatcher, or proxy.
@@ -703,11 +674,11 @@ Add:
 
 ```ts
 type ThreadPageParam = {
-  cursor: string
-  conversationId: string
-}
+  cursor: string;
+  conversationId: string;
+};
 
-type FeedPageParam = string | ThreadPageParam | undefined
+type FeedPageParam = string | ThreadPageParam | undefined;
 ```
 
 Change the option's initial page parameter annotation to:
@@ -719,15 +690,15 @@ Change the option's initial page parameter annotation to:
 Extend `Loaders` with:
 
 ```ts
-  thread: (options: { data: ThreadPageInput }) => Promise<ThreadLoadResult>
+thread: (options: { data: ThreadPageInput }) => Promise<ThreadLoadResult>;
 ```
 
 Make `unwrap` generic:
 
 ```ts
 function unwrap<TPage extends PostPage>(result: LoadResult<TPage>): TPage {
-  if (!result.ok) throw new PostLoadError(result.error)
-  return result.page
+  if (!result.ok) throw new PostLoadError(result.error);
+  return result.page;
 }
 ```
 
@@ -784,16 +755,16 @@ Replace `queryFn` and `getNextPageParam` inside `createPostFeedOptions` with:
 In `usePostFeed`, bind the third server function and pass all loaders:
 
 ```ts
-  const thread = useServerFn(loadThreadPosts)
+const thread = useServerFn(loadThreadPosts);
 
-  return useInfiniteQuery({
-    ...createPostFeedOptions(request ?? disabled, {
-      loadUser,
-      search,
-      thread,
-    }),
-    enabled: request !== undefined,
-  })
+return useInfiniteQuery({
+  ...createPostFeedOptions(request ?? disabled, {
+    loadUser,
+    search,
+    thread,
+  }),
+  enabled: request !== undefined,
+});
 ```
 
 - [ ] **Step 8: Run focused and regression tests**
@@ -829,6 +800,7 @@ git commit -m "feat: paginate tweet conversations"
 ### Task 3: Add the Detail Route and Focal Conversation Interface
 
 **Files:**
+
 - Create: `src/routes/status.$tweetId.tsx`
 - Modify: `src/routeTree.gen.ts` through the route generator
 - Modify: `src/components/app-shell.tsx`
@@ -840,6 +812,7 @@ git commit -m "feat: paginate tweet conversations"
 - Modify: `src/styles.css`
 
 **Interfaces:**
+
 - Consumes: thread `FeedRequest`, `focalPostFromPages()`, and `flattenConversationPages()` from Task 2.
 - Produces: `/status/$tweetId`, internal `詳細・スレッド` anchors, neutral shell navigation, focal-card presentation, and a reusable thread feed with existing retry/observer behavior.
 
@@ -987,11 +960,9 @@ In `src/features/posts/components/post-card.tsx`, add `current = false` to the p
 Within the non-quoted footer, keep the counts and external link and add:
 
 ```tsx
-          {!current ? (
-            <a href={`/status/${encodeURIComponent(post.id)}`}>
-              詳細・スレッド
-            </a>
-          ) : null}
+{
+  !current ? <a href={`/status/${encodeURIComponent(post.id)}`}>詳細・スレッド</a> : null;
+}
 ```
 
 The complete public prop contract becomes:
@@ -1002,10 +973,10 @@ export function PostCard({
   quoted = false,
   current = false,
 }: {
-  post: Post
-  quoted?: boolean
-  current?: boolean
-})
+  post: Post;
+  quoted?: boolean;
+  current?: boolean;
+});
 ```
 
 - [ ] **Step 5: Render focal and conversation content without duplicating query behavior**
@@ -1013,12 +984,9 @@ export function PostCard({
 In `src/features/posts/components/post-feed.tsx`, import `type Post`, the new page helpers, and derive:
 
 ```ts
-  const pages = query.data?.pages ?? []
-  const focalPost =
-    request?.kind === 'thread' ? focalPostFromPages(pages) : undefined
-  const posts = focalPost
-    ? flattenConversationPages(pages, focalPost.id)
-    : flattenPostPages(pages)
+const pages = query.data?.pages ?? [];
+const focalPost = request?.kind === "thread" ? focalPostFromPages(pages) : undefined;
+const posts = focalPost ? flattenConversationPages(pages, focalPost.id) : flattenPostPages(pages);
 ```
 
 Add a small local renderer:
@@ -1032,19 +1000,19 @@ function FocalPost({ post }: { post: Post }) {
       </p>
       <PostCard current post={post} />
     </section>
-  )
+  );
 }
 ```
 
 For a successful thread query, render `FocalPost` before the existing feed section. If `posts.length === 0` and there is no next page, render:
 
 ```tsx
-      {focalPost ? <FocalPost post={focalPost} /> : null}
-      <p className="state">
-        {focalPost
-          ? '会話にほかの投稿はありません。'
-          : '条件に一致する投稿はありません。'}
-      </p>
+{
+  focalPost ? <FocalPost post={focalPost} /> : null;
+}
+<p className="state">
+  {focalPost ? "会話にほかの投稿はありません。" : "条件に一致する投稿はありません。"}
+</p>;
 ```
 
 Keep the current observer, loading rail, later-page alert, Retry calls, and terminal state unchanged. The normal success return begins with:
@@ -1073,34 +1041,26 @@ Expected: all card/feed component tests PASS.
 Add to `src/routes/-feed-wiring.test.tsx`:
 
 ```ts
-it('turns a decimal status path into a deliberate thread request', async () => {
-  await renderRoute('/status/123')
+it("turns a decimal status path into a deliberate thread request", async () => {
+  await renderRoute("/status/123");
 
-  expect(
-    await screen.findByRole('heading', { name: '会話' }),
-  ).toBeVisible()
+  expect(await screen.findByRole("heading", { name: "会話" })).toBeVisible();
   await waitFor(() =>
     expect(usePostFeed).toHaveBeenCalledWith({
-      kind: 'thread',
-      tweetId: '123',
+      kind: "thread",
+      tweetId: "123",
     }),
-  )
-  expect(
-    screen.queryByRole('link', { name: 'ユーザー', current: 'page' }),
-  ).toBeNull()
-  expect(
-    screen.queryByRole('link', { name: '検索', current: 'page' }),
-  ).toBeNull()
-})
+  );
+  expect(screen.queryByRole("link", { name: "ユーザー", current: "page" })).toBeNull();
+  expect(screen.queryByRole("link", { name: "検索", current: "page" })).toBeNull();
+});
 
-it('keeps an invalid status path local and idle', async () => {
-  await renderRoute('/status/not-a-tweet')
+it("keeps an invalid status path local and idle", async () => {
+  await renderRoute("/status/not-a-tweet");
 
-  expect(await screen.findByRole('alert')).toHaveTextContent(
-    '投稿 ID を確認してください。',
-  )
-  expect(usePostFeed).toHaveBeenCalledWith(undefined)
-})
+  expect(await screen.findByRole("alert")).toHaveTextContent("投稿 ID を確認してください。");
+  expect(usePostFeed).toHaveBeenCalledWith(undefined);
+});
 ```
 
 - [ ] **Step 8: Run the route test before adding the route and verify RED**
@@ -1124,27 +1084,24 @@ Change `AppShell`'s active prop to optional:
 Create the complete `src/routes/status.$tweetId.tsx`:
 
 ```tsx
-import { createFileRoute } from '@tanstack/react-router'
-import { AppShell } from '#/components/app-shell'
-import { PostFeed } from '#/features/posts/components/post-feed'
-import { InputError, normalizeTweetId } from '#/features/posts/inputs'
+import { createFileRoute } from "@tanstack/react-router";
+import { AppShell } from "#/components/app-shell";
+import { PostFeed } from "#/features/posts/components/post-feed";
+import { InputError, normalizeTweetId } from "#/features/posts/inputs";
 
-export const Route = createFileRoute('/status/$tweetId')({
+export const Route = createFileRoute("/status/$tweetId")({
   component: StatusRoute,
-})
+});
 
 function StatusRoute() {
-  const { tweetId: rawTweetId } = Route.useParams()
-  let tweetId: string | undefined
-  let error: string | undefined
+  const { tweetId: rawTweetId } = Route.useParams();
+  let tweetId: string | undefined;
+  let error: string | undefined;
 
   try {
-    tweetId = normalizeTweetId(rawTweetId)
+    tweetId = normalizeTweetId(rawTweetId);
   } catch (cause) {
-    error =
-      cause instanceof InputError
-        ? cause.message
-        : '投稿 ID を確認してください。'
+    error = cause instanceof InputError ? cause.message : "投稿 ID を確認してください。";
   }
 
   return (
@@ -1156,11 +1113,9 @@ function StatusRoute() {
           {error}
         </p>
       ) : null}
-      <PostFeed
-        request={tweetId ? { kind: 'thread', tweetId } : undefined}
-      />
+      <PostFeed request={tweetId ? { kind: "thread", tweetId } : undefined} />
     </AppShell>
-  )
+  );
 }
 ```
 
@@ -1240,6 +1195,7 @@ git commit -m "feat: add tweet detail page"
 ### Task 4: Prove Thread Navigation and Infinite Scrolling in Real Browsers
 
 **Files:**
+
 - Modify: `tests/e2e/mock-relay.mjs`
 - Modify: `tests/e2e/reader.spec.ts`
 - Modify: `tests/e2e/reader.spec.ts-snapshots/mist-user-desktop-linux.png`
@@ -1248,6 +1204,7 @@ git commit -m "feat: add tweet detail page"
 - Create: `tests/e2e/reader.spec.ts-snapshots/mist-thread-mobile-linux.png`
 
 **Interfaces:**
+
 - Consumes: GET `TweetDetail` calls emitted by Bird and the `/status/$tweetId` route from Task 3.
 - Produces: deterministic desktop/mobile evidence for card navigation, reply-root resolution, focal de-duplication, cursor loading, later-page failure/retry, console safety, and visual quality.
 
@@ -1256,16 +1213,11 @@ git commit -m "feat: add tweet detail page"
 Refactor the current tweet helper in `tests/e2e/mock-relay.mjs` into:
 
 ```js
-const tweetResult = (
-  id,
-  text,
-  username = 'yuta',
-  { conversationId = id, inReplyTo } = {},
-) => ({
+const tweetResult = (id, text, username = "yuta", { conversationId = id, inReplyTo } = {}) => ({
   rest_id: id,
   legacy: {
     full_text: text,
-    created_at: 'Mon Jul 13 00:00:00 +0000 2026',
+    created_at: "Mon Jul 13 00:00:00 +0000 2026",
     reply_count: 1,
     retweet_count: 2,
     favorite_count: 3,
@@ -1275,14 +1227,14 @@ const tweetResult = (
   core: {
     user_results: {
       result: {
-        rest_id: '42',
-        legacy: { screen_name: username, name: 'Yuta' },
+        rest_id: "42",
+        legacy: { screen_name: username, name: "Yuta" },
       },
     },
   },
-})
+});
 
-const tweet = (id, text, username = 'yuta', options) => ({
+const tweet = (id, text, username = "yuta", options) => ({
   entryId: `tweet-${id}`,
   content: {
     itemContent: {
@@ -1291,7 +1243,7 @@ const tweet = (id, text, username = 'yuta', options) => ({
       },
     },
   },
-})
+});
 ```
 
 Change the first user fixture ID from `u1` to `1001` and give it conversation ID `1000`; change the second user fixture ID from `u2` to `1010`.
@@ -1302,116 +1254,115 @@ Add `TweetDetail` to the supported-operation suffix list. Before SearchTimeline 
 
 ```js
 const rootByTarget = new Map([
-  ['1001', '1000'],
-  ['2001', '2000'],
-])
+  ["1001", "1000"],
+  ["2001", "2000"],
+]);
 const targetByRoot = new Map([
-  ['1000', '1001'],
-  ['2000', '2001'],
-])
-const failedThreadRoots = new Set()
+  ["1000", "1001"],
+  ["2000", "2001"],
+]);
+const failedThreadRoots = new Set();
 ```
 
 The branch is:
 
 ```js
-  if (operation === 'TweetDetail') {
-    const focalTweetId = variables.focalTweetId
-    if (typeof focalTweetId !== 'string' || !/^\d+$/.test(focalTweetId)) {
-      fail(response, 400, 'invalid focalTweetId')
-      return
+if (operation === "TweetDetail") {
+  const focalTweetId = variables.focalTweetId;
+  if (typeof focalTweetId !== "string" || !/^\d+$/.test(focalTweetId)) {
+    fail(response, 400, "invalid focalTweetId");
+    return;
+  }
+  const features = url.searchParams.get("features");
+  const fieldToggles = url.searchParams.get("fieldToggles");
+  try {
+    if (!features || !isRecord(JSON.parse(features))) throw new Error();
+    if (!fieldToggles || !isRecord(JSON.parse(fieldToggles))) {
+      throw new Error();
     }
-    const features = url.searchParams.get('features')
-    const fieldToggles = url.searchParams.get('fieldToggles')
-    try {
-      if (!features || !isRecord(JSON.parse(features))) throw new Error()
-      if (!fieldToggles || !isRecord(JSON.parse(fieldToggles))) {
-        throw new Error()
-      }
-    } catch {
-      fail(response, 400, 'invalid TweetDetail feature locks')
-      return
-    }
+  } catch {
+    fail(response, 400, "invalid TweetDetail feature locks");
+    return;
+  }
 
-    const targetRoot = rootByTarget.get(focalTweetId)
-    if (targetRoot && variables.cursor === undefined) {
-      const text = focalTweetId === '1001' ? 'user page 1' : 'retry focal'
-      const result = tweetResult(focalTweetId, text, 'focus', {
-        conversationId: targetRoot,
-        inReplyTo: targetRoot,
-      })
-      send(response, {
-        data: {
-          tweetResult: { result },
-          threaded_conversation_with_injections_v2: {
-            instructions: [{ entries: [tweet(focalTweetId, text, 'focus', {
-              conversationId: targetRoot,
-              inReplyTo: targetRoot,
-            })] }],
-          },
-        },
-      })
-      return
-    }
-
-    const targetId = targetByRoot.get(focalTweetId)
-    if (!targetId) {
-      fail(response, 400, 'unsupported TweetDetail fixture')
-      return
-    }
-    const expectedCursor = `thread-next:${focalTweetId}`
-    if (
-      variables.cursor !== undefined &&
-      variables.cursor !== expectedCursor
-    ) {
-      fail(response, 400, 'invalid thread cursor')
-      return
-    }
-    if (
-      variables.cursor &&
-      focalTweetId === '2000' &&
-      !failedThreadRoots.has(focalTweetId)
-    ) {
-      failedThreadRoots.add(focalTweetId)
-      fail(response, 503, 'transient thread fixture failure')
-      return
-    }
-
-    const entries = variables.cursor
-      ? [
-          tweet(`${focalTweetId}3`, 'thread page 2', 'reply2', {
-            conversationId: focalTweetId,
-            inReplyTo: targetId,
-          }),
-        ]
-      : [
-          tweet(focalTweetId, 'thread root', 'root', {
-            conversationId: focalTweetId,
-          }),
-          tweet(targetId, focalTweetId === '1000' ? 'user page 1' : 'retry focal', 'focus', {
-            conversationId: focalTweetId,
-            inReplyTo: focalTweetId,
-          }),
-          tweet(`${focalTweetId}2`, 'thread page 1', 'reply1', {
-            conversationId: focalTweetId,
-            inReplyTo: targetId,
-          }),
-          cursor(expectedCursor),
-        ]
+  const targetRoot = rootByTarget.get(focalTweetId);
+  if (targetRoot && variables.cursor === undefined) {
+    const text = focalTweetId === "1001" ? "user page 1" : "retry focal";
+    const result = tweetResult(focalTweetId, text, "focus", {
+      conversationId: targetRoot,
+      inReplyTo: targetRoot,
+    });
     send(response, {
       data: {
-        tweetResult: {
-          result: tweetResult(focalTweetId, 'thread root', 'root', {
-            conversationId: focalTweetId,
-          }),
-        },
+        tweetResult: { result },
         threaded_conversation_with_injections_v2: {
-          instructions: [{ entries }],
+          instructions: [
+            {
+              entries: [
+                tweet(focalTweetId, text, "focus", {
+                  conversationId: targetRoot,
+                  inReplyTo: targetRoot,
+                }),
+              ],
+            },
+          ],
         },
       },
-    })
-    return
+    });
+    return;
   }
+
+  const targetId = targetByRoot.get(focalTweetId);
+  if (!targetId) {
+    fail(response, 400, "unsupported TweetDetail fixture");
+    return;
+  }
+  const expectedCursor = `thread-next:${focalTweetId}`;
+  if (variables.cursor !== undefined && variables.cursor !== expectedCursor) {
+    fail(response, 400, "invalid thread cursor");
+    return;
+  }
+  if (variables.cursor && focalTweetId === "2000" && !failedThreadRoots.has(focalTweetId)) {
+    failedThreadRoots.add(focalTweetId);
+    fail(response, 503, "transient thread fixture failure");
+    return;
+  }
+
+  const entries = variables.cursor
+    ? [
+        tweet(`${focalTweetId}3`, "thread page 2", "reply2", {
+          conversationId: focalTweetId,
+          inReplyTo: targetId,
+        }),
+      ]
+    : [
+        tweet(focalTweetId, "thread root", "root", {
+          conversationId: focalTweetId,
+        }),
+        tweet(targetId, focalTweetId === "1000" ? "user page 1" : "retry focal", "focus", {
+          conversationId: focalTweetId,
+          inReplyTo: focalTweetId,
+        }),
+        tweet(`${focalTweetId}2`, "thread page 1", "reply1", {
+          conversationId: focalTweetId,
+          inReplyTo: targetId,
+        }),
+        cursor(expectedCursor),
+      ];
+  send(response, {
+    data: {
+      tweetResult: {
+        result: tweetResult(focalTweetId, "thread root", "root", {
+          conversationId: focalTweetId,
+        }),
+      },
+      threaded_conversation_with_injections_v2: {
+        instructions: [{ entries }],
+      },
+    },
+  });
+  return;
+}
 ```
 
 Keep unknown operations at 501, wrong methods at 405, wrong profile at 403, and malformed supported input at 400. Do not add 404 or `fetch()`.
@@ -1421,52 +1372,42 @@ Keep unknown operations at 501, wrong methods at 405, wrong profile at 403, and 
 Add to `tests/e2e/reader.spec.ts`:
 
 ```ts
-test('opens a card detail and infinitely loads its conversation', async ({
-  page,
-}) => {
-  await openReader(page, '/user?target=yuta')
-  const sourceCard = page
-    .getByRole('article')
-    .filter({ hasText: 'user page 1' })
-  await sourceCard.getByRole('link', { name: '詳細・スレッド' }).click()
+test("opens a card detail and infinitely loads its conversation", async ({ page }) => {
+  await openReader(page, "/user?target=yuta");
+  const sourceCard = page.getByRole("article").filter({ hasText: "user page 1" });
+  await sourceCard.getByRole("link", { name: "詳細・スレッド" }).click();
 
-  await expect(page).toHaveURL(/\/status\/1001$/)
-  await expect(page.getByRole('heading', { name: '会話' })).toBeVisible()
-  await expect(page.getByText('表示中の投稿')).toBeVisible()
-  await expect(page.getByText('user page 1')).toHaveCount(1)
-  await expect(page.getByText('thread root')).toBeVisible()
-  await expect(page.getByText('thread page 1')).toBeVisible()
-  await expect(page.getByText('thread page 2')).toBeVisible()
-  await expect(page.getByText('これ以上の投稿はありません。')).toBeVisible()
-  await expect(page).toHaveScreenshot('mist-thread.png', {
-    animations: 'disabled',
+  await expect(page).toHaveURL(/\/status\/1001$/);
+  await expect(page.getByRole("heading", { name: "会話" })).toBeVisible();
+  await expect(page.getByText("表示中の投稿")).toBeVisible();
+  await expect(page.getByText("user page 1")).toHaveCount(1);
+  await expect(page.getByText("thread root")).toBeVisible();
+  await expect(page.getByText("thread page 1")).toBeVisible();
+  await expect(page.getByText("thread page 2")).toBeVisible();
+  await expect(page.getByText("これ以上の投稿はありません。")).toBeVisible();
+  await expect(page).toHaveScreenshot("mist-thread.png", {
+    animations: "disabled",
     fullPage: true,
-  })
-})
+  });
+});
 
-test('resolves a reply root and retries only the failed continuation', async ({
-  page,
-}) => {
-  await openReader(page, '/status/2001')
+test("resolves a reply root and retries only the failed continuation", async ({ page }) => {
+  await openReader(page, "/status/2001");
 
-  await expect(page.getByText('retry focal')).toHaveCount(1)
-  await expect(page.getByText('thread root')).toBeVisible()
-  await expect(page.getByText('thread page 1')).toBeVisible()
-  const alert = page
-    .getByRole('alert')
-    .filter({ hasText: '続きの投稿を取得できませんでした。' })
-  await expect(alert).toHaveCount(1)
-  await expect(page.getByText('retry focal')).toHaveCount(1)
+  await expect(page.getByText("retry focal")).toHaveCount(1);
+  await expect(page.getByText("thread root")).toBeVisible();
+  await expect(page.getByText("thread page 1")).toBeVisible();
+  const alert = page.getByRole("alert").filter({ hasText: "続きの投稿を取得できませんでした。" });
+  await expect(alert).toHaveCount(1);
+  await expect(page.getByText("retry focal")).toHaveCount(1);
 
-  await alert.getByRole('button', { name: '再試行' }).click()
+  await alert.getByRole("button", { name: "再試行" }).click();
 
-  await expect(page.getByText('thread page 2')).toBeVisible()
-  await expect(alert).toHaveCount(0)
-  await expect(page.getByText('これ以上の投稿はありません。')).toBeVisible()
-  await expect(
-    page.getByRole('button', { name: mutationControlNames }),
-  ).toHaveCount(0)
-})
+  await expect(page.getByText("thread page 2")).toBeVisible();
+  await expect(alert).toHaveCount(0);
+  await expect(page.getByText("これ以上の投稿はありません。")).toBeVisible();
+  await expect(page.getByRole("button", { name: mutationControlNames })).toHaveCount(0);
+});
 ```
 
 - [ ] **Step 4: Run E2E and verify intentional RED**
@@ -1523,6 +1464,7 @@ git commit -m "test: verify tweet conversation flows"
 ### Task 5: Document and Verify the Delivered Boundary
 
 **Files:**
+
 - Modify: `README.md`
 - Modify: `docs/superpowers/specs/2026-07-13-twitter-lite-design.md`
 - Modify: `docs/superpowers/plans/2026-07-13-twitter-lite.md`
@@ -1530,6 +1472,7 @@ git commit -m "test: verify tweet conversation flows"
 - Verify: `docs/superpowers/plans/2026-07-13-tweet-detail-thread.md`
 
 **Interfaces:**
+
 - Consumes: the complete detail route and deterministic evidence from Tasks 1–4.
 - Produces: accurate setup/scope documentation, a three-function security boundary, a clean feature branch, and a Tailscale-accessible development handoff.
 
