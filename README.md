@@ -13,6 +13,9 @@ controls for routine steps, tasks, replies and weight entries. Messages uses
 a Beeper-inspired conversation layout with visible source messages, editable
 drafts and a contextual side panel. These execution surfaces remain mocks;
 their records share browser-session state and external sending is simulated.
+Reply review can call Jev through Vercel AI Gateway when the server has
+`AI_GATEWAY_API_KEY`. It checks the draft against the sample conversation;
+Beeper synchronization and sending remain unconnected.
 
 ## Workspaces and current status
 

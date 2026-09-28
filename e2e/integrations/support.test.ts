@@ -12,7 +12,8 @@ test("reviews an edited reply and keeps the simulated result in history", async 
   const rows = page.locator(".support-row");
   await expect(rows).toHaveCount(3);
   await rows.filter({ hasText: reviewSubject }).click();
-  await page.getByRole("button", { name: "Polite", exact: true }).click();
+  await page.locator(".conversation-suggestions summary:visible").click();
+  await page.getByRole("button", { name: /^Polite/ }).click();
   const reply = page.getByRole("textbox", { name: "Reply", exact: true });
   await expect(reply).toHaveValue(/Thank you for sharing/);
   const edited = "I reviewed the materials. Let’s discuss the first-time experience.";
@@ -107,7 +108,10 @@ test("keeps corrections as new records and summarizes only selected current fact
   expect((await a11y().analyze()).violations).toEqual([]);
 });
 
-test("fits communication and journal interactions in narrow screens", async ({ page, a11y }) => {
+test("fits communication and journal interactions in narrow screens", async ({
+  page,
+  a11y,
+}, testInfo) => {
   for (const width of [320, 375, 414, 768]) {
     await page.setViewportSize({ width, height: 850 });
     await page.goto("/support");
@@ -117,6 +121,7 @@ test("fits communication and journal interactions in narrow screens", async ({ p
     await expect(page.getByRole("textbox", { name: "Reply", exact: true })).toBeVisible();
     expect(await page.evaluate(() => document.documentElement.scrollWidth)).toBe(width);
     if (width === 320) expect((await a11y().analyze()).violations).toEqual([]);
+    await page.screenshot({ path: testInfo.outputPath(`messages-${width}.png`) });
     const back = page.getByRole("button", { name: "Back to messages" });
     if (await back.isVisible()) await back.click();
     await page.getByRole("link", { name: "Journal", exact: true }).click();

@@ -39,8 +39,9 @@ the new communication and journal prototypes do not consume those accounts.
 `/` presents a greeting, a large input, and a Tiimo-inspired flexible day flow grouped as
 Start here, Routines, and If there’s room. There are no fixed time slots.
 Tasks can be reordered, completed, deferred, restored, or followed as routine
-steps. Communications can be reviewed directly in a home dialog; changes also
-appear in `/support`. Journal entries and corrections appear on the home, and
+steps. Communications open their Messages page at
+`/support?view=all&conversation=<id>`; browser Back returns to the home with
+shared outcomes intact. Journal entries and corrections appear on the home, and
 reader samples open for reading. Research remains a separate work surface.
 
 Activity blocks expand in place into controls suited to their content: routine
@@ -79,3 +80,21 @@ The home greeting includes a short prose brief derived from current task and
 communication state. Completed or deferred items leave the brief; the next
 contact opens directly from the text. A current resumption note takes precedence
 over the optional-task suggestion. This is local templated copy, not an LLM report.
+
+## Jev reply review
+
+The message thread keeps the reply composer at the bottom on wide screens;
+summary and source context live in the side panel. Expand Reply suggestions to
+compare candidate wording before editing.
+
+Opening Review reply calls an authenticated server function using AI SDK
+`experimental_evaluate` with `typesafe-ai/jev`. Set `AI_GATEWAY_API_KEY` on
+the server. The draft, recipient role, and original sample messages are sent
+through Vercel AI Gateway to TypeSafe AI. The model evaluates whether the reply
+answers the request, stays grounded, and uses an appropriate tone. The UI shows
+boolean probabilities, not a calibrated pass/fail verdict or generated advice.
+Editing the draft invalidates its evaluation. Missing configuration and provider
+failures show an unavailable state; no mock approval is substituted. Review
+results do not trigger sending, which remains a simulation.
+
+See [Vercel’s Jev integration](https://vercel.com/changelog/typesafe-ai-jev-now-available-on-ai-gateway).

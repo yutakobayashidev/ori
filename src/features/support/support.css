@@ -34,8 +34,7 @@
   flex-wrap: wrap;
   gap: 4px;
 }
-.support-filters button,
-.conversation-draft-options button {
+.support-filters button {
   cursor: pointer;
   padding: 6px 9px;
   font-size: 11px;
@@ -43,20 +42,18 @@
   border-radius: 6px;
   white-space: nowrap;
 }
-.support-filters button[aria-pressed="true"],
-.conversation-draft-options button[aria-pressed="true"] {
+.support-filters button[aria-pressed="true"] {
   background: var(--sidebar-accent);
   color: var(--foreground);
 }
-.support-filters button:hover,
-.conversation-draft-options button:hover {
+.support-filters button:hover {
   background: var(--muted);
   color: var(--foreground);
 }
 .support-row {
   display: flex;
   gap: 12px;
-  padding: 17px 14px;
+  padding: 12px 14px;
   margin: 2px 8px;
   border-radius: 10px;
   text-align: left;
@@ -145,8 +142,8 @@
   display: flex;
   align-items: center;
   gap: 10px;
-  min-height: 70px;
-  padding: 12px 28px;
+  min-height: 64px;
+  padding: 12px 20px;
   border-bottom: 1px solid var(--border);
 }
 .support-toolbar strong {
@@ -188,6 +185,7 @@
   display: none;
 }
 .conversation-workbench {
+  min-height: calc(100dvh - 64px);
   display: grid;
   grid-template-columns: minmax(0, 1fr);
   min-width: 0;
@@ -198,8 +196,8 @@
   flex-direction: column;
 }
 .conversation-summary {
-  padding: 26px 30px 22px;
-  border-bottom: 1px solid var(--border);
+  padding: 20px 0;
+  border-top: 1px solid var(--border);
 }
 .conversation-eyebrow {
   color: var(--muted-foreground);
@@ -207,7 +205,7 @@
 }
 .conversation-summary h2 {
   margin-top: 7px;
-  font-size: 15px;
+  font-size: 12px;
   line-height: 1.5;
   font-weight: 550;
   letter-spacing: -0.015em;
@@ -220,10 +218,10 @@
   max-width: 64ch;
 }
 .conversation-messages {
-  padding: 28px 30px 34px;
+  padding: 24px;
   display: flex;
   flex-direction: column;
-  gap: 22px;
+  gap: 16px;
   flex: 1;
 }
 .conversation-message {
@@ -250,11 +248,11 @@
   opacity: 0.8;
 }
 .conversation-bubble {
-  padding: 14px 17px;
+  padding: 10px 14px;
   border-radius: 3px 14px 14px;
   background: var(--muted);
   font-size: 13px;
-  line-height: 1.8;
+  line-height: 1.6;
   white-space: pre-wrap;
 }
 .conversation-message[data-direction="out"] .conversation-bubble {
@@ -262,9 +260,11 @@
   border-radius: 14px 3px 14px 14px;
 }
 .conversation-compose {
-  padding: 20px 30px 24px;
-  border-top: 1px solid var(--border);
+  padding: 12px 24px 16px;
+  background: var(--background);
   display: grid;
+  grid-auto-rows: max-content;
+  align-content: start;
   gap: 12px;
 }
 .conversation-compose-heading {
@@ -280,9 +280,80 @@
   font-size: 11px;
   color: var(--muted-foreground);
 }
-.conversation-draft-options {
+.conversation-suggestions > summary {
   display: flex;
-  gap: 4px;
+  align-items: center;
+  gap: 6px;
+  list-style: none;
+  cursor: pointer;
+  color: var(--muted-foreground);
+  font-size: 11px;
+}
+.conversation-suggestions > summary svg {
+  width: 12px;
+  height: 12px;
+}
+.conversation-suggestions > summary:focus-visible {
+  outline: 2px solid var(--ring);
+  outline-offset: 4px;
+}
+.conversation-draft-options {
+  display: grid;
+  gap: 6px;
+  padding-top: 10px;
+}
+.conversation-draft-options button {
+  text-align: left;
+  cursor: pointer;
+  padding: 10px 12px;
+  border: 1px solid var(--border);
+  border-radius: 8px;
+  background: var(--background);
+}
+.conversation-draft-options button > span {
+  font-size: 10px;
+  color: var(--muted-foreground);
+}
+.conversation-draft-options button p {
+  margin-top: 4px;
+  font-size: 12px;
+  line-height: 1.6;
+}
+.conversation-draft-options button:hover {
+  background: var(--muted);
+}
+.conversation-draft-options button[aria-pressed="true"] {
+  border-color: var(--ring);
+  background: var(--accent);
+}
+.conversation-editor {
+  border: 1px solid var(--border);
+  border-radius: 12px;
+  background: var(--sidebar);
+  overflow: hidden;
+}
+.conversation-editor:focus-within {
+  border-color: var(--ring);
+}
+.conversation-editor textarea {
+  min-height: 100px;
+  max-height: 240px;
+  border: 0;
+  border-radius: 0;
+  background: transparent;
+  box-shadow: none;
+  padding: 14px;
+  font-size: 13px;
+  line-height: 1.7;
+  resize: vertical;
+}
+.conversation-editor textarea:focus-visible {
+  outline: 2px solid var(--ring);
+  outline-offset: -3px;
+  box-shadow: none;
+}
+.conversation-editor .conversation-compose-footer {
+  padding: 4px 10px 10px 14px;
 }
 .conversation-compose-footer {
   display: flex;
@@ -341,7 +412,7 @@
 .conversation-person {
   display: grid;
   justify-items: start;
-  padding: 25px 0;
+  padding: 20px 0;
 }
 .conversation-person h3 {
   margin-top: 12px;
@@ -414,9 +485,23 @@
 @container (min-width: 780px) {
   .conversation-workbench {
     grid-template-columns: minmax(0, 1fr) 250px;
-    min-height: calc(100dvh - 70px);
+    height: calc(100dvh - 64px);
+    min-height: 0;
+  }
+  .conversation-thread {
+    min-height: 0;
+  }
+  .conversation-messages {
+    overflow-y: auto;
+    min-height: 100px;
+  }
+  .conversation-compose {
+    flex-shrink: 0;
+    max-height: 65%;
+    overflow-y: auto;
   }
   .conversation-context {
+    overflow-y: auto;
     border-top: 0;
     border-left: 1px solid var(--border);
   }
@@ -440,12 +525,11 @@
   .support-toolbar {
     padding: 12px;
   }
-  .conversation-summary,
   .conversation-compose {
-    padding: 20px;
+    padding: 12px;
   }
   .conversation-messages {
-    padding: 24px 20px;
+    padding: 20px 12px;
   }
   .conversation-message {
     max-width: 100%;
@@ -458,4 +542,32 @@
   .conversation-message {
     scroll-behavior: auto;
   }
+}
+.conversation-evaluation {
+  border-top: 1px solid var(--border);
+  padding-top: 16px;
+  font-size: 12px;
+}
+.conversation-evaluation h3 {
+  font-weight: 600;
+  margin-bottom: 12px;
+}
+.conversation-evaluation ul {
+  display: grid;
+  gap: 10px;
+}
+.conversation-evaluation li {
+  display: flex;
+  justify-content: space-between;
+  gap: 16px;
+}
+.conversation-evaluation strong {
+  font-variant-numeric: tabular-nums;
+  font-weight: 500;
+}
+.conversation-evaluation p {
+  margin-top: 12px;
+  color: var(--muted-foreground);
+  font-size: 11px;
+  line-height: 1.6;
 }

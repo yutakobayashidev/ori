@@ -94,35 +94,37 @@ test("adds tasks only after confirmation and can defer and restore them", async 
   ).toBeVisible();
 });
 
-test("resolves communication within home and carries the status to the shared queue", async ({
+test("opens a conversation page from home and retains outcomes on return", async ({
   page,
   a11y,
 }) => {
   await page.goto("/");
   await page.waitForLoadState("networkidle");
-  await page.getByRole("button", { name: "Open conversation with Haruka Aoki" }).click();
-  const dialog = page.getByRole("dialog", {
-    name: "Conversation with Haruka Aoki",
-  });
-  await expect(dialog.getByRole("textbox", { name: "Reply", exact: true })).toBeVisible();
+  const conversationLink = page.getByRole("link", { name: "Open conversation with Haruka Aoki" });
+  await expect(conversationLink).toHaveAttribute("href", /conversation=design-review/);
+  await conversationLink.click();
+  await expect(page).toHaveURL(/\/support\?.*conversation=design-review/);
+  await expect(page.getByRole("dialog")).toHaveCount(0);
+  await expect(page.getByRole("textbox", { name: "Reply", exact: true })).toBeVisible();
   expect((await a11y().analyze()).violations).toEqual([]);
-  await dialog.getByRole("button", { name: "Leave for later" }).click();
-  await expect(dialog).toHaveCount(0);
-  await expect(
-    page.getByRole("button", { name: "Open conversation with Haruka Aoki" }),
-  ).toContainText("Set aside");
-  await page.getByRole("link", { name: "Messages", exact: true }).first().click();
-  const rows = page.locator(".support-row");
-  await expect(rows.filter({ hasText: "Schedule next week’s design review" })).toHaveCount(0);
-  await page.getByRole("button", { name: "Set aside", exact: true }).click();
-  await rows.filter({ hasText: "Schedule next week’s design review" }).click();
+  await page.goBack();
+  await expect(conversationLink).toBeVisible();
+  await page.goForward();
+  await expect(page.getByRole("textbox", { name: "Reply", exact: true })).toBeVisible();
+  await page.reload();
+  await page.waitForLoadState("networkidle");
+  await expect(page.getByRole("textbox", { name: "Reply", exact: true })).toBeVisible();
+  await page.getByRole("button", { name: "Leave for later" }).click();
+  await page.getByRole("link", { name: "Home", exact: true }).first().click();
+  await expect(conversationLink).toContainText("Set aside");
+  await conversationLink.click();
+  await expect(page).toHaveURL(/conversation=design-review/);
+  await expect(page.getByRole("button", { name: "Move to Inbox" })).toBeVisible();
   await page.getByRole("button", { name: "Move to Inbox" }).click();
   const back = page.getByRole("button", { name: "Back to messages" });
   if (await back.isVisible()) await back.click();
   await page.getByRole("link", { name: "Home", exact: true }).first().click();
-  await expect(
-    page.getByRole("button", { name: "Open conversation with Haruka Aoki" }),
-  ).toBeVisible();
+  await expect(conversationLink).toBeVisible();
 });
 
 test("updates the prose brief as priorities change and opens the referenced conversation", async ({
@@ -136,11 +138,8 @@ test("updates the prose brief as priorities change and opens the referenced conv
   await page.getByRole("button", { name: "Complete Review the documents", exact: true }).click();
   await expect(brief).not.toContainText("Review the documents");
   await brief.getByRole("button", { name: "Reply to Haruka Aoki" }).click();
-  const dialog = page.getByRole("dialog", {
-    name: "Conversation with Haruka Aoki",
-    exact: true,
-  });
-  await dialog.getByRole("button", { name: "Leave for later" }).click();
+  await page.getByRole("button", { name: "Leave for later" }).click();
+  await page.getByRole("link", { name: "Home", exact: true }).first().click();
   await expect(brief).toContainText("2 conversations");
   await expect(brief).not.toContainText("Haruka Aoki");
   await page.getByRole("textbox", { name: "Home input" }).fill("再開地点：資料の2ページ目から");
@@ -164,18 +163,15 @@ test("keeps completed actions in their original positions with visible outcomes"
   await expect(
     page.getByRole("button", { name: "Review the documents Completed", exact: true }),
   ).toBeVisible();
-  await page.getByRole("button", { name: "Open conversation with Haruka Aoki" }).click();
-  const conversation = page.getByRole("dialog", {
-    name: "Conversation with Haruka Aoki",
-    exact: true,
-  });
-  await conversation.getByRole("button", { name: "Review reply", exact: true }).click();
+  await page.getByRole("link", { name: "Open conversation with Haruka Aoki" }).click();
+  await page.getByRole("button", { name: "Review reply", exact: true }).click();
   await page
     .getByRole("dialog", { name: "Review reply", exact: true })
     .getByRole("button", { name: "Try sending" })
     .click();
+  await page.getByRole("link", { name: "Home", exact: true }).first().click();
   await expect(
-    page.getByRole("button", { name: "Open conversation with Haruka Aoki" }),
+    page.getByRole("link", { name: "Open conversation with Haruka Aoki" }),
   ).toContainText("Reply recorded");
   await page.getByRole("button", { name: /Record weight A quick check-in/ }).click();
   await page.getByRole("spinbutton", { name: "Weight", exact: true }).fill("65.2");

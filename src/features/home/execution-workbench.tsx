@@ -1,3 +1,4 @@
+import { Link } from "@tanstack/react-router";
 import {
   ArrowDown,
   ArrowUp,
@@ -26,14 +27,9 @@ import {
 type ExecutionWorkbenchProps = {
   selectedId?: string;
   onSelect: (id: string) => void;
-  onOpenContact: (id: string) => void;
 };
 
-export function ExecutionWorkbench({
-  selectedId,
-  onSelect,
-  onOpenContact,
-}: ExecutionWorkbenchProps) {
+export function ExecutionWorkbench({ selectedId, onSelect }: ExecutionWorkbenchProps) {
   const { tasks, setTasks, statuses, entries } = useWorkspaceState();
   const currentEntries = entries.filter(
     (entry) => !entries.some((other) => other.correctionOf === entry.id),
@@ -152,11 +148,11 @@ export function ExecutionWorkbench({
                         <MessageCircle />
                       )}
                     </span>
-                    <button
-                      type="button"
+                    <Link
+                      to="/support"
+                      search={{ conversation: conversation.id, view: "all" }}
                       className="execution-flow-open"
                       aria-label={`Open conversation with ${conversation.name}`}
-                      onClick={() => onOpenContact(conversation.id)}
                     >
                       <span className="execution-flow-title">Reply to {conversation.name}</span>
                       <span className="execution-flow-description">
@@ -170,7 +166,7 @@ export function ExecutionWorkbench({
                                 ? "Waiting for their reply"
                                 : conversation.subject}
                       </span>
-                    </button>
+                    </Link>
                     <ArrowUpRight className="execution-expand-icon" aria-hidden="true" />
                   </div>
                 </div>

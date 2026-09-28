@@ -9,7 +9,6 @@ import { TooltipProvider } from "#/components/ui/tooltip";
 import { WorkspaceNavigation } from "#/components/workspace-navigation";
 import { articles } from "#/features/inbox/mock-articles";
 import { useUrlState } from "#/features/navigation/use-url-state";
-import { ConversationDetail } from "#/features/support/conversation-detail";
 import { conversations } from "#/features/support/mock-conversations";
 import { entryKindLabels, useWorkspaceState } from "#/features/workspace/workspace-state";
 import { DailyBrief } from "./daily-brief";
@@ -18,8 +17,7 @@ import { type HomeAction, interpretAction } from "./interpret-action";
 
 export function HomePage() {
   const { auth } = useRouteContext({ from: "__root__" });
-  const { tasks, setTasks, setStatuses, outcomes, setOutcomes, entries, setEntries } =
-    useWorkspaceState();
+  const { tasks, setTasks, setStatuses, entries, setEntries } = useWorkspaceState();
   const navigate = useNavigate();
   const input = useRef<HTMLTextAreaElement>(null);
   const [prompt, setPrompt] = useState("");
@@ -29,13 +27,11 @@ export function HomePage() {
   } | null>(null);
   const [notice, setNotice] = useState("");
   const [search, updateSearch] = useUrlState();
-  const contactId = search.conversation;
   const articleId = search.article;
-  const setContactId = (id: string | undefined) =>
-    updateSearch({ conversation: id, article: undefined });
+  const openContact = (id: string) =>
+    void navigate({ to: "/support", search: { conversation: id, view: "all" } });
   const setArticleId = (id: string | undefined) =>
     updateSearch({ article: id, conversation: undefined });
-  const contact = conversations.find((item) => item.id === contactId);
   const article = articles.find((item) => item.id === articleId);
   const currentEntries = entries.filter(
     (entry) => !entries.some((other) => other.correctionOf === entry.id),
@@ -94,7 +90,7 @@ export function HomePage() {
         );
         break;
       case "contact":
-        setContactId(action.id);
+        openContact(action.id);
         break;
       case "contact-status":
         setStatuses((current) => ({ ...current, [action.id]: action.status }));
@@ -148,7 +144,7 @@ export function HomePage() {
               <header className="home-greeting">
                 <p className="text-sm text-muted-foreground">Today</p>
                 <h1>Good morning, {auth.owner?.name}</h1>
-                <DailyBrief onOpenContact={setContactId} />
+                <DailyBrief onOpenContact={openContact} />
               </header>
               <form
                 className="home-composer"
@@ -219,7 +215,6 @@ export function HomePage() {
                 <ExecutionWorkbench
                   selectedId={search.activity}
                   onSelect={(id) => updateSearch({ activity: id || undefined })}
-                  onOpenContact={setContactId}
                 />
                 <aside aria-label="Today’s context">
                   <section className="home-section">
@@ -279,25 +274,6 @@ export function HomePage() {
             </div>
           </div>
         </SidebarInset>
-        {contact && (
-          <Dialog
-            title={`Conversation with ${contact.name}`}
-            className="sm:max-w-3xl"
-            onClose={() => setContactId(undefined)}
-          >
-            <ConversationDetail
-              conversation={contact}
-              onResolve={(status, note) => {
-                setStatuses((current) => ({ ...current, [contact.id]: status }));
-                if (note) setOutcomes((current) => ({ ...current, [contact.id]: note }));
-                setContactId(undefined);
-              }}
-            />
-            {outcomes[contact.id] && (
-              <p className="text-sm whitespace-pre-wrap">{outcomes[contact.id]}</p>
-            )}
-          </Dialog>
-        )}
         {article && (
           <Dialog
             title={article.title}
