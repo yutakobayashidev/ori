@@ -1,6 +1,7 @@
 import { Icon } from "#/components/icon";
 import { Badge } from "#/components/ui/badge";
 import { Button } from "#/components/ui/button";
+import { Skeleton } from "#/components/ui/skeleton";
 import {
   DropdownMenu,
   DropdownMenuContent,
@@ -22,6 +23,7 @@ import { describeSource } from "./source-description";
 export function ResearchColumn({
   column,
   connectionLabel,
+  connectionLoading = false,
   onEdit,
   onRemove,
   onMove,
@@ -32,6 +34,7 @@ export function ResearchColumn({
 }: {
   column: DeckColumn;
   connectionLabel?: string;
+  connectionLoading?: boolean;
   onEdit: () => void;
   onRemove: () => void;
   onMove: (direction: -1 | 1) => void;
@@ -112,9 +115,13 @@ export function ResearchColumn({
           </DropdownMenu>
         </div>
         <div className="deck-column-label">
-          <span title={`Connection profile: ${connectionLabel ?? "Connection not found"}`}>
-            {connectionLabel ?? "Connection not found"}
-          </span>
+          {connectionLoading ? (
+            <Skeleton className="h-3 w-24 shrink-0" aria-hidden="true" />
+          ) : (
+            <span title={`Connection profile: ${connectionLabel ?? "Connection not found"}`}>
+              {connectionLabel ?? "Connection not found"}
+            </span>
+          )}
           <Badge variant="outline" className="deck-source-label">
             <Icon name={column.source.kind} />
             {sourceDescription.label}

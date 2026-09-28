@@ -15,6 +15,7 @@ import {
   EmptyTitle,
 } from "#/components/ui/empty";
 import { Input } from "#/components/ui/input";
+import { Skeleton } from "#/components/ui/skeleton";
 import { loadConnections } from "#/features/connections/server-functions";
 import { syncResearchDeck } from "#/features/research/research-deck-sync";
 import { ResearchPanel } from "#/features/research/research-panel";
@@ -27,6 +28,7 @@ import { type ColumnRegistry, useColumnTools } from "./column-tools";
 import { ResearchColumn } from "./deck-column";
 import { DeckSwitcher } from "./deck-switcher";
 import { type DeckColumn, MAX_COLUMNS, moveColumn } from "./model";
+import { ResearchDeckSkeleton } from "./research-deck-skeleton";
 import { useDeck } from "./use-deck";
 import { useDeckTools } from "./webmcp-tools";
 
@@ -202,10 +204,19 @@ export function DeckPage() {
         >
           <div className="deck-heading">
             <div>
-              <h1>{deck.title}</h1>
-              <span className="deck-count">
-                {deck.columns.length} / {MAX_COLUMNS} columns
-              </span>
+              {ready ? (
+                <>
+                  <h1>{deck.title}</h1>
+                  <span className="deck-count">
+                    {deck.columns.length} / {MAX_COLUMNS} columns
+                  </span>
+                </>
+              ) : (
+                <div className="space-y-2" aria-hidden="true">
+                  <Skeleton className="h-5 w-40" />
+                  <Skeleton className="h-3 w-20" />
+                </div>
+              )}
             </div>
             <div className="deck-actions">
               {deck.persisted ? (
@@ -260,11 +271,6 @@ export function DeckPage() {
               </Button>
             </p>
           ) : null}
-          {!ready ? (
-            <p className="deck-save-status" role="status">
-              Loading decks…
-            </p>
-          ) : null}
           {profiles.isError ? (
             <p role="alert" className="deck-error">
               Unable to load connection profiles.
@@ -288,7 +294,6 @@ export function DeckPage() {
               {profiles.data.relayError}
             </p>
           ) : null}
-          {profiles.isPending ? <p role="status">Loading connection profiles…</p> : null}
           {!renaming && editing === null && !switcherEditing ? storageErrorNotice : null}
           {renaming ? (
             <Dialog title="Rename deck" onClose={() => setRenaming(false)}>
@@ -355,6 +360,7 @@ export function DeckPage() {
               </Button>
             </div>
           ) : null}
+          {!ready && !storageError ? <ResearchDeckSkeleton /> : null}
           {ready && deck.columns.length === 0 && editing === null ? (
             <Empty>
               <EmptyHeader>
@@ -388,6 +394,7 @@ export function DeckPage() {
                   key={`${deck.id}:${column.id}`}
                   registry={registry}
                   column={column}
+                  connectionLoading={profiles.isPending}
                   citation={
                     citationNavigation.target?.deckId === deck.id &&
                     citationNavigation.target.column.id === column.id &&
