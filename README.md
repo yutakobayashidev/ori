@@ -85,6 +85,8 @@ use opens account setup, followed by a short onboarding. Run
 `nix develop -c pnpm account:setup` on the server to obtain the private setup
 code. See [owner login](docs/login.md) for configuration, sessions, and limits.
 
+`GET /health` returns `{"status":"ok"}` without authentication or database access.
+
 ## Requirements and setup
 
 Use Nix, or Node.js `>=22.12.0` with pnpm `11.9.0`. The committed `.npmrc`

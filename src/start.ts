@@ -1,5 +1,12 @@
 import { createCsrfMiddleware, createMiddleware, createStart } from "@tanstack/react-start";
 
+const health = createMiddleware().server(({ request, next }) => {
+  if (request.method === "GET" && new URL(request.url).pathname === "/health") {
+    return Response.json({ status: "ok" }, { headers: { "Cache-Control": "no-store" } });
+  }
+  return next();
+});
+
 const ownerAccess = createMiddleware().server(async ({ request, next }) => {
   const { checkAccess, readAccessConfig } = await import("./features/access/policy.server");
   return checkAccess(request, readAccessConfig()) ?? next();
@@ -23,5 +30,5 @@ const storage = createMiddleware().server(async ({ next }) => {
 });
 
 export const startInstance = createStart(() => ({
-  requestMiddleware: [ownerAccess, csrf, storage, appSession],
+  requestMiddleware: [health, ownerAccess, csrf, storage, appSession],
 }));
