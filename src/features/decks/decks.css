@@ -117,6 +117,7 @@
 .deck-column-results {
   min-height: 0;
   overflow-y: auto;
+  scrollbar-gutter: stable;
   flex: 1;
   overscroll-behavior-y: contain;
   scrollbar-width: thin;

@@ -16,6 +16,7 @@ import { PlatformIcon } from "../platforms/platform-icon";
 import { type ColumnRegistry, useRegisterColumn } from "./column-tools";
 import type { DeckColumn } from "./model";
 import { ResearchPostCard } from "./research-post-card";
+import { ResearchPostSkeleton } from "./research-post-skeleton";
 import { describeSource } from "./source-description";
 
 export function ResearchColumn({
@@ -129,6 +130,7 @@ export function ResearchColumn({
         // oxlint-disable-next-line jsx-a11y/no-noninteractive-tabindex -- Make the scrolling feed keyboard-accessible.
         tabIndex={0}
         aria-label={`Posts in ${column.title}`}
+        aria-busy={query.isFetching}
       >
         {visiblePosts.map((post) => (
           <ResearchPostCard
@@ -140,6 +142,13 @@ export function ResearchColumn({
             citationSnapshot={citation?.post === post && !posts.includes(post)}
           />
         ))}
+        {query.isPending || query.isFetchingNextPage ? (
+          <>
+            <ResearchPostSkeleton />
+            <ResearchPostSkeleton />
+            <ResearchPostSkeleton />
+          </>
+        ) : null}
         {query.isError ? (
           <div className="deck-message" role="alert">
             <p>{error.message}</p>
