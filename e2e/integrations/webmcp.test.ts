@@ -136,6 +136,7 @@ test('creates temporary research, edits it, persists explicitly and reopens it o
   ).not.toBe(true)
   expect(savedCount()).toEqual({ count: 1 })
   const other = await browser.newContext({
+    storageState: await page.context().storageState(),
     baseURL,
     extraHTTPHeaders: { 'Tailscale-User-Login': 'owner@twitter-lite.invalid' },
   })

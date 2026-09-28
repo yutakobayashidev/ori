@@ -296,6 +296,7 @@ test('keeps an open draft through remote edits and rejects its stale save', asyn
   baseURL,
 }) => {
   const other = await browser.newContext({
+    storageState: await page.context().storageState(),
     baseURL,
     extraHTTPHeaders: { 'Tailscale-User-Login': 'owner@twitter-lite.invalid' },
   })

@@ -15,6 +15,13 @@ const csrf = createCsrfMiddleware({
   filter: (context) => context.handlerType === 'serverFn',
 })
 
+const appSession = createMiddleware().server(async ({ request, next }) => {
+  const { checkSessionAccess } = await import('./features/auth/gate.server')
+  const { setResponseHeader } = await import('@tanstack/react-start/server')
+  setResponseHeader('Cache-Control', 'no-store')
+  return checkSessionAccess(request) ?? next()
+})
+
 const storage = createMiddleware().server(async ({ next }) => {
   const { getDatabase } = await import('./features/storage/database.server')
   getDatabase()
@@ -22,5 +29,5 @@ const storage = createMiddleware().server(async ({ next }) => {
 })
 
 export const startInstance = createStart(() => ({
-  requestMiddleware: [ownerAccess, csrf, storage],
+  requestMiddleware: [ownerAccess, csrf, storage, appSession],
 }))

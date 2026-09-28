@@ -41,7 +41,8 @@
     "test:watch": "vitest",
     "test:e2e": "playwright test",
     "test:live": "TWITTER_LITE_LIVE=1 vitest run tests/live/relay.test.ts",
-    "lint:ui": "oxlint src"
+    "lint:ui": "oxlint src",
+    "account:setup": "node --env-file-if-exists=.env.local --import tsx scripts/account-setup.ts"
   },
   "dependencies": {
     "@base-ui/react": "1.8.0",

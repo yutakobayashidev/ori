@@ -81,3 +81,25 @@ it('bounds a slow viewer buffer while retaining the latest state', async () => {
   )
   await reader.cancel()
 })
+
+it('stops sending updates when its login session is revoked', async () => {
+  let authorized = true
+  let emit = (_value: { configured: boolean; run: null }) => {}
+  const unsubscribe = vi.fn()
+  const response = researchEvents(
+    new Request('http://127.0.0.1/events'),
+    (listener) => {
+      emit = listener
+      listener({ configured: false, run: null })
+      return unsubscribe
+    },
+    () => authorized,
+  )
+  const reader = response.body?.getReader()
+  expect.assert.isDefined(reader)
+  await reader.read()
+  authorized = false
+  emit({ configured: true, run: null })
+  expect((await reader.read()).done).toBe(true)
+  expect(unsubscribe).toHaveBeenCalledOnce()
+})

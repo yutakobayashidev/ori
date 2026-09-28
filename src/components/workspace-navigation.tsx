@@ -1,4 +1,4 @@
-import { Link, useLocation } from '@tanstack/react-router'
+import { Link, useLocation, useRouteContext } from '@tanstack/react-router'
 import {
   Activity,
   House,
@@ -35,6 +35,7 @@ export function WorkspaceNavigation({
   footer,
   hasTemporaryDecks,
 }: WorkspaceNavigationProps) {
+  const { auth } = useRouteContext({ from: '__root__' })
   const [managingAccounts, setManagingAccounts] = useState(false)
   const pathname = useLocation({ select: (location) => location.pathname })
   const navigation = [
@@ -129,7 +130,9 @@ export function WorkspaceNavigation({
               onClick={() => setManagingAccounts(true)}
             >
               <Avatar className="size-8">
-                <AvatarFallback>Y</AvatarFallback>
+                <AvatarFallback>
+                  {auth.owner?.name.slice(0, 1).toUpperCase()}
+                </AvatarFallback>
               </Avatar>
             </SidebarMenuButton>
           </SidebarMenuItem>

@@ -1,3 +1,4 @@
+import { useRouteContext } from '@tanstack/react-router'
 import {
   Activity,
   Bell,
@@ -52,6 +53,7 @@ const nav = [
   { name: 'Profile', icon: UserRound },
 ]
 export function VitalsPage() {
+  const { auth } = useRouteContext({ from: '__root__' })
   const [section, setSection] = useState('Body')
   const [mobileMenu, setMobileMenu] = useState(false)
   const [detail, setDetail] = useState<string>()
@@ -141,7 +143,10 @@ export function VitalsPage() {
                   className="vital-profile"
                   onClick={() => setDetail('Profile')}
                 >
-                  <span className="vital-avatar">Y</span>Yuta
+                  <span className="vital-avatar">
+                    {auth.owner?.name.slice(0, 1).toUpperCase()}
+                  </span>
+                  {auth.owner?.name}
                   <ChevronDown />
                 </button>
               </div>

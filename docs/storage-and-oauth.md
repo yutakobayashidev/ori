@@ -1,7 +1,8 @@
 # Shared storage and Mastodon OAuth
 
 Personal Workspace runs as a single personal server behind Tailscale Serve. The
-backend binds to loopback and accepts only the configured Tailscale login.
+backend binds to loopback. The configured Tailscale identity is an outer access
+check; a separate [owner login](login.md) is required in every deployment mode.
 Browser requests that change state must have the configured Origin. OAuth
 callbacks also pass the owner check; the browser must be able to reach the
 tailnet HTTPS address after Mastodon authorization.

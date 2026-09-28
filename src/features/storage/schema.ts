@@ -146,3 +146,34 @@ export const researchState = sqliteTable(
   },
   (table) => [check('research_state_singleton', sql`${table.id} = 1`)],
 )
+
+export const workspaceOwner = sqliteTable(
+  'workspace_owner',
+  {
+    id: integer('id').primaryKey(),
+    email: text('email').notNull(),
+    name: text('name').notNull(),
+    passwordHash: text('password_hash').notNull(),
+    onboardingCompletedAt: integer('onboarding_completed_at'),
+    createdAt: integer('created_at').notNull(),
+  },
+  (table) => [check('workspace_owner_singleton', sql`${table.id} = 1`)],
+)
+
+export const authSessions = sqliteTable('auth_sessions', {
+  tokenHash: text('token_hash').primaryKey(),
+  ownerId: integer('owner_id')
+    .notNull()
+    .references(() => workspaceOwner.id, { onDelete: 'cascade' }),
+  expiresAt: integer('expires_at').notNull(),
+})
+
+export const authThrottle = sqliteTable(
+  'auth_throttle',
+  {
+    id: integer('id').primaryKey(),
+    attempts: integer('attempts').notNull(),
+    resetAt: integer('reset_at').notNull(),
+  },
+  (table) => [check('auth_throttle_singleton', sql`${table.id} = 1`)],
+)

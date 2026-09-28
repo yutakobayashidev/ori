@@ -4,7 +4,11 @@ type Snapshot = { configured: boolean; run: ResearchRun | null }
 type Subscribe = (listener: (snapshot: Snapshot) => void) => () => void
 
 /** Subscribe to current state and subsequent changes; disconnect only this viewer. */
-export function researchEvents(request: Request, subscribe: Subscribe) {
+export function researchEvents(
+  request: Request,
+  subscribe: Subscribe,
+  isAuthorized: () => boolean = () => true,
+) {
   const encoder = new TextEncoder()
   let dispose = () => {}
   let flushPending = () => {}
@@ -14,7 +18,15 @@ export function researchEvents(request: Request, subscribe: Subscribe) {
       let closed = false
       let unsubscribe = () => {}
       let heartbeat: ReturnType<typeof setInterval> | undefined
+      const checkSession = () => {
+        if (closed) return false
+        if (isAuthorized()) return true
+        dispose()
+        controller.close()
+        return false
+      }
       const flush = () => {
+        if (!checkSession()) return
         if (
           !closed &&
           pending !== undefined &&
@@ -46,7 +58,12 @@ export function researchEvents(request: Request, subscribe: Subscribe) {
         pending = `data: ${JSON.stringify(snapshot)}\n\n`
         flush()
       })
+      if (closed) {
+        unsubscribe()
+        return
+      }
       heartbeat = setInterval(() => {
+        if (!checkSession()) return
         if (
           !closed &&
           pending === undefined &&

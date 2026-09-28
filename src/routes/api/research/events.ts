@@ -8,7 +8,16 @@ export const Route = createFileRoute('/api/research/events')({
           import('../../../features/research/events.server'),
           import('../../../features/research/runner.server'),
         ])
-        return researchEvents(request, researchService().subscribe)
+        const { getSession } = await import(
+          '../../../features/auth/auth.server'
+        )
+        const { sessionToken } = await import(
+          '../../../features/auth/http.server'
+        )
+        const token = sessionToken(request)
+        return researchEvents(request, researchService().subscribe, () =>
+          Boolean(getSession(token)?.onboardingCompletedAt),
+        )
       },
     },
   },

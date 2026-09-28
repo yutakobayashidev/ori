@@ -42,4 +42,14 @@ export const migrations = [
     folderMillis: 1790242505709,
     hash: '5b74e60a806df54dc3c6897aa84305b80a3b097dd70cd6cf1feebcfd3b72a135',
   },
+  {
+    sql: [
+      'CREATE TABLE `auth_sessions` (\n\t`token_hash` text PRIMARY KEY NOT NULL,\n\t`owner_id` integer NOT NULL,\n\t`expires_at` integer NOT NULL,\n\tFOREIGN KEY (`owner_id`) REFERENCES `workspace_owner`(`id`) ON UPDATE no action ON DELETE cascade\n);\n',
+      '\nCREATE TABLE `auth_throttle` (\n\t`id` integer PRIMARY KEY NOT NULL,\n\t`attempts` integer NOT NULL,\n\t`reset_at` integer NOT NULL,\n\tCONSTRAINT "auth_throttle_singleton" CHECK("auth_throttle"."id" = 1)\n);\n',
+      '\nCREATE TABLE `workspace_owner` (\n\t`id` integer PRIMARY KEY NOT NULL,\n\t`email` text NOT NULL,\n\t`name` text NOT NULL,\n\t`password_hash` text NOT NULL,\n\t`onboarding_completed_at` integer,\n\t`created_at` integer NOT NULL,\n\tCONSTRAINT "workspace_owner_singleton" CHECK("workspace_owner"."id" = 1)\n);\n',
+    ],
+    bps: true,
+    folderMillis: 1790589494499,
+    hash: 'c2093b5a2e4f84ffa333dff896fc8a7bf86015ce84ae562765b525b763af749e',
+  },
 ]

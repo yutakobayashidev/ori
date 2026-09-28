@@ -46,6 +46,8 @@
               --add-flags "$out/lib/twitter-lite/server/index.mjs"
             makeWrapper ${nixpkgs.lib.getExe pkgs.nodejs_22} $out/bin/twitter-lite-backup \
               --add-flags "$out/lib/twitter-lite/server/tools/backup-database.js"
+            makeWrapper ${nixpkgs.lib.getExe pkgs.nodejs_22} $out/bin/twitter-lite-setup \
+              --add-flags "$out/lib/twitter-lite/server/tools/account-setup.js"
             runHook postInstall
           '';
 

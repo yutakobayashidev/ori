@@ -11,10 +11,14 @@
 import { Route as rootRouteImport } from './routes/__root'
 import { Route as VitalsRouteImport } from './routes/vitals'
 import { Route as SupportRouteImport } from './routes/support'
+import { Route as SetupRouteImport } from './routes/setup'
+import { Route as OnboardingRouteImport } from './routes/onboarding'
+import { Route as LoginRouteImport } from './routes/login'
 import { Route as JournalRouteImport } from './routes/journal'
 import { Route as InboxRouteImport } from './routes/inbox'
 import { Route as DeckRouteImport } from './routes/deck'
 import { Route as IndexRouteImport } from './routes/index'
+import { Route as ApiAuthRouteImport } from './routes/api/auth'
 import { Route as OauthMastodonCallbackRouteImport } from './routes/oauth/mastodon/callback'
 import { Route as ApiResearchEventsRouteImport } from './routes/api/research/events'
 
@@ -26,6 +30,21 @@ const VitalsRoute = VitalsRouteImport.update({
 const SupportRoute = SupportRouteImport.update({
   id: '/support',
   path: '/support',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const SetupRoute = SetupRouteImport.update({
+  id: '/setup',
+  path: '/setup',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const OnboardingRoute = OnboardingRouteImport.update({
+  id: '/onboarding',
+  path: '/onboarding',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const LoginRoute = LoginRouteImport.update({
+  id: '/login',
+  path: '/login',
   getParentRoute: () => rootRouteImport,
 } as any)
 const JournalRoute = JournalRouteImport.update({
@@ -48,6 +67,11 @@ const IndexRoute = IndexRouteImport.update({
   path: '/',
   getParentRoute: () => rootRouteImport,
 } as any)
+const ApiAuthRoute = ApiAuthRouteImport.update({
+  id: '/api/auth',
+  path: '/api/auth',
+  getParentRoute: () => rootRouteImport,
+} as any)
 const OauthMastodonCallbackRoute = OauthMastodonCallbackRouteImport.update({
   id: '/oauth/mastodon/callback',
   path: '/oauth/mastodon/callback',
@@ -64,8 +88,12 @@ export interface FileRoutesByFullPath {
   '/deck': typeof DeckRoute
   '/inbox': typeof InboxRoute
   '/journal': typeof JournalRoute
+  '/login': typeof LoginRoute
+  '/onboarding': typeof OnboardingRoute
+  '/setup': typeof SetupRoute
   '/support': typeof SupportRoute
   '/vitals': typeof VitalsRoute
+  '/api/auth': typeof ApiAuthRoute
   '/api/research/events': typeof ApiResearchEventsRoute
   '/oauth/mastodon/callback': typeof OauthMastodonCallbackRoute
 }
@@ -74,8 +102,12 @@ export interface FileRoutesByTo {
   '/deck': typeof DeckRoute
   '/inbox': typeof InboxRoute
   '/journal': typeof JournalRoute
+  '/login': typeof LoginRoute
+  '/onboarding': typeof OnboardingRoute
+  '/setup': typeof SetupRoute
   '/support': typeof SupportRoute
   '/vitals': typeof VitalsRoute
+  '/api/auth': typeof ApiAuthRoute
   '/api/research/events': typeof ApiResearchEventsRoute
   '/oauth/mastodon/callback': typeof OauthMastodonCallbackRoute
 }
@@ -85,8 +117,12 @@ export interface FileRoutesById {
   '/deck': typeof DeckRoute
   '/inbox': typeof InboxRoute
   '/journal': typeof JournalRoute
+  '/login': typeof LoginRoute
+  '/onboarding': typeof OnboardingRoute
+  '/setup': typeof SetupRoute
   '/support': typeof SupportRoute
   '/vitals': typeof VitalsRoute
+  '/api/auth': typeof ApiAuthRoute
   '/api/research/events': typeof ApiResearchEventsRoute
   '/oauth/mastodon/callback': typeof OauthMastodonCallbackRoute
 }
@@ -97,8 +133,12 @@ export interface FileRouteTypes {
     | '/deck'
     | '/inbox'
     | '/journal'
+    | '/login'
+    | '/onboarding'
+    | '/setup'
     | '/support'
     | '/vitals'
+    | '/api/auth'
     | '/api/research/events'
     | '/oauth/mastodon/callback'
   fileRoutesByTo: FileRoutesByTo
@@ -107,8 +147,12 @@ export interface FileRouteTypes {
     | '/deck'
     | '/inbox'
     | '/journal'
+    | '/login'
+    | '/onboarding'
+    | '/setup'
     | '/support'
     | '/vitals'
+    | '/api/auth'
     | '/api/research/events'
     | '/oauth/mastodon/callback'
   id:
@@ -117,8 +161,12 @@ export interface FileRouteTypes {
     | '/deck'
     | '/inbox'
     | '/journal'
+    | '/login'
+    | '/onboarding'
+    | '/setup'
     | '/support'
     | '/vitals'
+    | '/api/auth'
     | '/api/research/events'
     | '/oauth/mastodon/callback'
   fileRoutesById: FileRoutesById
@@ -128,8 +176,12 @@ export interface RootRouteChildren {
   DeckRoute: typeof DeckRoute
   InboxRoute: typeof InboxRoute
   JournalRoute: typeof JournalRoute
+  LoginRoute: typeof LoginRoute
+  OnboardingRoute: typeof OnboardingRoute
+  SetupRoute: typeof SetupRoute
   SupportRoute: typeof SupportRoute
   VitalsRoute: typeof VitalsRoute
+  ApiAuthRoute: typeof ApiAuthRoute
   ApiResearchEventsRoute: typeof ApiResearchEventsRoute
   OauthMastodonCallbackRoute: typeof OauthMastodonCallbackRoute
 }
@@ -148,6 +200,27 @@ declare module '@tanstack/react-router' {
       path: '/support'
       fullPath: '/support'
       preLoaderRoute: typeof SupportRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/setup': {
+      id: '/setup'
+      path: '/setup'
+      fullPath: '/setup'
+      preLoaderRoute: typeof SetupRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/onboarding': {
+      id: '/onboarding'
+      path: '/onboarding'
+      fullPath: '/onboarding'
+      preLoaderRoute: typeof OnboardingRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/login': {
+      id: '/login'
+      path: '/login'
+      fullPath: '/login'
+      preLoaderRoute: typeof LoginRouteImport
       parentRoute: typeof rootRouteImport
     }
     '/journal': {
@@ -178,6 +251,13 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof IndexRouteImport
       parentRoute: typeof rootRouteImport
     }
+    '/api/auth': {
+      id: '/api/auth'
+      path: '/api/auth'
+      fullPath: '/api/auth'
+      preLoaderRoute: typeof ApiAuthRouteImport
+      parentRoute: typeof rootRouteImport
+    }
     '/oauth/mastodon/callback': {
       id: '/oauth/mastodon/callback'
       path: '/oauth/mastodon/callback'
@@ -200,8 +280,12 @@ const rootRouteChildren: RootRouteChildren = {
   DeckRoute: DeckRoute,
   InboxRoute: InboxRoute,
   JournalRoute: JournalRoute,
+  LoginRoute: LoginRoute,
+  OnboardingRoute: OnboardingRoute,
+  SetupRoute: SetupRoute,
   SupportRoute: SupportRoute,
   VitalsRoute: VitalsRoute,
+  ApiAuthRoute: ApiAuthRoute,
   ApiResearchEventsRoute: ApiResearchEventsRoute,
   OauthMastodonCallbackRoute: OauthMastodonCallbackRoute,
 }

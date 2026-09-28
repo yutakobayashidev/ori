@@ -63,6 +63,13 @@ or change direction.
 Original-post links open their source site; SNS reply threads are not rendered
 inside the app. Bluesky, Threads, and Nostr connectors are not implemented.
 
+## Login and onboarding
+
+The workspace requires a single owner account with email and password. First
+use opens account setup, followed by a short onboarding. Run
+`nix develop -c pnpm account:setup` on the server to obtain the private setup
+code. See [owner login](docs/login.md) for configuration, sessions, and limits.
+
 ## Requirements and setup
 
 Use Nix, or Node.js `>=22.12.0` with pnpm `11.9.0`. The committed `.npmrc`
@@ -107,6 +114,7 @@ nix develop -c pnpm test:e2e
 nix develop -c pnpm test:live
 nix develop -c pnpm build
 nix develop -c pnpm start
+nix develop -c pnpm account:setup
 nix develop -c pnpm db:generate
 nix develop -c pnpm codex:serve
 ```
@@ -271,10 +279,10 @@ to localhost does not supply the required identity. Playwright supplies an
 explicit fixture identity to its isolated test server.
 
 For a private, tailnet-only reverse proxy such as Traefik, explicitly set
-`TWITTER_LITE_AUTH_MODE=none` to disable application identity checks. This mode
-does not require `TWITTER_LITE_ALLOWED_LOGIN` or Tailscale identity headers;
-anyone who can reach that proxy can use the app and its connected accounts and
-Codex. Bind the backend to loopback or its Tailscale address and restrict proxy
+`TWITTER_LITE_AUTH_MODE=none` to disable the Tailscale identity check. This mode
+does not require `TWITTER_LITE_ALLOWED_LOGIN` or Tailscale identity headers.
+App login remains mandatory, including access to connected accounts and Codex.
+Bind the backend to loopback or its Tailscale address and restrict proxy
 access to the tailnet.
 Both modes require the exact configured `Origin` for state-changing requests,
 including chat and deck mutations. Missing origin or an unknown auth mode

@@ -3,14 +3,36 @@ import {
   createRootRouteWithContext,
   HeadContent,
   Outlet,
+  redirect,
   Scripts,
 } from '@tanstack/react-router'
+import { loadAuthState } from '#/features/auth/session'
 import { WorkspaceStateProvider } from '#/features/workspace/workspace-state'
 import appCss from '../styles.css?url'
 
 type RouterContext = { queryClient: QueryClient }
 
 export const Route = createRootRouteWithContext<RouterContext>()({
+  beforeLoad: async ({ location }) => {
+    const auth = await loadAuthState()
+    const path = location.pathname
+    const entry = path === '/login' || path === '/setup'
+    if (!auth.owner && auth.needsSetup && path === '/login')
+      throw redirect({ to: '/setup' })
+    if (!auth.owner && !entry)
+      throw redirect({ to: auth.needsSetup ? '/setup' : '/login' })
+    if (!auth.owner && path === '/setup' && !auth.needsSetup)
+      throw redirect({ to: '/login' })
+    if (
+      auth.owner &&
+      !auth.owner.onboardingCompletedAt &&
+      path !== '/onboarding'
+    )
+      throw redirect({ to: '/onboarding' })
+    if (auth.owner?.onboardingCompletedAt && (entry || path === '/onboarding'))
+      throw redirect({ to: '/' })
+    return { auth }
+  },
   head: () => ({
     meta: [
       { charSet: 'utf-8' },

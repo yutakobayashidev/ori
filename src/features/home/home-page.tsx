@@ -1,4 +1,4 @@
-import { Link, useNavigate } from '@tanstack/react-router'
+import { Link, useNavigate, useRouteContext } from '@tanstack/react-router'
 import {
   ArrowDown,
   ArrowUp,
@@ -32,6 +32,7 @@ import { type HomeAction, interpretAction } from './interpret-action'
 import './home.css'
 
 export function HomePage() {
+  const { auth } = useRouteContext({ from: '__root__' })
   const {
     tasks,
     setTasks,
@@ -175,7 +176,7 @@ export function HomePage() {
             <div className="home-content">
               <header className="home-greeting">
                 <p className="text-sm text-muted-foreground">Today</p>
-                <h1>Good morning, Yuta</h1>
+                <h1>Good morning, {auth.owner?.name}</h1>
                 <DailyBrief onOpenContact={setContactId} />
               </header>
               <form
