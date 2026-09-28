@@ -64,7 +64,7 @@ export function WorkspaceNavigation({
       active: pathname === '/inbox',
     },
     {
-      title: 'Twitter Lite',
+      title: 'Research',
       to: '/deck',
       icon: Search,
       active: pathname === '/deck',

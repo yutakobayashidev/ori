@@ -87,7 +87,7 @@ async function getApp(origin: string, database: AppDatabase, send: Send) {
   const registered = appSchema.parse(
     await (
       await formRequest(send, origin, '/api/v1/apps', {
-        client_name: 'Twitter Lite',
+        client_name: 'Personal Workspace',
         redirect_uris: redirectUri,
         scopes,
       })

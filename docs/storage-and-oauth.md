@@ -1,6 +1,6 @@
 # Shared storage and Mastodon OAuth
 
-Twitter Lite runs as a single personal server behind Tailscale Serve. The
+Personal Workspace runs as a single personal server behind Tailscale Serve. The
 backend binds to loopback and accepts only the configured Tailscale login.
 Browser requests that change state must have the configured Origin. OAuth
 callbacks also pass the owner check; the browser must be able to reach the

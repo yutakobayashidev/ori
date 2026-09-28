@@ -4,7 +4,7 @@
 
 `/deck` renders the research workspace; `/` is the integrated daily home. A collapsible shadcn/ui
 sidebar based on `sidebar-09` shares its navigation rail with the article reader
-at `/inbox`. Within Twitter Lite, it switches between research chat and deck management.
+at `/inbox`. Within Research, it switches between research chat and deck management.
 Deck management switches decks and adds columns. The avatar at the bottom of the
 shared sidebar opens connected-account management in a dialog from either workspace.
 Up to six ordered columns scroll independently; only the active deck

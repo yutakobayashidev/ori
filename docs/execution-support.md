@@ -1,7 +1,7 @@
 # Execution support prototype
 
 The shared sidebar opens `/support` (Messages) and `/journal` (Journal), alongside
-Reader and Twitter Lite. These are UI-only prototypes with fictional contacts
+Reader and Research. These are UI-only prototypes with fictional contacts
 and in-memory state. Reloading resets the prototype state. Tasks, communication status, outcomes, and
 journal entries are shared between routes for the current browser session.
 No messages, calendar events, medical records, or Rensheng pages are written.
@@ -41,7 +41,7 @@ Start here, Routines, and If there’s room. There are no fixed time slots.
 Tasks can be reordered, completed, deferred, restored, or followed as routine
 steps. Communications can be reviewed directly in a home dialog; changes also
 appear in `/support`. Journal entries and corrections appear on the home, and
-reader samples open for reading. Twitter Lite remains a separate work surface.
+reader samples open for reading. Research remains a separate work surface.
 
 The input currently uses a deterministic English/Japanese mock interpreter, not an LLM.
 It proposes typed actions for task creation/status/reordering, routine steps,

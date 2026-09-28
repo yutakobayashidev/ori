@@ -100,13 +100,13 @@
         let cfg = config.services.twitter-lite;
         in {
           options.services.twitter-lite = {
-            enable = lib.mkEnableOption "Twitter Lite";
+            enable = lib.mkEnableOption "Personal Workspace";
 
             package = lib.mkOption {
               type = lib.types.package;
               default = mkTwitterLite pkgs;
               defaultText = lib.literalExpression "twitter-lite.packages.\${pkgs.system}.default";
-              description = "Twitter Lite package to run.";
+              description = "Personal Workspace package to run.";
             };
 
             relayBaseUrl = lib.mkOption {
@@ -143,13 +143,13 @@
             port = lib.mkOption {
               type = lib.types.port;
               default = 3000;
-              description = "Port on which Twitter Lite listens.";
+              description = "Port on which Personal Workspace listens.";
             };
           };
 
           config = lib.mkIf cfg.enable {
             systemd.services.twitter-lite = {
-              description = "Twitter Lite";
+              description = "Personal Workspace";
               after = [ "network.target" ];
               wantedBy = [ "multi-user.target" ];
               environment = {

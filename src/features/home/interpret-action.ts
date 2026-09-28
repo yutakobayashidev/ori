@@ -38,13 +38,13 @@ export function interpretAction(
     return { error: 'Please review this action in the relevant screen.' }
   text = text
     .replace(
-      /^open (messages|journal|reader|twitter lite|deck)$/i,
+      /^open (messages|journal|reader|research|deck)$/i,
       (_, name: string) =>
         ({
           messages: '連絡',
           journal: '記録',
           reader: 'リーダー',
-          'twitter lite': 'Twitter Lite',
+          research: 'Research',
           deck: 'デッキ',
         })[name.toLowerCase()] ?? name,
     )
@@ -83,7 +83,7 @@ export function interpretAction(
     連絡: '/support',
     記録: '/journal',
     リーダー: '/inbox',
-    'Twitter Lite': '/deck',
+    Research: '/deck',
     デッキ: '/deck',
   }
   const destination = text.replace(/(?:を開いて|を開く|に移動)$/, '')
@@ -93,7 +93,7 @@ export function interpretAction(
   if (route)
     return {
       action: { type: 'navigate', to: route },
-      label: `Open ${{ '/support': 'Messages', '/journal': 'Journal', '/inbox': 'Reader', '/deck': 'Twitter Lite' }[route]}`,
+      label: `Open ${{ '/support': 'Messages', '/journal': 'Journal', '/inbox': 'Reader', '/deck': 'Research' }[route]}`,
     }
 
   const note = text.match(/^(メモ|再開地点)[：:\s]+(.+)$/s)

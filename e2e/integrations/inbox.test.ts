@@ -41,7 +41,7 @@ test('selects articles and keeps the reader focused on their content', async ({
   ).toBeVisible()
 })
 
-test('recovers from empty search and shares navigation with Twitter Lite', async ({
+test('recovers from empty search and shares navigation with Research', async ({
   page,
   a11y,
 }) => {
@@ -61,7 +61,7 @@ test('recovers from empty search and shares navigation with Twitter Lite', async
   await expect(
     page.getByRole('button', { name: 'Edit interests', exact: true }),
   ).toHaveCount(0)
-  await page.getByRole('link', { name: 'Twitter Lite', exact: true }).click()
+  await page.getByRole('link', { name: 'Research', exact: true }).click()
   await expect(page).toHaveURL(/\/deck$/)
   await page.getByRole('link', { name: 'Reader', exact: true }).click()
   await expect(page).toHaveURL(/\/inbox$/)

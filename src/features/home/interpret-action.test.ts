@@ -148,7 +148,7 @@ describe('home natural-language proposals', () => {
     ['連絡を開いて', '/support'],
     ['記録', '/journal'],
     ['リーダーを開く', '/inbox'],
-    ['Twitter Liteに移動', '/deck'],
+    ['Researchに移動', '/deck'],
   ])('recognizes navigation: %s', (input, to) => {
     expect(interpretAction(input, tasks, contacts)).toMatchObject({
       action: { type: 'navigate', to },

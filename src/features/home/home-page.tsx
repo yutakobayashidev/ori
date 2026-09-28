@@ -548,7 +548,7 @@ export function HomePage() {
                     ))}
                   </section>
                   <Link to="/deck" className="home-deck-link">
-                    Explore in Twitter Lite
+                    Explore in Research
                     <ArrowUpRight className="size-4" />
                   </Link>
                 </aside>

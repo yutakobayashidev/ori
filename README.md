@@ -1,54 +1,67 @@
-# Twitter Lite
+# Personal Workspace
 
-Twitter Lite is a personal research deck for Twitter and Mastodon. Create
-multiple named decks and arrange up to six columns per deck. Each column is
-bound to a connection account, so platforms and multiple accounts work side by side.
+A personal workspace for understanding the day, choosing the next action,
+keeping context, and exploring information. Home brings together a short brief,
+flexible tasks and routines, messages, notes, and reading. A shared sidebar opens
+each dedicated workspace; its bottom avatar manages connected accounts.
 
-## Scope
+The interface is in English. User-entered text and external posts retain their
+original language.
 
-- Multiple deck profiles with creation, selection, renaming, and deletion
-- Twitter search, user timeline, and list columns with independent relay accounts
+## Workspaces and current status
+
+| Workspace | Route | Current implementation |
+| --- | --- | --- |
+| Home | `/` | State-derived daily brief, flexible tasks and routines, and natural-language action proposals. Local prototype. |
+| Messages | `/support` | Sample conversations, editable replies, scheduling previews, and deferral. Sending is simulated. |
+| Journal | `/journal` | Notes, resume points, medication and weight entries, append-only corrections, and summary previews. Local prototype. |
+| Reader | `/inbox` | Searchable sample articles and a responsive article reader. Recommendation from activity history is not connected yet. |
+| Vitals | `/vitals` | Body and Environment dashboards with sample readings, charts, and simulated controls. No health or device connection. |
+| Research | `/deck` | Twitter and Mastodon columns, connected accounts, persistent decks, and optional Codex research chat. |
+
+Home, Messages, and Journal share in-memory state across navigation; reloading
+resets it. The home input uses a deterministic English/Japanese interpreter to
+preview an action before confirmation, rather than an LLM. Research decks,
+connections, and chat history use server-side persistence.
+
+See [execution support](docs/execution-support.md) and the
+[vitals preview](docs/vitals-preview.md) for prototype scope.
+
+## Direction: personal context and execution
+
+The intended connection with the separate private `life` / Rensheng repository
+is a loop: read relevant personal context, suggest useful next actions, record
+what happened, and compile meaningful outcomes back into durable context.
+This integration is planned; the app does not currently read or update life.
+
+Rensheng would retain personal context, preferences, and the background of
+ongoing matters. This workspace would own its execution state and interaction
+history, with original conversations and appointments remaining in their source
+systems. Context should carry source references and verification dates.
+
+Interests are queries over activity history, not settings the user must maintain.
+Routines provide optional guidance rather than a daily completion quota. Home
+should help the user choose a manageable next step, with room to defer, dismiss,
+or change direction.
+
+## Research capabilities
+
+- Multiple named decks with up to six columns each
+- Twitter search, user timelines, and lists with independent relay accounts
 - Mastodon OAuth, multiple accounts, search, user, list, and hashtag columns
 - Native X search syntax, Top/Latest ranking, and optional `filter:follows`
-- List discovery for the profile selected in the column editor
-- Column editing, ordering, deletion/undo, manual refresh, and cursor pagination
-- Platform logos in column headers distinguish Twitter and Mastodon at a glance
-- SQLite-backed shared decks, revision conflicts, and device-local active selection
-- Temporary views for AI exploration, with explicit save and temporary copies
+- List discovery for the account selected in the column editor
+- Column editing, ordering, deletion/undo, refresh, and cursor pagination
+- SQLite-backed shared decks, revision conflicts, and device-local selection
+- Temporary views for exploration, with explicit saving
 - Server-only encrypted Mastodon credentials and configurable Tailscale owner access
-- Read-only cards with original-post links, text, media, and quotes
-- Experimental WebMCP tools to manage decks and read or paginate their columns
-- Prototype: chat with a resident home Codex beside a live deck, reuse existing
-  decks and write cited Markdown research reports on the host
-- Saved chat history with deck, account and citation restoration across devices
-  and backend restarts
+- Read-only post cards with source links, text, media, and quotes
+- Experimental WebMCP tools to manage decks and read their columns
+- Optional resident Codex research chat, cited host-side Markdown reports,
+  and saved conversations with deck, account, and citation restoration
 
-The system interface is in English; user-entered text and external posts retain their original language.
-
-`/` opens the daily home with a greeting, natural-language action proposals,
-flexible tasks/routines, messages, notes, and reading. `/deck` opens Twitter Lite.
-The shared sidebar also opens
-the article reader at `/inbox`. This UI-only prototype shows articles inferred
-from past reading, searches, and research, with no manual interest settings.
-Articles are fictional samples; search and article selection work locally.
-On mobile, the article list and reader switch views. The shared sidebar’s bottom
-avatar opens connected-account management from either workspace.
-
-The shared sidebar also contains `/support` (communication support) and `/journal`
-(notes and health records). These use fictional conversations and local session
-state to preview reply review, scheduling, deferral, recording, and corrections.
-See [execution support](docs/execution-support.md) for scope and limitations.
-
-`/vitals` is a separate [health/environment reference preview](docs/vitals-preview.md)
-with sample scores, body systems, environmental charts, and simulated controls.
-
-The former SNS reader, search,
-list, user-profile, and conversation routes have been removed. Original-post
-links on post cards open their source site; SNS reply threads are not rendered
-inside the app.
-
-Bluesky/Threads/Nostr connectors are not implemented yet. An external browser
-agent can also create and read decks through WebMCP.
+Original-post links open their source site; SNS reply threads are not rendered
+inside the app. Bluesky, Threads, and Nostr connectors are not implemented.
 
 ## Requirements and setup
 
@@ -129,10 +142,10 @@ accounts' lists before planning new searches, then read relevant list columns
 for evidence. Follow-ups can reuse catalogs already fetched in the conversation.
 Manual deck creation and column editing remain
 available. The backend handles tools even when the browser is closed.
-Use **新しいチャット** to leave the current conversation and start a fresh Codex
+Use **New chat** to leave the current conversation and start a fresh Codex
 thread with your next message. The open deck and host reports remain available.
 If a turn is running, stop it first. The conversation reset is shared across
-open devices. **チャット履歴** reopens saved conversations with their account
+open devices. **Chat history** reopens saved conversations with their account
 selection, deck and citations; the next message resumes the same Codex thread.
 SQLite stores conversation snapshots and the active conversation selection.
 Each turn is limited to 6 columns, 12 upstream requests shared between list

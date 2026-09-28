@@ -119,7 +119,7 @@ function Workspace({
       <SidebarInset className="min-w-0 overflow-hidden">
         <header className="flex h-12 shrink-0 items-center gap-2 border-b px-3">
           <SidebarTrigger aria-label="Toggle sidebar" />
-          <span className="text-sm font-medium">Twitter Lite</span>
+          <span className="text-sm font-medium">Research</span>
           <span className="ml-auto text-xs text-muted-foreground">
             Research workspace
           </span>
