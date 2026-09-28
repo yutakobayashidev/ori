@@ -16,3 +16,7 @@ as the anatomy illustration source and clipped in CSS. Source media:
 https://pbs.twimg.com/media/HTE4JWFWUAAnPBt.jpg
 The rest of the interface is HTML/CSS with SVG data charts. Reference-specific
 colors are scoped to `--vital-*` tokens in `vitals.css`.
+
+Sections, tabs, history, chart filters, and detail dialogs are URL state and
+restore on reload or browser Back/Forward. Simulated climate control values
+remain local; opening a URL never issues a device command.

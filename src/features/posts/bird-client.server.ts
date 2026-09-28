@@ -1,17 +1,17 @@
-import { TwitterClient } from '@yuta/bird'
-import type { BirdReader } from './post-service'
+import { TwitterClient } from "@yuta/bird";
+import type { BirdReader } from "./post-service";
 
-const clients = new Map<string, TwitterClient>()
+const clients = new Map<string, TwitterClient>();
 
 export function getBirdReader(profileName: string): BirdReader {
-  const existing = clients.get(profileName)
-  if (existing) return existing
+  const existing = clients.get(profileName);
+  if (existing) return existing;
 
   const client = new TwitterClient({
     relayBaseUrl: process.env.TWITTER_RELAY_BASE_URL,
     profileName,
     timeoutMs: 20_000,
-  })
-  clients.set(profileName, client)
-  return client
+  });
+  clients.set(profileName, client);
+  return client;
 }

@@ -1,30 +1,28 @@
-import type { Page } from '@playwright/test'
-import Database from 'better-sqlite3'
-import { expect, test } from '../fixtures'
+import type { Page } from "@playwright/test";
+import Database from "better-sqlite3";
+import { expect, test } from "../fixtures";
 
 type NativeTesting = {
-  listTools(): { name: string }[]
-  executeTool(name: string, input: string): Promise<string | null>
-}
+  listTools(): { name: string }[];
+  executeTool(name: string, input: string): Promise<string | null>;
+};
 type ToolResult = {
-  content: { type: string; text: string }[]
-  isError?: boolean
-}
+  content: { type: string; text: string }[];
+  isError?: boolean;
+};
 test.use({
   launchOptions: {
     executablePath: process.env.PLAYWRIGHT_CHROMIUM_EXECUTABLE,
-    args: ['--enable-blink-features=WebMCP,WebMCPTesting'],
+    args: ["--enable-blink-features=WebMCP,WebMCPTesting"],
   },
-})
+});
 async function toolNames(page: Page) {
   return page.evaluate(() =>
-    (
-      navigator as Navigator & { modelContextTesting: NativeTesting }
-    ).modelContextTesting
+    (navigator as Navigator & { modelContextTesting: NativeTesting }).modelContextTesting
       .listTools()
       .map((tool) => tool.name)
       .sort(),
-  )
+  );
 }
 async function executeTool(
   page: Page,
@@ -37,296 +35,249 @@ async function executeTool(
         navigator as Navigator & { modelContextTesting: NativeTesting }
       ).modelContextTesting.executeTool(name, JSON.stringify(input)),
     { name, input },
-  )
-  expect(result).not.toBeNull()
-  return JSON.parse(result ?? '{}')
+  );
+  expect(result).not.toBeNull();
+  return JSON.parse(result ?? "{}");
 }
 function decoded(result: ToolResult) {
-  return JSON.parse(result.content[0]?.text ?? '{}')
+  return JSON.parse(result.content[0]?.text ?? "{}");
 }
 const column = (title: string, connectionId: string) => ({
   title,
   connectionId,
-  source: { kind: 'search', query: 'WebMCP' },
-})
+  source: { kind: "search", query: "WebMCP" },
+});
 function savedCount() {
-  const db = new Database(process.env.TWITTER_LITE_E2E_DB_PATH ?? '', {
+  const db = new Database(process.env.TWITTER_LITE_E2E_DB_PATH ?? "", {
     readonly: true,
-  })
+  });
   try {
-    return db.prepare('SELECT count(*) AS count FROM decks').get()
+    return db.prepare("SELECT count(*) AS count FROM decks").get();
   } finally {
-    db.close()
+    db.close();
   }
 }
-let accounts: Record<string, string>
-let pageErrors: string[]
+let accounts: Record<string, string>;
+let pageErrors: string[];
 test.beforeEach(async ({ page }) => {
-  pageErrors = []
-  page.on('pageerror', (error) => pageErrors.push(error.message))
-  await page.goto('/deck')
+  pageErrors = [];
+  page.on("pageerror", (error) => pageErrors.push(error.message));
+  await page.goto("/deck");
   await expect
     .poll(() => toolNames(page))
     .toEqual([
-      'delete_deck',
-      'get_column_posts',
-      'get_deck',
-      'list_connections',
-      'list_decks',
-      'load_more_column',
-      'save_deck',
-      'select_deck',
-      'set_deck',
-    ])
+      "delete_deck",
+      "get_column_posts",
+      "get_deck",
+      "list_connections",
+      "list_decks",
+      "load_more_column",
+      "save_deck",
+      "select_deck",
+      "set_deck",
+    ]);
   await expect
-    .poll(
-      async () =>
-        decoded(await executeTool(page, 'list_connections')).connections
-          ?.length,
-    )
-    .toBe(2)
+    .poll(async () => decoded(await executeTool(page, "list_connections")).connections?.length)
+    .toBe(2);
   accounts = Object.fromEntries(
-    decoded(await executeTool(page, 'list_connections')).connections.map(
-      (connection: { displayName: string; id: string }) => [
-        connection.displayName,
-        connection.id,
-      ],
+    decoded(await executeTool(page, "list_connections")).connections.map(
+      (connection: { displayName: string; id: string }) => [connection.displayName, connection.id],
     ),
-  )
-})
-test.afterEach(() => expect(pageErrors).toEqual([]))
+  );
+});
+test.afterEach(() => expect(pageErrors).toEqual([]));
 
-test('creates temporary research, edits it, persists explicitly and reopens it on another device', async ({
+test("creates temporary research, edits it, persists explicitly and reopens it on another device", async ({
   page,
   browser,
   baseURL,
 }) => {
-  const created = await executeTool(page, 'set_deck', {
-    title: 'WebMCPの反応',
+  const created = await executeTool(page, "set_deck", {
+    title: "WebMCPの反応",
     columns: [
-      { ...column('日本語', accounts.e2e ?? ''), id: 'new' },
-      column('別の接続', accounts.alternate ?? ''),
+      { ...column("日本語", accounts.e2e ?? ""), id: "new" },
+      column("別の接続", accounts.alternate ?? ""),
     ],
-  })
-  expect(created.isError).not.toBe(true)
-  const deck = decoded(created).deck
-  expect(deck.persisted).toBe(false)
-  expect(savedCount()).toEqual({ count: 0 })
-  await expect(
-    page.getByText('alternate · Latest · all page 1', { exact: true }),
-  ).toBeVisible()
+  });
+  expect(created.isError).not.toBe(true);
+  const deck = decoded(created).deck;
+  expect(deck.persisted).toBe(false);
+  expect(savedCount()).toEqual({ count: 0 });
+  await expect(page.getByText("alternate · Latest · all page 1", { exact: true })).toBeVisible();
   await page
-    .getByRole('region', { name: '日本語', exact: true })
-    .getByRole('button', { name: 'Actions for 日本語' })
-    .click()
-  await page.getByRole('menuitem', { name: 'Edit', exact: true }).click()
-  const replaced = await executeTool(page, 'set_deck', {
+    .getByRole("region", { name: "日本語", exact: true })
+    .getByRole("button", { name: "Actions for 日本語" })
+    .click();
+  await page.getByRole("menuitem", { name: "Edit", exact: true }).click();
+  const replaced = await executeTool(page, "set_deck", {
     deckId: deck.id,
-    title: '更新した調査',
+    title: "更新した調査",
     columns: [deck.columns[1]],
-  })
-  expect(replaced.isError).not.toBe(true)
-  await expect(page.getByRole('dialog')).toHaveCount(0)
-  expect(savedCount()).toEqual({ count: 0 })
-  expect(
-    (await executeTool(page, 'save_deck', { deckId: deck.id })).isError,
-  ).not.toBe(true)
-  expect(
-    (await executeTool(page, 'save_deck', { deckId: deck.id })).isError,
-  ).not.toBe(true)
-  expect(savedCount()).toEqual({ count: 1 })
+  });
+  expect(replaced.isError).not.toBe(true);
+  await expect(page.getByRole("dialog")).toHaveCount(0);
+  expect(savedCount()).toEqual({ count: 0 });
+  expect((await executeTool(page, "save_deck", { deckId: deck.id })).isError).not.toBe(true);
+  expect((await executeTool(page, "save_deck", { deckId: deck.id })).isError).not.toBe(true);
+  expect(savedCount()).toEqual({ count: 1 });
   const other = await browser.newContext({
     storageState: await page.context().storageState(),
     baseURL,
-    extraHTTPHeaders: { 'Tailscale-User-Login': 'owner@twitter-lite.invalid' },
-  })
+    extraHTTPHeaders: { "Tailscale-User-Login": "owner@twitter-lite.invalid" },
+  });
   try {
-    const device = await other.newPage()
-    await device.goto('/deck')
-    await expect(device.getByRole('heading', { level: 1 })).toHaveText(
-      '更新した調査',
-    )
+    const device = await other.newPage();
+    await device.goto("/deck");
+    await expect(device.getByRole("heading", { level: 1 })).toHaveText("更新した調査");
     await expect(
-      device.getByText('alternate · Latest · all page 1', { exact: true }),
-    ).toBeVisible()
+      device.getByText("alternate · Latest · all page 1", { exact: true }),
+    ).toBeVisible();
   } finally {
-    await other.close()
+    await other.close();
   }
-  await page.reload()
-  await expect(page.getByRole('heading', { level: 1 })).toHaveText(
-    '更新した調査',
-  )
-})
+  await page.reload();
+  await expect(page.getByRole("heading", { level: 1 })).toHaveText("更新した調査");
+});
 
-test('requires revisions for saved mutations and rejects stale overwrites', async ({
-  page,
-}) => {
+test("requires revisions for saved mutations and rejects stale overwrites", async ({ page }) => {
   const deck = decoded(
-    await executeTool(page, 'set_deck', { title: '保存済み', columns: [] }),
-  ).deck
-  await executeTool(page, 'save_deck', { deckId: deck.id })
+    await executeTool(page, "set_deck", { title: "保存済み", columns: [] }),
+  ).deck;
+  await executeTool(page, "save_deck", { deckId: deck.id });
   expect(
     (
-      await executeTool(page, 'set_deck', {
+      await executeTool(page, "set_deck", {
         deckId: deck.id,
-        title: '変更',
+        title: "変更",
         columns: [],
       })
     ).isError,
-  ).toBe(true)
+  ).toBe(true);
   expect(
     (
-      await executeTool(page, 'set_deck', {
+      await executeTool(page, "set_deck", {
         deckId: deck.id,
         expectedRevision: 1,
-        title: '変更',
+        title: "変更",
         columns: [],
       })
     ).isError,
-  ).not.toBe(true)
+  ).not.toBe(true);
   expect(
     (
-      await executeTool(page, 'set_deck', {
+      await executeTool(page, "set_deck", {
         deckId: deck.id,
         expectedRevision: 1,
-        title: '古い変更',
+        title: "古い変更",
         columns: [],
       })
     ).isError,
-  ).toBe(true)
-  await expect(page.getByRole('heading', { level: 1 })).toHaveText('変更')
+  ).toBe(true);
+  await expect(page.getByRole("heading", { level: 1 })).toHaveText("変更");
   expect(
     (
-      await executeTool(page, 'delete_deck', {
+      await executeTool(page, "delete_deck", {
         deckId: deck.id,
         expectedRevision: 1,
       })
     ).isError,
-  ).toBe(true)
+  ).toBe(true);
   expect(
     (
-      await executeTool(page, 'delete_deck', {
+      await executeTool(page, "delete_deck", {
         deckId: deck.id,
         expectedRevision: 2,
       })
     ).isError,
-  ).not.toBe(true)
-  expect(savedCount()).toEqual({ count: 0 })
-})
+  ).not.toBe(true);
+  expect(savedCount()).toEqual({ count: 0 });
+});
 
-test('keeps temporary views independent and loses only unsaved views on reload', async ({
+test("keeps temporary views independent and loses only unsaved views on reload", async ({
   page,
 }) => {
   const first = decoded(
-    await executeTool(page, 'set_deck', { title: '一時の調査A', columns: [] }),
-  ).deck
+    await executeTool(page, "set_deck", { title: "一時の調査A", columns: [] }),
+  ).deck;
   const second = decoded(
-    await executeTool(page, 'set_deck', { title: '一時の調査B', columns: [] }),
-  ).deck
-  await executeTool(page, 'select_deck', { deckId: first.id })
-  await expect(page.getByRole('heading', { level: 1 })).toHaveText(
-    '一時の調査A',
-  )
-  await executeTool(page, 'delete_deck', { deckId: second.id })
+    await executeTool(page, "set_deck", { title: "一時の調査B", columns: [] }),
+  ).deck;
+  await executeTool(page, "select_deck", { deckId: first.id });
+  await expect(page.getByRole("heading", { level: 1 })).toHaveText("一時の調査A");
+  await executeTool(page, "delete_deck", { deckId: second.id });
   expect(
-    decoded(await executeTool(page, 'list_decks')).decks.some(
+    decoded(await executeTool(page, "list_decks")).decks.some(
       (deck: { id: string }) => deck.id === second.id,
     ),
-  ).toBe(false)
-  expect(savedCount()).toEqual({ count: 0 })
-  await page.reload()
-  await expect(page.getByRole('heading', { level: 1 })).toHaveText(
-    'New research',
-  )
-})
+  ).toBe(false);
+  expect(savedCount()).toEqual({ count: 0 });
+  await page.reload();
+  await expect(page.getByRole("heading", { level: 1 })).toHaveText("New research");
+});
 
-test('rejects invalid input without changing the active view', async ({
-  page,
-}) => {
-  await executeTool(page, 'set_deck', {
-    title: '残す調査',
-    columns: [column('残す観点', accounts.e2e ?? '')],
-  })
-  const duplicate = { ...column('不正', accounts.e2e ?? ''), id: 'duplicate' }
+test("rejects invalid input without changing the active view", async ({ page }) => {
+  await executeTool(page, "set_deck", {
+    title: "残す調査",
+    columns: [column("残す観点", accounts.e2e ?? "")],
+  });
+  const duplicate = { ...column("不正", accounts.e2e ?? ""), id: "duplicate" };
   for (const columns of [
     [duplicate, duplicate],
-    [column('不明', 'missing')],
+    [column("不明", "missing")],
     [
       {
-        ...column('不正', accounts.e2e ?? ''),
-        source: { kind: 'list', target: 'invalid' },
+        ...column("不正", accounts.e2e ?? ""),
+        source: { kind: "list", target: "invalid" },
       },
     ],
   ]) {
-    expect(
-      (await executeTool(page, 'set_deck', { title: '変更しない', columns }))
-        .isError,
-    ).toBe(true)
-    await expect(page.locator('.deck-column h2')).toHaveText(['残す観点'])
+    expect((await executeTool(page, "set_deck", { title: "変更しない", columns })).isError).toBe(
+      true,
+    );
+    await expect(page.locator(".deck-column h2")).toHaveText(["残す観点"]);
   }
-  expect(savedCount()).toEqual({ count: 0 })
-})
+  expect(savedCount()).toEqual({ count: 0 });
+});
 
-test('keeps failed temporary saves visible and allows retry without duplicate decks', async ({
+test("keeps failed temporary saves visible and allows retry without duplicate decks", async ({
   page,
 }) => {
   const deck = decoded(
-    await executeTool(page, 'set_deck', { title: '未保存の調査', columns: [] }),
-  ).deck
-  await page.route('**/_serverFn/**', (route) =>
-    route.request().method() === 'POST' ? route.abort() : route.continue(),
-  )
-  expect(
-    (await executeTool(page, 'save_deck', { deckId: deck.id })).isError,
-  ).toBe(true)
-  await expect(page.getByRole('heading', { level: 1 })).toHaveText(
-    '未保存の調査',
-  )
-  expect(decoded(await executeTool(page, 'get_deck')).deck.persisted).toBe(
-    false,
-  )
-  await page.unroute('**/_serverFn/**')
-  expect(
-    (await executeTool(page, 'save_deck', { deckId: deck.id })).isError,
-  ).not.toBe(true)
-  expect(savedCount()).toEqual({ count: 1 })
-})
+    await executeTool(page, "set_deck", { title: "未保存の調査", columns: [] }),
+  ).deck;
+  await page.route("**/_serverFn/**", (route) =>
+    route.request().method() === "POST" ? route.abort() : route.continue(),
+  );
+  expect((await executeTool(page, "save_deck", { deckId: deck.id })).isError).toBe(true);
+  await expect(page.getByRole("heading", { level: 1 })).toHaveText("未保存の調査");
+  expect(decoded(await executeTool(page, "get_deck")).deck.persisted).toBe(false);
+  await page.unroute("**/_serverFn/**");
+  expect((await executeTool(page, "save_deck", { deckId: deck.id })).isError).not.toBe(true);
+  expect(savedCount()).toEqual({ count: 1 });
+});
 
-test('reads and pages bound accounts without mixing sibling columns', async ({
-  page,
-}) => {
+test("reads and pages bound accounts without mixing sibling columns", async ({ page }) => {
   const deck = decoded(
-    await executeTool(page, 'set_deck', {
-      title: '接続を比較',
-      columns: [
-        column('通常', accounts.e2e ?? ''),
-        column('別の接続', accounts.alternate ?? ''),
-      ],
+    await executeTool(page, "set_deck", {
+      title: "接続を比較",
+      columns: [column("通常", accounts.e2e ?? ""), column("別の接続", accounts.alternate ?? "")],
     }),
-  ).deck
-  await expect(
-    page.getByText('alternate · Latest · all page 1', { exact: true }),
-  ).toBeVisible()
-  const id = deck.columns[1].id
-  const loaded = decoded(
-    await executeTool(page, 'get_column_posts', { columnId: id }),
-  )
-  expect(loaded.column.connectionId).toBe(accounts.alternate)
+  ).deck;
+  await expect(page.getByText("alternate · Latest · all page 1", { exact: true })).toBeVisible();
+  const id = deck.columns[1].id;
+  const loaded = decoded(await executeTool(page, "get_column_posts", { columnId: id }));
+  expect(loaded.column.connectionId).toBe(accounts.alternate);
   expect(loaded.posts.map((post: { text: string }) => post.text)).toEqual([
-    'alternate · Latest · all page 1',
-  ])
-  const more = decoded(
-    await executeTool(page, 'load_more_column', { columnId: id }),
-  )
-  expect(more).toMatchObject({ loadedCount: 2, offset: 1, hasMore: false })
+    "alternate · Latest · all page 1",
+  ]);
+  const more = decoded(await executeTool(page, "load_more_column", { columnId: id }));
+  expect(more).toMatchObject({ loadedCount: 2, offset: 1, hasMore: false });
   expect(more.posts.map((post: { text: string }) => post.text)).toEqual([
-    'alternate · Latest · all page 2',
-  ])
+    "alternate · Latest · all page 2",
+  ]);
   await expect(
-    page.getByRole('region', { name: '通常', exact: true }).locator('article'),
-  ).toHaveCount(1)
-  await executeTool(page, 'set_deck', { title: '別の一時ビュー', columns: [] })
-  expect(
-    (await executeTool(page, 'get_column_posts', { columnId: id })).isError,
-  ).toBe(true)
-})
+    page.getByRole("region", { name: "通常", exact: true }).locator("article"),
+  ).toHaveCount(1);
+  await executeTool(page, "set_deck", { title: "別の一時ビュー", columns: [] });
+  expect((await executeTool(page, "get_column_posts", { columnId: id })).isError).toBe(true);
+});

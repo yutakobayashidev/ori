@@ -10,176 +10,176 @@ import {
   TriangleAlert,
   Wifi,
   Wind,
-} from 'lucide-react'
-import { useState } from 'react'
-import { Dialog } from '#/components/dialog'
+} from "lucide-react";
+import { useState } from "react";
+import { Dialog } from "#/components/dialog";
+import { useUrlState } from "#/features/navigation/use-url-state";
 
-type Tone = 'green' | 'blue' | 'purple' | 'yellow'
+type Tone = "green" | "blue" | "purple" | "yellow";
 type Metric = {
-  name: string
-  value: string
-  unit: string
-  tone: Tone
-  status?: string
-  min: string
-  max: string
-}
+  name: string;
+  value: string;
+  unit: string;
+  tone: Tone;
+  status?: string;
+  min: string;
+  max: string;
+};
 const metrics: Metric[] = [
   {
-    name: 'Room temperature',
-    value: '64.0',
-    unit: '°F',
-    tone: 'purple',
-    status: 'Watch',
-    min: '58.1',
-    max: '73.6',
+    name: "Room temperature",
+    value: "64.0",
+    unit: "°F",
+    tone: "purple",
+    status: "Watch",
+    min: "58.1",
+    max: "73.6",
   },
   {
-    name: 'Humidity',
-    value: '64',
-    unit: '%',
-    tone: 'yellow',
-    status: 'Watch',
-    min: '47',
-    max: '71',
+    name: "Humidity",
+    value: "64",
+    unit: "%",
+    tone: "yellow",
+    status: "Watch",
+    min: "47",
+    max: "71",
   },
   {
-    name: 'CO₂',
-    value: '676',
-    unit: 'ppm',
-    tone: 'blue',
-    status: 'Good',
-    min: '437',
-    max: '1,639',
+    name: "CO₂",
+    value: "676",
+    unit: "ppm",
+    tone: "blue",
+    status: "Good",
+    min: "437",
+    max: "1,639",
   },
   {
-    name: 'PM1.0',
-    value: '0.0',
-    unit: 'µg/m³',
-    tone: 'purple',
-    min: '0.0',
-    max: '4.0',
+    name: "PM1.0",
+    value: "0.0",
+    unit: "µg/m³",
+    tone: "purple",
+    min: "0.0",
+    max: "4.0",
   },
   {
-    name: 'PM2.5',
-    value: '0.8',
-    unit: 'µg/m³',
-    tone: 'green',
-    status: 'Good',
-    min: '0.0',
-    max: '3.2',
+    name: "PM2.5",
+    value: "0.8",
+    unit: "µg/m³",
+    tone: "green",
+    status: "Good",
+    min: "0.0",
+    max: "3.2",
   },
   {
-    name: 'PM10',
-    value: '1.0',
-    unit: 'µg/m³',
-    tone: 'purple',
-    min: '0.0',
-    max: '5.9',
+    name: "PM10",
+    value: "1.0",
+    unit: "µg/m³",
+    tone: "purple",
+    min: "0.0",
+    max: "5.9",
   },
   {
-    name: 'TVOC',
-    value: '73',
-    unit: 'ppb',
-    tone: 'green',
-    status: 'Good',
-    min: '30',
-    max: '1,252',
+    name: "TVOC",
+    value: "73",
+    unit: "ppb",
+    tone: "green",
+    status: "Good",
+    min: "30",
+    max: "1,252",
   },
   {
-    name: 'NOx index',
-    value: '1',
-    unit: '',
-    tone: 'green',
-    status: 'Good',
-    min: '1',
-    max: '1',
+    name: "NOx index",
+    value: "1",
+    unit: "",
+    tone: "green",
+    status: "Good",
+    min: "1",
+    max: "1",
   },
   {
-    name: 'Particle count',
-    value: '217',
-    unit: 'particles/dL',
-    tone: 'purple',
-    min: '8',
-    max: '817',
+    name: "Particle count",
+    value: "217",
+    unit: "particles/dL",
+    tone: "purple",
+    min: "8",
+    max: "817",
   },
-]
+];
 const scores = [
   {
-    name: 'Air quality score',
-    value: '93',
-    unit: '',
-    status: 'Optimal',
-    change: '−3',
-    suffix: '',
+    name: "Air quality score",
+    value: "93",
+    unit: "",
+    status: "Optimal",
+    change: "−3",
+    suffix: "",
     progress: 0.93,
   },
   {
-    name: 'CO₂',
-    value: '676',
-    unit: 'ppm',
-    status: 'Good',
-    change: '+42',
-    suffix: 'ppm',
+    name: "CO₂",
+    value: "676",
+    unit: "ppm",
+    status: "Good",
+    change: "+42",
+    suffix: "ppm",
     progress: 0.91,
   },
   {
-    name: 'PM2.5',
-    value: '0.8',
-    unit: 'µg/m³',
-    status: 'Good',
-    change: '+0.4',
-    suffix: 'µg/m³',
+    name: "PM2.5",
+    value: "0.8",
+    unit: "µg/m³",
+    status: "Good",
+    change: "+0.4",
+    suffix: "µg/m³",
     progress: 0.96,
   },
   {
-    name: 'Comfort index',
-    value: '80',
-    unit: '',
-    status: 'Good',
-    change: '+2',
-    suffix: '',
+    name: "Comfort index",
+    value: "80",
+    unit: "",
+    status: "Good",
+    change: "+2",
+    suffix: "",
     progress: 0.8,
   },
-]
+];
 const series = [
   {
-    name: 'PM2.5',
-    unit: 'µg/m³',
-    tone: 'green',
+    name: "PM2.5",
+    unit: "µg/m³",
+    tone: "green",
     values: [
-      2, 1, 0, 0, 0, 1, 0, 6, 1, 1, 0, 0, 5, 21, 14, 9, 0, 0, 1, 2, 0, 2, 5, 62,
-      40, 21, 11, 4, 20, 54,
+      2, 1, 0, 0, 0, 1, 0, 6, 1, 1, 0, 0, 5, 21, 14, 9, 0, 0, 1, 2, 0, 2, 5, 62, 40, 21, 11, 4, 20,
+      54,
     ],
   },
   {
-    name: 'CO₂',
-    unit: 'ppm',
-    tone: 'blue',
+    name: "CO₂",
+    unit: "ppm",
+    tone: "blue",
     values: [
-      38, 34, 38, 41, 39, 29, 67, 56, 50, 53, 56, 53, 54, 34, 34, 32, 40, 42,
-      29, 59, 95, 58, 50, 48, 49, 50, 50, 56, 39, 48,
+      38, 34, 38, 41, 39, 29, 67, 56, 50, 53, 56, 53, 54, 34, 34, 32, 40, 42, 29, 59, 95, 58, 50,
+      48, 49, 50, 50, 56, 39, 48,
     ],
   },
   {
-    name: 'Room temperature',
-    unit: '°F',
-    tone: 'purple',
+    name: "Room temperature",
+    unit: "°F",
+    tone: "purple",
     values: [
-      55, 60, 66, 69, 69, 64, 62, 43, 36, 35, 33, 27, 29, 43, 57, 65, 71, 75,
-      72, 69, 66, 45, 39, 34, 30, 27, 29, 33, 36, 39,
+      55, 60, 66, 69, 69, 64, 62, 43, 36, 35, 33, 27, 29, 43, 57, 65, 71, 75, 72, 69, 66, 45, 39,
+      34, 30, 27, 29, 33, 36, 39,
     ],
   },
   {
-    name: 'Humidity',
-    unit: '%',
-    tone: 'yellow',
+    name: "Humidity",
+    unit: "%",
+    tone: "yellow",
     values: [
-      4, 4, 3, 3, 3, 3, 4, 4, 5, 5, 4, 4, 4, 5, 4, 3, 3, 3, 3, 3, 3, 3, 3, 3, 3,
-      3, 3, 3, 4, 4,
+      4, 4, 3, 3, 3, 3, 4, 4, 5, 5, 4, 4, 4, 5, 4, 3, 3, 3, 3, 3, 3, 3, 3, 3, 3, 3, 3, 3, 4, 4,
     ],
   },
-] as const
+] as const;
 
 function points(values: readonly number[], width = 640, height = 190) {
   return values
@@ -187,14 +187,14 @@ function points(values: readonly number[], width = 640, height = 190) {
       (value, index) =>
         `${(index * width) / (values.length - 1)},${height - (value * height) / 100}`,
     )
-    .join(' ')
+    .join(" ");
 }
 
-function Sparkline({ index, tone = 'green' }: { index: number; tone?: Tone }) {
+function Sparkline({ index, tone = "green" }: { index: number; tone?: Tone }) {
   const values =
     index === 7
       ? Array<number>(30).fill(20)
-      : (series[index % series.length]?.values ?? series[0].values)
+      : (series[index % series.length]?.values ?? series[0].values);
   return (
     <svg
       className="vital-sparkline"
@@ -210,7 +210,7 @@ function Sparkline({ index, tone = 'green' }: { index: number; tone?: Tone }) {
         vectorEffect="non-scaling-stroke"
       />
     </svg>
-  )
+  );
 }
 
 function Gauge({ value }: { value: number }) {
@@ -233,37 +233,32 @@ function Gauge({ value }: { value: number }) {
         strokeDasharray={`${value * 100} 100`}
       />
     </svg>
-  )
+  );
 }
 
 function Trends() {
-  const [range, setRange] = useState('48H')
-  const [metric, setMetric] = useState('Overview')
-  const visible = series.filter(
-    (item) => metric === 'Overview' || item.name === metric,
-  )
+  const [search, setSearch] = useUrlState();
+  const range = search.environmentRange ?? "48H";
+  const metric = series.some((item) => item.name === search.environmentMetric)
+    ? search.environmentMetric
+    : "Overview";
+  const setRange = (value: "24H" | "48H" | "7D") =>
+    setSearch({ environmentRange: value === "48H" ? undefined : value });
+  const setMetric = (value: string) =>
+    setSearch({ environmentMetric: value === "Overview" ? undefined : value });
+  const visible = series.filter((item) => metric === "Overview" || item.name === metric);
   const labels =
-    range === '7D'
-      ? ['Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat', 'Sun']
-      : range === '24H'
-        ? ['12 AM', '4 AM', '8 AM', '12 PM', '4 PM', '8 PM']
-        : [
-            'Mon 7 PM',
-            'Tue 3 AM',
-            'Tue 11 AM',
-            'Tue 7 PM',
-            'Wed 3 AM',
-            'Wed 11 AM',
-          ]
+    range === "7D"
+      ? ["Mon", "Tue", "Wed", "Thu", "Fri", "Sat", "Sun"]
+      : range === "24H"
+        ? ["12 AM", "4 AM", "8 AM", "12 PM", "4 PM", "8 PM"]
+        : ["Mon 7 PM", "Tue 3 AM", "Tue 11 AM", "Tue 7 PM", "Wed 3 AM", "Wed 11 AM"];
   return (
-    <section
-      className="vital-trends vital-card"
-      aria-label="Environmental trends"
-    >
+    <section className="vital-trends vital-card" aria-label="Environmental trends">
       <div className="vital-card-header">
         <h2>Trends</h2>
         <fieldset className="vital-segmented" aria-label="Trend period">
-          {['24H', '48H', '7D'].map((item) => (
+          {(["24H", "48H", "7D"] as const).map((item) => (
             <button
               type="button"
               key={item}
@@ -275,11 +270,8 @@ function Trends() {
           ))}
         </fieldset>
       </div>
-      <fieldset
-        className="vital-chart-tabs vital-segmented"
-        aria-label="Trend metric"
-      >
-        {['Overview', ...series.map((item) => item.name)].map((item) => (
+      <fieldset className="vital-chart-tabs vital-segmented" aria-label="Trend metric">
+        {["Overview", ...series.map((item) => item.name)].map((item) => (
           <button
             type="button"
             key={item}
@@ -320,7 +312,7 @@ function Trends() {
               fill="var(--vital-muted)"
               fontSize="12"
             >
-              {['1,500', '1,000', '500', '0'][index]}
+              {["1,500", "1,000", "500", "0"][index]}
             </text>
           </g>
         ))}
@@ -333,11 +325,11 @@ function Trends() {
         <g transform="translate(56,26)">
           {visible.map((item) => {
             const values =
-              range === '24H'
+              range === "24H"
                 ? item.values.slice(15)
-                : range === '7D'
+                : range === "7D"
                   ? [...item.values.slice(10), ...item.values.slice(0, 10)]
-                  : item.values
+                  : item.values;
             return (
               <polyline
                 key={item.name}
@@ -347,7 +339,7 @@ function Trends() {
                 strokeWidth="2.3"
                 strokeLinejoin="round"
               />
-            )
+            );
           })}
         </g>
         {labels.map((label, index) => (
@@ -364,22 +356,18 @@ function Trends() {
         ))}
       </svg>
     </section>
-  )
+  );
 }
 
 function AirMonitor() {
-  const [synced, setSynced] = useState(false)
+  const [synced, setSynced] = useState(false);
   return (
     <section className="vital-monitor vital-card">
       <div className="vital-card-header">
         <h2>Air monitor</h2>
-        <button
-          className="vital-outline-button"
-          type="button"
-          onClick={() => setSynced(true)}
-        >
+        <button className="vital-outline-button" type="button" onClick={() => setSynced(true)}>
           <RefreshCw size={15} />
-          {synced ? 'Synced' : 'Sync now'}
+          {synced ? "Synced" : "Sync now"}
         </button>
       </div>
       <div className="vital-device">
@@ -390,11 +378,9 @@ function AirMonitor() {
             <span data-tone="green">● Connected</span>
           </div>
           <p>Air monitor</p>
-          <p role="status">
-            {synced ? 'Sample readings refreshed' : 'Updated just now'}
-          </p>
+          <p role="status">{synced ? "Sample readings refreshed" : "Updated just now"}</p>
           <div className="vital-device-badges">
-            {['CO₂', 'PM2.5', 'Temp', 'Humidity', 'VOC', 'NOx'].map((item) => (
+            {["CO₂", "PM2.5", "Temp", "Humidity", "VOC", "NOx"].map((item) => (
               <span key={item}>{item}</span>
             ))}
           </div>
@@ -402,11 +388,11 @@ function AirMonitor() {
       </div>
       <p className="vital-monitor-footnote">
         {synced
-          ? '71 sample readings synced. No device connected.'
-          : '71 sample readings · simulated device'}
+          ? "71 sample readings synced. No device connected."
+          : "71 sample readings · simulated device"}
       </p>
     </section>
-  )
+  );
 }
 
 function Insights() {
@@ -419,11 +405,7 @@ function Insights() {
         </div>
         <div className="vital-insight">
           <TriangleAlert data-tone="yellow" size={20} />
-          <div
-            className="vital-obscured"
-            role="img"
-            aria-label="Text obscured in reference image"
-          >
+          <div className="vital-obscured" role="img" aria-label="Text obscured in reference image">
             <i />
             <i />
             <i />
@@ -434,20 +416,14 @@ function Insights() {
           <Check data-tone="green" size={20} />
           <div>
             <h3>Particulates stayed low</h3>
-            <p>
-              The sample PM2.5 reading is 0.8 µg/m³. View its recent pattern in
-              Trends.
-            </p>
+            <p>The sample PM2.5 reading is 0.8 µg/m³. View its recent pattern in Trends.</p>
           </div>
         </div>
         <div className="vital-insight">
           <Check data-tone="green" size={20} />
           <div>
             <h3>Humidity through the day</h3>
-            <p>
-              The room’s current sample reading is 64%. Select Humidity to
-              explore the chart.
-            </p>
+            <p>The room’s current sample reading is 64%. Select Humidity to explore the chart.</p>
           </div>
         </div>
         <div className="vital-insight">
@@ -455,8 +431,8 @@ function Insights() {
           <div>
             <h3>Room temperature</h3>
             <p>
-              The current sample temperature is 64.0°F. Recent readings are
-              shown alongside the other room metrics.
+              The current sample temperature is 64.0°F. Recent readings are shown alongside the
+              other room metrics.
             </p>
           </div>
         </div>
@@ -465,11 +441,7 @@ function Insights() {
         <h2>Recommended actions</h2>
         <div className="vital-insight">
           <Grid2X2 size={20} />
-          <div
-            className="vital-obscured"
-            role="img"
-            aria-label="Text obscured in reference image"
-          >
+          <div className="vital-obscured" role="img" aria-label="Text obscured in reference image">
             <i />
             <i />
           </div>
@@ -483,13 +455,13 @@ function Insights() {
         </div>
       </section>
     </aside>
-  )
+  );
 }
 
 function ClimateControl() {
-  const [temperature, setTemperature] = useState(68)
-  const [mode, setMode] = useState('Auto')
-  const [purifier, setPurifier] = useState(true)
+  const [temperature, setTemperature] = useState(68);
+  const [mode, setMode] = useState("Auto");
+  const [purifier, setPurifier] = useState(true);
   return (
     <section className="vital-climate vital-card">
       <h2>Room climate</h2>
@@ -506,7 +478,7 @@ function ClimateControl() {
         onChange={(event) => setTemperature(Number(event.target.value))}
       />
       <fieldset className="vital-segmented" aria-label="Climate mode">
-        {['Auto', 'Cool', 'Heat', 'Off'].map((item) => (
+        {["Auto", "Cool", "Heat", "Off"].map((item) => (
           <button
             type="button"
             key={item}
@@ -524,37 +496,30 @@ function ClimateControl() {
         onClick={() => setPurifier(!purifier)}
       >
         <Wind size={18} />
-        Air purifier · {purifier ? 'On' : 'Off'}
+        Air purifier · {purifier ? "On" : "Off"}
       </button>
     </section>
-  )
+  );
 }
 
 export function EnvironmentPanel() {
-  const [tab, setTab] = useState('Overview')
-  const [detail, setDetail] = useState<{
-    name: string
-    value: string
-    unit: string
-  } | null>(null)
+  const [search, setSearch] = useUrlState();
+  const tab = search.environmentTab ?? "Overview";
+  const detail = [...scores, ...metrics].find((item) => item.name === search.environmentDetail);
+  const setTab = (value: "Overview" | "Climate control") =>
+    setSearch({ environmentTab: value === "Overview" ? undefined : value });
+  const setDetail = (value: { name: string } | null) =>
+    setSearch({ environmentDetail: value?.name });
   return (
     <>
-      <fieldset
-        className="vital-env-tabs vital-segmented"
-        aria-label="Environment view"
-      >
-        {['Overview', 'Climate control'].map((item) => (
-          <button
-            type="button"
-            key={item}
-            aria-pressed={tab === item}
-            onClick={() => setTab(item)}
-          >
+      <fieldset className="vital-segmented" aria-label="Environment view">
+        {(["Overview", "Climate control"] as const).map((item) => (
+          <button type="button" key={item} aria-pressed={tab === item} onClick={() => setTab(item)}>
             {item}
           </button>
         ))}
       </fieldset>
-      {tab === 'Climate control' ? (
+      {tab === "Climate control" ? (
         <ClimateControl />
       ) : (
         <div className="vital-env-layout">
@@ -580,9 +545,7 @@ export function EnvironmentPanel() {
                     </div>
                   </div>
                   <p className="vital-delta">
-                    <span data-tone={index === 3 ? 'green' : 'yellow'}>
-                      {score.change}
-                    </span>{' '}
+                    <span data-tone={index === 3 ? "green" : "yellow"}>{score.change}</span>{" "}
                     {score.suffix} vs yesterday
                   </p>
                   <Sparkline index={index} />
@@ -598,7 +561,7 @@ export function EnvironmentPanel() {
                       ? Droplets
                       : index === 2
                         ? Cloud
-                        : Grid2X2
+                        : Grid2X2;
                 return (
                   <button
                     type="button"
@@ -613,11 +576,7 @@ export function EnvironmentPanel() {
                         <strong>{metric.value}</strong>
                         <small>{metric.unit}</small>
                         {metric.status && (
-                          <em
-                            data-tone={
-                              metric.status === 'Watch' ? 'yellow' : 'green'
-                            }
-                          >
+                          <em data-tone={metric.status === "Watch" ? "yellow" : "green"}>
                             {metric.status}
                           </em>
                         )}
@@ -629,7 +588,7 @@ export function EnvironmentPanel() {
                       <small>{metric.max}</small>
                     </div>
                   </button>
-                )
+                );
               })}
               <div className="vital-metric vital-card vital-room">
                 <Wifi size={17} data-tone="green" />
@@ -656,18 +615,14 @@ export function EnvironmentPanel() {
             {detail.value} <small>{detail.unit}</small>
           </p>
           <p>
-            This is a sample reading for the dashboard preview. No health or
-            environmental device is connected.
+            This is a sample reading for the dashboard preview. No health or environmental device is
+            connected.
           </p>
-          <button
-            className="vital-outline-button"
-            type="button"
-            onClick={() => setDetail(null)}
-          >
+          <button className="vital-outline-button" type="button" onClick={() => setDetail(null)}>
             Back to overview
           </button>
         </Dialog>
       )}
     </>
-  )
+  );
 }

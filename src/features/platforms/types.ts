@@ -1,29 +1,29 @@
-type Platform = 'twitter' | 'mastodon' | 'bluesky' | 'threads' | 'nostr'
+type Platform = "twitter" | "mastodon" | "bluesky" | "threads" | "nostr";
 
-export type ResearchPage = { posts: ResearchPost[]; nextCursor?: string }
+export type ResearchPage = { posts: ResearchPost[]; nextCursor?: string };
 
 export type ResearchPost = {
-  key: string
-  platform: Platform
-  nativeId: string
-  url: string
-  text: string
+  key: string;
+  platform: Platform;
+  nativeId: string;
+  url: string;
+  text: string;
   /** Only HTML sanitized on the server with the platform allowlist. */
-  html?: string
-  contentWarning?: string
-  sensitive?: boolean
-  boostedBy?: { name: string; handle: string }
+  html?: string;
+  contentWarning?: string;
+  sensitive?: boolean;
+  boostedBy?: { name: string; handle: string };
   author: {
-    name: string
-    handle: string
-    avatarUrl?: string
-  }
-  createdAt?: string
+    name: string;
+    handle: string;
+    avatarUrl?: string;
+  };
+  createdAt?: string;
   media?: {
-    type: 'photo' | 'video' | 'gif'
-    url: string
-    previewUrl?: string
-    alt?: string
-  }[]
-  quotedPost?: ResearchPost
-}
+    type: "photo" | "video" | "gif";
+    url: string;
+    previewUrl?: string;
+    alt?: string;
+  }[];
+  quotedPost?: ResearchPost;
+};

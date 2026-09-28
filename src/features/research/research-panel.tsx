@@ -1,29 +1,18 @@
-import { useQuery, useQueryClient } from '@tanstack/react-query'
-import { useServerFn } from '@tanstack/react-start'
-import {
-  type ReactNode,
-  useCallback,
-  useEffect,
-  useId,
-  useRef,
-  useState,
-} from 'react'
-import { Bubble, BubbleContent } from '#/components/ui/bubble'
-import { Button } from '#/components/ui/button'
-import { Checkbox } from '#/components/ui/checkbox'
-import {
-  Collapsible,
-  CollapsibleContent,
-  CollapsibleTrigger,
-} from '#/components/ui/collapsible'
+import { useQuery, useQueryClient } from "@tanstack/react-query";
+import { useServerFn } from "@tanstack/react-start";
+import { type ReactNode, useCallback, useEffect, useId, useRef, useState } from "react";
+import { Bubble, BubbleContent } from "#/components/ui/bubble";
+import { Button } from "#/components/ui/button";
+import { Checkbox } from "#/components/ui/checkbox";
+import { Collapsible, CollapsibleContent, CollapsibleTrigger } from "#/components/ui/collapsible";
 import {
   InputGroup,
   InputGroupAddon,
   InputGroupButton,
   InputGroupTextarea,
-} from '#/components/ui/input-group'
-import { Marker, MarkerContent } from '#/components/ui/marker'
-import { Message, MessageContent, MessageHeader } from '#/components/ui/message'
+} from "#/components/ui/input-group";
+import { Marker, MarkerContent } from "#/components/ui/marker";
+import { Message, MessageContent, MessageHeader } from "#/components/ui/message";
 import {
   MessageScroller,
   MessageScrollerButton,
@@ -31,41 +20,35 @@ import {
   MessageScrollerItem,
   MessageScrollerProvider,
   MessageScrollerViewport,
-} from '#/components/ui/message-scroller'
-import { NativeSelect, NativeSelectOption } from '#/components/ui/native-select'
-import type { Connection } from '../connections/model'
-import type { Deck } from '../decks/model'
+} from "#/components/ui/message-scroller";
+import { NativeSelect, NativeSelectOption } from "#/components/ui/native-select";
+import type { Connection } from "../connections/model";
+import type { Deck } from "../decks/model";
+import { useUrlState } from "../navigation/use-url-state";
 import {
   isResearchActive,
   type ResearchCitation,
   type ResearchRun,
   type ResearchSnapshot,
-} from './model'
-import { ResearchMarkdown } from './research-markdown'
-import {
-  cancelResearch,
-  loadResearchStatus,
-  resetResearch,
-  selectResearch,
-  startResearch,
-} from './server-functions'
-import './research-panel.css'
+} from "./model";
+import { ResearchMarkdown } from "./research-markdown";
+import { cancelResearch, loadResearchStatus, startResearch } from "./server-functions";
 
-const statusNames: Record<ResearchRun['status'], string> = {
-  starting: 'Starting',
-  running: 'Researching',
-  complete: 'Complete',
-  failed: 'Failed',
-  cancelled: 'Cancelled',
-  interrupted: 'Interrupted · Ready to resume',
-}
-type ResearchInput = { topic: string; connectionIds: string[] }
+const statusNames: Record<ResearchRun["status"], string> = {
+  starting: "Starting",
+  running: "Researching",
+  complete: "Complete",
+  failed: "Failed",
+  cancelled: "Cancelled",
+  interrupted: "Interrupted · Ready to resume",
+};
+type ResearchInput = { topic: string; connectionIds: string[] };
 type ResearchDraft = {
-  runId: string | null
-  topic: string
-  selected: string[] | null
-}
-type RenderResearchPanel = (onCitationNavigated?: () => void) => ReactNode
+  runId: string | null;
+  topic: string;
+  selected: string[] | null;
+};
+type RenderResearchPanel = (onCitationNavigated?: () => void) => ReactNode;
 
 export function ResearchPanel({
   ready,
@@ -75,169 +58,200 @@ export function ResearchPanel({
   onNavigateCitation,
   children,
 }: {
-  ready: boolean
-  contextDeck: Deck
-  connections: Connection[]
-  onOpenDeck: (deck: Deck, activate?: boolean) => unknown
-  onNavigateCitation?: (url: string, citations: ResearchCitation[]) => boolean
-  children?: (renderPanel: RenderResearchPanel) => ReactNode
+  ready: boolean;
+  contextDeck: Deck;
+  connections: Connection[];
+  onOpenDeck: (deck: Deck, activate?: boolean) => unknown;
+  onNavigateCitation?: (url: string, citations: ResearchCitation[], restore?: boolean) => boolean;
+  children?: (renderPanel: RenderResearchPanel) => ReactNode;
 }) {
-  const fetchStatus = useServerFn(loadResearchStatus)
-  const start = useServerFn(startResearch)
-  const cancel = useServerFn(cancelResearch)
-  const reset = useServerFn(resetResearch)
-  const select = useServerFn(selectResearch)
-  const client = useQueryClient()
-  const historyId = useId()
+  const [search, setSearch] = useUrlState();
+  const fetchStatus = useServerFn(loadResearchStatus);
+  const start = useServerFn(startResearch);
+  const cancel = useServerFn(cancelResearch);
+  const client = useQueryClient();
+  const historyId = useId();
+  const selectedId = search.run === "new" ? undefined : search.run;
+  const selection = useRef(selectedId);
+  useEffect(() => {
+    selection.current = selectedId;
+  }, [selectedId]);
+  const queryKey = ["research-status", selectedId ?? "new"] as const;
   const status = useQuery({
-    queryKey: ['research-status'],
-    queryFn: () => fetchStatus(),
+    queryKey,
+    queryFn: () => fetchStatus({ data: { id: selectedId } }),
     retry: false,
-  })
-  const run = status.data?.run ?? null
-  const runId = run?.id ?? null
+  });
+  const run = status.data?.run ?? null;
+  const runId = run?.id ?? null;
   const [draft, setDraft] = useState<ResearchDraft>({
     runId,
-    topic: '',
+    topic: "",
     selected: run?.connectionIds ?? null,
-  })
+  });
   // Conversation changes reset the draft; responsive view remounts do not.
   if (draft.runId !== runId) {
-    setDraft({ runId, topic: '', selected: run?.connectionIds ?? null })
+    setDraft({ runId, topic: "", selected: run?.connectionIds ?? null });
   }
-  function updateDraft(
-    update: Partial<Pick<ResearchDraft, 'topic' | 'selected'>>,
-  ) {
-    setDraft((current) =>
-      current.runId === runId ? { ...current, ...update } : current,
-    )
+  function updateDraft(update: Partial<Pick<ResearchDraft, "topic" | "selected">>) {
+    setDraft((current) => (current.runId === runId ? { ...current, ...update } : current));
   }
-  const [busy, setBusy] = useState(false)
-  const [error, setError] = useState<string>()
-  const [reconnecting, setReconnecting] = useState(false)
-  const previousRunId = useRef<string | null>(null)
-  const syncedRunId = useRef<string | null>(null)
-  const attemptedVersion = useRef<string | null>(null)
+  const [busy, setBusy] = useState(false);
+  const [error, setError] = useState<string>();
+  const [reconnecting, setReconnecting] = useState(false);
+  const previousRunId = useRef<string | null>(null);
+  const syncedRunId = useRef<string | null>(null);
+  const attemptedVersion = useRef<string | null>(null);
   const pendingTurn = useRef<{
-    runId?: string
-    previousRunId?: string
-    version: number
-  } | null>(null)
-  const syncQueue = useRef<Promise<unknown>>(Promise.resolve())
+    runId?: string;
+    previousRunId?: string;
+    version: number;
+  } | null>(null);
+  const syncQueue = useRef<Promise<unknown>>(Promise.resolve());
   const syncDeck = useCallback(
     (deck: Deck, activate: boolean) => {
-      const pending = syncQueue.current.then(() => onOpenDeck(deck, activate))
-      syncQueue.current = pending.catch(() => undefined)
-      return pending
+      const pending = syncQueue.current.then(() => onOpenDeck(deck, activate));
+      syncQueue.current = pending.catch(() => undefined);
+      return pending;
     },
     [onOpenDeck],
-  )
-  const request = useRef<{ signature: string; id: string } | null>(null)
+  );
+  const request = useRef<{ signature: string; id: string } | null>(null);
 
   useEffect(() => {
     if (previousRunId.current && previousRunId.current !== run?.id) {
-      request.current = null
-      pendingTurn.current = null
+      request.current = null;
+      pendingTurn.current = null;
     }
-    previousRunId.current = run?.id ?? null
-  }, [run])
+    previousRunId.current = run?.id ?? null;
+  }, [run]);
 
   useEffect(() => {
-    const events = new EventSource('/api/research/events')
-    events.onopen = () => setReconnecting(false)
-    events.onerror = () => setReconnecting(true)
+    let subscribed = true;
+    const key = ["research-status", selectedId ?? "new"];
+    const events = new EventSource(
+      `/api/research/events${selectedId ? `?run=${encodeURIComponent(selectedId)}` : ""}`,
+    );
+    events.onopen = () => setReconnecting(false);
+    events.onerror = () => setReconnecting(true);
     events.onmessage = (event) => {
       try {
-        const next = JSON.parse(event.data) as ResearchSnapshot
+        const next = JSON.parse(event.data) as ResearchSnapshot;
+        if ((next.run?.id ?? undefined) !== selectedId) return;
         void client
-          .cancelQueries({ queryKey: ['research-status'] })
+          .cancelQueries({ queryKey: key })
           .then(() => {
-            client.setQueryData(['research-status'], next)
+            if (subscribed) client.setQueryData(key, next);
           })
-          .catch(() => setReconnecting(true))
+          .catch(() => setReconnecting(true));
       } catch {
-        setReconnecting(true)
+        setReconnecting(true);
       }
-    }
-    return () => events.close()
-  }, [client])
+    };
+    return () => {
+      subscribed = false;
+      events.close();
+    };
+  }, [client, selectedId]);
 
   useEffect(() => {
     if (!run) {
-      syncedRunId.current = null
-      attemptedVersion.current = null
-      return
+      syncedRunId.current = null;
+      attemptedVersion.current = null;
+      return;
     }
-    if (!ready) return
-    const switched = syncedRunId.current !== run.id
-    const deck = run.deck ?? (switched ? run.contextDeck : undefined)
-    if (!deck) return
-    syncedRunId.current = run.id
-    const version = `${run.id}:${run.deckVersion}`
-    if (attemptedVersion.current === version) return
-    attemptedVersion.current = version
-    const turn = pendingTurn.current
+    if (!ready) return;
+    const switched = syncedRunId.current !== run.id;
+    const deck = run.deck ?? (switched ? run.contextDeck : undefined);
+    if (!deck) return;
+    syncedRunId.current = run.id;
+    const version = `${run.id}:${run.deckVersion}`;
+    if (attemptedVersion.current === version) return;
+    attemptedVersion.current = version;
+    const turn = pendingTurn.current;
     const activate =
-      switched ||
+      (switched && !search.citation && (!search.deck || search.deck === deck.id)) ||
       (!!turn &&
         run.deckVersion > turn.version &&
-        (turn.runId ? run.id === turn.runId : run.id !== turn.previousRunId))
-    if (activate && run.deck && turn && run.deckVersion > turn.version)
-      pendingTurn.current = null
+        (turn.runId ? run.id === turn.runId : run.id !== turn.previousRunId));
+    if (activate && run.deck && turn && run.deckVersion > turn.version) pendingTurn.current = null;
     void syncDeck(deck, activate).catch(() => {
-      setError(
-        'Unable to sync the research deck. Use “Open temporary deck” to try again.',
-      )
-    })
-  }, [run, syncDeck, ready])
+      setError("Unable to sync the research deck. Use “Open temporary deck” to try again.");
+    });
+  }, [run, syncDeck, ready, search.deck, search.citation]);
+
+  const restoredCitation = useRef<string | undefined>(undefined);
+  useEffect(() => {
+    if (!search.citation) {
+      restoredCitation.current = undefined;
+      return;
+    }
+    if (!ready || !run) return;
+    const key = `${run.id}:${search.citation}`;
+    if (restoredCitation.current === key) return;
+    const citation = run.citations.find((entry) => entry.post.key === search.citation);
+    if (!citation) return;
+    let cancelled = false;
+    void syncQueue.current.then(() => {
+      if (!cancelled && onNavigateCitation?.(citation.post.url, run.citations, true))
+        restoredCitation.current = key;
+    });
+    return () => {
+      cancelled = true;
+    };
+  }, [ready, search.citation, run, onNavigateCitation]);
 
   async function begin(input: ResearchInput) {
-    const beforeStart = client.getQueryData(['research-status'])
+    const startedFrom = selectedId;
+    const beforeStart = client.getQueryData(queryKey);
     pendingTurn.current = {
       runId: run?.threadId ? run.id : undefined,
       previousRunId: run?.id,
       version: run?.threadId ? run.deckVersion : 0,
-    }
-    setBusy(true)
-    setError(undefined)
+    };
+    setBusy(true);
+    setError(undefined);
     const payload = {
       ...input,
       contextDeck,
-      ...(run?.threadId ? { runId: run.id } : {}),
-    }
-    const signature = JSON.stringify(payload)
+      ...(run ? { runId: run.id } : {}),
+    };
+    const signature = JSON.stringify(payload);
     if (request.current?.signature !== signature)
-      request.current = { signature, id: crypto.randomUUID() }
+      request.current = { signature, id: crypto.randomUUID() };
     try {
       const next = await start({
         data: { ...payload, requestId: request.current.id },
-      })
-      request.current = null
-      client.setQueryData<ResearchSnapshot>(['research-status'], (existing) =>
-        existing !== beforeStart
+      });
+      request.current = null;
+      client.setQueryData<ResearchSnapshot>(["research-status", next.id], (existing) =>
+        existing && existing !== beforeStart
           ? existing
-          : { configured: true, run: next, history: existing?.history ?? [] },
-      )
-      return true
+          : {
+              configured: true,
+              run: next,
+              history: status.data?.history ?? [],
+            },
+      );
+      if (selection.current === startedFrom) setSearch({ run: next.id, citation: undefined });
+      return true;
     } catch {
-      pendingTurn.current = null
-      setError(
-        'Unable to send. Check your connection and try again. Your draft has been kept.',
-      )
-      return false
+      pendingTurn.current = null;
+      setError("Unable to send. Check your connection and try again. Your draft has been kept.");
+      return false;
     } finally {
-      setBusy(false)
+      setBusy(false);
     }
   }
 
   async function stop() {
-    if (!run) return
-    const beforeCancel = client.getQueryData(['research-status'])
-    setBusy(true)
-    setError(undefined)
+    if (!run) return;
+    const beforeCancel = client.getQueryData(queryKey);
+    setBusy(true);
+    setError(undefined);
     try {
-      const next = await cancel({ data: { id: run.id } })
-      client.setQueryData(['research-status'], (existing: unknown) =>
+      const next = await cancel({ data: { id: run.id } });
+      client.setQueryData(queryKey, (existing: unknown) =>
         existing === beforeCancel
           ? {
               configured: status.data?.configured ?? true,
@@ -245,66 +259,34 @@ export function ResearchPanel({
               history: status.data?.history ?? [],
             }
           : existing,
-      )
+      );
     } catch {
-      setError('Unable to stop research. Please try again.')
+      setError("Unable to stop research. Please try again.");
     } finally {
-      setBusy(false)
+      setBusy(false);
     }
   }
 
-  async function newChat() {
-    if (!run || isResearchActive(run)) return
-    const beforeReset = client.getQueryData(['research-status'])
-    setBusy(true)
-    setError(undefined)
-    try {
-      const next = await reset({ data: { id: run.id } })
-      client.setQueryData(['research-status'], (existing: unknown) =>
-        existing === beforeReset ? next : existing,
-      )
-      request.current = null
-      pendingTurn.current = null
-      updateDraft({ topic: '' })
-    } catch {
-      setError(
-        'Unable to start a new chat. Your conversation and draft have been kept. Please try again.',
-      )
-    } finally {
-      setBusy(false)
-    }
+  function newChat() {
+    setSearch({ run: "new", citation: undefined });
+    request.current = null;
+    pendingTurn.current = null;
   }
 
-  async function selectChat(id: string) {
-    if (!id || id === run?.id || isResearchActive(run)) return
-    const beforeSelect = client.getQueryData(['research-status'])
-    setBusy(true)
-    setError(undefined)
-    try {
-      const next = await select({ data: { id, currentId: run?.id ?? null } })
-      client.setQueryData(['research-status'], (existing: unknown) =>
-        existing === beforeSelect ? next : existing,
-      )
-    } catch {
-      setError(
-        'Unable to open the chat. Your draft has been kept. Please try again.',
-      )
-    } finally {
-      setBusy(false)
-    }
+  function selectChat(id: string) {
+    if (!id || id === run?.id) return;
+    setSearch({ run: id, citation: undefined });
   }
 
   async function openDeck(deck: Deck) {
-    setBusy(true)
-    setError(undefined)
+    setBusy(true);
+    setError(undefined);
     try {
-      await syncDeck(deck, true)
+      await syncDeck(deck, true);
     } catch {
-      setError(
-        'Unable to open the research deck. Try again after saving finishes.',
-      )
+      setError("Unable to open the research deck. Try again after saving finishes.");
     } finally {
-      setBusy(false)
+      setBusy(false);
     }
   }
 
@@ -312,18 +294,7 @@ export function ResearchPanel({
     <aside className="research-panel" aria-label="Research chat">
       <header className="research-heading">
         <h2>Research chat</h2>
-        <Button
-          variant="ghost"
-          size="sm"
-          type="button"
-          disabled={busy || !run || isResearchActive(run)}
-          title={
-            isResearchActive(run)
-              ? 'Stop research before starting a new chat'
-              : undefined
-          }
-          onClick={() => void newChat()}
-        >
+        <Button variant="ghost" size="sm" type="button" disabled={busy || !run} onClick={newChat}>
           New chat
         </Button>
         {(status.data?.history?.length ?? 0) > 0 && (
@@ -332,9 +303,9 @@ export function ResearchPanel({
             <NativeSelect
               id={historyId}
               size="sm"
-              value={run?.id ?? ''}
-              disabled={busy || isResearchActive(run)}
-              onChange={(event) => void selectChat(event.target.value)}
+              value={run?.id ?? ""}
+              disabled={busy}
+              onChange={(event) => selectChat(event.target.value)}
             >
               <NativeSelectOption value="" disabled>
                 New chat
@@ -350,8 +321,7 @@ export function ResearchPanel({
       </header>
       {reconnecting && (
         <p className="deck-save-status" role="status">
-          Reconnecting to research updates. Processing continues on your home
-          server.
+          Reconnecting to research updates. Processing continues on your home server.
         </p>
       )}
       {status.isError && (
@@ -362,6 +332,11 @@ export function ResearchPanel({
           </Button>
         </p>
       )}
+      {selectedId && status.isSuccess && !run && (
+        <p className="deck-error" role="alert">
+          This conversation could not be found.
+        </p>
+      )}
       {error && (
         <p className="deck-error" role="alert">
           {error}
@@ -370,18 +345,17 @@ export function ResearchPanel({
       {status.isPending ? (
         <p role="status">Checking the research connection…</p>
       ) : !status.data?.configured ? (
-        <p role="status">
-          The connection to Codex on your home server is not configured.
-        </p>
+        <p role="status">The connection to Codex on your home server is not configured.</p>
       ) : null}
       <ResearchConversation
-        key={`conversation:${run?.id ?? 'new'}`}
+        key={`conversation:${run?.id ?? "new"}`}
         messages={run?.messages ?? []}
         citations={run?.citations ?? []}
+        streaming={isResearchActive(run)}
         onNavigateCitation={(url, citations) => {
-          const navigated = onNavigateCitation?.(url, citations) ?? false
-          if (navigated) onCitationNavigated?.()
-          return navigated
+          const navigated = onNavigateCitation?.(url, citations) ?? false;
+          if (navigated) onCitationNavigated?.();
+          return navigated;
         }}
       />
       {run && (
@@ -393,7 +367,7 @@ export function ResearchPanel({
         />
       )}
       <ResearchComposer
-        key={run?.id ?? 'new'}
+        key={run?.id ?? "new"}
         topic={draft.topic}
         selected={draft.selected}
         onTopicChange={(topic) => updateDraft({ topic })}
@@ -401,48 +375,47 @@ export function ResearchPanel({
         connections={connections}
         contextTitle={contextDeck.title}
         disabled={
-          !ready || busy || isResearchActive(run) || !status.data?.configured
+          !ready || busy || isResearchActive(status.data?.run ?? null) || !status.data?.configured
         }
         onSend={begin}
       />
     </aside>
-  )
-  return children ? children(renderPanel) : renderPanel()
+  );
+  return children ? children(renderPanel) : renderPanel();
 }
 
 function ResearchConversation({
   messages,
   citations,
+  streaming,
   onNavigateCitation,
 }: {
-  messages: ResearchRun['messages']
-  citations: ResearchCitation[]
-  onNavigateCitation?: (url: string, citations: ResearchCitation[]) => boolean
+  streaming: boolean;
+  messages: ResearchRun["messages"];
+  citations: ResearchCitation[];
+  onNavigateCitation?: (url: string, citations: ResearchCitation[]) => boolean;
 }) {
-  const names = { user: 'You', assistant: 'Codex', tool: 'Tool activity' }
+  const names = { user: "You", assistant: "Codex", tool: "Tool activity" };
   return (
     <MessageScrollerProvider autoScroll>
       <MessageScroller className="research-conversation">
         <MessageScrollerViewport aria-label="Research messages">
-          <MessageScrollerContent
-            aria-label="Research conversation"
-            className="gap-5 p-4"
-          >
+          <MessageScrollerContent aria-label="Research conversation" className="gap-5 p-4">
             {messages.length === 0 ? (
               <MessageScrollerItem messageId="empty">
                 <p className="research-empty">
-                  Send a topic or question. The assistant adds columns as it
-                  searches and saves a report to your home server.
+                  Send a topic or question. The assistant adds columns as it searches and saves a
+                  report to your home server.
                 </p>
               </MessageScrollerItem>
             ) : (
-              messages.map((message) => (
+              messages.map((message, index) => (
                 <MessageScrollerItem
                   key={message.id}
                   messageId={message.id}
-                  scrollAnchor={message.role === 'user'}
+                  scrollAnchor={message.role === "user"}
                 >
-                  {message.role === 'tool' ? (
+                  {message.role === "tool" ? (
                     <Marker className="research-tool-message">
                       <MarkerContent>
                         <span className="sr-only">{names.tool}: </span>
@@ -451,14 +424,15 @@ function ResearchConversation({
                     </Marker>
                   ) : (
                     <Message
-                      align={message.role === 'user' ? 'end' : 'start'}
+                      align={message.role === "user" ? "end" : "start"}
                       className="research-message"
                     >
                       <MessageContent>
                         <MessageHeader>{names[message.role]}</MessageHeader>
-                        {message.role === 'assistant' ? (
+                        {message.role === "assistant" ? (
                           <ResearchMarkdown
                             text={message.text}
+                            isAnimating={streaming && index === messages.length - 1}
                             onNavigateCitation={(url) =>
                               onNavigateCitation?.(url, citations) ?? false
                             }
@@ -481,7 +455,7 @@ function ResearchConversation({
         <MessageScrollerButton aria-label="Jump to latest message" />
       </MessageScroller>
     </MessageScrollerProvider>
-  )
+  );
 }
 
 function ResearchComposer({
@@ -494,37 +468,34 @@ function ResearchComposer({
   disabled,
   onSend,
 }: {
-  topic: string
-  selected: string[] | null
-  onTopicChange: (topic: string) => void
-  onSelectionChange: (selected: string[]) => void
-  connections: Connection[]
-  contextTitle: string
-  disabled: boolean
-  onSend: (input: ResearchInput) => Promise<boolean>
+  topic: string;
+  selected: string[] | null;
+  onTopicChange: (topic: string) => void;
+  onSelectionChange: (selected: string[]) => void;
+  connections: Connection[];
+  contextTitle: string;
+  disabled: boolean;
+  onSend: (input: ResearchInput) => Promise<boolean>;
 }) {
-  const available = connections.filter(
-    (connection) => connection.status === 'connected',
-  )
-  const selectedIds =
-    selected ?? available.slice(0, 6).map((connection) => connection.id)
-  const id = useId()
+  const available = connections.filter((connection) => connection.status === "connected");
+  const selectedIds = selected ?? available.slice(0, 6).map((connection) => connection.id);
+  const id = useId();
   const validSelection = selectedIds.filter((value) =>
     available.some((connection) => connection.id === value),
-  )
+  );
   return (
     <form
       className="research-start-form"
       aria-label="Research messages"
       onSubmit={(event) => {
-        event.preventDefault()
-        if (!topic.trim() || validSelection.length === 0 || disabled) return
+        event.preventDefault();
+        if (!topic.trim() || validSelection.length === 0 || disabled) return;
         void onSend({
           topic: topic.trim(),
           connectionIds: validSelection,
         }).then((sent) => {
-          if (sent) onTopicChange('')
-        })
+          if (sent) onTopicChange("");
+        });
       }}
     >
       <p className="research-context">
@@ -548,21 +519,18 @@ function ResearchComposer({
                       checked={selectedIds.includes(connection.id)}
                       disabled={
                         disabled ||
-                        (!selectedIds.includes(connection.id) &&
-                          validSelection.length >= 6)
+                        (!selectedIds.includes(connection.id) && validSelection.length >= 6)
                       }
                       onCheckedChange={(checked) =>
                         onSelectionChange(
                           checked
                             ? [...selectedIds, connection.id]
-                            : selectedIds.filter(
-                                (value) => value !== connection.id,
-                              ),
+                            : selectedIds.filter((value) => value !== connection.id),
                         )
                       }
                     />
-                    {connection.displayName} ·{' '}
-                    {connection.platform === 'twitter' ? 'Twitter' : 'Mastodon'}
+                    {connection.displayName} ·{" "}
+                    {connection.platform === "twitter" ? "Twitter" : "Mastodon"}
                   </label>
                 ))
               )}
@@ -586,9 +554,7 @@ function ResearchComposer({
               type="submit"
               variant="default"
               size="sm"
-              disabled={
-                disabled || !topic.trim() || validSelection.length === 0
-              }
+              disabled={disabled || !topic.trim() || validSelection.length === 0}
             >
               Send
             </InputGroupButton>
@@ -596,7 +562,7 @@ function ResearchComposer({
         </InputGroup>
       </fieldset>
     </form>
-  )
+  );
 }
 
 function ResearchRunStatus({
@@ -605,12 +571,12 @@ function ResearchRunStatus({
   onCancel,
   onOpenDeck,
 }: {
-  run: ResearchRun
-  busy: boolean
-  onCancel: () => void
-  onOpenDeck: (deck: Deck) => void
+  run: ResearchRun;
+  busy: boolean;
+  onCancel: () => void;
+  onOpenDeck: (deck: Deck) => void;
 }) {
-  const deck = run.deck ?? run.contextDeck
+  const deck = run.deck ?? run.contextDeck;
   return (
     <section className="research-run" aria-label="Research status">
       <Marker role="status">
@@ -630,13 +596,7 @@ function ResearchRunStatus({
       )}
       <div className="deck-actions">
         {isResearchActive(run) && (
-          <Button
-            variant="outline"
-            size="sm"
-            type="button"
-            disabled={busy}
-            onClick={onCancel}
-          >
+          <Button variant="outline" size="sm" type="button" disabled={busy} onClick={onCancel}>
             Stop research
           </Button>
         )}
@@ -646,7 +606,7 @@ function ResearchRunStatus({
             size="sm"
             type="button"
             onClick={() => {
-              onOpenDeck(deck)
+              onOpenDeck(deck);
             }}
           >
             Open temporary deck
@@ -654,5 +614,5 @@ function ResearchRunStatus({
         )}
       </div>
     </section>
-  )
+  );
 }

@@ -24,15 +24,15 @@ list, user-profile, and conversation pages are not provided.
 unique column IDs within each deck. Each column contains `id`, `title`,
 `connectionId`, and a platform-specific `source`.
 
-| Platform | Source kind | Conditions |
-| --- | --- | --- |
-| Twitter | `search` | Native `query`, `product` (`Top`/`Latest`), `following` |
-| Twitter | `user` | `target`: handle or X/Twitter profile URL |
-| Twitter | `list` | `target`: numeric list ID or X/Twitter list URL |
-| Mastodon | `search` | `query`; results depend on the instance's search configuration |
-| Mastodon | `user` | `target`: account handle or the connected instance's numeric account ID |
-| Mastodon | `list` | `target`: numeric list ID for the connected account |
-| Mastodon | `hashtag` | `target`: tag without `#`, containing letters, numbers, or underscores |
+| Platform | Source kind | Conditions                                                              |
+| -------- | ----------- | ----------------------------------------------------------------------- |
+| Twitter  | `search`    | Native `query`, `product` (`Top`/`Latest`), `following`                 |
+| Twitter  | `user`      | `target`: handle or X/Twitter profile URL                               |
+| Twitter  | `list`      | `target`: numeric list ID or X/Twitter list URL                         |
+| Mastodon | `search`    | `query`; results depend on the instance's search configuration          |
+| Mastodon | `user`      | `target`: account handle or the connected instance's numeric account ID |
+| Mastodon | `list`      | `target`: numeric list ID for the connected account                     |
+| Mastodon | `hashtag`   | `target`: tag without `#`, containing letters, numbers, or underscores  |
 
 `connectionId` is the account binding, distinct from a deck's name. Twitter
 connections resolve to profiles discovered from the configured relay.
@@ -76,9 +76,9 @@ in a transaction. A stale revision is rejected. Save failures remain visible
 and do not report unsaved edits as persisted.
 
 Saved decks refresh on focus and every five seconds while visible. Refresh is
-held while an editor is open. Active selection is a local preference under
-`twitter-lite-active-deck`; selecting a deck does not switch another device's
-view. Deleting the active deck selects a remaining one. When none remain, the
+held while an editor is open. The `deck` URL parameter selects the active view;
+selecting a deck does not switch another device's view. Browser history restores
+selection, and saved decks can be opened from a copied URL. Deleting the active deck selects a remaining one. When none remain, the
 app opens an empty temporary view.
 
 WebMCP-created views are temporary by default. Temporary copies of saved decks
@@ -139,3 +139,10 @@ uses an isolated SQLite database and mock relay through real server functions
 to exercise shared decks across browser contexts, editing, persistence,
 pagination, and native WebMCP. Deterministic automated tests do not require
 live SNS credentials.
+
+## Conversation execution
+
+The [research runtime](research-runtime.md) uses AI SDK and the Codex app-server
+provider. Conversations are selected by URL, with per-conversation background
+execution and reconnectable SSE. Opening New chat or another saved conversation
+does not stop an existing turn or change another browser's selection.

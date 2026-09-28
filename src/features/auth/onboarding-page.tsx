@@ -1,55 +1,47 @@
-import { useRouteContext } from '@tanstack/react-router'
-import { ArrowRight, BookOpen, House, MessagesSquare } from 'lucide-react'
-import { type FormEvent, useState } from 'react'
-import { Button } from '#/components/ui/button'
-import { Input } from '#/components/ui/input'
-import { Label } from '#/components/ui/label'
-import { authRequest } from './auth-client'
-import { AuthFrame } from './auth-page'
+import { useRouteContext } from "@tanstack/react-router";
+import { ArrowRight, BookOpen, House, MessagesSquare } from "lucide-react";
+import { type FormEvent, useState } from "react";
+import { Button } from "#/components/ui/button";
+import { Input } from "#/components/ui/input";
+import { Label } from "#/components/ui/label";
+import { authRequest } from "./auth-client";
+import { AuthFrame } from "./auth-page";
 
 export function OnboardingPage() {
-  const { auth } = useRouteContext({ from: '__root__' })
-  const [name, setName] = useState(auth.owner?.name ?? '')
-  const [step, setStep] = useState(1)
-  const [pending, setPending] = useState(false)
-  const [error, setError] = useState('')
+  const { auth } = useRouteContext({ from: "__root__" });
+  const [name, setName] = useState(auth.owner?.name ?? "");
+  const [step, setStep] = useState(1);
+  const [pending, setPending] = useState(false);
+  const [error, setError] = useState("");
 
   async function finish() {
-    setPending(true)
-    setError('')
+    setPending(true);
+    setError("");
     try {
-      await authRequest({ action: 'onboard', name: name.trim() })
-      window.location.assign('/')
+      await authRequest({ action: "onboard", name: name.trim() });
+      window.location.assign("/");
     } catch (cause) {
-      setError(
-        cause instanceof Error
-          ? cause.message
-          : 'Unable to save. Please try again.',
-      )
-      setPending(false)
+      setError(cause instanceof Error ? cause.message : "Unable to save. Please try again.");
+      setPending(false);
     }
   }
 
   async function signOut() {
-    setPending(true)
-    setError('')
+    setPending(true);
+    setError("");
     try {
-      await authRequest({ action: 'logout' })
-      window.location.assign('/login')
+      await authRequest({ action: "logout" });
+      window.location.assign("/login");
     } catch (cause) {
-      setError(
-        cause instanceof Error
-          ? cause.message
-          : 'Unable to sign out. Please try again.',
-      )
-      setPending(false)
+      setError(cause instanceof Error ? cause.message : "Unable to sign out. Please try again.");
+      setPending(false);
     }
   }
 
   function next(event: FormEvent<HTMLFormElement>) {
-    event.preventDefault()
-    if (!name.trim()) return
-    setStep(2)
+    event.preventDefault();
+    if (!name.trim()) return;
+    setStep(2);
   }
 
   return (
@@ -116,20 +108,15 @@ export function OnboardingPage() {
             </li>
           </ul>
           <p className="auth-prototype">
-            Home, contacts, notes, reading, and vitals currently use sample
-            data. You can add connections from your profile menu whenever you’re
-            ready.
+            Home, contacts, notes, reading, and vitals currently use sample data. You can add
+            connections from your profile menu whenever you’re ready.
           </p>
           <div className="auth-actions">
-            <Button
-              variant="ghost"
-              onClick={() => setStep(1)}
-              disabled={pending}
-            >
+            <Button variant="ghost" onClick={() => setStep(1)} disabled={pending}>
               Back
             </Button>
             <Button size="lg" onClick={finish} disabled={pending}>
-              {pending ? 'Saving…' : 'Open workspace'}
+              {pending ? "Saving…" : "Open workspace"}
               <ArrowRight aria-hidden="true" />
             </Button>
           </div>
@@ -147,5 +134,5 @@ export function OnboardingPage() {
         </Button>
       </footer>
     </AuthFrame>
-  )
+  );
 }

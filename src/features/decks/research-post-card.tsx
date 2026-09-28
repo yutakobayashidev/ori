@@ -1,63 +1,56 @@
-import { useEffect, useRef, useState } from 'react'
-import { Icon } from '#/components/icon'
-import { PostText } from '#/components/post-text'
-import { Avatar, AvatarFallback, AvatarImage } from '#/components/ui/avatar'
-import { Badge } from '#/components/ui/badge'
-import { Button } from '#/components/ui/button'
-import type { ResearchPost } from '#/features/platforms/types'
+import { useEffect, useRef, useState } from "react";
+import { Icon } from "#/components/icon";
+import { PostText } from "#/components/post-text";
+import { Avatar, AvatarFallback, AvatarImage } from "#/components/ui/avatar";
+import { Badge } from "#/components/ui/badge";
+import { Button } from "#/components/ui/button";
+import type { ResearchPost } from "#/features/platforms/types";
 
-const dateFormatter = new Intl.DateTimeFormat('en-US', {
-  month: 'numeric',
-  day: 'numeric',
-  hour: '2-digit',
-  minute: '2-digit',
-  timeZone: 'Asia/Tokyo',
-})
+const dateFormatter = new Intl.DateTimeFormat("en-US", {
+  month: "numeric",
+  day: "numeric",
+  hour: "2-digit",
+  minute: "2-digit",
+  timeZone: "Asia/Tokyo",
+});
 
 export function ResearchPostCard({
   post,
   citationRequest,
   citationSnapshot,
 }: {
-  post: ResearchPost
-  citationRequest?: number
-  citationSnapshot?: boolean
+  post: ResearchPost;
+  citationRequest?: number;
+  citationSnapshot?: boolean;
 }) {
-  const [revealed, setRevealed] = useState(false)
-  const [highlighted, setHighlighted] = useState(false)
-  const article = useRef<HTMLElement>(null)
-  // biome-ignore lint/correctness/useExhaustiveDependencies: Re-scroll when a snapshot moves to its live feed position.
+  const [revealed, setRevealed] = useState(false);
+  const [expiredHighlight, setExpiredHighlight] = useState<string>();
+  const highlightKey = `${citationRequest}:${citationSnapshot}`;
+  const highlighted = citationRequest !== undefined && expiredHighlight !== highlightKey;
+  const article = useRef<HTMLElement>(null);
   useEffect(() => {
-    if (citationRequest === undefined) {
-      setHighlighted(false)
-      return
-    }
-    setHighlighted(true)
-    article.current?.focus({ preventScroll: true })
+    if (citationRequest === undefined) return;
+    article.current?.focus({ preventScroll: true });
     article.current?.scrollIntoView({
-      block: 'center',
-      inline: 'center',
-      behavior: window.matchMedia?.('(prefers-reduced-motion: reduce)').matches
-        ? 'instant'
-        : 'smooth',
-    })
-    const timer = setTimeout(() => setHighlighted(false), 2500)
-    return () => clearTimeout(timer)
-  }, [citationRequest, citationSnapshot])
-  const concealed = Boolean(post.contentWarning || post.sensitive)
+      block: "center",
+      inline: "center",
+      behavior: window.matchMedia?.("(prefers-reduced-motion: reduce)").matches
+        ? "instant"
+        : "smooth",
+    });
+    const timer = setTimeout(() => setExpiredHighlight(highlightKey), 2500);
+    return () => clearTimeout(timer);
+  }, [citationRequest, highlightKey]);
+  const concealed = Boolean(post.contentWarning || post.sensitive);
   return (
     <article
       ref={article}
       tabIndex={-1}
-      className={`research-post${highlighted ? ' citation-highlight' : ''}`}
+      className={`research-post${highlighted ? " citation-highlight" : ""}`}
       data-post-url={post.url}
     >
-      {citationSnapshot ? (
-        <Badge variant="secondary">Post saved during research</Badge>
-      ) : null}
-      {post.boostedBy ? (
-        <p className="handle">Boosted by {post.boostedBy.name}</p>
-      ) : null}
+      {citationSnapshot ? <Badge variant="secondary">Post saved during research</Badge> : null}
+      {post.boostedBy ? <p className="handle">Boosted by {post.boostedBy.name}</p> : null}
       <header>
         <Avatar className="size-9 shrink-0">
           <AvatarImage src={post.author.avatarUrl} alt="" loading="lazy" />
@@ -65,9 +58,7 @@ export function ResearchPostCard({
         </Avatar>
         <div>
           <strong>{post.author.name}</strong>
-          <span className="handle">
-            @{post.author.handle.replace(/^@/, '')}
-          </span>
+          <span className="handle">@{post.author.handle.replace(/^@/, "")}</span>
         </div>
         {post.createdAt ? (
           <time dateTime={post.createdAt} title={post.createdAt}>
@@ -77,7 +68,7 @@ export function ResearchPostCard({
       </header>
       {concealed ? (
         <div>
-          <p>{post.contentWarning || 'This post contains sensitive media'}</p>
+          <p>{post.contentWarning || "This post contains sensitive media"}</p>
           <Button
             variant="outline"
             size="sm"
@@ -85,7 +76,7 @@ export function ResearchPostCard({
             aria-expanded={revealed}
             onClick={() => setRevealed(!revealed)}
           >
-            {revealed ? 'Hide content' : 'Show content'}
+            {revealed ? "Hide content" : "Show content"}
           </Button>
         </div>
       ) : null}
@@ -94,7 +85,7 @@ export function ResearchPostCard({
           {post.html !== undefined ? (
             <div
               className="research-post-text"
-              // biome-ignore lint/security/noDangerouslySetInnerHtml: Mastodon HTML is sanitized by the server allowlist before normalization.
+              // Mastodon content trust boundary: Mastodon HTML is sanitized by the server allowlist before normalization.
               dangerouslySetInnerHTML={{ __html: post.html }}
             />
           ) : (
@@ -103,21 +94,16 @@ export function ResearchPostCard({
             </p>
           )}
           {post.media?.map((media) =>
-            media.type === 'photo' ? (
+            media.type === "photo" ? (
               <img
                 className="research-media"
                 key={media.url}
                 src={media.url}
-                alt={media.alt ?? ''}
+                alt={media.alt ?? ""}
                 loading="lazy"
               />
             ) : (
-              <a
-                key={media.url}
-                href={media.url}
-                target="_blank"
-                rel="noreferrer noopener"
-              >
+              <a key={media.url} href={media.url} target="_blank" rel="noreferrer noopener">
                 Open video
               </a>
             ),
@@ -128,11 +114,7 @@ export function ResearchPostCard({
               <p>
                 <PostText text={post.quotedPost.text} />
               </p>
-              <a
-                href={post.quotedPost.url}
-                target="_blank"
-                rel="noreferrer noopener"
-              >
+              <a href={post.quotedPost.url} target="_blank" rel="noreferrer noopener">
                 Open quoted post
               </a>
             </blockquote>
@@ -145,5 +127,5 @@ export function ResearchPostCard({
         </a>
       </footer>
     </article>
-  )
+  );
 }

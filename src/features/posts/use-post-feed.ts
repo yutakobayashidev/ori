@@ -1,4 +1,4 @@
-import type { SearchProduct } from '@yuta/bird'
+import type { SearchProduct } from "@yuta/bird";
 import type {
   ListPageInput,
   LoadError,
@@ -6,45 +6,45 @@ import type {
   PostPage,
   SearchPageInput,
   UserPageInput,
-} from './types'
+} from "./types";
 
 export type FeedRequest = { connectionId: string } & (
-  | { kind: 'user'; target: string }
-  | { kind: 'list'; target: string }
+  | { kind: "user"; target: string }
+  | { kind: "list"; target: string }
   | {
-      kind: 'search'
-      query: string
-      product: SearchProduct
-      following: boolean
+      kind: "search";
+      query: string;
+      product: SearchProduct;
+      following: boolean;
     }
-)
+);
 
 type Loaders = {
-  loadUser: (options: { data: UserPageInput }) => Promise<LoadResult>
-  loadList: (options: { data: ListPageInput }) => Promise<LoadResult>
-  search: (options: { data: SearchPageInput }) => Promise<LoadResult>
-}
+  loadUser: (options: { data: UserPageInput }) => Promise<LoadResult>;
+  loadList: (options: { data: ListPageInput }) => Promise<LoadResult>;
+  search: (options: { data: SearchPageInput }) => Promise<LoadResult>;
+};
 
 export class PostLoadError extends Error {
   constructor(readonly detail: LoadError) {
-    super(detail.message)
+    super(detail.message);
   }
 }
 
 function unwrap<TPage extends PostPage>(result: LoadResult<TPage>): TPage {
-  if (!result.ok) throw new PostLoadError(result.error)
-  return result.page
+  if (!result.ok) throw new PostLoadError(result.error);
+  return result.page;
 }
 
 export function createPostFeedOptions(request: FeedRequest, loaders: Loaders) {
   return {
-    queryKey: ['posts', request] as const,
+    queryKey: ["posts", request] as const,
     initialPageParam: undefined as string | undefined,
     retry: false as const,
     refetchOnWindowFocus: false as const,
     refetchOnReconnect: false as const,
     queryFn: async ({ pageParam }: { pageParam: string | undefined }) => {
-      if (request.kind === 'user') {
+      if (request.kind === "user") {
         return unwrap(
           await loaders.loadUser({
             data: {
@@ -53,9 +53,9 @@ export function createPostFeedOptions(request: FeedRequest, loaders: Loaders) {
               cursor: pageParam,
             },
           }),
-        )
+        );
       }
-      if (request.kind === 'list') {
+      if (request.kind === "list") {
         return unwrap(
           await loaders.loadList({
             data: {
@@ -64,7 +64,7 @@ export function createPostFeedOptions(request: FeedRequest, loaders: Loaders) {
               cursor: pageParam,
             },
           }),
-        )
+        );
       }
       return unwrap(
         await loaders.search({
@@ -76,8 +76,8 @@ export function createPostFeedOptions(request: FeedRequest, loaders: Loaders) {
             cursor: pageParam,
           },
         }),
-      )
+      );
     },
     getNextPageParam: (page: PostPage) => page.nextCursor,
-  }
+  };
 }

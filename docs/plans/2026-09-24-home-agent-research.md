@@ -1,5 +1,8 @@
 # Home-agent research
 
+Historical design: the WebSocket transport and global active selection described
+here were replaced by the [AI SDK research runtime](../research-runtime.md).
+
 ## Product boundary
 
 The user starts a research task from the deck workspace. A home agent chooses

@@ -1,25 +1,22 @@
-import { Icon } from '#/components/icon'
-import { Badge } from '#/components/ui/badge'
-import { Button } from '#/components/ui/button'
+import { Icon } from "#/components/icon";
+import { Badge } from "#/components/ui/badge";
+import { Button } from "#/components/ui/button";
 import {
   DropdownMenu,
   DropdownMenuContent,
   DropdownMenuItem,
   DropdownMenuSeparator,
   DropdownMenuTrigger,
-} from '#/components/ui/dropdown-menu'
-import {
-  flattenResearchPages,
-  useResearchFeed,
-} from '#/features/platforms/use-research-feed'
-import { PostLoadError } from '#/features/posts/use-post-feed'
-import { citationUrlKey } from '#/features/research/citation-url'
-import type { CitationTarget } from '#/features/research/use-citation-navigation'
-import { PlatformIcon } from '../platforms/platform-icon'
-import { type ColumnRegistry, useRegisterColumn } from './column-tools'
-import type { DeckColumn } from './model'
-import { ResearchPostCard } from './research-post-card'
-import { describeSource } from './source-description'
+} from "#/components/ui/dropdown-menu";
+import { flattenResearchPages, useResearchFeed } from "#/features/platforms/use-research-feed";
+import { PostLoadError } from "#/features/posts/use-post-feed";
+import { citationUrlKey } from "#/features/research/citation-url";
+import type { CitationTarget } from "#/features/research/use-citation-navigation";
+import { PlatformIcon } from "../platforms/platform-icon";
+import { type ColumnRegistry, useRegisterColumn } from "./column-tools";
+import type { DeckColumn } from "./model";
+import { ResearchPostCard } from "./research-post-card";
+import { describeSource } from "./source-description";
 
 export function ResearchColumn({
   column,
@@ -32,30 +29,30 @@ export function ResearchColumn({
   registry,
   citation,
 }: {
-  column: DeckColumn
-  connectionLabel?: string
-  onEdit: () => void
-  onRemove: () => void
-  onMove: (direction: -1 | 1) => void
-  first: boolean
-  last: boolean
-  registry: ColumnRegistry
-  citation?: CitationTarget
+  column: DeckColumn;
+  connectionLabel?: string;
+  onEdit: () => void;
+  onRemove: () => void;
+  onMove: (direction: -1 | 1) => void;
+  first: boolean;
+  last: boolean;
+  registry: ColumnRegistry;
+  citation?: CitationTarget;
 }) {
-  const query = useResearchFeed(column)
-  useRegisterColumn(registry, column, query)
-  const posts = flattenResearchPages(query.data?.pages ?? [])
-  const citedKey = citation ? citationUrlKey(citation.post.url) : null
+  const query = useResearchFeed(column);
+  useRegisterColumn(registry, column, query);
+  const posts = flattenResearchPages(query.data?.pages ?? []);
+  const citedKey = citation ? citationUrlKey(citation.post.url) : null;
   const visiblePosts =
     citation && !posts.some((post) => citationUrlKey(post.url) === citedKey)
       ? [citation.post, ...posts]
-      : posts
+      : posts;
   const error =
     query.error instanceof PostLoadError
       ? query.error.detail
-      : { message: 'Unable to load posts.', retryable: true }
-  const headingId = `column-${column.id}`
-  const sourceDescription = describeSource(column.source)
+      : { message: "Unable to load posts.", retryable: true };
+  const headingId = `column-${column.id}`;
+  const sourceDescription = describeSource(column.source);
   return (
     <section className="deck-column" aria-labelledby={headingId}>
       <header className="deck-column-header">
@@ -114,10 +111,8 @@ export function ResearchColumn({
           </DropdownMenu>
         </div>
         <div className="deck-column-label">
-          <span
-            title={`Connection profile: ${connectionLabel ?? 'Connection not found'}`}
-          >
-            {connectionLabel ?? 'Connection not found'}
+          <span title={`Connection profile: ${connectionLabel ?? "Connection not found"}`}>
+            {connectionLabel ?? "Connection not found"}
           </span>
           <Badge variant="outline" className="deck-source-label">
             <Icon name={column.source.kind} />
@@ -126,12 +121,12 @@ export function ResearchColumn({
         </div>
         <p className="deck-query">{sourceDescription.query}</p>
         <p className="deck-column-status" role="status">
-          {query.isFetching ? 'Loading posts…' : `${posts.length} posts loaded`}
+          {query.isFetching ? "Loading posts…" : `${posts.length} posts loaded`}
         </p>
       </header>
       <section
         className="deck-column-results"
-        // biome-ignore lint/a11y/noNoninteractiveTabindex: Make the scrolling feed keyboard-accessible.
+        // oxlint-disable-next-line jsx-a11y/no-noninteractive-tabindex -- Make the scrolling feed keyboard-accessible.
         tabIndex={0}
         aria-label={`Posts in ${column.title}`}
       >
@@ -140,9 +135,7 @@ export function ResearchColumn({
             key={post.key}
             post={post}
             citationRequest={
-              citation && citationUrlKey(post.url) === citedKey
-                ? citation.request
-                : undefined
+              citation && citationUrlKey(post.url) === citedKey ? citation.request : undefined
             }
             citationSnapshot={citation?.post === post && !posts.includes(post)}
           />
@@ -181,13 +174,10 @@ export function ResearchColumn({
             </Button>
           </div>
         ) : null}
-        {!query.isPending &&
-        !query.isError &&
-        posts.length > 0 &&
-        !query.hasNextPage ? (
+        {!query.isPending && !query.isError && posts.length > 0 && !query.hasNextPage ? (
           <p className="deck-message">No more posts.</p>
         ) : null}
       </section>
     </section>
-  )
+  );
 }

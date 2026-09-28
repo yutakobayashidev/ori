@@ -1,39 +1,39 @@
-import { describe, expect, it } from 'vitest'
-import { type Deck, deckSchema, moveColumn } from './model'
+import { describe, expect, it } from "vitest";
+import { type Deck, deckSchema, moveColumn } from "./model";
 
 const deck: Deck = {
-  id: 'research',
-  title: '調査',
-  columns: ['a', 'b'].map((id) => ({
+  id: "research",
+  title: "調査",
+  columns: ["a", "b"].map((id) => ({
     id,
     title: id,
-    connectionId: 'main',
+    connectionId: "main",
     source: {
-      platform: 'twitter',
-      kind: 'search',
-      query: 'AI lang:ja',
-      product: 'Latest',
+      platform: "twitter",
+      kind: "search",
+      query: "AI lang:ja",
+      product: "Latest",
       following: false,
     },
   })),
-}
-describe('deck definitions', () => {
-  it('preserves native search and the bound relay profile when serialized', () => {
-    expect(deckSchema.parse(JSON.parse(JSON.stringify(deck)))).toEqual(deck)
-  })
-  it('normalizes user and list targets and rejects invalid targets', () => {
-    const column = deck.columns[0]
+};
+describe("deck definitions", () => {
+  it("preserves native search and the bound relay profile when serialized", () => {
+    expect(deckSchema.parse(JSON.parse(JSON.stringify(deck)))).toEqual(deck);
+  });
+  it("normalizes user and list targets and rejects invalid targets", () => {
+    const column = deck.columns[0];
     expect(
       deckSchema.parse({
         ...deck,
         columns: [
           {
             ...column,
-            source: { platform: 'twitter', kind: 'user', target: '@alice' },
+            source: { platform: "twitter", kind: "user", target: "@alice" },
           },
         ],
       }).columns[0]?.source,
-    ).toEqual({ platform: 'twitter', kind: 'user', target: 'alice' })
+    ).toEqual({ platform: "twitter", kind: "user", target: "alice" });
     expect(
       deckSchema.parse({
         ...deck,
@@ -41,41 +41,41 @@ describe('deck definitions', () => {
           {
             ...column,
             source: {
-              platform: 'twitter',
-              kind: 'list',
-              target: 'https://x.com/i/lists/123',
+              platform: "twitter",
+              kind: "list",
+              target: "https://x.com/i/lists/123",
             },
           },
         ],
       }).columns[0]?.source,
-    ).toEqual({ platform: 'twitter', kind: 'list', target: '123' })
+    ).toEqual({ platform: "twitter", kind: "list", target: "123" });
     expect(
       deckSchema.safeParse({
         ...deck,
         columns: [
           {
             ...column,
-            source: { platform: 'twitter', kind: 'list', target: 'invalid' },
+            source: { platform: "twitter", kind: "list", target: "invalid" },
           },
         ],
       }).success,
-    ).toBe(false)
-  })
-  it('rejects duplicate identities and missing profiles', () => {
+    ).toBe(false);
+  });
+  it("rejects duplicate identities and missing profiles", () => {
     expect(
       deckSchema.safeParse({
         ...deck,
         columns: [deck.columns[0], deck.columns[0]],
       }).success,
-    ).toBe(false)
+    ).toBe(false);
     expect(
       deckSchema.safeParse({
         ...deck,
-        columns: [{ ...deck.columns[0], connectionId: '' }],
+        columns: [{ ...deck.columns[0], connectionId: "" }],
       }).success,
-    ).toBe(false)
-  })
-  it('rejects queries exceeding the upstream limit after adding follows', () => {
+    ).toBe(false);
+  });
+  it("rejects queries exceeding the upstream limit after adding follows", () => {
     expect(
       deckSchema.safeParse({
         ...deck,
@@ -83,23 +83,20 @@ describe('deck definitions', () => {
           {
             ...deck.columns[0],
             source: {
-              platform: 'twitter',
-              kind: 'search',
-              query: 'a'.repeat(512),
-              product: 'Latest',
+              platform: "twitter",
+              kind: "search",
+              query: "a".repeat(512),
+              product: "Latest",
               following: true,
             },
           },
         ],
       }).success,
-    ).toBe(false)
-  })
-  it('moves a column without changing its conditions or the previous deck', () => {
-    expect(moveColumn(deck, 'b', -1).columns).toEqual([
-      deck.columns[1],
-      deck.columns[0],
-    ])
-    expect(deck.columns.map((column) => column.id)).toEqual(['a', 'b'])
-    expect(moveColumn(deck, 'a', -1)).toBe(deck)
-  })
-})
+    ).toBe(false);
+  });
+  it("moves a column without changing its conditions or the previous deck", () => {
+    expect(moveColumn(deck, "b", -1).columns).toEqual([deck.columns[1], deck.columns[0]]);
+    expect(deck.columns.map((column) => column.id)).toEqual(["a", "b"]);
+    expect(moveColumn(deck, "a", -1)).toBe(deck);
+  });
+});

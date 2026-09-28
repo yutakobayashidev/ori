@@ -2,54 +2,58 @@
 export const migrations = [
   {
     sql: [
-      'CREATE TABLE `connection_credentials` (\n\t`connection_id` text PRIMARY KEY NOT NULL,\n\t`encrypted_token` text NOT NULL,\n\t`updated_at` integer NOT NULL,\n\tFOREIGN KEY (`connection_id`) REFERENCES `connections`(`id`) ON UPDATE no action ON DELETE cascade\n);\n',
-      '\nCREATE TABLE `connections` (\n\t`id` text PRIMARY KEY NOT NULL,\n\t`platform` text NOT NULL,\n\t`origin` text NOT NULL,\n\t`account_id` text,\n\t`relay_profile` text,\n\t`display_name` text NOT NULL,\n\t`status` text NOT NULL,\n\t`created_at` integer NOT NULL,\n\t`updated_at` integer NOT NULL\n);\n',
-      '\nCREATE UNIQUE INDEX `connections_account` ON `connections` (`platform`,`origin`,`account_id`);',
-      '\nCREATE UNIQUE INDEX `connections_relay_profile` ON `connections` (`origin`,`relay_profile`);',
+      "CREATE TABLE `connection_credentials` (\n\t`connection_id` text PRIMARY KEY NOT NULL,\n\t`encrypted_token` text NOT NULL,\n\t`updated_at` integer NOT NULL,\n\tFOREIGN KEY (`connection_id`) REFERENCES `connections`(`id`) ON UPDATE no action ON DELETE cascade\n);\n",
+      "\nCREATE TABLE `connections` (\n\t`id` text PRIMARY KEY NOT NULL,\n\t`platform` text NOT NULL,\n\t`origin` text NOT NULL,\n\t`account_id` text,\n\t`relay_profile` text,\n\t`display_name` text NOT NULL,\n\t`status` text NOT NULL,\n\t`created_at` integer NOT NULL,\n\t`updated_at` integer NOT NULL\n);\n",
+      "\nCREATE UNIQUE INDEX `connections_account` ON `connections` (`platform`,`origin`,`account_id`);",
+      "\nCREATE UNIQUE INDEX `connections_relay_profile` ON `connections` (`origin`,`relay_profile`);",
       '\nCREATE TABLE `deck_columns` (\n\t`id` text NOT NULL,\n\t`deck_id` text NOT NULL,\n\t`position` integer NOT NULL,\n\t`connection_id` text NOT NULL,\n\t`title` text NOT NULL,\n\t`source` text NOT NULL,\n\tPRIMARY KEY(`deck_id`, `id`),\n\tFOREIGN KEY (`deck_id`) REFERENCES `decks`(`id`) ON UPDATE no action ON DELETE cascade,\n\tFOREIGN KEY (`connection_id`) REFERENCES `connections`(`id`) ON UPDATE no action ON DELETE restrict,\n\tCONSTRAINT "deck_columns_valid_position" CHECK("deck_columns"."position" >= 0)\n);\n',
-      '\nCREATE UNIQUE INDEX `deck_columns_position` ON `deck_columns` (`deck_id`,`position`);',
+      "\nCREATE UNIQUE INDEX `deck_columns_position` ON `deck_columns` (`deck_id`,`position`);",
       '\nCREATE TABLE `decks` (\n\t`id` text PRIMARY KEY NOT NULL,\n\t`title` text NOT NULL,\n\t`revision` integer DEFAULT 1 NOT NULL,\n\t`created_at` integer NOT NULL,\n\t`updated_at` integer NOT NULL,\n\tCONSTRAINT "decks_positive_revision" CHECK("decks"."revision" >= 1)\n);\n',
-      '\nCREATE TABLE `oauth_apps` (\n\t`id` text PRIMARY KEY NOT NULL,\n\t`origin` text NOT NULL,\n\t`redirect_uri` text NOT NULL,\n\t`scopes` text NOT NULL,\n\t`client_id` text NOT NULL,\n\t`encrypted_client_secret` text NOT NULL,\n\t`created_at` integer NOT NULL\n);\n',
-      '\nCREATE UNIQUE INDEX `oauth_apps_configuration` ON `oauth_apps` (`origin`,`redirect_uri`,`scopes`);',
-      '\nCREATE TABLE `oauth_attempts` (\n\t`state_hash` text PRIMARY KEY NOT NULL,\n\t`browser_hash` text NOT NULL,\n\t`app_id` text NOT NULL,\n\t`encrypted_verifier` text NOT NULL,\n\t`connection_id` text,\n\t`expires_at` integer NOT NULL,\n\t`consumed_at` integer,\n\tFOREIGN KEY (`app_id`) REFERENCES `oauth_apps`(`id`) ON UPDATE no action ON DELETE cascade,\n\tFOREIGN KEY (`connection_id`) REFERENCES `connections`(`id`) ON UPDATE no action ON DELETE cascade\n);\n',
+      "\nCREATE TABLE `oauth_apps` (\n\t`id` text PRIMARY KEY NOT NULL,\n\t`origin` text NOT NULL,\n\t`redirect_uri` text NOT NULL,\n\t`scopes` text NOT NULL,\n\t`client_id` text NOT NULL,\n\t`encrypted_client_secret` text NOT NULL,\n\t`created_at` integer NOT NULL\n);\n",
+      "\nCREATE UNIQUE INDEX `oauth_apps_configuration` ON `oauth_apps` (`origin`,`redirect_uri`,`scopes`);",
+      "\nCREATE TABLE `oauth_attempts` (\n\t`state_hash` text PRIMARY KEY NOT NULL,\n\t`browser_hash` text NOT NULL,\n\t`app_id` text NOT NULL,\n\t`encrypted_verifier` text NOT NULL,\n\t`connection_id` text,\n\t`expires_at` integer NOT NULL,\n\t`consumed_at` integer,\n\tFOREIGN KEY (`app_id`) REFERENCES `oauth_apps`(`id`) ON UPDATE no action ON DELETE cascade,\n\tFOREIGN KEY (`connection_id`) REFERENCES `connections`(`id`) ON UPDATE no action ON DELETE cascade\n);\n",
     ],
     bps: true,
     folderMillis: 1790234301369,
-    hash: 'f5bc7f4f379560b9495e9702a2bd57b27740a596fbacb76792208069db312bd2',
+    hash: "f5bc7f4f379560b9495e9702a2bd57b27740a596fbacb76792208069db312bd2",
   },
   {
-    sql: [
-      'ALTER TABLE `connection_credentials` ADD `app_id` text REFERENCES oauth_apps(id);',
-    ],
+    sql: ["ALTER TABLE `connection_credentials` ADD `app_id` text REFERENCES oauth_apps(id);"],
     bps: true,
     folderMillis: 1790234518415,
-    hash: '659051351ad2d857118f39b1cffedb99f227d0ace58025ceec978d1f653ea599',
+    hash: "659051351ad2d857118f39b1cffedb99f227d0ace58025ceec978d1f653ea599",
   },
   {
     sql: [
-      'CREATE TABLE `legacy_imports` (\n\t`id` text PRIMARY KEY NOT NULL,\n\t`payload_hash` text NOT NULL,\n\t`deck_ids` text NOT NULL,\n\t`created_at` integer NOT NULL\n);\n',
+      "CREATE TABLE `legacy_imports` (\n\t`id` text PRIMARY KEY NOT NULL,\n\t`payload_hash` text NOT NULL,\n\t`deck_ids` text NOT NULL,\n\t`created_at` integer NOT NULL\n);\n",
     ],
     bps: true,
     folderMillis: 1790234736939,
-    hash: 'b5e37346de551e36b3803ce756f9fb449c451ad9e120bdfa584b7db34037f805',
+    hash: "b5e37346de551e36b3803ce756f9fb449c451ad9e120bdfa584b7db34037f805",
   },
   {
     sql: [
-      'CREATE TABLE `research_sessions` (\n\t`id` text PRIMARY KEY NOT NULL,\n\t`title` text NOT NULL,\n\t`status` text NOT NULL,\n\t`updated_at` integer NOT NULL,\n\t`snapshot` text NOT NULL\n);\n',
+      "CREATE TABLE `research_sessions` (\n\t`id` text PRIMARY KEY NOT NULL,\n\t`title` text NOT NULL,\n\t`status` text NOT NULL,\n\t`updated_at` integer NOT NULL,\n\t`snapshot` text NOT NULL\n);\n",
       '\nCREATE TABLE `research_state` (\n\t`id` integer PRIMARY KEY NOT NULL,\n\t`active_session_id` text,\n\tFOREIGN KEY (`active_session_id`) REFERENCES `research_sessions`(`id`) ON UPDATE no action ON DELETE set null,\n\tCONSTRAINT "research_state_singleton" CHECK("research_state"."id" = 1)\n);\n',
     ],
     bps: true,
     folderMillis: 1790242505709,
-    hash: '5b74e60a806df54dc3c6897aa84305b80a3b097dd70cd6cf1feebcfd3b72a135',
+    hash: "5b74e60a806df54dc3c6897aa84305b80a3b097dd70cd6cf1feebcfd3b72a135",
   },
   {
     sql: [
-      'CREATE TABLE `auth_sessions` (\n\t`token_hash` text PRIMARY KEY NOT NULL,\n\t`owner_id` integer NOT NULL,\n\t`expires_at` integer NOT NULL,\n\tFOREIGN KEY (`owner_id`) REFERENCES `workspace_owner`(`id`) ON UPDATE no action ON DELETE cascade\n);\n',
+      "CREATE TABLE `auth_sessions` (\n\t`token_hash` text PRIMARY KEY NOT NULL,\n\t`owner_id` integer NOT NULL,\n\t`expires_at` integer NOT NULL,\n\tFOREIGN KEY (`owner_id`) REFERENCES `workspace_owner`(`id`) ON UPDATE no action ON DELETE cascade\n);\n",
       '\nCREATE TABLE `auth_throttle` (\n\t`id` integer PRIMARY KEY NOT NULL,\n\t`attempts` integer NOT NULL,\n\t`reset_at` integer NOT NULL,\n\tCONSTRAINT "auth_throttle_singleton" CHECK("auth_throttle"."id" = 1)\n);\n',
       '\nCREATE TABLE `workspace_owner` (\n\t`id` integer PRIMARY KEY NOT NULL,\n\t`email` text NOT NULL,\n\t`name` text NOT NULL,\n\t`password_hash` text NOT NULL,\n\t`onboarding_completed_at` integer,\n\t`created_at` integer NOT NULL,\n\tCONSTRAINT "workspace_owner_singleton" CHECK("workspace_owner"."id" = 1)\n);\n',
     ],
     bps: true,
     folderMillis: 1790589494499,
-    hash: 'c2093b5a2e4f84ffa333dff896fc8a7bf86015ce84ae562765b525b763af749e',
+    hash: "c2093b5a2e4f84ffa333dff896fc8a7bf86015ce84ae562765b525b763af749e",
   },
-]
+  {
+    sql: ["DROP TABLE `research_state`;"],
+    bps: true,
+    folderMillis: 1790591720807,
+    hash: "766f6c07c16a178ba1614d1ef105dac67230ef4f16bb14403454ba4d5376c139",
+  },
+];

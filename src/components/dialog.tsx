@@ -1,13 +1,13 @@
-import { cn } from 'cn'
-import { Icon } from './icon'
-import { Button } from './ui/button'
+import { cn } from "cn";
+import { Icon } from "./icon";
+import { Button } from "./ui/button";
 import {
   DialogClose,
   DialogContent,
   DialogHeader,
   Dialog as DialogRoot,
   DialogTitle,
-} from './ui/dialog'
+} from "./ui/dialog";
 
 export function Dialog({
   title,
@@ -15,21 +15,21 @@ export function Dialog({
   children,
   className,
 }: {
-  title: string
-  className?: string
-  onClose: () => void
-  children: React.ReactNode
+  title: string;
+  className?: string;
+  onClose: () => void;
+  children: React.ReactNode;
 }) {
   return (
     <DialogRoot
       open
       onOpenChange={(open) => {
-        if (!open) onClose()
+        if (!open) onClose();
       }}
     >
       <DialogContent
         showCloseButton={false}
-        className={cn('max-h-[calc(100dvh-2rem)] overflow-y-auto', className)}
+        className={cn("max-h-[calc(100dvh-2rem)] overflow-y-auto", className)}
         aria-describedby={undefined}
       >
         <DialogHeader>
@@ -50,5 +50,5 @@ export function Dialog({
         {children}
       </DialogContent>
     </DialogRoot>
-  )
+  );
 }

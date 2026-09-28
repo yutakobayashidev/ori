@@ -1,11 +1,11 @@
-import { useQuery } from '@tanstack/react-query'
-import { useLocation } from '@tanstack/react-router'
-import { useServerFn } from '@tanstack/react-start'
-import { useRef, useState } from 'react'
-import { AppShell } from '#/components/app-shell'
-import { Dialog } from '#/components/dialog'
-import { Icon } from '#/components/icon'
-import { Button } from '#/components/ui/button'
+import { useQuery } from "@tanstack/react-query";
+import { useLocation } from "@tanstack/react-router";
+import { useServerFn } from "@tanstack/react-start";
+import { useState } from "react";
+import { AppShell } from "#/components/app-shell";
+import { Dialog } from "#/components/dialog";
+import { Icon } from "#/components/icon";
+import { Button } from "#/components/ui/button";
 import {
   Empty,
   EmptyContent,
@@ -13,36 +13,34 @@ import {
   EmptyHeader,
   EmptyMedia,
   EmptyTitle,
-} from '#/components/ui/empty'
-import { Input } from '#/components/ui/input'
-import { loadConnections } from '#/features/connections/server-functions'
-import { syncResearchDeck } from '#/features/research/research-deck-sync'
-import { ResearchPanel } from '#/features/research/research-panel'
+} from "#/components/ui/empty";
+import { Input } from "#/components/ui/input";
+import { loadConnections } from "#/features/connections/server-functions";
+import { syncResearchDeck } from "#/features/research/research-deck-sync";
+import { ResearchPanel } from "#/features/research/research-panel";
 import {
   sameCitationSource,
   useCitationNavigation,
-} from '#/features/research/use-citation-navigation'
-import { ColumnEditor } from './column-editor'
-import { type ColumnRegistry, useColumnTools } from './column-tools'
-import { ResearchColumn } from './deck-column'
-import { DeckSwitcher } from './deck-switcher'
-import { type DeckColumn, MAX_COLUMNS, moveColumn } from './model'
-import { useDeck } from './use-deck'
-import { useDeckTools } from './webmcp-tools'
-import './decks.css'
+} from "#/features/research/use-citation-navigation";
+import { ColumnEditor } from "./column-editor";
+import { type ColumnRegistry, useColumnTools } from "./column-tools";
+import { ResearchColumn } from "./deck-column";
+import { DeckSwitcher } from "./deck-switcher";
+import { type DeckColumn, MAX_COLUMNS, moveColumn } from "./model";
+import { useDeck } from "./use-deck";
+import { useDeckTools } from "./webmcp-tools";
 
 export function DeckPage() {
   const oauthResult = useLocation({
-    select: (location) =>
-      new URLSearchParams(location.searchStr).get('mastodon'),
-  })
-  const registry = useRef<ColumnRegistry>(new Map()).current
-  const researchDeckBindings = useRef(new Map<string, string>()).current
-  const [editing, setEditing] = useState<{ id: string } | 'new' | null>(null)
-  const [renaming, setRenaming] = useState(false)
-  const [deckDialog, setDeckDialog] = useState<'create' | 'delete' | null>(null)
-  const [newDeckTitle, setNewDeckTitle] = useState('')
-  const switcherEditing = deckDialog !== null
+    select: (location) => new URLSearchParams(location.searchStr).get("mastodon"),
+  });
+  const [registry] = useState<ColumnRegistry>(() => new Map());
+  const [researchDeckBindings] = useState(() => new Map<string, string>());
+  const [editing, setEditing] = useState<{ id: string } | "new" | null>(null);
+  const [renaming, setRenaming] = useState(false);
+  const [deckDialog, setDeckDialog] = useState<"create" | "delete" | null>(null);
+  const [newDeckTitle, setNewDeckTitle] = useState("");
+  const switcherEditing = deckDialog !== null;
   const {
     deck,
     workspace,
@@ -59,24 +57,24 @@ export function DeckPage() {
     select,
     remove,
     getWorkspace,
-  } = useDeck(editing !== null || renaming || switcherEditing)
+  } = useDeck(editing !== null || renaming || switcherEditing);
   const citationNavigation = useCitationNavigation({
     registry,
     getWorkspace,
     select,
     createTemporary,
-  })
-  const fetchProfiles = useServerFn(loadConnections)
+  });
+  const fetchProfiles = useServerFn(loadConnections);
   const profiles = useQuery({
-    queryKey: ['connections'],
+    queryKey: ["connections"],
     queryFn: () => fetchProfiles(),
     retry: false,
-  })
-  useColumnTools(registry, ready)
+  });
+  useColumnTools(registry, ready);
   const [removed, setRemoved] = useState<{
-    column: DeckColumn
-    index: number
-  }>()
+    column: DeckColumn;
+    index: number;
+  }>();
 
   useDeckTools({
     ready,
@@ -90,28 +88,26 @@ export function DeckPage() {
     persist,
     connections: profiles.data?.connections,
     onApplied: clearEditors,
-  })
+  });
 
   function clearEditors() {
-    setDeckDialog(null)
-    setNewDeckTitle('')
-    setEditing(null)
-    setRenaming(false)
-    setRemoved(undefined)
+    setDeckDialog(null);
+    setNewDeckTitle("");
+    setEditing(null);
+    setRenaming(false);
+    setRemoved(undefined);
   }
 
   async function saveColumn(column: DeckColumn) {
     const saved = await save({
       ...deck,
       columns:
-        editing === 'new'
+        editing === "new"
           ? [...deck.columns, column]
-          : deck.columns.map((current) =>
-              current.id === column.id ? column : current,
-            ),
-    })
-    if (saved) setEditing(null)
-    return saved
+          : deck.columns.map((current) => (current.id === column.id ? column : current)),
+    });
+    if (saved) setEditing(null);
+    return saved;
   }
 
   const storageErrorNotice = storageError ? (
@@ -122,14 +118,14 @@ export function DeckPage() {
         type="button"
         disabled={saving}
         onClick={() => {
-          clearEditors()
-          void refresh(true)
+          clearEditors();
+          void refresh(true);
         }}
       >
         Reload latest deck
       </Button>
     </p>
-  ) : null
+  ) : null;
 
   return (
     <ResearchPanel
@@ -147,8 +143,8 @@ export function DeckPage() {
           createTemporary,
           save,
           select,
-        })
-        if (activate) clearEditors()
+        });
+        if (activate) clearEditors();
       }}
     >
       {(renderResearchPanel) => (
@@ -167,22 +163,22 @@ export function DeckPage() {
                 newTitle={newDeckTitle}
                 onNewTitleChange={setNewDeckTitle}
                 onDialogChange={(dialog) => {
-                  setDeckDialog(dialog)
-                  if (dialog !== 'create') setNewDeckTitle('')
+                  setDeckDialog(dialog);
+                  if (dialog !== "create") setNewDeckTitle("");
                 }}
                 onSelect={(id) => {
-                  select(id)
-                  clearEditors()
+                  select(id);
+                  clearEditors();
                 }}
                 onCreate={async (title) => {
-                  const saved = await create(title)
-                  if (saved) clearEditors()
-                  return saved
+                  const saved = await create(title);
+                  if (saved) clearEditors();
+                  return saved;
                 }}
                 onDelete={async () => {
-                  const saved = await remove(deck.id)
-                  if (saved) clearEditors()
-                  return saved
+                  const saved = await remove(deck.id);
+                  if (saved) clearEditors();
+                  return saved;
                 }}
               />
               <Button
@@ -190,18 +186,16 @@ export function DeckPage() {
                 aria-label="Add column"
                 title="Add column"
                 type="button"
-                disabled={
-                  !ready || saving || deck.columns.length >= MAX_COLUMNS
-                }
-                onClick={() => setEditing('new')}
+                disabled={!ready || saving || deck.columns.length >= MAX_COLUMNS}
+                onClick={() => setEditing("new")}
               >
                 <Icon name="plus" />
                 <span>Add column</span>
               </Button>
               <p className="sidebar-note">
                 {deck.persisted
-                  ? 'Saved to server · Shared across devices'
-                  : 'Temporary view · This tab only'}
+                  ? "Saved to server · Shared across devices"
+                  : "Temporary view · This tab only"}
               </p>
             </>
           }
@@ -220,8 +214,8 @@ export function DeckPage() {
                   type="button"
                   disabled={saving}
                   onClick={() => {
-                    createTemporary(`${deck.title} copy`, deck.columns)
-                    clearEditors()
+                    createTemporary(`${deck.title} copy`, deck.columns);
+                    clearEditors();
                   }}
                 >
                   Create temporary copy
@@ -238,7 +232,6 @@ export function DeckPage() {
               )}
               <Button
                 variant="outline"
-                className="icon-button"
                 aria-label="Rename"
                 title="Rename"
                 type="button"
@@ -275,22 +268,17 @@ export function DeckPage() {
           {profiles.isError ? (
             <p role="alert" className="deck-error">
               Unable to load connection profiles.
-              <Button
-                variant="outline"
-                type="button"
-                onClick={() => void profiles.refetch()}
-              >
+              <Button variant="outline" type="button" onClick={() => void profiles.refetch()}>
                 Retry
               </Button>
             </p>
           ) : null}
-          {oauthResult === 'failed' ? (
+          {oauthResult === "failed" ? (
             <p className="deck-error" role="alert">
-              Could not complete Mastodon authorization. Try again from
-              Connected accounts.
+              Could not complete Mastodon authorization. Try again from Connected accounts.
             </p>
           ) : null}
-          {oauthResult === 'connected' ? (
+          {oauthResult === "connected" ? (
             <p className="deck-save-status" role="status">
               Mastodon account connected. You can now use it in a column.
             </p>
@@ -300,23 +288,18 @@ export function DeckPage() {
               {profiles.data.relayError}
             </p>
           ) : null}
-          {profiles.isPending ? (
-            <p role="status">Loading connection profiles…</p>
-          ) : null}
-          {!renaming && editing === null && !switcherEditing
-            ? storageErrorNotice
-            : null}
+          {profiles.isPending ? <p role="status">Loading connection profiles…</p> : null}
+          {!renaming && editing === null && !switcherEditing ? storageErrorNotice : null}
           {renaming ? (
             <Dialog title="Rename deck" onClose={() => setRenaming(false)}>
               <form
                 className="deck-rename"
                 onSubmit={async (event) => {
-                  event.preventDefault()
-                  const title = String(
-                    new FormData(event.currentTarget).get('title') ?? '',
-                  ).trim()
-                  if (!title) return
-                  if (await save({ ...deck, title })) setRenaming(false)
+                  event.preventDefault();
+                  const rawTitle = new FormData(event.currentTarget).get("title");
+                  const title = typeof rawTitle === "string" ? rawTitle.trim() : "";
+                  if (!title) return;
+                  if (await save({ ...deck, title })) setRenaming(false);
                 }}
               >
                 <label htmlFor="deck-title">
@@ -338,14 +321,14 @@ export function DeckPage() {
           ) : null}
           {editing !== null ? (
             <Dialog
-              title={editing === 'new' ? 'Add column' : 'Edit column'}
+              title={editing === "new" ? "Add column" : "Edit column"}
               onClose={() => setEditing(null)}
             >
               <ColumnEditor
-                key={`${deck.id}-${editing === 'new' ? 'new' : editing.id}`}
+                key={`${deck.id}-${editing === "new" ? "new" : editing.id}`}
                 connections={profiles.data?.connections ?? []}
                 column={
-                  editing === 'new'
+                  editing === "new"
                     ? undefined
                     : deck.columns.find((column) => column.id === editing.id)
                 }
@@ -361,13 +344,11 @@ export function DeckPage() {
               <Button
                 variant="outline"
                 type="button"
-                disabled={
-                  deck.columns.length >= MAX_COLUMNS || editing === 'new'
-                }
+                disabled={deck.columns.length >= MAX_COLUMNS || editing === "new"}
                 onClick={async () => {
-                  const columns = [...deck.columns]
-                  columns.splice(removed.index, 0, removed.column)
-                  if (await save({ ...deck, columns })) setRemoved(undefined)
+                  const columns = [...deck.columns];
+                  columns.splice(removed.index, 0, removed.column);
+                  if (await save({ ...deck, columns })) setRemoved(undefined);
                 }}
               >
                 Undo
@@ -384,13 +365,12 @@ export function DeckPage() {
                   <h2>Start a deck with a question</h2>
                 </EmptyTitle>
                 <EmptyDescription>
-                  Tell the assistant what you want to research to create
-                  relevant columns. You can also add search, user posts, and
-                  list columns yourself.
+                  Tell the assistant what you want to research to create relevant columns. You can
+                  also add search, user posts, and list columns yourself.
                 </EmptyDescription>
               </EmptyHeader>
               <EmptyContent>
-                <Button type="button" onClick={() => setEditing('new')}>
+                <Button type="button" onClick={() => setEditing("new")}>
                   Add column manually
                 </Button>
               </EmptyContent>
@@ -400,7 +380,7 @@ export function DeckPage() {
             <section
               className="deck-board"
               aria-label="Research columns"
-              // biome-ignore lint/a11y/noNoninteractiveTabindex: Keyboard users must be able to scroll the column board.
+              // oxlint-disable-next-line jsx-a11y/no-noninteractive-tabindex -- Keyboard users must be able to scroll the column board.
               tabIndex={0}
             >
               {deck.columns.map((column, index) => (
@@ -423,22 +403,14 @@ export function DeckPage() {
                   first={index === 0}
                   last={index === deck.columns.length - 1}
                   onEdit={() => setEditing({ id: column.id })}
-                  onMove={(direction) =>
-                    save(moveColumn(deck, column.id, direction))
-                  }
+                  onMove={(direction) => save(moveColumn(deck, column.id, direction))}
                   onRemove={async () => {
                     const saved = await save({
                       ...deck,
-                      columns: deck.columns.filter(
-                        (current) => current.id !== column.id,
-                      ),
-                    })
-                    if (saved) setRemoved({ column, index })
-                    if (
-                      typeof editing === 'object' &&
-                      editing?.id === column.id
-                    )
-                      setEditing(null)
+                      columns: deck.columns.filter((current) => current.id !== column.id),
+                    });
+                    if (saved) setRemoved({ column, index });
+                    if (typeof editing === "object" && editing?.id === column.id) setEditing(null);
                   }}
                 />
               ))}
@@ -447,5 +419,5 @@ export function DeckPage() {
         </AppShell>
       )}
     </ResearchPanel>
-  )
+  );
 }

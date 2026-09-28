@@ -1,4 +1,4 @@
-import { useRouteContext } from '@tanstack/react-router'
+import { useRouteContext } from "@tanstack/react-router";
 import {
   Activity,
   Bell,
@@ -20,52 +20,69 @@ import {
   Waves,
   Wind,
   X,
-} from 'lucide-react'
-import { useState } from 'react'
-import { Dialog } from '#/components/dialog'
-import { Button } from '#/components/ui/button'
-import { SidebarProvider } from '#/components/ui/sidebar'
-import { TooltipProvider } from '#/components/ui/tooltip'
-import { WorkspaceNavigation } from '#/components/workspace-navigation'
-import { EnvironmentPanel } from './environment-panel'
-import './vitals.css'
+} from "lucide-react";
+import { useState } from "react";
+import { Dialog } from "#/components/dialog";
+import { Button } from "#/components/ui/button";
+import { SidebarProvider } from "#/components/ui/sidebar";
+import { TooltipProvider } from "#/components/ui/tooltip";
+import { WorkspaceNavigation } from "#/components/workspace-navigation";
+import { useUrlState } from "#/features/navigation/use-url-state";
+import { EnvironmentPanel } from "./environment-panel";
 
 const systems = [
-  { name: 'Cardiovascular', score: 68, count: 19, tone: 'red', icon: Heart },
-  { name: 'Liver', score: 95, count: 11, tone: 'yellow', icon: Shield },
-  { name: 'Immune', score: 95, count: 19, tone: 'purple', icon: Shield },
-  { name: 'Metabolic', score: 92, count: 6, tone: 'green', icon: Waves },
-  { name: 'Endocrine', score: 94, count: 25, tone: 'yellow', icon: Waves },
-  { name: 'Blood', score: 100, count: 17, tone: 'red', icon: Activity },
-  { name: 'Kidney', score: 98, count: 33, tone: 'purple', icon: Waves },
-  { name: 'Nutrients', score: 97, count: 17, tone: 'green', icon: Leaf },
-] as const
+  { name: "Cardiovascular", score: 68, count: 19, tone: "red", icon: Heart },
+  { name: "Liver", score: 95, count: 11, tone: "yellow", icon: Shield },
+  { name: "Immune", score: 95, count: 19, tone: "purple", icon: Shield },
+  { name: "Metabolic", score: 92, count: 6, tone: "green", icon: Waves },
+  { name: "Endocrine", score: 94, count: 25, tone: "yellow", icon: Waves },
+  { name: "Blood", score: 100, count: 17, tone: "red", icon: Activity },
+  { name: "Kidney", score: 98, count: 33, tone: "purple", icon: Waves },
+  { name: "Nutrients", score: 97, count: 17, tone: "green", icon: Leaf },
+] as const;
 const nav = [
-  { name: 'Home', icon: House },
-  { name: 'Body', icon: UserRound },
-  { name: 'Vitals', icon: Activity },
-  { name: 'Nutrition', icon: Utensils },
-  { name: 'Care', icon: Stethoscope },
-  { name: 'Environment', icon: Wind },
-  { name: 'Lights', icon: Lightbulb },
-  { name: 'Records', icon: ClipboardList },
-  { name: 'Analysis', icon: ChartNoAxesCombined },
-  { name: 'Profile', icon: UserRound },
-]
+  { name: "Home", icon: House },
+  { name: "Body", icon: UserRound },
+  { name: "Vitals", icon: Activity },
+  { name: "Nutrition", icon: Utensils },
+  { name: "Care", icon: Stethoscope },
+  { name: "Environment", icon: Wind },
+  { name: "Lights", icon: Lightbulb },
+  { name: "Records", icon: ClipboardList },
+  { name: "Analysis", icon: ChartNoAxesCombined },
+  { name: "Profile", icon: UserRound },
+];
 export function VitalsPage() {
-  const { auth } = useRouteContext({ from: '__root__' })
-  const [section, setSection] = useState('Body')
-  const [mobileMenu, setMobileMenu] = useState(false)
-  const [detail, setDetail] = useState<string>()
-  const [tab, setTab] = useState('Overview')
-  const [history, setHistory] = useState(false)
+  const { auth } = useRouteContext({ from: "__root__" });
+  const [search, setSearch] = useUrlState();
+  const section = search.vitalSection ?? "Body";
+  const tab = systems.some((item) => item.name === search.vitalTab) ? search.vitalTab : "Overview";
+  const detail = [
+    ...systems.map((item) => item.name),
+    ...nav.map((item) => item.name),
+    "Log with Claude",
+    "Help",
+    "Notifications",
+    "Recent result",
+    "Insights",
+  ].includes(search.vitalDetail ?? "")
+    ? search.vitalDetail
+    : undefined;
+  const history = search.vitalHistory ?? false;
+  const setSection = (value: "Body" | "Environment") =>
+    setSearch({ vitalSection: value === "Body" ? undefined : value });
+  const setTab = (value: string) =>
+    setSearch({ vitalTab: value === "Overview" ? undefined : value });
+  const setDetail = (value: string | undefined) => setSearch({ vitalDetail: value });
+  const setHistory = (value: boolean) => setSearch({ vitalHistory: value || undefined });
+  const [mobileMenu, setMobileMenu] = useState(false);
   return (
     <TooltipProvider>
       <SidebarProvider className="vital-workspace">
         <WorkspaceNavigation />
         <div className="vital-app">
           <aside
-            className={`vital-navigation ${mobileMenu ? 'is-open' : ''}`}
+            className={`vital-navigation ${mobileMenu ? "is-open" : ""}`}
             aria-label="Health navigation"
           >
             <div className="vital-brand">
@@ -87,12 +104,12 @@ export function VitalsPage() {
                 <button
                   key={item.name}
                   type="button"
-                  className={section === item.name ? 'is-active' : ''}
+                  className={section === item.name ? "is-active" : ""}
                   onClick={() => {
-                    if (item.name === 'Body' || item.name === 'Environment') {
-                      setSection(item.name)
-                      setMobileMenu(false)
-                    } else setDetail(item.name)
+                    if (item.name === "Body" || item.name === "Environment") {
+                      setSection(item.name);
+                      setMobileMenu(false);
+                    } else setDetail(item.name);
                   }}
                 >
                   <item.icon />
@@ -101,14 +118,11 @@ export function VitalsPage() {
               ))}
             </nav>
             <div className="vital-navigation-bottom">
-              <button
-                type="button"
-                onClick={() => setDetail('Log with Claude')}
-              >
+              <button type="button" onClick={() => setDetail("Log with Claude")}>
                 <Plus />
                 Log with Claude
               </button>
-              <button type="button" onClick={() => setDetail('Help')}>
+              <button type="button" onClick={() => setDetail("Help")}>
                 <CircleHelp />
                 Help
               </button>
@@ -134,44 +148,42 @@ export function VitalsPage() {
                 <button
                   type="button"
                   aria-label="Open notifications"
-                  onClick={() => setDetail('Notifications')}
+                  onClick={() => setDetail("Notifications")}
                 >
                   <Bell />
                 </button>
                 <button
                   type="button"
                   className="vital-profile"
-                  onClick={() => setDetail('Profile')}
+                  onClick={() => setDetail("Profile")}
                 >
-                  <span className="vital-avatar">
-                    {auth.owner?.name.slice(0, 1).toUpperCase()}
-                  </span>
+                  <span className="vital-avatar">{auth.owner?.name.slice(0, 1).toUpperCase()}</span>
                   {auth.owner?.name}
                   <ChevronDown />
                 </button>
               </div>
             </header>
             <main className="vital-scroll">
-              {section === 'Environment' ? (
+              {section === "Environment" ? (
                 <EnvironmentPanel />
               ) : (
-                <div className="vital-body-page">
-                  <div className="vital-tabs">
+                <div>
+                  <div className="vital-tabs" role="group" aria-label="Body systems">
                     {[
-                      'Overview',
-                      'Cardiovascular',
-                      'Metabolic',
-                      'Liver',
-                      'Kidney',
-                      'Endocrine',
-                      'Immune',
-                      'Blood',
-                      'Nutrients',
+                      "Overview",
+                      "Cardiovascular",
+                      "Metabolic",
+                      "Liver",
+                      "Kidney",
+                      "Endocrine",
+                      "Immune",
+                      "Blood",
+                      "Nutrients",
                     ].map((name) => (
                       <button
                         type="button"
                         key={name}
-                        className={tab === name ? 'is-active' : ''}
+                        className={tab === name ? "is-active" : ""}
                         onClick={() => setTab(name)}
                       >
                         {name}
@@ -179,7 +191,7 @@ export function VitalsPage() {
                     ))}
                   </div>
                   <div className="vital-body-columns">
-                    <div className="vital-card vital-body-main">
+                    <div className="vital-card">
                       <div className="vital-lab-row">
                         <section className="vital-lab-score">
                           <header>
@@ -206,10 +218,7 @@ export function VitalsPage() {
                               <h3>
                                 Optimal <span>▾ 1</span>
                               </h3>
-                              <p>
-                                7 of 8 systems optimal · 21 of 161 biomarkers
-                                out of range
-                              </p>
+                              <p>7 of 8 systems optimal · 21 of 161 biomarkers out of range</p>
                               <div className="vital-lab-change">
                                 <div>
                                   <span>Change ⓘ</span>
@@ -218,11 +227,7 @@ export function VitalsPage() {
                                   </strong>
                                   <p>Since last draw</p>
                                 </div>
-                                <svg
-                                  viewBox="0 0 190 65"
-                                  aria-label="Lab score trend"
-                                  role="img"
-                                >
+                                <svg viewBox="0 0 190 65" aria-label="Lab score trend" role="img">
                                   <path
                                     d="M2 12 L24 12 Q34 8 39 29 T65 57 Q76 66 85 20 T105 19 L132 17 Q145 17 153 49 T174 48 L188 51"
                                     fill="none"
@@ -240,7 +245,7 @@ export function VitalsPage() {
                             <button
                               key={index}
                               type="button"
-                              onClick={() => setDetail('Recent result')}
+                              onClick={() => setDetail("Recent result")}
                             >
                               <span className="vital-warning">△</span>
                               <span
@@ -258,18 +263,18 @@ export function VitalsPage() {
                       </div>
                       <section className="vital-systems">
                         <header>
-                          <h2>{tab === 'Overview' ? 'Body systems' : tab}</h2>
-                          <div className="vital-tabs">
+                          <h2>{tab === "Overview" ? "Body systems" : tab}</h2>
+                          <div className="vital-tabs" role="group" aria-label="Body systems">
                             <button
                               type="button"
-                              className={!history ? 'is-active' : ''}
+                              className={!history ? "is-active" : ""}
                               onClick={() => setHistory(false)}
                             >
                               Systems
                             </button>
                             <button
                               type="button"
-                              className={history ? 'is-active' : ''}
+                              className={history ? "is-active" : ""}
                               onClick={() => setHistory(true)}
                             >
                               Lab history
@@ -280,9 +285,9 @@ export function VitalsPage() {
                           <div className="vital-history">
                             <h3>Lab history</h3>
                             {[
-                              ['Jul 28', '92'],
-                              ['May 16', '93'],
-                              ['Mar 04', '89'],
+                              ["Jul 28", "92"],
+                              ["May 16", "93"],
+                              ["Mar 04", "89"],
                             ].map(([date, score]) => (
                               <div key={date}>
                                 <span>{date}</span>
@@ -298,10 +303,7 @@ export function VitalsPage() {
                             <div className="vital-system-list">
                               {systems
                                 .slice(0, 4)
-                                .filter(
-                                  (item) =>
-                                    tab === 'Overview' || tab === item.name,
-                                )
+                                .filter((item) => tab === "Overview" || tab === item.name)
                                 .map((item) => (
                                   <SystemCard
                                     key={item.name}
@@ -320,10 +322,7 @@ export function VitalsPage() {
                             <div className="vital-system-list">
                               {systems
                                 .slice(4)
-                                .filter(
-                                  (item) =>
-                                    tab === 'Overview' || tab === item.name,
-                                )
+                                .filter((item) => tab === "Overview" || tab === item.name)
                                 .map((item) => (
                                   <SystemCard
                                     key={item.name}
@@ -369,7 +368,7 @@ export function VitalsPage() {
                       {[0, 1, 2].map((index) => (
                         <div className="vital-insight-placeholder" key={index}>
                           <b
-                            className={`vital-dot ${index === 2 ? 'vital-yellow' : 'vital-red'}`}
+                            className={`vital-dot ${index === 2 ? "vital-yellow" : "vital-red"}`}
                           />
                           <div
                             className="vital-obscured"
@@ -385,7 +384,7 @@ export function VitalsPage() {
                       <button
                         className="vital-text-button"
                         type="button"
-                        onClick={() => setDetail('Insights')}
+                        onClick={() => setDetail("Insights")}
                       >
                         Show 6 more
                       </button>
@@ -398,21 +397,15 @@ export function VitalsPage() {
           </div>
         </div>
         {detail && (
-          <Dialog
-            title={detail}
-            className="sm:max-w-xl"
-            onClose={() => setDetail(undefined)}
-          >
+          <Dialog title={detail} className="sm:max-w-xl" onClose={() => setDetail(undefined)}>
             <p className="text-sm leading-relaxed text-muted-foreground">
-              This preview uses sample data from the reference image. It is not
-              connected to health measurements, diagnoses, or device controls.
+              This preview uses sample data from the reference image. It is not connected to health
+              measurements, diagnoses, or device controls.
             </p>
             {systems.find((item) => item.name === detail) && (
               <p className="text-3xl">
                 {systems.find((item) => item.name === detail)?.score}
-                <span className="ml-2 text-sm text-muted-foreground">
-                  score
-                </span>
+                <span className="ml-2 text-sm text-muted-foreground">score</span>
               </p>
             )}
             <Button variant="outline" onClick={() => setDetail(undefined)}>
@@ -422,15 +415,9 @@ export function VitalsPage() {
         )}
       </SidebarProvider>
     </TooltipProvider>
-  )
+  );
 }
-function SystemCard({
-  item,
-  onSelect,
-}: {
-  item: (typeof systems)[number]
-  onSelect: () => void
-}) {
+function SystemCard({ item, onSelect }: { item: (typeof systems)[number]; onSelect: () => void }) {
   return (
     <button type="button" className="vital-system-card" onClick={onSelect}>
       <span className={`vital-system-icon vital-${item.tone}`}>
@@ -442,10 +429,10 @@ function SystemCard({
       </span>
       <span className="vital-system-score">
         {item.score}
-        <small className={item.score < 70 ? 'vital-yellow' : 'vital-green'}>
-          ● {item.score < 70 ? 'Watch' : 'Optimal'}
+        <small className={item.score < 70 ? "vital-yellow" : "vital-green"}>
+          ● {item.score < 70 ? "Watch" : "Optimal"}
         </small>
       </span>
     </button>
-  )
+  );
 }

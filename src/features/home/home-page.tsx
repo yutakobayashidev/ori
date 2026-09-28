@@ -1,4 +1,4 @@
-import { Link, useNavigate, useRouteContext } from '@tanstack/react-router'
+import { Link, useNavigate, useRouteContext } from "@tanstack/react-router";
 import {
   ArrowDown,
   ArrowUp,
@@ -11,161 +11,146 @@ import {
   Plus,
   RotateCcw,
   X,
-} from 'lucide-react'
-import { useRef, useState } from 'react'
-import { Dialog } from '#/components/dialog'
-import { Button } from '#/components/ui/button'
-import { Checkbox } from '#/components/ui/checkbox'
-import { SidebarInset, SidebarProvider } from '#/components/ui/sidebar'
-import { Textarea } from '#/components/ui/textarea'
-import { TooltipProvider } from '#/components/ui/tooltip'
-import { WorkspaceNavigation } from '#/components/workspace-navigation'
-import { articles } from '#/features/inbox/mock-articles'
-import { ConversationDetail } from '#/features/support/conversation-detail'
-import { conversations } from '#/features/support/mock-conversations'
-import {
-  entryKindLabels,
-  useWorkspaceState,
-} from '#/features/workspace/workspace-state'
-import { DailyBrief } from './daily-brief'
-import { type HomeAction, interpretAction } from './interpret-action'
-import './home.css'
+} from "lucide-react";
+import { useRef, useState } from "react";
+import { Dialog } from "#/components/dialog";
+import { Button } from "#/components/ui/button";
+import { Checkbox } from "#/components/ui/checkbox";
+import { SidebarInset, SidebarProvider } from "#/components/ui/sidebar";
+import { Textarea } from "#/components/ui/textarea";
+import { TooltipProvider } from "#/components/ui/tooltip";
+import { WorkspaceNavigation } from "#/components/workspace-navigation";
+import { articles } from "#/features/inbox/mock-articles";
+import { useUrlState } from "#/features/navigation/use-url-state";
+import { ConversationDetail } from "#/features/support/conversation-detail";
+import { conversations } from "#/features/support/mock-conversations";
+import { entryKindLabels, useWorkspaceState } from "#/features/workspace/workspace-state";
+import { DailyBrief } from "./daily-brief";
+import { type HomeAction, interpretAction } from "./interpret-action";
 
 export function HomePage() {
-  const { auth } = useRouteContext({ from: '__root__' })
-  const {
-    tasks,
-    setTasks,
-    statuses,
-    setStatuses,
-    outcomes,
-    setOutcomes,
-    entries,
-    setEntries,
-  } = useWorkspaceState()
-  const navigate = useNavigate()
-  const input = useRef<HTMLTextAreaElement>(null)
-  const [prompt, setPrompt] = useState('')
+  const { auth } = useRouteContext({ from: "__root__" });
+  const { tasks, setTasks, statuses, setStatuses, outcomes, setOutcomes, entries, setEntries } =
+    useWorkspaceState();
+  const navigate = useNavigate();
+  const input = useRef<HTMLTextAreaElement>(null);
+  const [prompt, setPrompt] = useState("");
   const [proposal, setProposal] = useState<{
-    action: HomeAction
-    label: string
-  } | null>(null)
-  const [notice, setNotice] = useState('')
-  const [contactId, setContactId] = useState<string>()
-  const [articleId, setArticleId] = useState<string>()
-  const contact = conversations.find((item) => item.id === contactId)
-  const article = articles.find((item) => item.id === articleId)
-  const waiting = conversations.filter(
-    (item) => (statuses[item.id] ?? 'now') === 'now',
-  )
+    action: HomeAction;
+    label: string;
+  } | null>(null);
+  const [notice, setNotice] = useState("");
+  const [search, updateSearch] = useUrlState();
+  const contactId = search.conversation;
+  const articleId = search.article;
+  const setContactId = (id: string | undefined) =>
+    updateSearch({ conversation: id, article: undefined });
+  const setArticleId = (id: string | undefined) =>
+    updateSearch({ article: id, conversation: undefined });
+  const contact = conversations.find((item) => item.id === contactId);
+  const article = articles.find((item) => item.id === articleId);
+  const waiting = conversations.filter((item) => (statuses[item.id] ?? "now") === "now");
   const currentEntries = entries.filter(
     (entry) => !entries.some((other) => other.correctionOf === entry.id),
-  )
-  const rest = tasks.filter((task) => task.status !== 'todo')
+  );
+  const rest = tasks.filter((task) => task.status !== "todo");
 
   function suggest(text: string) {
-    setPrompt(text)
-    setProposal(null)
-    input.current?.focus()
+    setPrompt(text);
+    setProposal(null);
+    input.current?.focus();
   }
   function interpret() {
-    const result = interpretAction(prompt, tasks, conversations)
-    if ('error' in result) {
-      setNotice(result.error)
-      setProposal(null)
+    const result = interpretAction(prompt, tasks, conversations);
+    if ("error" in result) {
+      setNotice(result.error);
+      setProposal(null);
     } else {
-      setProposal(result)
-      setNotice('')
+      setProposal(result);
+      setNotice("");
     }
   }
   function apply(action: HomeAction) {
     switch (action.type) {
-      case 'add-task':
+      case "add-task":
         setTasks((current) => [
           ...current,
           {
             id: crypto.randomUUID(),
             title: action.title,
             section: action.section,
-            status: 'todo',
+            status: "todo",
           },
-        ])
-        break
-      case 'task-status':
+        ]);
+        break;
+      case "task-status":
         setTasks((current) =>
           current.map((task) =>
             task.id === action.id ? { ...task, status: action.status } : task,
           ),
-        )
-        break
-      case 'task-move':
-        moveTask(action.id, action.direction)
-        break
-      case 'routine-step':
+        );
+        break;
+      case "task-move":
+        moveTask(action.id, action.direction);
+        break;
+      case "routine-step":
         setTasks((current) =>
           current.map((task) =>
             task.id === action.id
               ? {
                   ...task,
                   completedSteps: action.done
-                    ? Array.from(
-                        new Set([...(task.completedSteps ?? []), action.step]),
-                      )
-                    : (task.completedSteps ?? []).filter(
-                        (step) => step !== action.step,
-                      ),
+                    ? Array.from(new Set([...(task.completedSteps ?? []), action.step]))
+                    : (task.completedSteps ?? []).filter((step) => step !== action.step),
                 }
               : task,
           ),
-        )
-        break
-      case 'contact':
-        setContactId(action.id)
-        break
-      case 'contact-status':
-        setStatuses((current) => ({ ...current, [action.id]: action.status }))
-        break
-      case 'journal':
+        );
+        break;
+      case "contact":
+        setContactId(action.id);
+        break;
+      case "contact-status":
+        setStatuses((current) => ({ ...current, [action.id]: action.status }));
+        break;
+      case "journal":
         setEntries((current) => [
           {
             id: crypto.randomUUID(),
             kind: action.kind,
             text: action.text,
-            source: '',
-            occurredAt: '',
+            source: "",
+            occurredAt: "",
             recordedAt: new Date().toISOString(),
           },
           ...current,
-        ])
-        break
-      case 'navigate':
-        void navigate({ to: action.to })
-        break
+        ]);
+        break;
+      case "navigate":
+        void navigate({ to: action.to });
+        break;
     }
-    setNotice(proposal?.label ?? 'Updated')
-    setProposal(null)
-    setPrompt('')
+    setNotice(proposal?.label ?? "Updated");
+    setProposal(null);
+    setPrompt("");
   }
   function moveTask(id: string, direction: -1 | 1) {
     setTasks((current) => {
-      const index = current.findIndex((task) => task.id === id)
+      const index = current.findIndex((task) => task.id === id);
       const siblings = current
         .map((task, i) => ({ task, i }))
-        .filter(
-          ({ task }) =>
-            task.section === current[index]?.section && task.status === 'todo',
-        )
-      const position = siblings.findIndex(({ task }) => task.id === id)
-      const target = siblings[position + direction]?.i
-      if (target === undefined) return current
-      const sourceTask = current[index]
-      const targetTask = current[target]
-      if (!sourceTask || !targetTask) return current
-      const updated = [...current]
-      updated[index] = targetTask
-      updated[target] = sourceTask
-      return updated
-    })
+        .filter(({ task }) => task.section === current[index]?.section && task.status === "todo");
+      const position = siblings.findIndex(({ task }) => task.id === id);
+      const target = siblings[position + direction]?.i;
+      if (target === undefined) return current;
+      const sourceTask = current[index];
+      const targetTask = current[target];
+      if (!sourceTask || !targetTask) return current;
+      const updated = [...current];
+      updated[index] = targetTask;
+      updated[target] = sourceTask;
+      return updated;
+    });
   }
   return (
     <TooltipProvider delay={500}>
@@ -182,8 +167,8 @@ export function HomePage() {
               <form
                 className="home-composer"
                 onSubmit={(event) => {
-                  event.preventDefault()
-                  interpret()
+                  event.preventDefault();
+                  interpret();
                 }}
               >
                 <Textarea
@@ -192,25 +177,23 @@ export function HomePage() {
                   placeholder="What’s on your mind?"
                   value={prompt}
                   onChange={(event) => {
-                    setPrompt(event.target.value)
-                    setProposal(null)
-                    setNotice('')
+                    setPrompt(event.target.value);
+                    setProposal(null);
+                    setNotice("");
                   }}
                   onKeyDown={(event) => {
                     if (
                       (event.metaKey || event.ctrlKey) &&
-                      event.key === 'Enter' &&
+                      event.key === "Enter" &&
                       !event.nativeEvent.isComposing
                     ) {
-                      event.preventDefault()
-                      interpret()
+                      event.preventDefault();
+                      interpret();
                     }
                   }}
                 />
                 <div className="home-composer-footer">
-                  <span className="text-xs text-muted-foreground">
-                    Tasks, replies, notes.
-                  </span>
+                  <span className="text-xs text-muted-foreground">Tasks, replies, notes.</span>
                   <Button
                     type="submit"
                     size="icon"
@@ -222,16 +205,8 @@ export function HomePage() {
                 </div>
               </form>
               <div className="home-suggestions">
-                {[
-                  'Add grocery shopping',
-                  'Reply to Aoki',
-                  'Note: Resume on page 2',
-                ].map((text) => (
-                  <button
-                    type="button"
-                    key={text}
-                    onClick={() => suggest(text)}
-                  >
+                {["Add grocery shopping", "Reply to Aoki", "Note: Resume on page 2"].map((text) => (
+                  <button type="button" key={text} onClick={() => suggest(text)}>
                     {text}
                     <ArrowUpRight className="size-3" />
                   </button>
@@ -255,12 +230,12 @@ export function HomePage() {
                 {notice}
               </p>
               <div className="home-columns">
-                <section className="home-plan" aria-label="Today’s plan">
+                <section aria-label="Today’s plan">
                   {(
                     [
-                      { id: 'focus', label: 'Start here' },
-                      { id: 'routine', label: 'Routines' },
-                      { id: 'optional', label: 'If there’s room' },
+                      { id: "focus", label: "Start here" },
+                      { id: "routine", label: "Routines" },
+                      { id: "optional", label: "If there’s room" },
                     ] as const
                   ).map((section) => (
                     <section key={section.id} className="home-section">
@@ -272,11 +247,11 @@ export function HomePage() {
                           aria-label={`Add to ${section.label}`}
                           onClick={() =>
                             suggest(
-                              section.id === 'routine'
-                                ? 'Add routine:'
-                                : section.id === 'optional'
-                                  ? 'Optional: '
-                                  : 'Add:',
+                              section.id === "routine"
+                                ? "Add routine:"
+                                : section.id === "optional"
+                                  ? "Optional: "
+                                  : "Add:",
                             )
                           }
                         >
@@ -284,11 +259,7 @@ export function HomePage() {
                         </Button>
                       </header>
                       {tasks
-                        .filter(
-                          (task) =>
-                            task.section === section.id &&
-                            task.status === 'todo',
-                        )
+                        .filter((task) => task.section === section.id && task.status === "todo")
                         .map((task) => (
                           <div className="home-task" key={task.id}>
                             <button
@@ -298,9 +269,7 @@ export function HomePage() {
                               onClick={() =>
                                 setTasks((current) =>
                                   current.map((item) =>
-                                    item.id === task.id
-                                      ? { ...item, status: 'done' }
-                                      : item,
+                                    item.id === task.id ? { ...item, status: "done" } : item,
                                   ),
                                 )
                               }
@@ -321,11 +290,7 @@ export function HomePage() {
                                       >
                                         <Checkbox
                                           id={`step-${task.id}-${step}`}
-                                          checked={
-                                            task.completedSteps?.includes(
-                                              step,
-                                            ) ?? false
-                                          }
+                                          checked={task.completedSteps?.includes(step) ?? false}
                                           onCheckedChange={(checked) =>
                                             setTasks((current) =>
                                               current.map((item) =>
@@ -333,17 +298,9 @@ export function HomePage() {
                                                   ? {
                                                       ...item,
                                                       completedSteps: checked
-                                                        ? [
-                                                            ...(item.completedSteps ??
-                                                              []),
-                                                            step,
-                                                          ]
-                                                        : (
-                                                            item.completedSteps ??
-                                                            []
-                                                          ).filter(
-                                                            (value) =>
-                                                              value !== step,
+                                                        ? [...(item.completedSteps ?? []), step]
+                                                        : (item.completedSteps ?? []).filter(
+                                                            (value) => value !== step,
                                                           ),
                                                     }
                                                   : item,
@@ -382,9 +339,7 @@ export function HomePage() {
                                 onClick={() =>
                                   setTasks((current) =>
                                     current.map((item) =>
-                                      item.id === task.id
-                                        ? { ...item, status: 'later' }
-                                        : item,
+                                      item.id === task.id ? { ...item, status: "later" } : item,
                                     ),
                                   )
                                 }
@@ -394,7 +349,7 @@ export function HomePage() {
                             </div>
                           </div>
                         ))}
-                      {section.id === 'focus' &&
+                      {section.id === "focus" &&
                         waiting.slice(0, 2).map((item) => (
                           <div className="home-task" key={item.id}>
                             <MessagesSquare className="size-5 text-muted-foreground mt-1" />
@@ -403,12 +358,8 @@ export function HomePage() {
                               className="home-task-body text-left"
                               onClick={() => setContactId(item.id)}
                             >
-                              <span className="block">
-                                Reply to {item.name}
-                              </span>
-                              <span className="text-xs text-muted-foreground">
-                                {item.subject}
-                              </span>
+                              <span className="block">Reply to {item.name}</span>
+                              <span className="text-xs text-muted-foreground">{item.subject}</span>
                             </button>
                             <Button
                               variant="ghost"
@@ -421,13 +372,10 @@ export function HomePage() {
                           </div>
                         ))}
                       {!tasks.some(
-                        (task) =>
-                          task.section === section.id && task.status === 'todo',
+                        (task) => task.section === section.id && task.status === "todo",
                       ) &&
-                        (section.id !== 'focus' || !waiting.length) && (
-                          <p className="home-empty">
-                            It’s okay to leave some room.
-                          </p>
+                        (section.id !== "focus" || !waiting.length) && (
+                          <p className="home-empty">It’s okay to leave some room.</p>
                         )}
                     </section>
                   ))}
@@ -438,7 +386,7 @@ export function HomePage() {
                       </summary>
                       {rest.map((task) => (
                         <div className="home-task" key={task.id}>
-                          {task.status === 'done' ? (
+                          {task.status === "done" ? (
                             <Check className="size-4" />
                           ) : (
                             <Coffee className="size-4" />
@@ -451,9 +399,7 @@ export function HomePage() {
                             onClick={() =>
                               setTasks((current) =>
                                 current.map((item) =>
-                                  item.id === task.id
-                                    ? { ...item, status: 'todo' }
-                                    : item,
+                                  item.id === task.id ? { ...item, status: "todo" } : item,
                                 ),
                               )
                             }
@@ -465,7 +411,7 @@ export function HomePage() {
                     </details>
                   )}
                 </section>
-                <aside className="home-context" aria-label="Today’s context">
+                <aside aria-label="Today’s context">
                   <section className="home-section">
                     <header className="home-section-heading">
                       <h2>Messages</h2>
@@ -474,12 +420,7 @@ export function HomePage() {
                       </Link>
                     </header>
                     {conversations
-                      .filter(
-                        (item) =>
-                          !['sent', 'dismissed'].includes(
-                            statuses[item.id] ?? 'now',
-                          ),
-                      )
+                      .filter((item) => !["sent", "dismissed"].includes(statuses[item.id] ?? "now"))
                       .map((item) => (
                         <button
                           className="home-context-row"
@@ -489,11 +430,11 @@ export function HomePage() {
                         >
                           <span>{item.name}</span>
                           <span className="text-xs text-muted-foreground">
-                            {statuses[item.id] === 'waiting'
-                              ? 'Waiting'
-                              : statuses[item.id] === 'later'
-                                ? 'Later'
-                                : item.channels.join(' / ')}
+                            {statuses[item.id] === "waiting"
+                              ? "Waiting"
+                              : statuses[item.id] === "later"
+                                ? "Later"
+                                : item.channels.join(" / ")}
                           </span>
                         </button>
                       ))}
@@ -512,7 +453,7 @@ export function HomePage() {
                         </span>
                         <span>
                           {entry.text}
-                          {entry.kind === '体重' ? ' kg' : ''}
+                          {entry.kind === "体重" ? " kg" : ""}
                         </span>
                       </p>
                     ))}
@@ -520,7 +461,7 @@ export function HomePage() {
                       <button
                         type="button"
                         className="home-context-row"
-                        onClick={() => suggest('Note:')}
+                        onClick={() => suggest("Note:")}
                       >
                         <span>Leave a note</span>
                         <Plus className="size-4" />
@@ -541,9 +482,7 @@ export function HomePage() {
                         key={item.id}
                         onClick={() => setArticleId(item.id)}
                       >
-                        <span className="text-xs text-muted-foreground">
-                          {item.source}
-                        </span>
+                        <span className="text-xs text-muted-foreground">{item.source}</span>
                         <span>{item.title}</span>
                       </button>
                     ))}
@@ -566,16 +505,13 @@ export function HomePage() {
             <ConversationDetail
               conversation={contact}
               onResolve={(status, note) => {
-                setStatuses((current) => ({ ...current, [contact.id]: status }))
-                if (note)
-                  setOutcomes((current) => ({ ...current, [contact.id]: note }))
-                setContactId(undefined)
+                setStatuses((current) => ({ ...current, [contact.id]: status }));
+                if (note) setOutcomes((current) => ({ ...current, [contact.id]: note }));
+                setContactId(undefined);
               }}
             />
             {outcomes[contact.id] && (
-              <p className="text-sm whitespace-pre-wrap">
-                {outcomes[contact.id]}
-              </p>
+              <p className="text-sm whitespace-pre-wrap">{outcomes[contact.id]}</p>
             )}
           </Dialog>
         )}
@@ -595,5 +531,5 @@ export function HomePage() {
         )}
       </SidebarProvider>
     </TooltipProvider>
-  )
+  );
 }

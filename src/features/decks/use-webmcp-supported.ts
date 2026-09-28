@@ -1,8 +1,9 @@
-import { useEffect, useState } from 'react'
+import { useSyncExternalStore } from "react";
+
+const subscribe = () => () => {};
+const getSnapshot = () => Boolean(document.modelContext);
+const getServerSnapshot = () => false;
+
 export function useWebMCPSupported() {
-  const [supported, setSupported] = useState(false)
-  useEffect(() => {
-    setSupported(Boolean(document.modelContext))
-  }, [])
-  return supported
+  return useSyncExternalStore(subscribe, getSnapshot, getServerSnapshot);
 }

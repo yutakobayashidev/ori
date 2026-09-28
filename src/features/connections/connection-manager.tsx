@@ -1,88 +1,80 @@
-import { useQuery } from '@tanstack/react-query'
-import { useServerFn } from '@tanstack/react-start'
-import { useId, useState } from 'react'
-import { Badge } from '#/components/ui/badge'
-import { Button } from '#/components/ui/button'
-import { Label } from '#/components/ui/label'
-import { NativeSelect, NativeSelectOption } from '#/components/ui/native-select'
+import { useQuery } from "@tanstack/react-query";
+import { useServerFn } from "@tanstack/react-start";
+import { useId, useState } from "react";
+import { Badge } from "#/components/ui/badge";
+import { Button } from "#/components/ui/button";
+import { Label } from "#/components/ui/label";
+import { NativeSelect, NativeSelectOption } from "#/components/ui/native-select";
 import {
   disconnectMastodonAccount,
   loadMastodonInstances,
   startMastodonOAuth,
-} from '../mastodon/server-functions'
-import type { Connection } from './model'
-import './connection-manager.css'
+} from "../mastodon/server-functions";
+import type { Connection } from "./model";
 
 const statusNames = {
-  connected: 'Connected',
-  disconnected: 'Disconnected',
-  expired: 'Reconnect required',
-}
+  connected: "Connected",
+  disconnected: "Disconnected",
+  expired: "Reconnect required",
+};
 
 export function ConnectionManager({
   connections,
   onChanged,
   hasTemporaryDecks = false,
 }: {
-  connections: Connection[]
-  onChanged: () => unknown
-  hasTemporaryDecks?: boolean
+  connections: Connection[];
+  onChanged: () => unknown;
+  hasTemporaryDecks?: boolean;
 }) {
-  const fetchInstances = useServerFn(loadMastodonInstances)
-  const authorize = useServerFn(startMastodonOAuth)
-  const disconnect = useServerFn(disconnectMastodonAccount)
+  const fetchInstances = useServerFn(loadMastodonInstances);
+  const authorize = useServerFn(startMastodonOAuth);
+  const disconnect = useServerFn(disconnectMastodonAccount);
   const instances = useQuery({
-    queryKey: ['mastodon-instances'],
+    queryKey: ["mastodon-instances"],
     queryFn: () => fetchInstances(),
     retry: false,
-  })
-  const [selected, setSelected] = useState('')
-  const [busy, setBusy] = useState(false)
-  const [error, setError] = useState<string>()
-  const selectId = useId()
-  const origin = selected || instances.data?.origins[0] || ''
+  });
+  const [selected, setSelected] = useState("");
+  const [busy, setBusy] = useState(false);
+  const [error, setError] = useState<string>();
+  const selectId = useId();
+  const origin = selected || instances.data?.origins[0] || "";
 
   async function connect(origin: string, connectionId?: string) {
-    setBusy(true)
-    setError(undefined)
+    setBusy(true);
+    setError(undefined);
     try {
       const result = await authorize({
         data: { origin, ...(connectionId ? { connectionId } : {}) },
-      })
-      window.location.assign(result.authorizationUrl)
+      });
+      window.location.assign(result.authorizationUrl);
     } catch {
-      setError(
-        'Could not start Mastodon authorization. Check the server and try again.',
-      )
+      setError("Could not start Mastodon authorization. Check the server and try again.");
     } finally {
-      setBusy(false)
+      setBusy(false);
     }
   }
 
   async function remove(connectionId: string) {
-    setBusy(true)
-    setError(undefined)
+    setBusy(true);
+    setError(undefined);
     try {
-      await disconnect({ data: { connectionId } })
+      await disconnect({ data: { connectionId } });
       try {
-        await onChanged()
+        await onChanged();
       } catch {
-        setError(
-          'Account disconnected, but the list could not be refreshed. Reload the page.',
-        )
+        setError("Account disconnected, but the list could not be refreshed. Reload the page.");
       }
     } catch {
-      setError('Could not disconnect the account. Try again later.')
+      setError("Could not disconnect the account. Try again later.");
     } finally {
-      setBusy(false)
+      setBusy(false);
     }
   }
 
   return (
-    <section
-      className="connection-manager"
-      aria-label="Connected account management"
-    >
+    <section className="connection-manager" aria-label="Connected account management">
       <p className="connection-manager-description">
         Connected accounts are available in columns on all your devices.
       </p>
@@ -96,31 +88,25 @@ export function ConnectionManager({
               <div className="connection-manager-account">
                 <strong>{connection.displayName}</strong>
                 <span>
-                  {connection.platform === 'twitter' ? 'Twitter' : 'Mastodon'} ·{' '}
+                  {connection.platform === "twitter" ? "Twitter" : "Mastodon"} ·{" "}
                   {new URL(connection.origin).hostname}
                 </span>
-                <Badge
-                  variant={
-                    connection.status === 'connected' ? 'secondary' : 'outline'
-                  }
-                >
+                <Badge variant={connection.status === "connected" ? "secondary" : "outline"}>
                   {statusNames[connection.status]}
                 </Badge>
               </div>
-              {connection.platform === 'mastodon' && (
+              {connection.platform === "mastodon" && (
                 <div className="connection-manager-actions">
                   <Button
                     variant="outline"
                     type="button"
                     disabled={busy}
                     aria-label={`Reconnect ${connection.displayName}`}
-                    onClick={() =>
-                      void connect(connection.origin, connection.id)
-                    }
+                    onClick={() => void connect(connection.origin, connection.id)}
                   >
                     Reconnect
                   </Button>
-                  {connection.status !== 'disconnected' && (
+                  {connection.status !== "disconnected" && (
                     <Button
                       variant="destructive"
                       type="button"
@@ -140,8 +126,8 @@ export function ConnectionManager({
       <form
         className="connection-manager-add"
         onSubmit={(event) => {
-          event.preventDefault()
-          if (origin) void connect(origin)
+          event.preventDefault();
+          if (origin) void connect(origin);
         }}
       >
         <h3>Add a Mastodon account</h3>
@@ -150,11 +136,7 @@ export function ConnectionManager({
         ) : instances.isError ? (
           <p role="alert">
             Could not load servers.
-            <Button
-              variant="outline"
-              type="button"
-              onClick={() => void instances.refetch()}
-            >
+            <Button variant="outline" type="button" onClick={() => void instances.refetch()}>
               Retry
             </Button>
           </p>
@@ -183,12 +165,12 @@ export function ConnectionManager({
         )}
         {hasTemporaryDecks && (
           <p className="connection-manager-note">
-            Temporary decks will be lost when you leave to authorize. Save any
-            decks you want to keep first.
+            Temporary decks will be lost when you leave to authorize. Save any decks you want to
+            keep first.
           </p>
         )}
         {busy && <p role="status">Working…</p>}
       </form>
     </section>
-  )
+  );
 }

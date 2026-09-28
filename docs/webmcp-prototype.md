@@ -13,15 +13,15 @@ operations use the same access controls and persistence rules as the UI.
 
 ## Workspace tools
 
-| Tool | Input | Behavior |
-| --- | --- | --- |
-| `list_connections` | `{}` | Return connection IDs, platforms, origins, account IDs, display names, and states; never credentials |
-| `list_decks` | `{}` | Return saved decks and this tab's temporary views, `activeDeckId`, and `storageError` |
-| `get_deck` | Optional `deckId` | Read the named or active view, including `persisted` and saved `revision` |
-| `set_deck` | Optional `deckId` and `expectedRevision`, required `title` and `columns` | Without an ID, create a temporary view; with an ID, replace and activate that existing view |
-| `save_deck` | `deckId` | Explicitly persist a temporary view; an already saved deck is unchanged |
-| `select_deck` | `deckId` | Activate a view; selection remains device-local |
-| `delete_deck` | `deckId`, optional `expectedRevision` | Discard a temporary view or delete a saved deck for all devices |
+| Tool               | Input                                                                    | Behavior                                                                                             |
+| ------------------ | ------------------------------------------------------------------------ | ---------------------------------------------------------------------------------------------------- |
+| `list_connections` | `{}`                                                                     | Return connection IDs, platforms, origins, account IDs, display names, and states; never credentials |
+| `list_decks`       | `{}`                                                                     | Return saved decks and this tab's temporary views, `activeDeckId`, and `storageError`                |
+| `get_deck`         | Optional `deckId`                                                        | Read the named or active view, including `persisted` and saved `revision`                            |
+| `set_deck`         | Optional `deckId` and `expectedRevision`, required `title` and `columns` | Without an ID, create a temporary view; with an ID, replace and activate that existing view          |
+| `save_deck`        | `deckId`                                                                 | Explicitly persist a temporary view; an already saved deck is unchanged                              |
+| `select_deck`      | `deckId`                                                                 | Activate a view and update the URL; other tabs remain unchanged                                      |
+| `delete_deck`      | `deckId`, optional `expectedRevision`                                    | Discard a temporary view or delete a saved deck for all devices                                      |
 
 Read tools return the workspace's current client snapshot, not a fresh server
 request. Saved definitions refresh on focus and while visible, except during

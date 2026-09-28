@@ -188,3 +188,10 @@
   text-decoration: underline;
   text-underline-offset: 0.15em;
 }
+
+@media (prefers-reduced-motion: reduce) {
+  .research-markdown [data-sd-animate],
+  .research-markdown [data-sd-animate-marker]::marker {
+    animation: none;
+  }
+}

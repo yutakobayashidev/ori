@@ -1,32 +1,31 @@
-import { ArrowLeft, Search } from 'lucide-react'
-import { useState } from 'react'
-import { Button } from '#/components/ui/button'
-import { Input } from '#/components/ui/input'
+import { ArrowLeft, Search } from "lucide-react";
+import { Button } from "#/components/ui/button";
+import { Input } from "#/components/ui/input";
 import {
   Sidebar,
   SidebarContent,
   SidebarHeader,
   SidebarInset,
   SidebarProvider,
-} from '#/components/ui/sidebar'
-import { TooltipProvider } from '#/components/ui/tooltip'
-import { WorkspaceNavigation } from '#/components/workspace-navigation'
-import { type Article, articles } from './mock-articles'
-import './inbox.css'
+} from "#/components/ui/sidebar";
+import { TooltipProvider } from "#/components/ui/tooltip";
+import { WorkspaceNavigation } from "#/components/workspace-navigation";
+import { useSearchInput } from "#/features/navigation/use-search-input";
+import { useUrlState } from "#/features/navigation/use-url-state";
+import { type Article, articles } from "./mock-articles";
 
 export function InboxPage() {
-  const [query, setQuery] = useState('')
-  const [selectedId, setSelectedId] = useState<string | undefined>(
-    articles[0]?.id,
-  )
-  const [readingMobile, setReadingMobile] = useState(false)
+  const [search, updateSearch] = useUrlState();
+  const query = search.q ?? "";
+  const selectedId = search.article;
+  const readingMobile = !!selectedId;
+  const { clear: clearSearch, ...searchInput } = useSearchInput("article");
   const visible = articles.filter((article) =>
     `${article.title} ${article.summary} ${article.source}`
       .toLowerCase()
       .includes(query.trim().toLowerCase()),
-  )
-  const selected =
-    visible.find((article) => article.id === selectedId) ?? visible[0]
+  );
+  const selected = visible.find((article) => article.id === selectedId) ?? visible[0];
 
   return (
     <TooltipProvider delay={500}>
@@ -45,8 +44,7 @@ export function InboxPage() {
                   aria-label="Search articles"
                   placeholder="Search"
                   className="pl-9"
-                  value={query}
-                  onChange={(event) => setQuery(event.target.value)}
+                  {...searchInput}
                 />
               </div>
             </SidebarHeader>
@@ -57,15 +55,14 @@ export function InboxPage() {
                   article={article}
                   selected={selected?.id === article.id}
                   onSelect={() => {
-                    setSelectedId(article.id)
-                    setReadingMobile(true)
+                    updateSearch({ article: article.id });
                   }}
                 />
               ))}
               {visible.length === 0 && (
                 <div className="inbox-no-results">
                   <p>No articles found</p>
-                  <Button variant="outline" onClick={() => setQuery('')}>
+                  <Button variant="outline" onClick={clearSearch}>
                     Clear search
                   </Button>
                 </div>
@@ -80,19 +77,17 @@ export function InboxPage() {
               size="icon"
               className="inbox-back"
               aria-label="Back to articles"
-              onClick={() => setReadingMobile(false)}
+              onClick={() => updateSearch({ article: undefined })}
             >
               <ArrowLeft />
             </Button>
-            <span className="text-xs text-muted-foreground">
-              {selected?.source}
-            </span>
+            <span className="text-xs text-muted-foreground">{selected?.source}</span>
           </header>
           <section
             className="inbox-reader-scroll"
             key={selected?.id}
             aria-label="Article content"
-            // biome-ignore lint/a11y/noNoninteractiveTabindex: The independently scrolling reader must be keyboard-scrollable.
+            // oxlint-disable-next-line jsx-a11y/no-noninteractive-tabindex -- The independently scrolling reader must be keyboard-scrollable.
             tabIndex={0}
           >
             {selected && <ArticleReader article={selected} />}
@@ -100,7 +95,7 @@ export function InboxPage() {
         </SidebarInset>
       </SidebarProvider>
     </TooltipProvider>
-  )
+  );
 }
 
 function ArticleRow({
@@ -108,15 +103,15 @@ function ArticleRow({
   selected,
   onSelect,
 }: {
-  article: Article
-  selected: boolean
-  onSelect: () => void
+  article: Article;
+  selected: boolean;
+  onSelect: () => void;
 }) {
   return (
     <button
       type="button"
       className="inbox-article-row"
-      aria-current={selected ? 'true' : undefined}
+      aria-current={selected ? "true" : undefined}
       onClick={onSelect}
     >
       <span className="inbox-row-meta">
@@ -126,7 +121,7 @@ function ArticleRow({
       <span className="inbox-row-title">{article.title}</span>
       <span className="inbox-row-summary">{article.summary}</span>
     </button>
-  )
+  );
 }
 
 function ArticleReader({ article }: { article: Article }) {
@@ -142,5 +137,5 @@ function ArticleReader({ article }: { article: Article }) {
         ))}
       </div>
     </article>
-  )
+  );
 }
