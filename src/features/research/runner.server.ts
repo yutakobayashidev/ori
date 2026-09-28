@@ -220,11 +220,22 @@ export function createResearchService(
       current.status = "complete";
       current.reportPath = info ? reportPath : undefined;
       emit(current);
-    } catch {
+    } catch (error) {
       if (active(execution)) {
+        process.stderr.write(
+          `${JSON.stringify({
+            event: "research_failed",
+            runId: current.id,
+            error:
+              error instanceof Error ? { name: error.name, message: error.message } : String(error),
+          })}\n`,
+        );
         current.status = "failed";
         current.error =
-          "Unable to complete research. Check Codex, its login, selected accounts, and the report location.";
+          error instanceof Error &&
+          /unauthorized|\b401\b|authentication|not logged in/i.test(error.message)
+            ? "Codex authentication failed. Make sure the server uses the CODEX_HOME of your signed-in Codex CLI."
+            : "Unable to complete research. Check Codex, its login, selected accounts, and the report location.";
         emit(current);
       }
     } finally {

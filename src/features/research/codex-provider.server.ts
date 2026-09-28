@@ -129,6 +129,12 @@ export async function executeCodexResearch(input: CodexResearchInput): Promise<v
         web_search: "disabled",
         ...Object.fromEntries(inherited.map((server) => [`mcp_servers.${server}.enabled`, false])),
         [`mcp_servers.${name}.enabled`]: true,
+        ...Object.fromEntries(
+          input.tools.definitions.map((tool) => [
+            `mcp_servers.${name}.tools.${tool.name}.approval_mode`,
+            "approve",
+          ]),
+        ),
       },
       onSessionCreated: (session) => {
         if (!input.signal.aborted) input.onThread(session.threadId);
@@ -152,8 +158,12 @@ export async function executeCodexResearch(input: CodexResearchInput): Promise<v
       if (part.type === "error") throw part.error;
     }
     input.signal.throwIfAborted();
-    const metadata = (await result.finalStep).providerMetadata?.["codex-app-server"];
+    const step = await result.finalStep;
+    const metadata = step.providerMetadata?.["codex-app-server"];
     if (typeof metadata?.threadId === "string") input.onThread(metadata.threadId);
+    if (step.finishReason === "error" || step.finishReason === "length") {
+      throw new Error(step.rawFinishReason || "Codex could not complete the turn.");
+    }
   } finally {
     await provider.close();
   }

@@ -333,6 +333,18 @@ it("retains a failed startup conversation for retry even before a Codex thread e
   expect(turns[0]?.input.threadId).toBeUndefined();
 });
 
+it("identifies Codex authentication failures without exposing the raw provider error", async () => {
+  vi.spyOn(process.stderr, "write").mockImplementation(() => true);
+  launch = async () => {
+    throw new Error("workspace routing discovery unauthorized (401)");
+  };
+  const run = service.start(input());
+  await vi.waitFor(() => expect(service.status(run.id).run?.status).toBe("failed"));
+  expect(service.status(run.id).run?.error).toBe(
+    "Codex authentication failed. Make sure the server uses the CODEX_HOME of your signed-in Codex CLI.",
+  );
+});
+
 it("bounds long-running work and aborts it at the time limit", async () => {
   vi.useFakeTimers({ toFake: ["setTimeout", "clearTimeout"] });
   const run = service.start(input());

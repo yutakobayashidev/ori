@@ -151,7 +151,14 @@ TWITTER_LITE_CODEX_MODEL=gpt-6-astra
 TWITTER_LITE_REPORT_ROOT=/absolute/path/to/twitter-lite/.data/research
 # Optional:
 # TWITTER_LITE_CODEX_PATH=/absolute/path/to/codex
+# CODEX_HOME=/absolute/path/to/codex-home
 ```
+
+If your CLI sets `CODEX_HOME`, set the same path in the server environment
+(`.env.local` for development). A systemd service does not inherit your shell's
+environment. Without it, research uses `~/.codex`, which may have different or
+expired credentials. Authentication failures appear separately in chat; the
+underlying error and conversation ID are logged on the server.
 
 This provider does not register AI SDK `tools` as Codex dynamic tools.
 The existing validated, account-scoped research functions are exposed through

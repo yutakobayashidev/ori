@@ -13,6 +13,10 @@ research definitions and executors are exposed with `createSdkMcpServer` instead
 Validation, connected-account scope, request budgets, evidence tracking, and
 read-only SNS behavior remain in `agent-tools.server.ts`. Provider execution is
 one agent turn; there is no second AI SDK tool loop replaying those calls.
+Only the registered research tools receive per-tool MCP approval overrides for
+non-interactive execution. Shell approvals and external MCP servers remain
+disabled. Failed or truncated Codex turns are treated as failures even when the
+provider emits a finish event without an error event.
 Resumed threads that already registered dynamic tools route their calls through
 `onDynamicToolCall` to the same validated executor.
 

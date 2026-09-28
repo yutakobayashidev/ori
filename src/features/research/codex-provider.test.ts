@@ -24,7 +24,11 @@ const fake = vi.hoisted(() => ({
   stream: vi.fn<
     (options: unknown) => {
       stream: AsyncIterable<{ type: string; id?: string; text?: string; error?: Error }>;
-      finalStep?: Promise<{ providerMetadata: { "codex-app-server": { threadId: string } } }>;
+      finalStep?: Promise<{
+        finishReason: "stop" | "error" | "length";
+        rawFinishReason?: string;
+        providerMetadata: { "codex-app-server": { threadId: string } };
+      }>;
     }
   >(),
   smooth: vi.fn<(options: unknown) => string>(),
@@ -78,6 +82,7 @@ beforeEach(() => {
       yield { type: "text-delta", id: "answer", text: "世界" };
     })(),
     finalStep: Promise.resolve({
+      finishReason: "stop",
       providerMetadata: {
         "codex-app-server": { threadId: "persistent-thread" },
       },
@@ -165,6 +170,30 @@ it("fails closed on an unreadable or malformed inherited MCP configuration", asy
   expect(fake.create).not.toHaveBeenCalled();
 });
 
+it("preapproves only this run's supplied MCP tools while preserving global restrictions", async () => {
+  const request = input();
+  request.tools.definitions.push({
+    name: "fetch_column_posts",
+    description: "Read scoped posts",
+    inputSchema: { type: "object" },
+  });
+  await executeCodexResearch(request);
+  const settings = fake.create.mock.calls[0]?.[0].defaultSettings;
+  expect(settings).toMatchObject({
+    approvalPolicy: "never",
+    autoApprove: false,
+    sandboxPolicy: "workspace-write",
+  });
+  const overrides = settings?.configOverrides ?? {};
+  expect(
+    Object.fromEntries(Object.entries(overrides).filter(([key]) => key.endsWith("approval_mode"))),
+  ).toEqual({
+    "mcp_servers.workspace_research_testrun.tools.list_decks.approval_mode": "approve",
+    "mcp_servers.workspace_research_testrun.tools.fetch_column_posts.approval_mode": "approve",
+  });
+  expect(overrides["mcp_servers.external.enabled"]).toBe(false);
+});
+
 it("closes the provider after a stream error", async () => {
   fake.stream.mockReturnValue({
     stream: (async function* () {
@@ -174,6 +203,30 @@ it("closes the provider after a stream error", async () => {
   await expect(executeCodexResearch(input())).rejects.toThrow("Provider unavailable");
   expect(fake.model.close).toHaveBeenCalledOnce();
 });
+
+it.each([
+  ["error", "workspace routing discovery unauthorized (401)"],
+  ["length", "usage_limit_exceeded"],
+  ["length", "context_window_exceeded"],
+] as const)(
+  "rejects an incomplete %s finish without an error event: %s",
+  async (finishReason, rawFinishReason) => {
+    const request = input();
+    fake.stream.mockReturnValue({
+      stream: (async function* () {
+        yield { type: "finish" };
+      })(),
+      finalStep: Promise.resolve({
+        finishReason,
+        rawFinishReason,
+        providerMetadata: { "codex-app-server": { threadId: "failed-thread" } },
+      }),
+    });
+    await expect(executeCodexResearch(request)).rejects.toThrow(rawFinishReason);
+    expect(request.onThread).toHaveBeenCalledWith("failed-thread");
+    expect(fake.model.close).toHaveBeenCalledOnce();
+  },
+);
 
 it("propagates cancellation and prevents late bridge calls or metadata changes", async () => {
   const controller = new AbortController();
