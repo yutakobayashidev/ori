@@ -22,8 +22,13 @@ export const mastodonSourceSchema = z.discriminatedUnion("kind", [
       target: z
         .string()
         .trim()
-        .regex(/^[\p{L}\p{N}_]+$/u)
-        .max(128),
+        .min(1)
+        .max(128)
+        // JSON Schema consumers do not all support Unicode property escapes.
+        .refine((value) => /^[\p{L}\p{N}_]+$/u.test(value), {
+          message: "Use only letters, numbers, and underscores in a hashtag.",
+        })
+        .describe("Hashtag without #, containing only Unicode letters, numbers, and underscores."),
     })
     .strict(),
   z

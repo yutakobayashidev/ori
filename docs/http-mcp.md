@@ -37,6 +37,11 @@ External tools are stateless and do not share the internal research turn's
 12-request budget. No tool writes to an SNS account. Tool failures return
 `isError: true` and a structured error in text content.
 
+Tool input schemas must also work with non-JavaScript JSON Schema validators.
+Mastodon hashtag character restrictions remain enforced by the server and are
+described in the schema, without exporting JavaScript Unicode property escapes
+as a `pattern` that Python JSON Schema validators reject.
+
 Activity publication uses the same service as Home and Messages. Exact retries
 return the original receipt before revision checks; conflicting publications
 make no changes. Browser clients refresh on committed changes through the
