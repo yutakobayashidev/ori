@@ -1,5 +1,6 @@
 import { ArrowLeft, MessageSquare, Search } from "lucide-react";
 import { useState } from "react";
+import { Avatar, AvatarFallback } from "#/components/ui/avatar";
 import { Button } from "#/components/ui/button";
 import { Input } from "#/components/ui/input";
 import {
@@ -61,14 +62,21 @@ export function SupportPage() {
   }
   return (
     <TooltipProvider>
-      <SidebarProvider className="support-workspace" data-reading={!!selectedId}>
-        <Sidebar collapsible="none" className="support-sidebar">
+      <SidebarProvider
+        data-testid="support-workspace"
+        className="group/support h-dvh min-h-0 overflow-hidden"
+        data-reading={!!selectedId}
+      >
+        <Sidebar
+          collapsible="none"
+          className="w-[370px] shrink-0 flex-row border-r border-border max-md:w-full max-md:group-data-[reading=true]/support:hidden"
+        >
           <WorkspaceNavigation />
-          <Sidebar collapsible="none" className="support-list">
+          <Sidebar collapsible="none" className="w-auto min-w-0 flex-1">
             <SidebarHeader className="p-5 gap-4">
-              <div className="support-list-title">
-                <h1>Messages</h1>
-                <span>{visible.length}</span>
+              <div className="flex items-center gap-px-10">
+                <h1 className="text-ui-19 font-semibold tracking-title">Messages</h1>
+                <span className="text-ui-12 text-muted-foreground">{visible.length}</span>
               </div>
               <div className="relative">
                 <Search className="absolute left-3 top-2 size-4 text-muted-foreground" />
@@ -82,9 +90,10 @@ export function SupportPage() {
                   onCompositionEnd={searchState.onCompositionEnd}
                 />
               </div>
-              <nav className="support-filters" aria-label="Conversation filters">
+              <nav className="flex flex-wrap gap-px-4" aria-label="Conversation filters">
                 {views.map((tab) => (
                   <button
+                    className="cursor-pointer rounded-ui-6 px-px-9 py-px-6 text-ui-11 whitespace-nowrap text-muted-foreground aria-pressed:bg-sidebar-accent aria-pressed:text-foreground hover:bg-muted hover:text-foreground focus-visible:outline-2 focus-visible:outline-ring focus-visible:-outline-offset-2"
                     type="button"
                     key={tab.id}
                     aria-pressed={view === tab.id}
@@ -105,24 +114,34 @@ export function SupportPage() {
               {visible.map((item) => (
                 <button
                   type="button"
-                  className="support-row"
+                  data-testid="support-row"
+                  aria-label={`${item.name}: ${item.subject}`}
+                  className="mx-px-8 my-px-2 flex cursor-pointer gap-px-12 rounded-ui-10 px-px-14 py-px-12 text-left leading-normal hover:bg-sidebar-accent aria-current:bg-sidebar-accent active:bg-muted focus-visible:outline-2 focus-visible:outline-ring focus-visible:-outline-offset-2"
                   aria-current={selected?.id === item.id ? "true" : undefined}
                   key={item.id}
                   onClick={() => updateSearch({ conversation: item.id })}
                 >
-                  <span className="support-avatar" aria-hidden="true">
-                    {item.name
-                      .split(" ")
-                      .map((part) => part[0])
-                      .join("")}
-                  </span>
-                  <span className="support-row-content">
-                    <span className="support-row-heading">
-                      <strong>{item.name}</strong>
-                      <span>{item.updatedAt}</span>
+                  <Avatar aria-hidden="true">
+                    <AvatarFallback>
+                      {item.name
+                        .split(" ")
+                        .map((part) => part[0])
+                        .join("")}
+                    </AvatarFallback>
+                  </Avatar>
+                  <span className="flex min-w-0 flex-1 flex-col gap-px-3">
+                    <span className="flex items-center justify-between gap-px-8">
+                      <strong className="text-ui-12 font-book">{item.name}</strong>
+                      <span className="text-ui-10 whitespace-nowrap text-muted-foreground">
+                        {item.updatedAt}
+                      </span>
                     </span>
-                    <span className="support-row-preview">{item.subject}</span>
-                    <span className="support-row-channel">{item.channels.join(" · ")}</span>
+                    <span className="truncate text-ui-12 text-muted-foreground">
+                      {item.subject}
+                    </span>
+                    <span className="text-ui-10 text-muted-foreground">
+                      {item.channels.join(" · ")}
+                    </span>
                   </span>
                 </button>
               ))}
@@ -132,17 +151,20 @@ export function SupportPage() {
                 </p>
               )}
             </SidebarContent>
-            <div className="support-list-footer" role="status">
+            <div className="px-px-20 py-px-16 text-ui-11 text-muted-foreground" role="status">
               {notice || "Sample conversations"}
             </div>
           </Sidebar>
         </Sidebar>
-        <SidebarInset className="support-main">
-          <header className="support-toolbar">
+        <SidebarInset className="h-full min-w-0 overflow-hidden max-md:hidden max-md:group-data-[reading=true]/support:flex">
+          <header
+            data-testid="support-toolbar"
+            className="flex min-h-[64px] items-center gap-px-10 border-b border-border px-px-20 py-px-12 max-md:px-px-12"
+          >
             <Button
               variant="ghost"
               size="icon"
-              className="support-back"
+              className="hidden max-md:inline-flex"
               aria-label="Back to messages"
               onClick={() => updateSearch({ conversation: undefined })}
             >
@@ -150,15 +172,19 @@ export function SupportPage() {
             </Button>
             {selected && (
               <>
-                <span className="support-avatar support-avatar-small" aria-hidden="true">
-                  {selected.name
-                    .split(" ")
-                    .map((part) => part[0])
-                    .join("")}
-                </span>
+                <Avatar aria-hidden="true">
+                  <AvatarFallback>
+                    {selected.name
+                      .split(" ")
+                      .map((part) => part[0])
+                      .join("")}
+                  </AvatarFallback>
+                </Avatar>
                 <div>
-                  <strong>{selected.name}</strong>
-                  <p>{selected.channels.join(" · ")}</p>
+                  <strong className="text-ui-13 font-book">{selected.name}</strong>
+                  <p className="mt-px-2 text-ui-10 text-muted-foreground">
+                    {selected.channels.join(" · ")}
+                  </p>
                 </div>
               </>
             )}
@@ -177,7 +203,10 @@ export function SupportPage() {
               </div>
             )}
           </header>
-          <section className="support-detail" aria-label="Message details">
+          <section
+            className="@container min-h-0 flex-1 overflow-y-auto wrap-anywhere"
+            aria-label="Message details"
+          >
             {conversations.map((conversation) => (
               <div key={conversation.id} hidden={selected?.id !== conversation.id}>
                 <ConversationDetail
@@ -185,15 +214,20 @@ export function SupportPage() {
                   onResolve={(status, note) => resolve(conversation.id, status, note)}
                 />
                 {outcomes[conversation.id] && (
-                  <div className="support-outcome">
+                  <div
+                    data-testid="support-outcome"
+                    className="border-t border-border p-px-24 text-ui-12"
+                  >
                     <h2>Reply preview</h2>
-                    <p>{outcomes[conversation.id]}</p>
+                    <p className="mt-px-8 whitespace-pre-wrap text-muted-foreground">
+                      {outcomes[conversation.id]}
+                    </p>
                   </div>
                 )}
               </div>
             ))}
             {!selected && (
-              <div className="support-empty">
+              <div className="grid justify-items-center gap-px-12 px-px-24 py-px-64 text-center text-ui-13 text-muted-foreground">
                 <MessageSquare aria-hidden="true" />
                 <p>Select a conversation</p>
               </div>

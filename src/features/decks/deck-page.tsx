@@ -113,7 +113,11 @@ export function DeckPage() {
   }
 
   const storageErrorNotice = storageError ? (
-    <p className="deck-error" role="alert">
+    <p
+      data-testid="deck-error"
+      className="m-0 px-4 py-2 text-sm leading-body text-destructive wrap-anywhere"
+      role="alert"
+    >
       {storageError}
       <Button
         variant="outline"
@@ -194,7 +198,7 @@ export function DeckPage() {
                 <Icon name="plus" />
                 <span>Add column</span>
               </Button>
-              <p className="sidebar-note">
+              <p className="text-xs text-muted-foreground">
                 {deck.persisted
                   ? "Saved to server · Shared across devices"
                   : "Temporary view · This tab only"}
@@ -202,12 +206,17 @@ export function DeckPage() {
             </>
           }
         >
-          <div className="deck-heading">
+          <div
+            data-testid="deck-heading"
+            className="[&>div]:min-w-0 flex shrink-0 items-center justify-between gap-3 min-h-[52px] px-3 py-2 md:min-h-[58px] md:px-4"
+          >
             <div>
               {ready ? (
                 <>
-                  <h1>{deck.title}</h1>
-                  <span className="deck-count">
+                  <h1 className="m-0 min-w-0 truncate text-md leading-compact font-bold">
+                    {deck.title}
+                  </h1>
+                  <span data-testid="deck-count" className="text-xs text-muted-foreground">
                     {deck.columns.length} / {MAX_COLUMNS} columns
                   </span>
                 </>
@@ -218,7 +227,10 @@ export function DeckPage() {
                 </div>
               )}
             </div>
-            <div className="deck-actions">
+            <div
+              data-testid="deck-actions"
+              className="flex flex-nowrap items-center gap-2 md:flex-wrap"
+            >
               {deck.persisted ? (
                 <Button
                   variant="outline"
@@ -254,12 +266,19 @@ export function DeckPage() {
             </div>
           </div>
           {saving ? (
-            <p className="deck-save-status" role="status">
+            <p
+              data-testid="deck-save-status"
+              className="m-0 px-4 pb-2 text-xs leading-normal text-muted-foreground"
+              role="status"
+            >
               Saving…
             </p>
           ) : null}
           {legacyAvailable ? (
-            <p className="deck-save-status">
+            <p
+              data-testid="deck-save-status"
+              className="m-0 px-4 pb-2 text-xs leading-normal text-muted-foreground"
+            >
               Legacy decks are available in this browser.
               <Button
                 variant="outline"
@@ -272,7 +291,11 @@ export function DeckPage() {
             </p>
           ) : null}
           {profiles.isError ? (
-            <p role="alert" className="deck-error">
+            <p
+              role="alert"
+              data-testid="deck-error"
+              className="m-0 px-4 py-2 text-sm leading-body text-destructive wrap-anywhere"
+            >
               Unable to load connection profiles.
               <Button variant="outline" type="button" onClick={() => void profiles.refetch()}>
                 Retry
@@ -280,17 +303,29 @@ export function DeckPage() {
             </p>
           ) : null}
           {oauthResult === "failed" ? (
-            <p className="deck-error" role="alert">
+            <p
+              data-testid="deck-error"
+              className="m-0 px-4 py-2 text-sm leading-body text-destructive wrap-anywhere"
+              role="alert"
+            >
               Could not complete Mastodon authorization. Try again from Connected accounts.
             </p>
           ) : null}
           {oauthResult === "connected" ? (
-            <p className="deck-save-status" role="status">
+            <p
+              data-testid="deck-save-status"
+              className="m-0 px-4 pb-2 text-xs leading-normal text-muted-foreground"
+              role="status"
+            >
               Mastodon account connected. You can now use it in a column.
             </p>
           ) : null}
           {profiles.data?.relayError ? (
-            <p className="deck-error" role="alert">
+            <p
+              data-testid="deck-error"
+              className="m-0 px-4 py-2 text-sm leading-body text-destructive wrap-anywhere"
+              role="alert"
+            >
               {profiles.data.relayError}
             </p>
           ) : null}
@@ -298,7 +333,8 @@ export function DeckPage() {
           {renaming ? (
             <Dialog title="Rename deck" onClose={() => setRenaming(false)}>
               <form
-                className="deck-rename"
+                data-testid="deck-rename"
+                className="m-0 flex flex-wrap items-end gap-3"
                 onSubmit={async (event) => {
                   event.preventDefault();
                   const rawTitle = new FormData(event.currentTarget).get("title");
@@ -307,7 +343,7 @@ export function DeckPage() {
                   if (await save({ ...deck, title })) setRenaming(false);
                 }}
               >
-                <label htmlFor="deck-title">
+                <label className="grid min-w-0 flex-[1_1_100%] gap-2 text-sm" htmlFor="deck-title">
                   Research topic / deck name
                   <Input
                     id="deck-title"
@@ -344,7 +380,11 @@ export function DeckPage() {
             </Dialog>
           ) : null}
           {removed ? (
-            <div className="deck-undo" role="status">
+            <div
+              data-testid="deck-undo"
+              className="flex flex-wrap items-center gap-2 px-4 py-2 text-sm wrap-anywhere"
+              role="status"
+            >
               <span>Deleted “{removed.column.title}”.</span>
               <Button
                 variant="outline"
@@ -384,7 +424,8 @@ export function DeckPage() {
           ) : null}
           {ready && deck.columns.length > 0 ? (
             <section
-              className="deck-board"
+              data-testid="deck-board"
+              className="grid min-h-0 flex-1 auto-cols-[min(328px,100%)] grid-flow-col justify-start gap-2 overflow-x-auto overflow-y-hidden px-2 pb-2 snap-x snap-proximity md:auto-cols-[328px]"
               aria-label="Research columns"
               // oxlint-disable-next-line jsx-a11y/no-noninteractive-tabindex -- Keyboard users must be able to scroll the column board.
               tabIndex={0}

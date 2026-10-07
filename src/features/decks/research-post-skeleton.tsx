@@ -2,7 +2,7 @@ import { Skeleton } from "#/components/ui/skeleton";
 
 export function ResearchPostSkeleton() {
   return (
-    <div className="research-post" aria-hidden="true">
+    <div data-testid="research-post" className="border-b p-3 wrap-anywhere" aria-hidden="true">
       <div className="flex items-center gap-3">
         <Skeleton className="size-9 shrink-0" />
         <div className="flex-1 space-y-2">

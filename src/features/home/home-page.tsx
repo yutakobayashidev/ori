@@ -136,24 +136,28 @@ export function HomePage() {
   }
   return (
     <TooltipProvider delay={500}>
-      <SidebarProvider className="home-workspace">
+      <SidebarProvider className="h-dvh min-h-0 overflow-hidden">
         <WorkspaceNavigation />
-        <SidebarInset className="home-main">
-          <div className="home-scroll">
-            <div className="home-content">
-              <header className="home-greeting">
+        <SidebarInset className="min-w-0 overflow-hidden">
+          <div className="min-h-0 flex-1 overflow-y-auto">
+            <div className="mx-auto max-w-[1200px] px-px-48 pt-px-40 pb-px-80 max-[1000px]:px-px-28 max-[1000px]:pb-px-40 max-md:px-px-20 max-md:py-px-32">
+              <header className="mb-px-32">
                 <p className="text-sm text-muted-foreground">Today</p>
-                <h1>Good morning, {auth.owner?.name}</h1>
+                <h1 className="mt-px-12 text-home-greeting font-book tracking-home leading-normal max-md:text-ui-25">
+                  Good morning, {auth.owner?.name}
+                </h1>
                 <DailyBrief onOpenContact={openContact} />
               </header>
               <form
-                className="home-composer"
+                className="rounded-ui-20 border border-border bg-muted p-px-16 max-md:p-px-10"
                 onSubmit={(event) => {
                   event.preventDefault();
                   interpret();
                 }}
               >
                 <Textarea
+                  variant="composer"
+                  className="min-h-[130px] max-md:min-h-[150px]"
                   ref={input}
                   aria-label="Home input"
                   placeholder="What’s on your mind?"
@@ -174,7 +178,7 @@ export function HomePage() {
                     }
                   }}
                 />
-                <div className="home-composer-footer">
+                <div className="flex items-center justify-between p-px-8">
                   <span className="text-xs text-muted-foreground">Tasks, replies, notes.</span>
                   <Button
                     type="submit"
@@ -186,17 +190,22 @@ export function HomePage() {
                   </Button>
                 </div>
               </form>
-              <div className="home-suggestions">
+              <div className="mt-px-16 flex flex-wrap gap-x-px-20 gap-y-px-8 max-md:gap-px-12">
                 {["Add grocery shopping", "Reply to Aoki", "Note: Resume on page 2"].map((text) => (
-                  <button type="button" key={text} onClick={() => suggest(text)}>
+                  <button
+                    className="flex cursor-pointer items-center gap-px-6 text-left text-ui-12 text-muted-foreground"
+                    type="button"
+                    key={text}
+                    onClick={() => suggest(text)}
+                  >
                     {text}
                     <ArrowUpRight className="size-3" />
                   </button>
                 ))}
               </div>
               {proposal && (
-                <div className="home-proposal">
-                  <p>{proposal.label}</p>
+                <div className="mt-px-20 flex flex-wrap items-center gap-px-12 rounded-ui-12 border border-border p-px-16">
+                  <p className="min-w-[140px] flex-1 text-ui-14">{proposal.label}</p>
                   <Button onClick={() => apply(proposal.action)}>Apply</Button>
                   <Button
                     variant="ghost"
@@ -208,24 +217,31 @@ export function HomePage() {
                   </Button>
                 </div>
               )}
-              <p className="home-status" role="status">
+              <p className="min-h-[36px] pt-px-12 text-ui-12 text-muted-foreground" role="status">
                 {notice}
               </p>
-              <div className="home-columns">
+              <div className="mt-px-24 grid grid-cols-[minmax(0,2.5fr)_minmax(190px,1fr)] gap-px-40 max-[1000px]:gap-px-32 max-md:grid-cols-1 max-md:gap-px-24">
                 <ExecutionWorkbench
                   selectedId={search.activity}
                   onSelect={(id) => updateSearch({ activity: id || undefined })}
                 />
                 <aside aria-label="Today’s context">
-                  <section className="home-section">
-                    <header className="home-section-heading">
-                      <h2>Journal</h2>
-                      <Link to="/journal" aria-label="Open journal">
+                  <section className="mb-px-36">
+                    <header className="mb-px-12 flex items-center justify-between">
+                      <h2 className="text-ui-14 font-semibold">Journal</h2>
+                      <Link
+                        className="p-px-6 text-muted-foreground"
+                        to="/journal"
+                        aria-label="Open journal"
+                      >
                         <ArrowUpRight className="size-4" />
                       </Link>
                     </header>
                     {currentEntries.slice(0, 2).map((entry) => (
-                      <p className="home-record" key={entry.id}>
+                      <p
+                        className="flex flex-col gap-px-6 py-px-12 text-left text-ui-13 leading-relaxed-copy wrap-anywhere"
+                        key={entry.id}
+                      >
                         <span className="text-xs text-muted-foreground">
                           {entryKindLabels[entry.kind]}
                         </span>
@@ -238,7 +254,7 @@ export function HomePage() {
                     {!currentEntries.length && (
                       <button
                         type="button"
-                        className="home-context-row"
+                        className="flex w-full cursor-pointer items-center justify-between gap-px-10 py-px-12 text-left text-ui-13"
                         onClick={() => suggest("Note:")}
                       >
                         <span>Leave a note</span>
@@ -246,17 +262,21 @@ export function HomePage() {
                       </button>
                     )}
                   </section>
-                  <section className="home-section">
-                    <header className="home-section-heading">
-                      <h2>Reading</h2>
-                      <Link to="/inbox" aria-label="Open reader">
+                  <section className="mb-px-36">
+                    <header className="mb-px-12 flex items-center justify-between">
+                      <h2 className="text-ui-14 font-semibold">Reading</h2>
+                      <Link
+                        className="p-px-6 text-muted-foreground"
+                        to="/inbox"
+                        aria-label="Open reader"
+                      >
                         <ArrowUpRight className="size-4" />
                       </Link>
                     </header>
                     {articles.slice(0, 2).map((item) => (
                       <button
                         type="button"
-                        className="home-reading"
+                        className="flex w-full cursor-pointer flex-col gap-px-6 py-px-12 text-left text-ui-13 leading-relaxed-copy wrap-anywhere"
                         key={item.id}
                         onClick={() => setArticleId(item.id)}
                       >
@@ -265,7 +285,10 @@ export function HomePage() {
                       </button>
                     ))}
                   </section>
-                  <Link to="/deck" className="home-deck-link">
+                  <Link
+                    to="/deck"
+                    className="flex items-center justify-between text-ui-12 text-muted-foreground"
+                  >
                     Explore in Research
                     <ArrowUpRight className="size-4" />
                   </Link>

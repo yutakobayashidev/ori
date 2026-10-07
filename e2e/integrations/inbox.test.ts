@@ -3,7 +3,7 @@ import { expect, test } from "../fixtures";
 test("selects articles and keeps the reader focused on their content", async ({ page }) => {
   await page.goto("/inbox");
   await page.waitForLoadState("networkidle");
-  const rows = page.locator(".inbox-article-row");
+  const rows = page.locator("[data-testid='inbox-article-row']");
   await expect(rows).toHaveCount(9);
   const articleTitle = "Context for an agent can be brief";
   await rows.filter({ hasText: articleTitle }).click();
@@ -33,7 +33,7 @@ test("selects articles and keeps the reader focused on their content", async ({ 
 test("recovers from empty search and shares navigation with Research", async ({ page, a11y }) => {
   await page.goto("/inbox");
   await page.waitForLoadState("networkidle");
-  const rows = page.locator(".inbox-article-row");
+  const rows = page.locator("[data-testid='inbox-article-row']");
   await page.getByRole("textbox", { name: "Search articles" }).fill("nonexistent-query-xyz");
   await expect(rows).toHaveCount(0);
   await expect(page.getByText("No articles found", { exact: true })).toBeVisible();
@@ -58,7 +58,7 @@ test("keeps article navigation readable without horizontal overflow", async ({
     await page.setViewportSize({ width, height: 850 });
     await expect(page.getByRole("textbox", { name: "Search articles" })).toBeVisible();
     expect(await page.evaluate(() => document.documentElement.scrollWidth)).toBe(width);
-    await page.locator(".inbox-article-row").first().click();
+    await page.locator("[data-testid='inbox-article-row']").first().click();
     const reader = page.getByRole("article", {
       name: "Thinking in the browser: a new workflow with AI agents",
       exact: true,

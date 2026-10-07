@@ -801,7 +801,7 @@ it("animates only the latest live assistant response and leaves prior replies st
   };
   const view = show();
   expect(await screen.findByText("Earlier answer")).toBeVisible();
-  const replies = view.container.querySelectorAll(".research-markdown");
+  const replies = view.container.querySelectorAll('[data-testid="research-markdown"]');
   expect(replies).toHaveLength(2);
   expect(replies[0]?.querySelector("[data-sd-animate]")).toBeNull();
   expect(replies[1]?.querySelector("[data-sd-animate]")).not.toBeNull();
@@ -814,4 +814,19 @@ it("animates only the latest live assistant response and leaves prior replies st
     }),
   );
   await waitFor(() => expect(view.container.querySelector("[data-sd-animate]")).toBeNull());
+});
+
+it("submits with Enter while preserving Shift+Enter and IME composition", async () => {
+  show();
+  const input = await screen.findByLabelText("Message");
+  await waitFor(() => expect(input).toBeEnabled());
+  fireEvent.change(input, { target: { value: "Compare browser automation tools" } });
+  fireEvent.keyDown(input, { key: "Enter", shiftKey: true });
+  fireEvent.keyDown(input, { key: "Enter", isComposing: true });
+  expect(actions.start).not.toHaveBeenCalled();
+  fireEvent.keyDown(input, { key: "Enter" });
+  await waitFor(() => expect(actions.start).toHaveBeenCalledTimes(1));
+  expect(actions.start).toHaveBeenCalledWith({
+    data: expect.objectContaining({ topic: "Compare browser automation tools" }),
+  });
 });

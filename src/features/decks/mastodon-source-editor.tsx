@@ -34,7 +34,7 @@ export function MastodonSourceEditor({
   const id = useId();
   return (
     <>
-      <Label htmlFor={id}>
+      <Label className="grid min-w-0 gap-2 text-sm" htmlFor={id}>
         Column type
         <NativeSelect
           className="w-full"
@@ -78,8 +78,8 @@ function MastodonSearchEditor({
 }: EditorProps<Extract<MastodonSource, { kind: "search" }>>) {
   const id = useId();
   return (
-    <div className="deck-source-fields">
-      <Label htmlFor={id}>
+    <div data-testid="deck-source-fields" className="my-4 grid gap-4">
+      <Label className="grid min-w-0 gap-2 text-sm" htmlFor={id}>
         Mastodon search query
         <Input
           id={id}
@@ -90,7 +90,7 @@ function MastodonSearchEditor({
           required
         />
       </Label>
-      <p className="deck-help">
+      <p data-testid="deck-help" className="text-xs leading-normal text-muted-foreground">
         Full-text search depends on server settings. Zero results do not necessarily mean search is
         supported.
       </p>
@@ -104,8 +104,8 @@ function MastodonUserEditor({
 }: EditorProps<Extract<MastodonSource, { kind: "user" }>>) {
   const id = useId();
   return (
-    <div className="deck-source-fields">
-      <Label htmlFor={id}>
+    <div data-testid="deck-source-fields" className="my-4 grid gap-4">
+      <Label className="grid min-w-0 gap-2 text-sm" htmlFor={id}>
         User
         <Input
           id={id}
@@ -126,8 +126,8 @@ function MastodonHashtagEditor({
 }: EditorProps<Extract<MastodonSource, { kind: "hashtag" }>>) {
   const id = useId();
   return (
-    <div className="deck-source-fields">
-      <Label htmlFor={id}>
+    <div data-testid="deck-source-fields" className="my-4 grid gap-4">
+      <Label className="grid min-w-0 gap-2 text-sm" htmlFor={id}>
         Hashtag
         <Input
           id={id}
@@ -151,8 +151,8 @@ function MastodonListEditor({
 }) {
   const id = useId();
   return (
-    <div className="deck-source-fields">
-      <Label htmlFor={id}>
+    <div data-testid="deck-source-fields" className="my-4 grid gap-4">
+      <Label className="grid min-w-0 gap-2 text-sm" htmlFor={id}>
         List
         <Input
           id={id}
@@ -197,7 +197,11 @@ function MastodonListChoices({
       </p>
     );
   return (
-    <section className="deck-list-choices" aria-label="Lists for this account">
+    <section
+      data-testid="deck-list-choices"
+      className="flex flex-wrap gap-2"
+      aria-label="Lists for this account"
+    >
       {lists.data.lists.length === 0 ? (
         <p>This account has no lists.</p>
       ) : (

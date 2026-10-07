@@ -15,7 +15,8 @@ remains a visual placeholder, not inferred medical content.
 as the anatomy illustration source and clipped in CSS. Source media:
 https://pbs.twimg.com/media/HTE4JWFWUAAnPBt.jpg
 The rest of the interface is HTML/CSS with SVG data charts. Reference-specific
-colors are scoped to `--vital-*` tokens in `vitals.css`.
+colors use `--color-vital-*` Tailwind theme tokens in `src/styles.css`.
+Layout, responsive states, and chart styling use utilities in the components.
 
 Sections, tabs, history, chart filters, and detail dialogs are URL state and
 restore on reload or browser Back/Forward. Simulated climate control values

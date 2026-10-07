@@ -19,7 +19,9 @@
     "react-perf",
     "jsx-a11y"
   ],
-  "jsPlugins": ["@shadcn/lint"],
+  "jsPlugins": [
+    "@shadcn/lint"
+  ],
   "rules": {
     "no-console": "error",
     "no-unused-vars": [
@@ -48,7 +50,9 @@
     "shadcn/no-arbitrary-values": [
       "error",
       {
-        "allow": ["layout"]
+        "allow": [
+          "layout"
+        ]
       }
     ],
     "shadcn/no-inline-styles": "error",
@@ -56,95 +60,114 @@
     "shadcn/no-restyle": [
       "error",
       {
-        "allow": ["layout"],
+        "allow": [
+          "layout"
+        ],
         "contracts": [
           {
             "pattern": "^Sidebar$",
             "allow": [
               "layout",
               "border-r",
-              "transition-none",
-              "inbox-sidebar",
-              "inbox-list-panel",
-              "support-sidebar",
-              "support-list"
+              "border-r-0",
+              "border-border",
+              "transition-none"
             ]
           },
           {
             "pattern": "^SidebarHeader$",
-            "allow": ["layout", "py-4", "gap-4", "border-b", "p-5"]
+            "allow": [
+              "layout",
+              "py-4",
+              "gap-4",
+              "border-b",
+              "p-5"
+            ]
           },
           {
             "pattern": "^SidebarGroup$",
-            "allow": ["layout", "px-3"]
+            "allow": [
+              "layout",
+              "px-3"
+            ]
           },
           {
             "pattern": "^SidebarFooter$",
-            "allow": ["layout", "px-3", "pb-4"]
+            "allow": [
+              "layout",
+              "px-3",
+              "pb-4"
+            ]
           },
           {
             "pattern": "^SidebarMenuButton$",
-            "allow": ["layout", "p-0"]
+            "allow": [
+              "layout",
+              "p-0"
+            ]
           },
           {
             "pattern": "^Label$",
-            "allow": ["layout", "deck-checkbox"]
-          },
-          {
-            "pattern": "^Textarea$",
-            "allow": ["layout", "text-sm", "leading-7", "journal-summary"]
-          },
-          {
-            "pattern": "^MessageScroller$",
-            "allow": ["layout", "research-conversation"]
+            "allow": [
+              "layout",
+              "gap-2",
+              "text-sm",
+              "text-xs",
+              "text-muted-foreground"
+            ]
           },
           {
             "pattern": "^MessageScrollerContent$",
-            "allow": ["layout", "gap-5", "p-4"]
+            "allow": [
+              "layout",
+              "gap-5",
+              "p-4"
+            ]
           },
           {
-            "pattern": "^Marker$",
-            "allow": ["layout", "research-tool-message"]
-          },
-          {
-            "pattern": "^Message$",
-            "allow": ["layout", "research-message"]
-          },
-          {
-            "pattern": "^Collapsible$",
-            "allow": ["layout", "research-account-picker"]
+            "pattern": "^(Marker|Collapsible)$",
+            "allow": [
+              "layout",
+              "text-research-label",
+              "text-muted-foreground"
+            ]
           },
           {
             "pattern": "^SidebarProvider$",
             "allow": [
               "layout",
-              "workspace",
-              "home-workspace",
-              "inbox-workspace",
-              "vital-workspace",
-              "support-workspace",
-              "journal-workspace"
+              "bg-vital-bg",
+              "text-vital-text",
+              "font-arial"
             ]
           },
           {
             "pattern": "^Button$",
-            "allow": ["layout", "auth-submit", "inbox-back", "support-back"]
-          },
-          {
-            "pattern": "^SidebarInset$",
-            "allow": ["layout", "home-main", "inbox-reader", "support-main", "journal-main"]
+            "allow": [
+              "layout",
+              "px-2"
+            ]
           },
           {
             "pattern": "^Input$",
-            "allow": ["layout", "pl-9"]
+            "allow": [
+              "layout",
+              "pl-9"
+            ]
           },
           {
             "pattern": "^SidebarContent$",
-            "allow": ["layout", "gap-0"]
+            "allow": [
+              "layout",
+              "gap-0"
+            ]
           },
           {
             "pattern": "^Badge$",
-            "allow": ["layout", "deck-source-label"]
+            "allow": [
+              "layout",
+              "gap-1"
+            ]
           }
         ]
       }
@@ -154,13 +177,17 @@
   },
   "overrides": [
     {
-      "files": ["scripts/**"],
+      "files": [
+        "scripts/**"
+      ],
       "rules": {
         "no-console": "off"
       }
     },
     {
-      "files": ["src/components/ui/**"],
+      "files": [
+        "src/components/ui/**"
+      ],
       "rules": {
         "shadcn/no-arbitrary-values": "off",
         "shadcn/no-restyle": "off",
@@ -168,8 +195,13 @@
       }
     },
     {
-      "files": ["src/**/*.{test,spec}.{ts,tsx}", "tests/**/*.{ts,tsx}"],
-      "plugins": ["vitest"],
+      "files": [
+        "src/**/*.{test,spec}.{ts,tsx}",
+        "tests/**/*.{ts,tsx}"
+      ],
+      "plugins": [
+        "vitest"
+      ],
       "rules": {
         "typescript/unbound-method": "error",
         "vitest/expect-expect": "error",
@@ -179,7 +211,9 @@
       }
     },
     {
-      "files": ["e2e/**/*.{ts,tsx}"],
+      "files": [
+        "e2e/**/*.{ts,tsx}"
+      ],
       "rules": {
         "react/rules-of-hooks": "off"
       }

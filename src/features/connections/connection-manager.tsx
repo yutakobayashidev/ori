@@ -74,20 +74,33 @@ export function ConnectionManager({
   }
 
   return (
-    <section className="connection-manager" aria-label="Connected account management">
-      <p className="connection-manager-description">
+    <section
+      data-testid="connection-manager"
+      className="grid gap-4"
+      aria-label="Connected account management"
+    >
+      <p
+        data-testid="connection-manager-description"
+        className="m-0 text-research-body text-muted-foreground"
+      >
         Connected accounts are available in columns on all your devices.
       </p>
       {error && <p role="alert">{error}</p>}
       {connections.length === 0 ? (
         <p>No connected accounts yet.</p>
       ) : (
-        <ul className="connection-manager-list">
+        <ul data-testid="connection-manager-list" className="m-0 grid list-none gap-3 p-0">
           {connections.map((connection) => (
-            <li key={connection.id}>
-              <div className="connection-manager-account">
+            <li
+              className="flex items-center justify-between gap-3 border-b py-3 max-[480px]:flex-col max-[480px]:items-start"
+              key={connection.id}
+            >
+              <div
+                data-testid="connection-manager-account"
+                className="grid min-w-0 gap-1 wrap-anywhere"
+              >
                 <strong>{connection.displayName}</strong>
-                <span>
+                <span className="text-research-field text-muted-foreground">
                   {connection.platform === "twitter" ? "Twitter" : "Mastodon"} ·{" "}
                   {new URL(connection.origin).hostname}
                 </span>
@@ -96,7 +109,10 @@ export function ConnectionManager({
                 </Badge>
               </div>
               {connection.platform === "mastodon" && (
-                <div className="connection-manager-actions">
+                <div
+                  data-testid="connection-manager-actions"
+                  className="flex flex-wrap justify-end gap-2"
+                >
                   <Button
                     variant="outline"
                     type="button"
@@ -124,13 +140,14 @@ export function ConnectionManager({
         </ul>
       )}
       <form
-        className="connection-manager-add"
+        data-testid="connection-manager-add"
+        className="grid gap-3"
         onSubmit={(event) => {
           event.preventDefault();
           if (origin) void connect(origin);
         }}
       >
-        <h3>Add a Mastodon account</h3>
+        <h3 className="m-0 text-base">Add a Mastodon account</h3>
         {instances.isPending ? (
           <p role="status">Checking servers…</p>
         ) : instances.isError ? (
@@ -164,7 +181,10 @@ export function ConnectionManager({
           </>
         )}
         {hasTemporaryDecks && (
-          <p className="connection-manager-note">
+          <p
+            data-testid="connection-manager-note"
+            className="m-0 text-research-body text-muted-foreground"
+          >
             Temporary decks will be lost when you leave to authorize. Save any decks you want to
             keep first.
           </p>

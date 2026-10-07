@@ -78,33 +78,35 @@ export function VitalsPage() {
   const [mobileMenu, setMobileMenu] = useState(false);
   return (
     <TooltipProvider>
-      <SidebarProvider className="vital-workspace">
+      <SidebarProvider className="h-[100dvh] min-h-0 overflow-hidden bg-vital-bg text-vital-text font-arial">
         <WorkspaceNavigation />
-        <div className="vital-app">
+        <div className="flex flex-1 min-w-0 h-full">
           <aside
-            className={`vital-navigation ${mobileMenu ? "is-open" : ""}`}
+            className="w-[208px] shrink-0 flex flex-col bg-vital-bg border-r border-vital-border pt-0 pb-0 px-px-10 max-[1401px]:w-[170px] max-[1101px]:w-[150px] max-[768px]:hidden max-[768px]:data-[open=true]:flex max-[768px]:data-[open=true]:fixed max-[768px]:data-[open=true]:left-[56px] max-[768px]:data-[open=true]:top-0 max-[768px]:data-[open=true]:bottom-0 max-[768px]:data-[open=true]:z-[40] max-[768px]:data-[open=true]:w-[220px] max-[768px]:data-[open=true]:shadow-vital-menu"
+            data-open={mobileMenu}
             aria-label="Health navigation"
           >
-            <div className="vital-brand">
-              <Activity />
+            <div className="h-[64px] flex items-center gap-px-12 pt-0 pb-0 px-px-12 text-ui-18 font-semibold whitespace-nowrap max-[1101px]:text-ui-14 max-[1101px]:px-px-4">
+              <Activity className="w-[24px] text-vital-muted" />
               <span>
-                1F2T <span>Health</span>
+                1F2T <span className="text-vital-muted font-normal">Health</span>
               </span>
               <button
-                className="vital-mobile-close"
+                className="items-center gap-px-14 pt-px-10 pb-px-10 px-px-12 rounded-ui-8 text-left text-ui-14 cursor-pointer text-vital-muted hover:text-vital-text hidden max-[768px]:flex max-[768px]:ml-auto"
                 type="button"
                 aria-label="Close menu"
                 onClick={() => setMobileMenu(false)}
               >
-                <X />
+                <X className="w-[17px] h-[17px] shrink-0" />
               </button>
             </div>
-            <nav>
+            <nav className="grid gap-px-3 mt-px-14">
               {nav.map((item) => (
                 <button
                   key={item.name}
                   type="button"
-                  className={section === item.name ? "is-active" : ""}
+                  className="flex items-center gap-px-14 pt-px-10 pb-px-10 px-px-12 rounded-ui-8 text-left text-ui-14 cursor-pointer text-vital-muted data-[active=true]:bg-muted data-[active=true]:text-vital-text hover:text-vital-text"
+                  data-active={section === item.name}
                   onClick={() => {
                     if (item.name === "Body" || item.name === "Environment") {
                       setSection(item.name);
@@ -112,63 +114,80 @@ export function VitalsPage() {
                     } else setDetail(item.name);
                   }}
                 >
-                  <item.icon />
+                  <item.icon className="w-[17px] h-[17px] shrink-0" />
                   <span>{item.name}</span>
                 </button>
               ))}
             </nav>
-            <div className="vital-navigation-bottom">
-              <button type="button" onClick={() => setDetail("Log with Claude")}>
-                <Plus />
+            <div className="mt-auto pb-px-20">
+              <button
+                className="flex items-center gap-px-14 pt-px-10 pb-px-10 px-px-12 rounded-ui-8 text-left text-ui-14 cursor-pointer text-vital-muted hover:text-vital-text"
+                type="button"
+                onClick={() => setDetail("Log with Claude")}
+              >
+                <Plus className="w-[17px] h-[17px] shrink-0" />
                 Log with Claude
               </button>
-              <button type="button" onClick={() => setDetail("Help")}>
-                <CircleHelp />
+              <button
+                className="flex items-center gap-px-14 pt-px-10 pb-px-10 px-px-12 rounded-ui-8 text-left text-ui-14 cursor-pointer text-vital-muted hover:text-vital-text"
+                type="button"
+                onClick={() => setDetail("Help")}
+              >
+                <CircleHelp className="w-[17px] h-[17px] shrink-0" />
                 Help
               </button>
-              <p>Reference preview</p>
+              <p className="text-ui-11 pt-px-8 pb-px-8 px-px-12 text-vital-muted">
+                Reference preview
+              </p>
             </div>
           </aside>
-          <div className="vital-surface">
-            <header className="vital-topbar">
+          <div className="flex flex-col flex-1 min-w-0">
+            <header className="h-[64px] shrink-0 flex items-center pt-0 pb-0 px-px-28 border-b border-vital-border gap-px-12 max-[768px]:pt-0 max-[768px]:pb-0 max-[768px]:px-px-12 max-[768px]:h-[56px]">
               <button
-                className="vital-mobile-toggle"
+                className="hidden max-[768px]:flex"
                 type="button"
                 aria-label="Open Health menu"
                 onClick={() => setMobileMenu(true)}
               >
-                <Menu />
+                <Menu className="w-[17px] h-[17px] text-vital-muted" />
               </button>
-              <h1>{section}</h1>
-              <div className="vital-topbar-right">
-                <span className="vital-pulse">
-                  <Heart />
+              <h1 className="text-ui-16 font-medium">{section}</h1>
+              <div className="ml-auto flex items-center gap-px-28 text-ui-14 max-[768px]:gap-px-14">
+                <span className="flex items-center gap-px-10 text-vital-muted max-[768px]:hidden">
+                  <Heart className="w-[17px] h-[17px] text-vital-red" />
                   86 bpm
                 </span>
                 <button
+                  className="flex items-center gap-px-10 cursor-pointer max-[768px]:hidden"
                   type="button"
                   aria-label="Open notifications"
                   onClick={() => setDetail("Notifications")}
                 >
-                  <Bell />
+                  <Bell className="w-[17px] h-[17px] text-vital-muted" />
                 </button>
                 <button
                   type="button"
-                  className="vital-profile"
+                  className="flex items-center gap-px-10 cursor-pointer"
                   onClick={() => setDetail("Profile")}
                 >
-                  <span className="vital-avatar">{auth.owner?.name.slice(0, 1).toUpperCase()}</span>
+                  <span className="grid place-items-center w-[30px] h-[30px] rounded-full bg-muted text-ui-12">
+                    {auth.owner?.name.slice(0, 1).toUpperCase()}
+                  </span>
                   {auth.owner?.name}
-                  <ChevronDown />
+                  <ChevronDown className="w-[17px] h-[17px] text-vital-muted max-[768px]:hidden" />
                 </button>
               </div>
             </header>
-            <main className="vital-scroll">
+            <main className="overflow-auto flex-1 min-h-0 p-px-32 max-[1401px]:p-px-24 max-[768px]:pt-px-16 max-[768px]:pb-px-16 max-[768px]:px-px-12">
               {section === "Environment" ? (
                 <EnvironmentPanel />
               ) : (
                 <div>
-                  <div className="vital-tabs" role="group" aria-label="Body systems">
+                  <div
+                    className="inline-flex max-w-full overflow-x-auto border border-vital-border rounded-ui-10 p-px-3 gap-px-2 whitespace-nowrap"
+                    role="group"
+                    aria-label="Body systems"
+                  >
                     {[
                       "Overview",
                       "Cardiovascular",
@@ -181,28 +200,46 @@ export function VitalsPage() {
                       "Nutrients",
                     ].map((name) => (
                       <button
+                        className="pt-px-7 pb-px-7 px-px-12 text-vital-muted text-ui-14 rounded-ui-7 cursor-pointer data-[active=true]:text-vital-text data-[active=true]:bg-muted data-[active=true]:inset-ring-1 data-[active=true]:inset-ring-vital-border"
                         type="button"
                         key={name}
-                        className={tab === name ? "is-active" : ""}
+                        data-active={tab === name}
                         onClick={() => setTab(name)}
                       >
                         {name}
                       </button>
                     ))}
                   </div>
-                  <div className="vital-body-columns">
-                    <div className="vital-card">
-                      <div className="vital-lab-row">
-                        <section className="vital-lab-score">
-                          <header>
-                            <h2>Lab score</h2>
-                            <span>Latest draw · Jul 28</span>
+                  <div className="grid grid-cols-[minmax(0,_1fr)_290px] gap-px-20 mt-px-20 items-start min-[1700px]:grid-cols-[minmax(0,_1fr)_350px] max-[1401px]:grid-cols-[minmax(0,_1fr)_250px] max-[1101px]:grid-cols-[1fr] max-[768px]:gap-px-16">
+                    <div className="bg-vital-card border border-vital-border rounded-ui-16 min-w-0 overflow-hidden">
+                      <div className="grid grid-cols-[0.95fr_1.15fr] border-b border-vital-border max-[1401px]:grid-cols-[1fr]">
+                        <section className="p-px-26 min-w-0 max-[768px]:p-px-16">
+                          <header className="flex items-center justify-between pb-px-16 border-b border-vital-border gap-px-12">
+                            <h2 className="text-ui-15 font-medium">Lab score</h2>
+                            <span className="text-ui-10 text-vital-muted">
+                              Latest draw · Jul 28
+                            </span>
                           </header>
-                          <div className="vital-lab-value">
-                            <div className="vital-ring">
-                              <svg viewBox="0 0 160 160" aria-hidden="true">
-                                <circle cx="80" cy="80" r="67" />
+                          <div className="flex items-center gap-px-20 mt-px-24 max-[768px]:gap-px-12">
+                            <div className="w-[142px] h-[160px] relative shrink-0 max-[768px]:w-[90px] max-[768px]:h-[120px]">
+                              <svg
+                                className="w-full h-full -rotate-90"
+                                viewBox="0 0 160 160"
+                                aria-hidden="true"
+                              >
                                 <circle
+                                  fill="none"
+                                  className="stroke-vital-border"
+                                  strokeWidth={9}
+                                  cx="80"
+                                  cy="80"
+                                  r="67"
+                                />
+                                <circle
+                                  fill="none"
+                                  className="stroke-vital-green drop-shadow-vital-glow"
+                                  strokeWidth={9}
+                                  strokeLinecap="round"
                                   cx="80"
                                   cy="80"
                                   r="67"
@@ -210,24 +247,36 @@ export function VitalsPage() {
                                   strokeDasharray="92 100"
                                 />
                               </svg>
-                              <span>
-                                92<small>Lab score</small>
+                              <span className="absolute inset-0 flex flex-col justify-center items-center text-ui-40 font-light max-[768px]:text-ui-28">
+                                92
+                                <small className="text-ui-12 text-vital-muted mt-px-4">
+                                  Lab score
+                                </small>
                               </span>
                             </div>
-                            <div className="vital-lab-description">
-                              <h3>
-                                Optimal <span>▾ 1</span>
+                            <div className="border-l border-vital-border pl-px-20 min-w-0 max-[768px]:pl-px-12">
+                              <h3 className="text-ui-23 whitespace-nowrap max-[768px]:text-ui-19">
+                                Optimal <span className="text-ui-13 text-vital-yellow">▾ 1</span>
                               </h3>
-                              <p>7 of 8 systems optimal · 21 of 161 biomarkers out of range</p>
-                              <div className="vital-lab-change">
+                              <p className="text-ui-11 text-vital-muted leading-normal">
+                                7 of 8 systems optimal · 21 of 161 biomarkers out of range
+                              </p>
+                              <div className="flex items-center gap-px-16 mt-px-20 border-t border-vital-border pt-px-16">
                                 <div>
-                                  <span>Change ⓘ</span>
-                                  <strong>
-                                    −1 <small>pt</small>
+                                  <span className="text-ui-13 text-vital-muted">Change ⓘ</span>
+                                  <strong className="block text-ui-20 font-medium text-vital-yellow">
+                                    −1 <small className="text-ui-12">pt</small>
                                   </strong>
-                                  <p>Since last draw</p>
+                                  <p className="text-ui-11 text-vital-muted leading-normal">
+                                    Since last draw
+                                  </p>
                                 </div>
-                                <svg viewBox="0 0 190 65" aria-label="Lab score trend" role="img">
+                                <svg
+                                  className="w-[120px] min-w-[40px] text-vital-green max-[768px]:hidden"
+                                  viewBox="0 0 190 65"
+                                  aria-label="Lab score trend"
+                                  role="img"
+                                >
                                   <path
                                     d="M2 12 L24 12 Q34 8 39 29 T65 57 Q76 66 85 20 T105 19 L132 17 Q145 17 153 49 T174 48 L188 51"
                                     fill="none"
@@ -239,42 +288,53 @@ export function VitalsPage() {
                             </div>
                           </div>
                         </section>
-                        <section className="vital-recent">
-                          <h2>Recent results</h2>
+                        <section className="border-l border-vital-border p-px-24 max-[1401px]:hidden">
+                          <h2 className="text-ui-15 font-medium mb-px-10">Recent results</h2>
                           {[1, 2, 3].map((index) => (
                             <button
+                              className="flex items-center gap-px-16 w-full pt-px-16 pb-px-16 px-0 border-b border-vital-border cursor-pointer last:border-0"
                               key={index}
                               type="button"
                               onClick={() => setDetail("Recent result")}
                             >
-                              <span className="vital-warning">△</span>
+                              <span className="grid place-items-center w-[34px] h-[34px] rounded-ui-9 bg-muted text-vital-yellow text-ui-23">
+                                △
+                              </span>
                               <span
-                                className="vital-obscured"
+                                className="flex flex-col gap-px-10 flex-1 min-w-0"
                                 role="img"
                                 aria-label="Reference text obscured"
                               >
-                                <i />
-                                <i />
+                                <i className="block h-[9px] w-[90%] bg-vital-muted opacity-30 blur-xs nth-2:w-[72%] nth-3:w-[84%]" />
+                                <i className="block h-[9px] w-[90%] bg-vital-muted opacity-30 blur-xs nth-2:w-[72%] nth-3:w-[84%]" />
                               </span>
-                              <ChevronRight />
+                              <ChevronRight className="w-[16px] text-vital-muted" />
                             </button>
                           ))}
                         </section>
                       </div>
-                      <section className="vital-systems">
-                        <header>
-                          <h2>{tab === "Overview" ? "Body systems" : tab}</h2>
-                          <div className="vital-tabs" role="group" aria-label="Body systems">
+                      <section>
+                        <header className="flex items-center justify-between p-px-20 gap-px-12 max-[768px]:p-px-16 max-[768px]:flex-wrap">
+                          <h2 className="text-ui-15 font-medium">
+                            {tab === "Overview" ? "Body systems" : tab}
+                          </h2>
+                          <div
+                            className="inline-flex max-w-full overflow-x-auto border border-vital-border rounded-ui-10 p-px-3 gap-px-2 whitespace-nowrap"
+                            role="group"
+                            aria-label="Body systems"
+                          >
                             <button
+                              className="pt-px-7 pb-px-7 px-px-12 text-vital-muted text-ui-14 rounded-ui-7 cursor-pointer data-[active=true]:text-vital-text data-[active=true]:bg-muted data-[active=true]:inset-ring-1 data-[active=true]:inset-ring-vital-border"
                               type="button"
-                              className={!history ? "is-active" : ""}
+                              data-active={!history}
                               onClick={() => setHistory(false)}
                             >
                               Systems
                             </button>
                             <button
+                              className="pt-px-7 pb-px-7 px-px-12 text-vital-muted text-ui-14 rounded-ui-7 cursor-pointer data-[active=true]:text-vital-text data-[active=true]:bg-muted data-[active=true]:inset-ring-1 data-[active=true]:inset-ring-vital-border"
                               type="button"
-                              className={history ? "is-active" : ""}
+                              data-active={history}
                               onClick={() => setHistory(true)}
                             >
                               Lab history
@@ -282,25 +342,28 @@ export function VitalsPage() {
                           </div>
                         </header>
                         {history ? (
-                          <div className="vital-history">
-                            <h3>Lab history</h3>
+                          <div data-testid="vital-history" className="min-h-[440px] p-px-30">
+                            <h3 className="mb-px-28">Lab history</h3>
                             {[
                               ["Jul 28", "92"],
                               ["May 16", "93"],
                               ["Mar 04", "89"],
                             ].map(([date, score]) => (
-                              <div key={date}>
+                              <div
+                                className="flex justify-between pt-px-24 pb-px-24 px-0 border-b border-vital-border"
+                                key={date}
+                              >
                                 <span>{date}</span>
                                 <span>
                                   {score}
-                                  <small> Lab score</small>
+                                  <small className="text-vital-muted"> Lab score</small>
                                 </span>
                               </div>
                             ))}
                           </div>
                         ) : (
-                          <div className="vital-anatomy-grid">
-                            <div className="vital-system-list">
+                          <div className="grid grid-cols-[minmax(0,_1fr)_230px_minmax(0,_1fr)] items-center min-h-[505px] pt-px-22 pb-0 px-px-20 min-[1700px]:grid-cols-[minmax(0,_1fr)_280px_minmax(0,_1fr)] max-[1401px]:grid-cols-[minmax(0,_1fr)_155px_minmax(0,_1fr)] max-[1401px]:px-px-12 max-[1101px]:grid-cols-[minmax(0,_1fr)_210px_minmax(0,_1fr)] max-[768px]:grid-cols-[1fr_1fr] max-[768px]:gap-px-12 max-[768px]:p-px-12">
+                            <div className="grid gap-px-12 relative z-[1]">
                               {systems
                                 .slice(0, 4)
                                 .filter((item) => tab === "Overview" || tab === item.name)
@@ -313,13 +376,17 @@ export function VitalsPage() {
                                 ))}
                             </div>
                             <div
-                              className="vital-anatomy"
+                              className="h-[500px] w-[230px] relative overflow-hidden self-end min-[1700px]:w-[280px] max-[1401px]:w-[155px] max-[1101px]:w-[210px] max-[768px]:col-span-full max-[768px]:row-start-1 max-[768px]:justify-self-center max-[768px]:h-[420px] max-[768px]:w-[230px]"
                               role="img"
                               aria-label="Reference illustration of the body and its systems"
                             >
-                              <img src="/vitals/body-reference.jpg" alt="" />
+                              <img
+                                className="absolute max-w-none w-[2008px] h-auto left-[-831px] top-[-563px] mix-blend-lighten min-[1700px]:left-[-806px] max-[1401px]:left-[-868px] max-[1101px]:left-[-841px] max-[768px]:w-[1687px] max-[768px]:left-[-695px] max-[768px]:top-[-473px]"
+                                src="/vitals/body-reference.jpg"
+                                alt=""
+                              />
                             </div>
-                            <div className="vital-system-list">
+                            <div className="grid gap-px-12 relative z-[1]">
                               {systems
                                 .slice(4)
                                 .filter((item) => tab === "Overview" || tab === item.name)
@@ -335,60 +402,77 @@ export function VitalsPage() {
                         )}
                       </section>
                     </div>
-                    <aside className="vital-card vital-insights">
-                      <h2>Insights</h2>
-                      <div className="vital-insight-feature">
-                        <span className="vital-red">△</span>
+                    <aside className="bg-vital-card border border-vital-border rounded-ui-16 min-w-0 overflow-hidden p-px-22 max-[1101px]:block max-[768px]:p-px-16">
+                      <h2 className="text-ui-15 font-medium mb-px-20">Insights</h2>
+                      <div className="border border-vital-border rounded-ui-12 p-px-16 flex items-start gap-px-12 flex-wrap">
+                        <span className="text-vital-red">△</span>
                         <div
-                          className="vital-obscured"
+                          className="flex flex-col gap-px-10 flex-1 min-w-0 min-h-[80px]"
                           role="img"
                           aria-label="Reference text obscured"
                         >
-                          <i />
-                          <i />
-                          <i />
+                          <i className="block h-[9px] w-[90%] bg-vital-muted opacity-30 blur-xs nth-2:w-[72%] nth-3:w-[84%]" />
+                          <i className="block h-[9px] w-[90%] bg-vital-muted opacity-30 blur-xs nth-2:w-[72%] nth-3:w-[84%]" />
+                          <i className="block h-[9px] w-[90%] bg-vital-muted opacity-30 blur-xs nth-2:w-[72%] nth-3:w-[84%]" />
                         </div>
-                        <button type="button" onClick={() => setHistory(true)}>
+                        <button
+                          className="border border-vital-border rounded-ui-7 pt-px-6 pb-px-6 px-px-10 text-ui-12 cursor-pointer"
+                          type="button"
+                          onClick={() => setHistory(true)}
+                        >
                           View lab history
                         </button>
                       </div>
-                      <h3>Summary</h3>
-                      <div className="vital-summary">
-                        <span>
-                          <b className="vital-dot vital-red" />4 need attention
+                      <h3 className="text-ui-14 mt-px-24 mb-px-10 mx-0 text-vital-muted">
+                        Summary
+                      </h3>
+                      <div className="flex flex-wrap gap-px-8">
+                        <span className="border border-vital-border rounded-ui-7 pt-px-5 pb-px-5 px-px-8 text-ui-12 text-vital-muted flex items-center gap-px-7">
+                          <b className="text-vital-red inline-block w-[7px] h-[7px] rounded-full bg-current shrink-0" />
+                          4 need attention
                         </span>
-                        <span>
-                          <b className="vital-dot vital-yellow" />3 to watch
+                        <span className="border border-vital-border rounded-ui-7 pt-px-5 pb-px-5 px-px-8 text-ui-12 text-vital-muted flex items-center gap-px-7">
+                          <b className="text-vital-yellow inline-block w-[7px] h-[7px] rounded-full bg-current shrink-0" />
+                          3 to watch
                         </span>
-                        <span>
-                          <b className="vital-dot vital-green" />4 going well
+                        <span className="border border-vital-border rounded-ui-7 pt-px-5 pb-px-5 px-px-8 text-ui-12 text-vital-muted flex items-center gap-px-7">
+                          <b className="text-vital-green inline-block w-[7px] h-[7px] rounded-full bg-current shrink-0" />
+                          4 going well
                         </span>
                       </div>
-                      <h3>More insights</h3>
+                      <h3 className="text-ui-14 mt-px-24 mb-px-10 mx-0 text-vital-muted">
+                        More insights
+                      </h3>
                       {[0, 1, 2].map((index) => (
-                        <div className="vital-insight-placeholder" key={index}>
+                        <div
+                          className="flex items-start gap-px-10 mb-px-20 min-h-[85px]"
+                          key={index}
+                        >
                           <b
-                            className={`vital-dot ${index === 2 ? "vital-yellow" : "vital-red"}`}
+                            className="inline-block w-[7px] h-[7px] rounded-full bg-current shrink-0 data-[tone=red]:text-vital-red data-[tone=green]:text-vital-green data-[tone=blue]:text-vital-blue data-[tone=purple]:text-vital-purple data-[tone=yellow]:text-vital-yellow"
+                            data-tone={index === 2 ? "yellow" : "red"}
                           />
                           <div
-                            className="vital-obscured"
+                            className="flex flex-col gap-px-10 flex-1 min-w-0"
                             role="img"
                             aria-label="Reference text obscured"
                           >
-                            <i />
-                            <i />
-                            <i />
+                            <i className="block h-[9px] w-[90%] bg-vital-muted opacity-30 blur-xs nth-2:w-[72%] nth-3:w-[84%]" />
+                            <i className="block h-[9px] w-[90%] bg-vital-muted opacity-30 blur-xs nth-2:w-[72%] nth-3:w-[84%]" />
+                            <i className="block h-[9px] w-[90%] bg-vital-muted opacity-30 blur-xs nth-2:w-[72%] nth-3:w-[84%]" />
                           </div>
                         </div>
                       ))}
                       <button
-                        className="vital-text-button"
+                        className="text-ui-13 text-vital-muted cursor-pointer"
                         type="button"
                         onClick={() => setDetail("Insights")}
                       >
                         Show 6 more
                       </button>
-                      <p className="vital-updated">Reference data · Sep 25</p>
+                      <p className="text-ui-12 text-vital-muted mt-px-28">
+                        Reference data · Sep 25
+                      </p>
                     </aside>
                   </div>
                 </div>
@@ -419,17 +503,30 @@ export function VitalsPage() {
 }
 function SystemCard({ item, onSelect }: { item: (typeof systems)[number]; onSelect: () => void }) {
   return (
-    <button type="button" className="vital-system-card" onClick={onSelect}>
-      <span className={`vital-system-icon vital-${item.tone}`}>
-        <item.icon />
+    <button
+      data-testid="vital-system-card"
+      type="button"
+      className="flex items-center gap-px-12 border border-vital-border rounded-ui-10 p-px-16 cursor-pointer text-left min-w-0 relative hover:bg-muted min-[1700px]:p-px-18 max-[1401px]:pt-px-12 max-[1401px]:pb-px-12 max-[1401px]:px-px-8 max-[1401px]:gap-px-8 max-[1401px]:flex-wrap max-[768px]:p-px-12"
+      onClick={onSelect}
+    >
+      <span
+        className="grid place-items-center w-[34px] h-[34px] border border-vital-border rounded-ui-7 shrink-0 max-[768px]:w-[28px] max-[768px]:h-[28px] data-[tone=red]:text-vital-red data-[tone=green]:text-vital-green data-[tone=blue]:text-vital-blue data-[tone=purple]:text-vital-purple data-[tone=yellow]:text-vital-yellow"
+        data-tone={item.tone}
+      >
+        <item.icon className="w-[17px] h-[17px]" />
       </span>
-      <span className="vital-system-label">
+      <span className="flex-1 text-ui-14 max-[1401px]:text-ui-12 max-[768px]:text-ui-11">
         {item.name}
-        <small>{item.count} biomarkers</small>
+        <small className="block text-ui-11 mt-px-4 whitespace-nowrap text-vital-muted max-[768px]:text-ui-9">
+          {item.count} biomarkers
+        </small>
       </span>
-      <span className="vital-system-score">
+      <span className="text-right text-ui-23 max-[1401px]:ml-auto max-[768px]:text-ui-20">
         {item.score}
-        <small className={item.score < 70 ? "vital-yellow" : "vital-green"}>
+        <small
+          className="block text-ui-11 mt-px-4 whitespace-nowrap max-[768px]:text-ui-9 data-[tone=red]:text-vital-red data-[tone=green]:text-vital-green data-[tone=blue]:text-vital-blue data-[tone=purple]:text-vital-purple data-[tone=yellow]:text-vital-yellow"
+          data-tone={item.score < 70 ? "yellow" : "green"}
+        >
           ● {item.score < 70 ? "Watch" : "Optimal"}
         </small>
       </span>

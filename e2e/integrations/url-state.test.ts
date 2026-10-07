@@ -2,19 +2,22 @@ import { expect, test } from "../fixtures";
 
 test("restores article selection with browser history and reload", async ({ page }) => {
   await page.goto("/inbox", { waitUntil: "networkidle" });
-  const rows = page.locator(".inbox-article-row");
-  const heading = await rows.nth(1).locator(".inbox-row-title").innerText();
+  const rows = page.locator("[data-testid='inbox-article-row']");
+  const heading = await rows.nth(1).locator("[data-testid='inbox-row-title']").innerText();
   await rows.nth(1).click();
-  await expect(page.locator(".inbox-article-title")).toHaveText(heading);
+  await expect(page.locator("[data-testid='inbox-article-title']")).toHaveText(heading);
   const selectedUrl = page.url();
   expect(new URL(selectedUrl).searchParams.get("article")).toBeTruthy();
   await page.reload({ waitUntil: "networkidle" });
-  await expect(page.locator(".inbox-article-title")).toHaveText(heading ?? "");
+  await expect(page.locator("[data-testid='inbox-article-title']")).toHaveText(heading ?? "");
   await page.goBack();
-  await expect(page.locator(".inbox-workspace")).toHaveAttribute("data-reading", "false");
+  await expect(page.locator("[data-testid='inbox-workspace']")).toHaveAttribute(
+    "data-reading",
+    "false",
+  );
   await page.goForward();
   await expect(page).toHaveURL(selectedUrl);
-  await expect(page.locator(".inbox-article-title")).toHaveText(heading ?? "");
+  await expect(page.locator("[data-testid='inbox-article-title']")).toHaveText(heading ?? "");
 });
 
 test("restores search and replaces typing history", async ({ page }) => {
@@ -24,10 +27,10 @@ test("restores search and replaces typing history", async ({ page }) => {
   await search.pressSequentially("browser");
   await expect(search).toHaveValue("browser");
   await expect.poll(() => new URL(page.url()).searchParams.get("q")).toBe("browser");
-  const count = await page.locator(".inbox-article-row").count();
+  const count = await page.locator("[data-testid='inbox-article-row']").count();
   await page.reload({ waitUntil: "networkidle" });
   await expect(search).toHaveValue("browser");
-  await expect(page.locator(".inbox-article-row")).toHaveCount(count);
+  await expect(page.locator("[data-testid='inbox-article-row']")).toHaveCount(count);
   await page.goBack();
   await expect(page).toHaveURL("http://127.0.0.1:4173/");
 });
@@ -47,16 +50,21 @@ test("restores account dialog without losing underlying article", async ({ page 
 test("restores a message view and conversation from its URL", async ({ page }) => {
   await page.goto("/support", { waitUntil: "networkidle" });
   await page.getByRole("button", { name: "All", exact: true }).click();
-  const row = page.locator(".support-row").nth(1);
+  const row = page.locator("[data-testid='support-row']").nth(1);
   const heading = await row.locator("span").first().innerText();
   await row.click();
-  await expect(page.locator(".support-toolbar > span").first()).toHaveText(heading);
+  await expect(page.locator("[data-testid='support-toolbar'] > span").first()).toHaveText(heading);
   const url = page.url();
   expect(new URL(url).searchParams.get("view")).toBe("all");
   expect(new URL(url).searchParams.get("conversation")).toBeTruthy();
   await page.reload({ waitUntil: "networkidle" });
-  await expect(page.locator(".support-toolbar > span").first()).toHaveText(heading ?? "");
-  await expect(page.locator(".support-workspace")).toHaveAttribute("data-reading", "true");
+  await expect(page.locator("[data-testid='support-toolbar'] > span").first()).toHaveText(
+    heading ?? "",
+  );
+  await expect(page.locator("[data-testid='support-workspace']")).toHaveAttribute(
+    "data-reading",
+    "true",
+  );
 });
 
 test("keeps a deep link through login", async ({ page, context }) => {

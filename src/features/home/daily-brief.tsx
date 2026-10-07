@@ -17,13 +17,20 @@ export function DailyBrief({ onOpenContact }: { onOpenContact: (id: string) => v
   );
 
   return (
-    <section className="home-brief" aria-label="Daily brief">
+    <section
+      className="mt-px-20 max-w-[760px] text-ui-15 leading-brief wrap-anywhere"
+      aria-label="Daily brief"
+    >
       <p>
         {focus ? `Start with “${focus.title}” today.` : "There are no priority tasks right now."}
         {firstContact ? (
           <>
             {" "}
-            <button type="button" onClick={() => onOpenContact(firstContact.id)}>
+            <button
+              className="cursor-pointer underline decoration-border underline-offset-4 hover:decoration-foreground"
+              type="button"
+              onClick={() => onOpenContact(firstContact.id)}
+            >
               Reply to {firstContact.name}
             </button>
             {contacts.length > 1
@@ -35,12 +42,14 @@ export function DailyBrief({ onOpenContact }: { onOpenContact: (id: string) => v
         )}
       </p>
       {resume ? (
-        <p className="home-brief-secondary">
+        <p className="mt-px-8 text-ui-13 text-muted-foreground">
           Your resume note: “
           {resume.text.length > 100 ? `${resume.text.slice(0, 100)}…` : resume.text}”
         </p>
       ) : optional ? (
-        <p className="home-brief-secondary">“{optional.title}” can wait until you have room.</p>
+        <p className="mt-px-8 text-ui-13 text-muted-foreground">
+          “{optional.title}” can wait until you have room.
+        </p>
       ) : null}
     </section>
   );

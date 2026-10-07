@@ -8,9 +8,9 @@ import { safeReturnTo } from "./return-to";
 
 export function AuthFrame({ children }: { children: ReactNode }) {
   return (
-    <main className="auth-page">
-      <div className="auth-panel">
-        <div className="auth-brand">
+    <main className="grid min-h-svh place-items-center bg-background px-px-24 py-px-48 text-foreground max-[480px]:py-px-32">
+      <div className="w-full max-w-[390px] min-w-0">
+        <div className="mb-px-44 flex items-center gap-px-9 text-ui-13 text-muted-foreground max-[480px]:mb-px-36">
           <LockKeyhole size={16} aria-hidden="true" />
           Personal Workspace
         </div>
@@ -75,19 +75,22 @@ function CredentialsForm({ setup }: { setup: boolean }) {
 
   return (
     <AuthFrame>
-      <header className="auth-heading">
-        <h1>{setup ? "Make yourself at home." : "Welcome back."}</h1>
-        <p>
+      <header className="mb-px-28">
+        <h1 className="text-ui-27 font-book tracking-tight leading-tight wrap-anywhere">
+          {setup ? "Make yourself at home." : "Welcome back."}
+        </h1>
+        <p className="mt-px-12 text-ui-14 leading-cozy text-muted-foreground">
           {setup
             ? "Create the owner account for your personal workspace."
             : "Sign in to your personal workspace."}
         </p>
       </header>
-      <form onSubmit={submit} className="auth-form" aria-busy={pending}>
+      <form onSubmit={submit} className="grid gap-px-20" aria-busy={pending}>
         {setup && (
-          <div className="auth-field">
+          <div className="grid gap-px-9">
             <Label htmlFor="name">Your name</Label>
             <Input
+              className="h-[40px]"
               id="name"
               name="name"
               autoComplete="given-name"
@@ -97,9 +100,10 @@ function CredentialsForm({ setup }: { setup: boolean }) {
             />
           </div>
         )}
-        <div className="auth-field">
+        <div className="grid gap-px-9">
           <Label htmlFor="email">Email address</Label>
           <Input
+            className="h-[40px]"
             id="email"
             name="email"
             type="email"
@@ -109,9 +113,10 @@ function CredentialsForm({ setup }: { setup: boolean }) {
             disabled={pending}
           />
         </div>
-        <div className="auth-field">
+        <div className="grid gap-px-9">
           <Label htmlFor="password">Password</Label>
           <Input
+            className="h-[40px]"
             id="password"
             name="password"
             type="password"
@@ -123,16 +128,17 @@ function CredentialsForm({ setup }: { setup: boolean }) {
             disabled={pending}
           />
           {setup && (
-            <p id="password-hint" className="auth-hint">
+            <p id="password-hint" className="text-ui-12 leading-cozy text-muted-foreground">
               Use 15–128 characters. A few memorable words work well.
             </p>
           )}
         </div>
         {setup && (
           <>
-            <div className="auth-field">
+            <div className="grid gap-px-9">
               <Label htmlFor="confirmPassword">Confirm password</Label>
               <Input
+                className="h-[40px]"
                 id="confirmPassword"
                 name="confirmPassword"
                 type="password"
@@ -143,9 +149,10 @@ function CredentialsForm({ setup }: { setup: boolean }) {
                 disabled={pending}
               />
             </div>
-            <div className="auth-field">
+            <div className="grid gap-px-9">
               <Label htmlFor="setupToken">Setup code</Label>
               <Input
+                className="h-[40px]"
                 id="setupToken"
                 name="setupToken"
                 type="password"
@@ -154,18 +161,23 @@ function CredentialsForm({ setup }: { setup: boolean }) {
                 aria-describedby="setup-hint"
                 disabled={pending}
               />
-              <p id="setup-hint" className="auth-hint">
+              <p id="setup-hint" className="text-ui-12 leading-cozy text-muted-foreground">
                 Use the setup code provided by your server administrator.
               </p>
             </div>
           </>
         )}
         {error && (
-          <p className="auth-error" role="alert">
+          <p className="text-ui-13 leading-cozy wrap-anywhere text-destructive" role="alert">
             {error}
           </p>
         )}
-        <Button type="submit" size="lg" disabled={pending} className="auth-submit">
+        <Button
+          type="submit"
+          size="lg"
+          disabled={pending}
+          className="mt-[4px] w-full justify-between"
+        >
           {pending
             ? setup
               ? "Creating account…"
@@ -176,7 +188,7 @@ function CredentialsForm({ setup }: { setup: boolean }) {
           <ArrowRight aria-hidden="true" />
         </Button>
       </form>
-      <p className="auth-footnote">
+      <p className="mt-px-24 text-ui-12 leading-cozy text-muted-foreground">
         {setup
           ? "This workspace has one owner. Connections can be added later."
           : "A private workspace. Access is limited to its owner."}

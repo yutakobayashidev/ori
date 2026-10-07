@@ -100,7 +100,7 @@ test("restores the conversation and growing temporary deck from reconnect snapsh
     "background-color",
     "rgba(0, 0, 0, 0)",
   );
-  await expect(page.locator(".deck-column h2")).toHaveText(["最初の観点"]);
+  await expect(page.locator("[data-testid='deck-column'] h2")).toHaveText(["最初の観点"]);
   run.deckVersion = 2;
   run.status = "complete";
   run.messages.push({
@@ -124,7 +124,10 @@ test("restores the conversation and growing temporary deck from reconnect snapsh
   await showResearch(page);
   await expect(conversation).toContainText("既存の観点を使って調査して");
   await expect(conversation).toContainText("比較する観点を追加しました。");
-  await expect(page.locator(".deck-column h2")).toHaveText(["最初の観点", "比較の観点"]);
+  await expect(page.locator("[data-testid='deck-column'] h2")).toHaveText([
+    "最初の観点",
+    "比較の観点",
+  ]);
   await closeMobileSidebar(page);
   await expect(page.getByRole("button", { name: "Save as deck", exact: true })).toBeEnabled();
   await showResearch(page);
@@ -260,15 +263,15 @@ test("renders Markdown and reveals an unloaded citation in an offscreen deck col
   await expect(page.getByText("AIが調査時に取得した引用本文", { exact: true })).toHaveCount(0);
   await chat.getByRole("link", { name: "根拠の投稿" }).click();
   const card = page.locator(
-    '.research-post[data-post-url="https://twitter.com/author/status/123456789"]',
+    '[data-testid="research-post"][data-post-url="https://twitter.com/author/status/123456789"]',
   );
   await expect(card).toBeVisible();
-  await expect(card).toHaveClass(/citation-highlight/);
+  await expect(card).toHaveAttribute("data-citation-highlight", "true");
   await expect(card).toBeFocused();
   await expect(card).toContainText("Post saved during research");
   await expect(card).toContainText("AIが調査時に取得した引用本文");
   expect(
-    await page.locator(".deck-board").evaluate((element) => element.scrollLeft),
+    await page.locator("[data-testid='deck-board']").evaluate((element) => element.scrollLeft),
   ).toBeGreaterThan(0);
   expect(page.context().pages()).toHaveLength(1);
   await expect(page).toHaveURL(/citation=twitter%3A123456789/);
@@ -283,7 +286,7 @@ test("renders Markdown and reveals an unloaded citation in an offscreen deck col
   await expect(card).toBeVisible();
   await expect(card).toHaveClass(/citation-highlight/);
   await expect(page).toHaveURL(/citation=twitter%3A123456789/);
-  await expect(page.locator(".deck-column")).toHaveCount(3);
+  await expect(page.locator("[data-testid='deck-column']")).toHaveCount(3);
   expect(submitted).toEqual([]);
   expect((await a11y().analyze()).violations).toEqual([]);
 });

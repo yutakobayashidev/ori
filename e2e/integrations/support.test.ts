@@ -9,16 +9,16 @@ test("reviews an edited reply and keeps the simulated result in history", async 
 }) => {
   await page.goto("/support");
   await page.waitForLoadState("networkidle");
-  const rows = page.locator(".support-row");
+  const rows = page.locator("[data-testid='support-row']");
   await expect(rows).toHaveCount(3);
   await rows.filter({ hasText: reviewSubject }).click();
-  await page.locator(".conversation-suggestions summary:visible").click();
+  await page.locator("[data-testid='conversation-suggestions'] summary:visible").click();
   await page.getByRole("button", { name: /^Polite/ }).click();
   const reply = page.getByRole("textbox", { name: "Reply", exact: true });
   await expect(reply).toHaveValue(/Thank you for sharing/);
   const edited = "I reviewed the materials. Let’s discuss the first-time experience.";
   await reply.fill(edited);
-  await page.locator(".conversation-scheduling summary:visible").click();
+  await page.locator("[data-testid='conversation-scheduling'] summary:visible").click();
   const slot = "Mon, Oct 5, 14:00–14:30";
   await page.getByRole("combobox", { name: "Suggested times" }).selectOption(slot);
   await page.getByRole("button", { name: "Add to reply" }).click();
@@ -37,15 +37,16 @@ test("reviews an edited reply and keeps the simulated result in history", async 
   await expect(rows.filter({ hasText: reviewSubject })).toHaveCount(0);
   await page.getByRole("button", { name: "Archive", exact: true }).click();
   await rows.filter({ hasText: reviewSubject }).click();
-  await expect(page.locator(".support-outcome")).toContainText(edited);
-  await expect(page.locator(".support-outcome")).toContainText(slot);
+  await expect(page.locator("[data-testid='support-outcome']")).toContainText(edited);
+  await expect(page.locator("[data-testid='support-outcome']")).toContainText(slot);
 });
 
 test("defers a conversation and restores it to the current queue", async ({ page }) => {
   await page.goto("/support");
   await page.waitForLoadState("networkidle");
-  const rows = page.locator(".support-row");
+  const rows = page.locator("[data-testid='support-row']");
   await rows.filter({ hasText: coffeeSubject }).click();
+  await expect(rows.filter({ hasText: coffeeSubject })).toHaveAttribute("aria-current", "true");
   await page
     .getByRole("textbox", { name: "Reply", exact: true })
     .fill("土曜の予定を確認してから返事するね。");
@@ -117,7 +118,7 @@ test("fits communication and journal interactions in narrow screens", async ({
     await page.goto("/support");
     await page.waitForLoadState("networkidle");
     expect(await page.evaluate(() => document.documentElement.scrollWidth)).toBe(width);
-    await page.locator(".support-row").first().click();
+    await page.locator("[data-testid='support-row']").first().click();
     await expect(page.getByRole("textbox", { name: "Reply", exact: true })).toBeVisible();
     expect(await page.evaluate(() => document.documentElement.scrollWidth)).toBe(width);
     if (width === 320) expect((await a11y().analyze()).violations).toEqual([]);

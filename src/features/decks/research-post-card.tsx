@@ -46,22 +46,32 @@ export function ResearchPostCard({
     <article
       ref={article}
       tabIndex={-1}
-      className={`research-post${highlighted ? " citation-highlight" : ""}`}
+      data-testid="research-post"
+      data-citation-highlight={highlighted || undefined}
+      className="border-b p-3 wrap-anywhere focus-visible:outline-2 focus-visible:outline-primary focus-visible:-outline-offset-2 data-[citation-highlight=true]:bg-primary/14 data-[citation-highlight=true]:outline-2 data-[citation-highlight=true]:outline-primary data-[citation-highlight=true]:-outline-offset-2 [&_a]:text-primary [&_a]:underline-offset-2"
       data-post-url={post.url}
     >
       {citationSnapshot ? <Badge variant="secondary">Post saved during research</Badge> : null}
-      {post.boostedBy ? <p className="handle">Boosted by {post.boostedBy.name}</p> : null}
-      <header>
+      {post.boostedBy ? (
+        <p className="block text-xs text-muted-foreground">Boosted by {post.boostedBy.name}</p>
+      ) : null}
+      <header className="flex items-center gap-2">
         <Avatar className="size-9 shrink-0">
           <AvatarImage src={post.author.avatarUrl} alt="" loading="lazy" />
           <AvatarFallback>{post.author.name.slice(0, 1)}</AvatarFallback>
         </Avatar>
-        <div>
-          <strong>{post.author.name}</strong>
-          <span className="handle">@{post.author.handle.replace(/^@/, "")}</span>
+        <div className="min-w-0 flex-1">
+          <strong className="text-sm">{post.author.name}</strong>
+          <span className="block text-xs text-muted-foreground">
+            @{post.author.handle.replace(/^@/, "")}
+          </span>
         </div>
         {post.createdAt ? (
-          <time dateTime={post.createdAt} title={post.createdAt}>
+          <time
+            className="block shrink-0 text-xs text-muted-foreground tabular-nums"
+            dateTime={post.createdAt}
+            title={post.createdAt}
+          >
             {dateFormatter.format(new Date(post.createdAt))}
           </time>
         ) : null}
@@ -84,19 +94,24 @@ export function ResearchPostCard({
         <>
           {post.html !== undefined ? (
             <div
-              className="research-post-text"
+              data-testid="research-post-text"
+              className="my-2 text-sm leading-post whitespace-pre-wrap"
               // Mastodon content trust boundary: Mastodon HTML is sanitized by the server allowlist before normalization.
               dangerouslySetInnerHTML={{ __html: post.html }}
             />
           ) : (
-            <p className="research-post-text">
+            <p
+              data-testid="research-post-text"
+              className="my-2 text-sm leading-post whitespace-pre-wrap"
+            >
               <PostText text={post.text} />
             </p>
           )}
           {post.media?.map((media) =>
             media.type === "photo" ? (
               <img
-                className="research-media"
+                data-testid="research-media"
+                className="my-2 block max-h-80 w-full rounded-sm object-contain"
                 key={media.url}
                 src={media.url}
                 alt={media.alt ?? ""}
@@ -109,9 +124,9 @@ export function ResearchPostCard({
             ),
           )}
           {post.quotedPost ? (
-            <blockquote>
-              <strong>{post.quotedPost.author.name}</strong>
-              <p>
+            <blockquote className="my-3 rounded-sm border p-3">
+              <strong className="text-sm">{post.quotedPost.author.name}</strong>
+              <p className="my-2 text-sm leading-post whitespace-pre-wrap">
                 <PostText text={post.quotedPost.text} />
               </p>
               <a href={post.quotedPost.url} target="_blank" rel="noreferrer noopener">
@@ -121,8 +136,13 @@ export function ResearchPostCard({
           ) : null}
         </>
       ) : null}
-      <footer>
-        <a href={post.url} target="_blank" rel="noreferrer noopener">
+      <footer className="mt-3 flex flex-wrap justify-between gap-2 text-xs text-muted-foreground">
+        <a
+          className="inline-flex items-center gap-1 [&_svg]:size-[14px]"
+          href={post.url}
+          target="_blank"
+          rel="noreferrer noopener"
+        >
           Open original post <Icon name="arrow" />
         </a>
       </footer>

@@ -190,14 +190,23 @@ function points(values: readonly number[], width = 640, height = 190) {
     .join(" ");
 }
 
-function Sparkline({ index, tone = "green" }: { index: number; tone?: Tone }) {
+function Sparkline({
+  index,
+  tone = "green",
+  variant = "metric",
+}: {
+  index: number;
+  tone?: Tone;
+  variant?: "metric" | "score";
+}) {
   const values =
     index === 7
       ? Array<number>(30).fill(20)
       : (series[index % series.length]?.values ?? series[0].values);
   return (
     <svg
-      className="vital-sparkline"
+      className="block w-full min-w-0 h-[24px] data-[variant=score]:mt-px-28 data-[variant=score]:h-[36px] min-[1700px]:data-[variant=score]:h-[40px] min-[1700px]:data-[variant=score]:mt-px-34 max-[1401px]:data-[variant=score]:mt-px-18"
+      data-variant={variant}
       viewBox="0 0 300 40"
       preserveAspectRatio="none"
       aria-hidden="true"
@@ -205,7 +214,8 @@ function Sparkline({ index, tone = "green" }: { index: number; tone?: Tone }) {
       <polyline
         points={points(values, 300, 36)}
         fill="none"
-        stroke={`var(--vital-${tone})`}
+        data-tone={tone}
+        className="data-[tone=green]:stroke-vital-green data-[tone=blue]:stroke-vital-blue data-[tone=purple]:stroke-vital-purple data-[tone=yellow]:stroke-vital-yellow"
         strokeWidth="1.8"
         vectorEffect="non-scaling-stroke"
       />
@@ -215,18 +225,18 @@ function Sparkline({ index, tone = "green" }: { index: number; tone?: Tone }) {
 
 function Gauge({ value }: { value: number }) {
   return (
-    <svg className="vital-gauge" viewBox="0 0 110 65" aria-hidden="true">
+    <svg className="w-[43%] shrink-0" viewBox="0 0 110 65" aria-hidden="true">
       <path
         d="M 5 58 A 50 50 0 0 1 105 58"
         fill="none"
-        stroke="var(--vital-border)"
+        className="stroke-vital-border"
         strokeWidth="5"
         strokeLinecap="round"
       />
       <path
         d="M 5 58 A 50 50 0 0 1 105 58"
         fill="none"
-        stroke="var(--vital-green)"
+        className="stroke-vital-green"
         strokeWidth="5"
         strokeLinecap="round"
         pathLength="100"
@@ -254,12 +264,19 @@ function Trends() {
         ? ["12 AM", "4 AM", "8 AM", "12 PM", "4 PM", "8 PM"]
         : ["Mon 7 PM", "Tue 3 AM", "Tue 11 AM", "Tue 7 PM", "Wed 3 AM", "Wed 11 AM"];
   return (
-    <section className="vital-trends vital-card" aria-label="Environmental trends">
-      <div className="vital-card-header">
-        <h2>Trends</h2>
-        <fieldset className="vital-segmented" aria-label="Trend period">
+    <section
+      className="bg-vital-card border border-vital-border rounded-ui-16 min-w-0 overflow-hidden p-px-20 max-[768px]:p-px-12"
+      aria-label="Environmental trends"
+    >
+      <div className="flex items-center justify-between gap-px-10 mb-px-18 max-[768px]:flex-wrap">
+        <h2 className="text-ui-15 font-medium">Trends</h2>
+        <fieldset
+          className="inline-flex max-w-full overflow-x-auto border border-vital-border rounded-ui-10 p-px-3 gap-px-2 whitespace-nowrap"
+          aria-label="Trend period"
+        >
           {(["24H", "48H", "7D"] as const).map((item) => (
             <button
+              className="pt-px-7 pb-px-7 px-px-12 text-vital-muted text-ui-14 rounded-ui-7 cursor-pointer aria-pressed:text-vital-text aria-pressed:bg-muted aria-pressed:inset-ring-1 aria-pressed:inset-ring-vital-border max-[768px]:text-ui-12 max-[768px]:pt-px-7 max-[768px]:pb-px-7 max-[768px]:px-px-9"
               type="button"
               key={item}
               aria-pressed={range === item}
@@ -270,9 +287,13 @@ function Trends() {
           ))}
         </fieldset>
       </div>
-      <fieldset className="vital-chart-tabs vital-segmented" aria-label="Trend metric">
+      <fieldset
+        className="inline-flex max-w-full overflow-x-auto border border-vital-border rounded-ui-10 p-px-3 gap-px-2 whitespace-nowrap"
+        aria-label="Trend metric"
+      >
         {["Overview", ...series.map((item) => item.name)].map((item) => (
           <button
+            className="pt-px-7 pb-px-7 px-px-12 text-vital-muted rounded-ui-7 cursor-pointer aria-pressed:text-vital-text aria-pressed:bg-muted aria-pressed:inset-ring-1 aria-pressed:inset-ring-vital-border text-ui-12 max-[768px]:text-ui-12 max-[768px]:pt-px-7 max-[768px]:pb-px-7 max-[768px]:px-px-9"
             type="button"
             key={item}
             aria-pressed={metric === item}
@@ -282,16 +303,20 @@ function Trends() {
           </button>
         ))}
       </fieldset>
-      <div className="vital-chart-legend">
+      <div className="flex flex-wrap gap-px-15 mt-px-20 mb-px-20 mx-0 text-ui-10">
         {visible.map((item) => (
-          <span key={item.name} data-tone={item.tone}>
-            <i />
+          <span
+            className="data-[tone=green]:text-vital-green data-[tone=blue]:text-vital-blue data-[tone=purple]:text-vital-purple data-[tone=yellow]:text-vital-yellow flex items-center gap-px-7"
+            key={item.name}
+            data-tone={item.tone}
+          >
+            <i className="w-[8px] h-[8px] rounded-ui-2 bg-current" />
             {item.name} ({item.unit})
           </span>
         ))}
       </div>
       <svg
-        className="vital-trend-chart"
+        className="w-full h-auto min-h-[220px] max-[768px]:min-h-[140px]"
         viewBox="0 0 740 260"
         role="img"
         aria-label={`${range} ${metric} simulated environmental readings`}
@@ -303,23 +328,23 @@ function Trends() {
               x2="696"
               y1={30 + index * 62}
               y2={30 + index * 62}
-              stroke="var(--vital-border)"
+              className="stroke-vital-border"
             />
             <text
               x="46"
               y={35 + index * 62}
               textAnchor="end"
-              fill="var(--vital-muted)"
+              className="fill-vital-muted"
               fontSize="12"
             >
               {["1,500", "1,000", "500", "0"][index]}
             </text>
           </g>
         ))}
-        <text x="6" y="14" fill="var(--vital-muted)" fontSize="12">
+        <text x="6" y="14" className="fill-vital-muted" fontSize="12">
           ppm / %
         </text>
-        <text x="712" y="14" fill="var(--vital-purple)" fontSize="12">
+        <text x="712" y="14" className="fill-vital-purple" fontSize="12">
           °F
         </text>
         <g transform="translate(56,26)">
@@ -335,7 +360,8 @@ function Trends() {
                 key={item.name}
                 points={points(values)}
                 fill="none"
-                stroke={`var(--vital-${item.tone})`}
+                data-tone={item.tone}
+                className="data-[tone=green]:stroke-vital-green data-[tone=blue]:stroke-vital-blue data-[tone=purple]:stroke-vital-purple data-[tone=yellow]:stroke-vital-yellow"
                 strokeWidth="2.3"
                 strokeLinejoin="round"
               />
@@ -347,7 +373,7 @@ function Trends() {
             key={label}
             x={75 + (index * 610) / (labels.length - 1)}
             y="242"
-            fill="var(--vital-muted)"
+            className="fill-vital-muted"
             fontSize="12"
             textAnchor="middle"
           >
@@ -362,31 +388,51 @@ function Trends() {
 function AirMonitor() {
   const [synced, setSynced] = useState(false);
   return (
-    <section className="vital-monitor vital-card">
-      <div className="vital-card-header">
-        <h2>Air monitor</h2>
-        <button className="vital-outline-button" type="button" onClick={() => setSynced(true)}>
+    <section className="bg-vital-card border border-vital-border rounded-ui-16 min-w-0 overflow-hidden p-px-20 max-[768px]:p-px-12">
+      <div className="flex items-center justify-between gap-px-10 mb-px-18 max-[768px]:flex-wrap">
+        <h2 className="text-ui-15 font-medium">Air monitor</h2>
+        <button
+          className="inline-flex items-center justify-center gap-px-7 text-ui-12 pt-px-7 pb-px-7 px-px-10 border border-vital-border rounded-ui-7 cursor-pointer"
+          type="button"
+          onClick={() => setSynced(true)}
+        >
           <RefreshCw size={15} />
           {synced ? "Synced" : "Sync now"}
         </button>
       </div>
-      <div className="vital-device">
-        <Radio className="vital-device-icon" size={66} strokeWidth={1} />
-        <div>
-          <div className="vital-device-heading">
-            <strong>Room</strong>
-            <span data-tone="green">● Connected</span>
+      <div className="flex items-center gap-px-12 pt-px-16 pb-px-16 px-px-12 border border-vital-border rounded-ui-12">
+        <Radio
+          className="text-vital-muted shrink-0 max-[1101px]:w-[50px]"
+          size={66}
+          strokeWidth={1}
+        />
+        <div className="flex-1 min-w-0">
+          <div className="flex gap-px-8 flex-wrap justify-between">
+            <strong className="text-ui-14">Room</strong>
+            <span
+              className="data-[tone=green]:text-vital-green data-[tone=blue]:text-vital-blue data-[tone=purple]:text-vital-purple data-[tone=yellow]:text-vital-yellow text-ui-10"
+              data-tone="green"
+            >
+              ● Connected
+            </span>
           </div>
-          <p>Air monitor</p>
-          <p role="status">{synced ? "Sample readings refreshed" : "Updated just now"}</p>
-          <div className="vital-device-badges">
+          <p className="text-ui-12 text-vital-muted mt-px-8">Air monitor</p>
+          <p className="text-ui-12 text-vital-muted mt-px-8" role="status">
+            {synced ? "Sample readings refreshed" : "Updated just now"}
+          </p>
+          <div className="flex flex-wrap gap-px-5 mt-px-10">
             {["CO₂", "PM2.5", "Temp", "Humidity", "VOC", "NOx"].map((item) => (
-              <span key={item}>{item}</span>
+              <span
+                className="text-ui-10 text-vital-muted bg-muted pt-px-3 pb-px-3 px-px-6 rounded-ui-12"
+                key={item}
+              >
+                {item}
+              </span>
             ))}
           </div>
         </div>
       </div>
-      <p className="vital-monitor-footnote">
+      <p className="mt-px-48 text-ui-11 text-vital-muted">
         {synced
           ? "71 sample readings synced. No device connected."
           : "71 sample readings · simulated device"}
@@ -397,60 +443,98 @@ function AirMonitor() {
 
 function Insights() {
   return (
-    <aside className="vital-env-insights">
-      <section className="vital-insights vital-card">
-        <div className="vital-card-header">
-          <h2>Insights</h2>
-          <span>today</span>
+    <aside className="grid gap-px-16 max-[1101px]:grid-cols-[1fr_1fr] max-[768px]:grid-cols-[1fr]">
+      <section className="bg-vital-card border border-vital-border rounded-ui-16 min-w-0 overflow-hidden p-px-22 max-[1101px]:block max-[768px]:p-px-16">
+        <div className="flex items-center justify-between gap-px-10 mb-px-18 max-[768px]:flex-wrap">
+          <h2 className="text-ui-15 font-medium m-0">Insights</h2>
+          <span className="text-ui-12 text-vital-muted">today</span>
         </div>
-        <div className="vital-insight">
-          <TriangleAlert data-tone="yellow" size={20} />
-          <div className="vital-obscured" role="img" aria-label="Text obscured in reference image">
-            <i />
-            <i />
-            <i />
-            <i />
+        <div className="flex items-start gap-px-14 pt-px-22 pb-px-22 px-0 border-b border-vital-border last:border-b-0 last:pb-0">
+          <TriangleAlert
+            className="data-[tone=green]:text-vital-green data-[tone=blue]:text-vital-blue data-[tone=purple]:text-vital-purple data-[tone=yellow]:text-vital-yellow shrink-0"
+            data-tone="yellow"
+            size={20}
+          />
+          <div
+            className="flex flex-col gap-px-10 flex-1 min-w-0 min-h-[105px]"
+            role="img"
+            aria-label="Text obscured in reference image"
+          >
+            <i className="block h-[9px] w-[90%] bg-vital-muted opacity-30 blur-xs nth-2:w-[72%] nth-3:w-[84%]" />
+            <i className="block h-[9px] w-[90%] bg-vital-muted opacity-30 blur-xs nth-2:w-[72%] nth-3:w-[84%]" />
+            <i className="block h-[9px] w-[90%] bg-vital-muted opacity-30 blur-xs nth-2:w-[72%] nth-3:w-[84%]" />
+            <i className="block h-[9px] w-[90%] bg-vital-muted opacity-30 blur-xs nth-2:w-[72%] nth-3:w-[84%]" />
           </div>
         </div>
-        <div className="vital-insight">
-          <Check data-tone="green" size={20} />
+        <div className="flex items-start gap-px-14 pt-px-22 pb-px-22 px-0 border-b border-vital-border last:border-b-0 last:pb-0">
+          <Check
+            className="data-[tone=green]:text-vital-green data-[tone=blue]:text-vital-blue data-[tone=purple]:text-vital-purple data-[tone=yellow]:text-vital-yellow shrink-0"
+            data-tone="green"
+            size={20}
+          />
           <div>
-            <h3>Particulates stayed low</h3>
-            <p>The sample PM2.5 reading is 0.8 µg/m³. View its recent pattern in Trends.</p>
+            <h3 className="text-ui-14 m-0 text-vital-text leading-normal">
+              Particulates stayed low
+            </h3>
+            <p className="text-ui-13 text-vital-muted leading-chat mt-px-5">
+              The sample PM2.5 reading is 0.8 µg/m³. View its recent pattern in Trends.
+            </p>
           </div>
         </div>
-        <div className="vital-insight">
-          <Check data-tone="green" size={20} />
+        <div className="flex items-start gap-px-14 pt-px-22 pb-px-22 px-0 border-b border-vital-border last:border-b-0 last:pb-0">
+          <Check
+            className="data-[tone=green]:text-vital-green data-[tone=blue]:text-vital-blue data-[tone=purple]:text-vital-purple data-[tone=yellow]:text-vital-yellow shrink-0"
+            data-tone="green"
+            size={20}
+          />
           <div>
-            <h3>Humidity through the day</h3>
-            <p>The room’s current sample reading is 64%. Select Humidity to explore the chart.</p>
+            <h3 className="text-ui-14 m-0 text-vital-text leading-normal">
+              Humidity through the day
+            </h3>
+            <p className="text-ui-13 text-vital-muted leading-chat mt-px-5">
+              The room’s current sample reading is 64%. Select Humidity to explore the chart.
+            </p>
           </div>
         </div>
-        <div className="vital-insight">
-          <Check data-tone="green" size={20} />
+        <div className="flex items-start gap-px-14 pt-px-22 pb-px-22 px-0 border-b border-vital-border last:border-b-0 last:pb-0">
+          <Check
+            className="data-[tone=green]:text-vital-green data-[tone=blue]:text-vital-blue data-[tone=purple]:text-vital-purple data-[tone=yellow]:text-vital-yellow shrink-0"
+            data-tone="green"
+            size={20}
+          />
           <div>
-            <h3>Room temperature</h3>
-            <p>
+            <h3 className="text-ui-14 m-0 text-vital-text leading-normal">Room temperature</h3>
+            <p className="text-ui-13 text-vital-muted leading-chat mt-px-5">
               The current sample temperature is 64.0°F. Recent readings are shown alongside the
               other room metrics.
             </p>
           </div>
         </div>
       </section>
-      <section className="vital-insights vital-card">
-        <h2>Recommended actions</h2>
-        <div className="vital-insight">
-          <Grid2X2 size={20} />
-          <div className="vital-obscured" role="img" aria-label="Text obscured in reference image">
-            <i />
-            <i />
+      <section className="bg-vital-card border border-vital-border rounded-ui-16 min-w-0 overflow-hidden p-px-22 max-[1101px]:block max-[768px]:p-px-16">
+        <h2 className="text-ui-15 font-medium mb-px-20">Recommended actions</h2>
+        <div className="flex items-start gap-px-14 pt-px-22 pb-px-22 px-0 border-b border-vital-border last:border-b-0 last:pb-0">
+          <Grid2X2 className="shrink-0" size={20} />
+          <div
+            className="flex flex-col gap-px-10 flex-1 min-w-0 min-h-[105px]"
+            role="img"
+            aria-label="Text obscured in reference image"
+          >
+            <i className="block h-[9px] w-[90%] bg-vital-muted opacity-30 blur-xs nth-2:w-[72%] nth-3:w-[84%]" />
+            <i className="block h-[9px] w-[90%] bg-vital-muted opacity-30 blur-xs nth-2:w-[72%] nth-3:w-[84%]" />
           </div>
         </div>
-        <div className="vital-insight">
-          <Droplets data-tone="yellow" size={20} />
+        <div className="flex items-start gap-px-14 pt-px-22 pb-px-22 px-0 border-b border-vital-border last:border-b-0 last:pb-0">
+          <Droplets
+            className="data-[tone=green]:text-vital-green data-[tone=blue]:text-vital-blue data-[tone=purple]:text-vital-purple data-[tone=yellow]:text-vital-yellow shrink-0"
+            data-tone="yellow"
+            size={20}
+          />
           <div>
-            <h3>Review room humidity</h3>
-            <p>Explore the climate controls with simulated settings.</p>
+            <h3 className="text-ui-14 m-0 text-vital-text leading-normal">Review room humidity</h3>
+            <p className="text-ui-13 text-vital-muted leading-chat mt-px-5">
+              Explore the climate controls with simulated settings.
+            </p>
           </div>
         </div>
       </section>
@@ -463,13 +547,16 @@ function ClimateControl() {
   const [mode, setMode] = useState("Auto");
   const [purifier, setPurifier] = useState(true);
   return (
-    <section className="vital-climate vital-card">
-      <h2>Room climate</h2>
-      <p>Simulated controls. Changes stay on this screen.</p>
-      <label htmlFor="vital-temperature">
+    <section className="bg-vital-card border border-vital-border rounded-ui-16 min-w-0 overflow-hidden max-w-[650px] mt-px-20 p-px-30 grid gap-px-24 max-[768px]:p-px-18">
+      <h2 className="text-ui-15 font-medium">Room climate</h2>
+      <p className="text-vital-muted text-ui-13">
+        Simulated controls. Changes stay on this screen.
+      </p>
+      <label className="flex justify-between text-ui-14" htmlFor="vital-temperature">
         Target temperature <strong>{temperature}°F</strong>
       </label>
       <input
+        className="accent-vital-green w-full"
         id="vital-temperature"
         type="range"
         min="60"
@@ -477,9 +564,13 @@ function ClimateControl() {
         value={temperature}
         onChange={(event) => setTemperature(Number(event.target.value))}
       />
-      <fieldset className="vital-segmented" aria-label="Climate mode">
+      <fieldset
+        className="inline-flex max-w-full overflow-x-auto border border-vital-border rounded-ui-10 p-px-3 gap-px-2 whitespace-nowrap"
+        aria-label="Climate mode"
+      >
         {["Auto", "Cool", "Heat", "Off"].map((item) => (
           <button
+            className="pt-px-7 pb-px-7 px-px-12 text-vital-muted text-ui-14 rounded-ui-7 cursor-pointer aria-pressed:text-vital-text aria-pressed:bg-muted aria-pressed:inset-ring-1 aria-pressed:inset-ring-vital-border max-[768px]:text-ui-12 max-[768px]:pt-px-7 max-[768px]:pb-px-7 max-[768px]:px-px-9"
             type="button"
             key={item}
             aria-pressed={item === mode}
@@ -490,7 +581,7 @@ function ClimateControl() {
         ))}
       </fieldset>
       <button
-        className="vital-outline-button"
+        className="inline-flex items-center justify-center gap-px-7 text-ui-12 pt-px-7 pb-px-7 px-px-10 border border-vital-border rounded-ui-7 cursor-pointer"
         type="button"
         aria-pressed={purifier}
         onClick={() => setPurifier(!purifier)}
@@ -512,9 +603,18 @@ export function EnvironmentPanel() {
     setSearch({ environmentDetail: value?.name });
   return (
     <>
-      <fieldset className="vital-segmented" aria-label="Environment view">
+      <fieldset
+        className="inline-flex max-w-full overflow-x-auto border border-vital-border rounded-ui-10 p-px-3 gap-px-2 whitespace-nowrap"
+        aria-label="Environment view"
+      >
         {(["Overview", "Climate control"] as const).map((item) => (
-          <button type="button" key={item} aria-pressed={tab === item} onClick={() => setTab(item)}>
+          <button
+            className="pt-px-7 pb-px-7 px-px-12 text-vital-muted text-ui-14 rounded-ui-7 cursor-pointer aria-pressed:text-vital-text aria-pressed:bg-muted aria-pressed:inset-ring-1 aria-pressed:inset-ring-vital-border max-[768px]:text-ui-12 max-[768px]:pt-px-7 max-[768px]:pb-px-7 max-[768px]:px-px-9"
+            type="button"
+            key={item}
+            aria-pressed={tab === item}
+            onClick={() => setTab(item)}
+          >
             {item}
           </button>
         ))}
@@ -522,37 +622,49 @@ export function EnvironmentPanel() {
       {tab === "Climate control" ? (
         <ClimateControl />
       ) : (
-        <div className="vital-env-layout">
-          <div className="vital-env-main">
-            <div className="vital-env-scores">
+        <div className="grid grid-cols-[minmax(0,_1fr)_290px] gap-px-20 mt-px-20 items-start min-[1700px]:grid-cols-[minmax(0,_1fr)_350px] max-[1401px]:grid-cols-[minmax(0,_1fr)_230px] max-[1101px]:grid-cols-[1fr]">
+          <div className="min-w-0">
+            <div className="grid grid-cols-[repeat(4,_minmax(0,_1fr))] gap-px-14 max-[1401px]:grid-cols-[repeat(2,_minmax(0,_1fr))] max-[768px]:gap-px-10">
               {scores.map((score, index) => (
                 <button
                   type="button"
-                  className="vital-env-score vital-card"
+                  className="bg-vital-card border border-vital-border min-w-0 overflow-hidden text-left pt-px-20 pb-0 px-px-18 cursor-pointer rounded-ui-15 min-[1700px]:pt-px-24 max-[768px]:pt-px-14 max-[768px]:pb-0 max-[768px]:px-px-10"
                   key={score.name}
                   onClick={() => setDetail(score)}
                 >
-                  <span className="vital-score-heading">
+                  <span className="flex items-center justify-between gap-px-8 text-ui-14 text-vital-muted max-[768px]:text-ui-11">
                     {score.name}
                     <ChevronRight size={16} />
                   </span>
-                  <div className="vital-score-reading">
+                  <div className="flex items-center gap-px-15 mt-px-24 max-[1401px]:mt-px-16 max-[768px]:gap-px-6 max-[768px]:flex-wrap">
                     <Gauge value={score.progress} />
                     <div>
-                      <strong>{score.value}</strong>
-                      <small>{score.unit}</small>
-                      <p data-tone="green">{score.status}</p>
+                      <strong className="text-ui-36 font-light tracking-score min-[1700px]:text-ui-42 max-[768px]:text-ui-30">
+                        {score.value}
+                      </strong>
+                      <small className="text-ui-10 text-vital-muted">{score.unit}</small>
+                      <p
+                        className="data-[tone=green]:text-vital-green data-[tone=blue]:text-vital-blue data-[tone=purple]:text-vital-purple data-[tone=yellow]:text-vital-yellow text-ui-13"
+                        data-tone="green"
+                      >
+                        {score.status}
+                      </p>
                     </div>
                   </div>
-                  <p className="vital-delta">
-                    <span data-tone={index === 3 ? "green" : "yellow"}>{score.change}</span>{" "}
+                  <p className="text-vital-muted text-ui-12 mt-px-16 max-[768px]:text-ui-10">
+                    <span
+                      className="data-[tone=green]:text-vital-green data-[tone=blue]:text-vital-blue data-[tone=purple]:text-vital-purple data-[tone=yellow]:text-vital-yellow"
+                      data-tone={index === 3 ? "green" : "yellow"}
+                    >
+                      {score.change}
+                    </span>{" "}
                     {score.suffix} vs yesterday
                   </p>
-                  <Sparkline index={index} />
+                  <Sparkline index={index} variant="score" />
                 </button>
               ))}
             </div>
-            <div className="vital-env-metrics">
+            <div className="grid grid-cols-[repeat(5,_minmax(0,_1fr))] gap-px-14 mt-px-14 max-[1401px]:grid-cols-[repeat(3,_minmax(0,_1fr))] max-[1101px]:grid-cols-[repeat(3,_minmax(0,_1fr))] max-[768px]:grid-cols-[repeat(2,_minmax(0,_1fr))] max-[768px]:gap-px-10">
               {metrics.map((metric, index) => {
                 const MetricIcon =
                   index === 0
@@ -565,43 +677,63 @@ export function EnvironmentPanel() {
                 return (
                   <button
                     type="button"
-                    className="vital-metric vital-card"
+                    className="bg-vital-card border border-vital-border min-w-0 overflow-hidden pt-px-16 pb-px-8 px-px-12 flex gap-px-8 flex-wrap text-left rounded-ui-12 cursor-pointer max-[768px]:pt-px-12 max-[768px]:pb-px-12 max-[768px]:px-px-10"
                     key={metric.name}
+                    data-testid="vital-metric"
                     onClick={() => setDetail(metric)}
                   >
-                    <MetricIcon size={17} data-tone={metric.tone} />
-                    <div className="vital-metric-content">
-                      <span>{metric.name}</span>
-                      <div className="vital-metric-reading">
-                        <strong>{metric.value}</strong>
-                        <small>{metric.unit}</small>
+                    <MetricIcon
+                      className="data-[tone=green]:text-vital-green data-[tone=blue]:text-vital-blue data-[tone=purple]:text-vital-purple data-[tone=yellow]:text-vital-yellow max-[768px]:w-[14px]"
+                      size={17}
+                      data-tone={metric.tone}
+                    />
+                    <div className="flex-1 min-w-0">
+                      <span className="text-vital-muted text-ui-12">{metric.name}</span>
+                      <div className="flex items-baseline flex-wrap gap-px-3">
+                        <strong className="text-ui-23 font-normal">{metric.value}</strong>
+                        <small className="text-ui-10 text-vital-muted">{metric.unit}</small>
                         {metric.status && (
-                          <em data-tone={metric.status === "Watch" ? "yellow" : "green"}>
+                          <em
+                            className="data-[tone=green]:text-vital-green data-[tone=blue]:text-vital-blue data-[tone=purple]:text-vital-purple data-[tone=yellow]:text-vital-yellow not-italic text-ui-11 ml-auto"
+                            data-tone={metric.status === "Watch" ? "yellow" : "green"}
+                          >
                             {metric.status}
                           </em>
                         )}
                       </div>
                     </div>
-                    <div className="vital-metric-spark">
-                      <small>{metric.min}</small>
+                    <div className="flex items-end w-full gap-px-4">
+                      <small className="text-ui-9 text-vital-muted">{metric.min}</small>
                       <Sparkline index={index} tone={metric.tone} />
-                      <small>{metric.max}</small>
+                      <small className="text-ui-9 text-vital-muted">{metric.max}</small>
                     </div>
                   </button>
                 );
               })}
-              <div className="vital-metric vital-card vital-room">
-                <Wifi size={17} data-tone="green" />
+              <div className="bg-vital-card border border-vital-border min-w-0 overflow-hidden pt-px-16 pb-px-8 px-px-12 flex gap-px-8 flex-wrap text-left rounded-ui-12 cursor-pointer max-[768px]:pt-px-12 max-[768px]:pb-px-12 max-[768px]:px-px-10">
+                <Wifi
+                  className="data-[tone=green]:text-vital-green data-[tone=blue]:text-vital-blue data-[tone=purple]:text-vital-purple data-[tone=yellow]:text-vital-yellow max-[768px]:w-[14px]"
+                  size={17}
+                  data-tone="green"
+                />
                 <div>
-                  <span>Room</span>
-                  <strong>Connected</strong>
-                  <p>
-                    <span data-tone="green">●</span> Updated just now
+                  <span className="text-vital-muted text-ui-12">Room</span>
+                  <strong className="block text-ui-14 font-medium mt-px-3 mb-px-3 mx-0">
+                    Connected
+                  </strong>
+                  <p className="text-ui-10 text-vital-muted">
+                    <span
+                      className="data-[tone=green]:text-vital-green data-[tone=blue]:text-vital-blue data-[tone=purple]:text-vital-purple data-[tone=yellow]:text-vital-yellow"
+                      data-tone="green"
+                    >
+                      ●
+                    </span>{" "}
+                    Updated just now
                   </p>
                 </div>
               </div>
             </div>
-            <div className="vital-env-bottom">
+            <div className="grid grid-cols-[1.65fr_1fr] gap-px-14 mt-px-14 max-[1401px]:grid-cols-[1fr]">
               <Trends />
               <AirMonitor />
             </div>
@@ -611,14 +743,18 @@ export function EnvironmentPanel() {
       )}
       {detail && (
         <Dialog title={detail.name} onClose={() => setDetail(null)}>
-          <p className="vital-detail-value">
-            {detail.value} <small>{detail.unit}</small>
+          <p className="text-ui-32">
+            {detail.value} <small className="text-ui-14">{detail.unit}</small>
           </p>
           <p>
             This is a sample reading for the dashboard preview. No health or environmental device is
             connected.
           </p>
-          <button className="vital-outline-button" type="button" onClick={() => setDetail(null)}>
+          <button
+            className="inline-flex items-center justify-center gap-px-7 text-ui-12 pt-px-7 pb-px-7 px-px-10 border border-vital-border rounded-ui-7 cursor-pointer"
+            type="button"
+            onClick={() => setDetail(null)}
+          >
             Back to overview
           </button>
         </Dialog>

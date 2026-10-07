@@ -1,8 +1,10 @@
 import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { useServerFn } from "@tanstack/react-start";
+import { ArrowUpIcon, SquareIcon } from "lucide-react";
 import { type ReactNode, useCallback, useEffect, useId, useRef, useState } from "react";
 import { Bubble, BubbleContent } from "#/components/ui/bubble";
 import { Button } from "#/components/ui/button";
+import { Empty, EmptyDescription, EmptyHeader, EmptyTitle } from "#/components/ui/empty";
 import { Checkbox } from "#/components/ui/checkbox";
 import { Collapsible, CollapsibleContent, CollapsibleTrigger } from "#/components/ui/collapsible";
 import {
@@ -12,7 +14,7 @@ import {
   InputGroupTextarea,
 } from "#/components/ui/input-group";
 import { Marker, MarkerContent } from "#/components/ui/marker";
-import { Message, MessageContent, MessageHeader } from "#/components/ui/message";
+import { Message, MessageContent } from "#/components/ui/message";
 import {
   MessageScroller,
   MessageScrollerButton,
@@ -291,15 +293,26 @@ export function ResearchPanel({
   }
 
   const renderPanel: RenderResearchPanel = (onCitationNavigated) => (
-    <aside className="research-panel" aria-label="Research chat">
-      <header className="research-heading">
-        <h2>Research chat</h2>
+    <aside
+      data-testid="research-panel"
+      className="flex h-full min-h-0 min-w-0 flex-col overflow-hidden bg-background"
+      aria-label="Research chat"
+    >
+      <header
+        data-testid="research-heading"
+        className="flex shrink-0 flex-wrap items-center justify-between gap-2 border-b p-4"
+      >
+        <h2 className="m-0 text-base">Research chat</h2>
         <Button variant="ghost" size="sm" type="button" disabled={busy || !run} onClick={newChat}>
           New chat
         </Button>
         {(status.data?.history?.length ?? 0) > 0 && (
-          <label className="research-history" htmlFor={historyId}>
-            <span>Chat history</span>
+          <label
+            data-testid="research-history"
+            className="flex w-full min-w-0 items-center gap-2 text-research-label text-muted-foreground [&>[data-slot=native-select-wrapper]]:min-w-0 [&>[data-slot=native-select-wrapper]]:flex-1"
+            htmlFor={historyId}
+          >
+            <span className="shrink-0">Chat history</span>
             <NativeSelect
               id={historyId}
               size="sm"
@@ -320,12 +333,20 @@ export function ResearchPanel({
         )}
       </header>
       {reconnecting && (
-        <p className="deck-save-status" role="status">
+        <p
+          data-testid="deck-save-status"
+          className="m-0 px-4 py-2 text-research-field leading-normal text-muted-foreground"
+          role="status"
+        >
           Reconnecting to research updates. Processing continues on your home server.
         </p>
       )}
       {status.isError && (
-        <p className="deck-error" role="alert">
+        <p
+          data-testid="deck-error"
+          className="m-0 px-4 py-2 text-research-field leading-body text-destructive wrap-anywhere"
+          role="alert"
+        >
           Unable to load research status.
           <Button type="button" onClick={() => void status.refetch()}>
             Retry
@@ -333,19 +354,31 @@ export function ResearchPanel({
         </p>
       )}
       {selectedId && status.isSuccess && !run && (
-        <p className="deck-error" role="alert">
+        <p
+          data-testid="deck-error"
+          className="m-0 px-4 py-2 text-research-field leading-body text-destructive wrap-anywhere"
+          role="alert"
+        >
           This conversation could not be found.
         </p>
       )}
       {error && (
-        <p className="deck-error" role="alert">
+        <p
+          data-testid="deck-error"
+          className="m-0 px-4 py-2 text-research-field leading-body text-destructive wrap-anywhere"
+          role="alert"
+        >
           {error}
         </p>
       )}
       {status.isPending ? (
-        <p role="status">Checking the research connection…</p>
+        <p className="m-0 px-4 py-2 text-research-field" role="status">
+          Checking the research connection…
+        </p>
       ) : !status.data?.configured ? (
-        <p role="status">The connection to Codex on your home server is not configured.</p>
+        <p className="m-0 px-4 py-2 text-research-field" role="status">
+          The connection to Codex on your home server is not configured.
+        </p>
       ) : null}
       <ResearchConversation
         key={`conversation:${run?.id ?? "new"}`}
@@ -358,14 +391,7 @@ export function ResearchPanel({
           return navigated;
         }}
       />
-      {run && (
-        <ResearchRunStatus
-          run={run}
-          busy={busy}
-          onCancel={() => void stop()}
-          onOpenDeck={(deck) => void openDeck(deck)}
-        />
-      )}
+      {run && <ResearchRunStatus run={run} onOpenDeck={(deck) => void openDeck(deck)} />}
       <ResearchComposer
         key={run?.id ?? "new"}
         topic={draft.topic}
@@ -378,6 +404,9 @@ export function ResearchPanel({
           !ready || busy || isResearchActive(status.data?.run ?? null) || !status.data?.configured
         }
         onSend={begin}
+        active={isResearchActive(run)}
+        busy={busy}
+        onStop={() => void stop()}
       />
     </aside>
   );
@@ -398,15 +427,20 @@ function ResearchConversation({
   const names = { user: "You", assistant: "Codex", tool: "Tool activity" };
   return (
     <MessageScrollerProvider autoScroll>
-      <MessageScroller className="research-conversation">
+      <MessageScroller data-testid="research-conversation" className="min-h-[80px] flex-1">
         <MessageScrollerViewport aria-label="Research messages">
           <MessageScrollerContent aria-label="Research conversation" className="gap-5 p-4">
             {messages.length === 0 ? (
               <MessageScrollerItem messageId="empty">
-                <p className="research-empty">
-                  Send a topic or question. The assistant adds columns as it searches and saves a
-                  report to your home server.
-                </p>
+                <Empty data-testid="research-empty">
+                  <EmptyHeader>
+                    <EmptyTitle>What would you like to explore?</EmptyTitle>
+                    <EmptyDescription>
+                      Send a topic or question. Codex adds columns as it searches and saves a report
+                      to your home server.
+                    </EmptyDescription>
+                  </EmptyHeader>
+                </Empty>
               </MessageScrollerItem>
             ) : (
               messages.map((message, index) => (
@@ -416,7 +450,10 @@ function ResearchConversation({
                   scrollAnchor={message.role === "user"}
                 >
                   {message.role === "tool" ? (
-                    <Marker className="research-tool-message">
+                    <Marker
+                      data-testid="research-tool-message"
+                      className="text-research-label whitespace-pre-wrap text-muted-foreground wrap-anywhere"
+                    >
                       <MarkerContent>
                         <span className="sr-only">{names.tool}: </span>
                         {message.text}
@@ -425,10 +462,11 @@ function ResearchConversation({
                   ) : (
                     <Message
                       align={message.role === "user" ? "end" : "start"}
-                      className="research-message"
+                      data-testid="research-message"
+                      className="wrap-anywhere"
                     >
                       <MessageContent>
-                        <MessageHeader>{names[message.role]}</MessageHeader>
+                        <span className="sr-only">{names[message.role]}</span>
                         {message.role === "assistant" ? (
                           <ResearchMarkdown
                             text={message.text}
@@ -438,9 +476,9 @@ function ResearchConversation({
                             }
                           />
                         ) : (
-                          <Bubble align="end">
+                          <Bubble align="end" variant="muted">
                             <BubbleContent>
-                              <p>{message.text}</p>
+                              <p className="m-0 whitespace-pre-wrap">{message.text}</p>
                             </BubbleContent>
                           </Bubble>
                         )}
@@ -467,6 +505,9 @@ function ResearchComposer({
   contextTitle,
   disabled,
   onSend,
+  active,
+  busy,
+  onStop,
 }: {
   topic: string;
   selected: string[] | null;
@@ -476,6 +517,9 @@ function ResearchComposer({
   contextTitle: string;
   disabled: boolean;
   onSend: (input: ResearchInput) => Promise<boolean>;
+  active: boolean;
+  busy: boolean;
+  onStop: () => void;
 }) {
   const available = connections.filter((connection) => connection.status === "connected");
   const selectedIds = selected ?? available.slice(0, 6).map((connection) => connection.id);
@@ -485,7 +529,8 @@ function ResearchComposer({
   );
   return (
     <form
-      className="research-start-form"
+      data-testid="research-start-form"
+      className="shrink-0 p-3"
       aria-label="Research messages"
       onSubmit={(event) => {
         event.preventDefault();
@@ -498,108 +543,141 @@ function ResearchComposer({
         });
       }}
     >
-      <p className="research-context">
-        Deck to send: <strong>{contextTitle}</strong>
-      </p>
-      <fieldset disabled={disabled}>
-        <Collapsible className="research-account-picker" disabled={disabled}>
-          <CollapsibleTrigger render={<Button variant="ghost" size="sm" />}>
-            Connected accounts · {validSelection.length}
-          </CollapsibleTrigger>
-          <CollapsibleContent>
-            <fieldset className="research-accounts">
-              <legend>Accounts for research (up to 6)</legend>
-              {available.length === 0 ? (
-                <p>Add a connected account first.</p>
-              ) : (
-                available.map((connection) => (
-                  <label key={connection.id} htmlFor={`${id}-${connection.id}`}>
-                    <Checkbox
-                      id={`${id}-${connection.id}`}
-                      checked={selectedIds.includes(connection.id)}
-                      disabled={
-                        disabled ||
-                        (!selectedIds.includes(connection.id) && validSelection.length >= 6)
-                      }
-                      onCheckedChange={(checked) =>
-                        onSelectionChange(
-                          checked
-                            ? [...selectedIds, connection.id]
-                            : selectedIds.filter((value) => value !== connection.id),
-                        )
-                      }
-                    />
-                    {connection.displayName} ·{" "}
-                    {connection.platform === "twitter" ? "Twitter" : "Mastodon"}
-                  </label>
-                ))
-              )}
-            </fieldset>
-          </CollapsibleContent>
-        </Collapsible>
-        <label htmlFor={id}>Message</label>
+      <Collapsible data-testid="research-account-picker" disabled={disabled}>
+        <label className="sr-only" htmlFor={id}>
+          Message
+        </label>
         <InputGroup>
           <InputGroupTextarea
             id={id}
             value={topic}
             onChange={(event) => onTopicChange(event.target.value)}
+            onKeyDown={(event) => {
+              if (event.key === "Enter" && !event.shiftKey && !event.nativeEvent.isComposing) {
+                event.preventDefault();
+                event.currentTarget.form?.requestSubmit();
+              }
+            }}
             maxLength={1000}
             rows={3}
-            placeholder="e.g. Compare reactions to WebMCP, then refine this deck."
+            placeholder="Ask about this deck…"
             required
             disabled={disabled}
           />
-          <InputGroupAddon align="block-end" className="justify-end">
-            <InputGroupButton
-              type="submit"
-              variant="default"
-              size="sm"
-              disabled={disabled || !topic.trim() || validSelection.length === 0}
-            >
-              Send
-            </InputGroupButton>
+          <InputGroupAddon align="block-end">
+            <CollapsibleTrigger render={<InputGroupButton size="sm" />}>
+              Connected accounts · {validSelection.length}
+            </CollapsibleTrigger>
+            {active ? (
+              <InputGroupButton
+                type="button"
+                size="icon-sm"
+                variant="outline"
+                className="ml-auto"
+                aria-label="Stop research"
+                disabled={busy}
+                onClick={onStop}
+              >
+                <SquareIcon />
+              </InputGroupButton>
+            ) : (
+              <InputGroupButton
+                type="submit"
+                variant="default"
+                size="icon-sm"
+                className="ml-auto"
+                aria-label="Send"
+                disabled={disabled || !topic.trim() || validSelection.length === 0}
+              >
+                <ArrowUpIcon />
+              </InputGroupButton>
+            )}
           </InputGroupAddon>
         </InputGroup>
-      </fieldset>
+        <CollapsibleContent>
+          <fieldset
+            data-testid="research-accounts"
+            className="grid max-h-[160px] min-w-0 gap-2 overflow-auto border p-3"
+          >
+            <legend>Accounts for research (up to 6)</legend>
+            {available.length === 0 ? (
+              <p>Add a connected account first.</p>
+            ) : (
+              available.map((connection) => (
+                <label
+                  className="flex items-center gap-2 text-research-field wrap-anywhere"
+                  key={connection.id}
+                  htmlFor={`${id}-${connection.id}`}
+                >
+                  <Checkbox
+                    id={`${id}-${connection.id}`}
+                    checked={selectedIds.includes(connection.id)}
+                    disabled={
+                      disabled ||
+                      (!selectedIds.includes(connection.id) && validSelection.length >= 6)
+                    }
+                    onCheckedChange={(checked) =>
+                      onSelectionChange(
+                        checked
+                          ? [...selectedIds, connection.id]
+                          : selectedIds.filter((value) => value !== connection.id),
+                      )
+                    }
+                  />
+                  {connection.displayName} ·{" "}
+                  {connection.platform === "twitter" ? "Twitter" : "Mastodon"}
+                </label>
+              ))
+            )}
+          </fieldset>
+        </CollapsibleContent>
+      </Collapsible>
+      <p
+        data-testid="research-context"
+        className="mt-2 mb-0 text-research-label text-muted-foreground wrap-anywhere"
+      >
+        Deck to send: <strong>{contextTitle}</strong>
+      </p>
     </form>
   );
 }
 
 function ResearchRunStatus({
   run,
-  busy,
-  onCancel,
   onOpenDeck,
 }: {
   run: ResearchRun;
-  busy: boolean;
-  onCancel: () => void;
   onOpenDeck: (deck: Deck) => void;
 }) {
   const deck = run.deck ?? run.contextDeck;
   return (
-    <section className="research-run" aria-label="Research status">
+    <section
+      data-testid="research-run"
+      className="max-h-[180px] shrink-0 overflow-y-auto border-t px-3 py-2 text-research-label"
+      aria-label="Research status"
+    >
       <Marker role="status">
         <MarkerContent>{statusNames[run.status]}</MarkerContent>
       </Marker>
       {run.error && (
-        <p className="deck-error" role="alert">
+        <p
+          data-testid="deck-error"
+          className="mt-0 mb-2 text-sm leading-body text-destructive wrap-anywhere"
+          role="alert"
+        >
           {run.error}
         </p>
       )}
       {run.reportPath && (
-        <p>
+        <p className="mt-0 mb-2 wrap-anywhere">
           Markdown location
           <br />
-          <code className="research-report-path">{run.reportPath}</code>
+          <code data-testid="research-report-path" className="text-research-label wrap-anywhere">
+            {run.reportPath}
+          </code>
         </p>
       )}
-      <div className="deck-actions">
-        {isResearchActive(run) && (
-          <Button variant="outline" size="sm" type="button" disabled={busy} onClick={onCancel}>
-            Stop research
-          </Button>
-        )}
+      <div data-testid="deck-actions" className="flex flex-wrap items-center gap-2">
         {deck && (
           <Button
             variant="outline"

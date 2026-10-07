@@ -21,7 +21,10 @@ export function ResearchMarkdown({
   onNavigateCitation?: (url: string) => boolean;
 }) {
   return (
-    <div className="research-markdown">
+    <div
+      data-testid="research-markdown"
+      className="min-w-0 wrap-anywhere motion-reduce:[&_[data-sd-animate]]:animate-none motion-reduce:[&_[data-sd-animate-marker]::marker]:animate-none"
+    >
       <Streamdown
         mode={isAnimating ? "streaming" : "static"}
         isAnimating={isAnimating}
@@ -32,17 +35,47 @@ export function ResearchMarkdown({
         remarkPlugins={[remarkGfm]}
         skipHtml
         components={{
+          p: ({ children }) => <p className="mt-1.5 mb-0 whitespace-normal">{children}</p>,
+          ul: ({ children }) => <ul className="list-disc pl-6">{children}</ul>,
+          ol: ({ children }) => <ol className="list-decimal pl-6">{children}</ol>,
+          li: ({ children }) => <li className="not-first:mt-1">{children}</li>,
+          blockquote: ({ children }) => (
+            <blockquote className="my-3 border-l-2 pl-3 text-muted-foreground">
+              {children}
+            </blockquote>
+          ),
+          th: ({ children }) => <th className="border p-1.5 text-left">{children}</th>,
+          td: ({ children }) => <td className="border p-1.5 text-left">{children}</td>,
           strong: ({ children }) => <strong>{children}</strong>,
-          pre: ({ children }) => <pre>{children}</pre>,
-          code: ({ children, className }) => <code className={className}>{children}</code>,
-          h1: ({ children }) => <h3>{children}</h3>,
-          h2: ({ children }) => <h4>{children}</h4>,
-          h3: ({ children }) => <h5>{children}</h5>,
-          h4: ({ children }) => <h6>{children}</h6>,
-          h5: ({ children }) => <h6>{children}</h6>,
-          h6: ({ children }) => <h6>{children}</h6>,
+          pre: ({ children }) => (
+            <pre className="max-w-full overflow-x-auto bg-muted p-3 text-research-label whitespace-pre">
+              {children}
+            </pre>
+          ),
+          code: ({ children, className }) => (
+            <code className={`wrap-anywhere ${className ?? ""}`}>{children}</code>
+          ),
+          h1: ({ children }) => (
+            <h3 className="mt-3.5 mb-1.5 text-research-body font-semibold">{children}</h3>
+          ),
+          h2: ({ children }) => (
+            <h4 className="mt-3.5 mb-1.5 text-research-body font-semibold">{children}</h4>
+          ),
+          h3: ({ children }) => (
+            <h5 className="mt-3.5 mb-1.5 text-research-body font-semibold">{children}</h5>
+          ),
+          h4: ({ children }) => (
+            <h6 className="mt-3.5 mb-1.5 text-research-body font-semibold">{children}</h6>
+          ),
+          h5: ({ children }) => (
+            <h6 className="mt-3.5 mb-1.5 text-research-body font-semibold">{children}</h6>
+          ),
+          h6: ({ children }) => (
+            <h6 className="mt-3.5 mb-1.5 text-research-body font-semibold">{children}</h6>
+          ),
           a: ({ href, children, title }) => (
             <a
+              className="text-primary underline underline-offset-2"
               href={href}
               title={title}
               target="_blank"
@@ -65,7 +98,12 @@ export function ResearchMarkdown({
           ),
           img: ({ src, alt }) =>
             typeof src === "string" && src ? (
-              <a href={src} target="_blank" rel="noopener noreferrer">
+              <a
+                className="text-primary underline underline-offset-2"
+                href={src}
+                target="_blank"
+                rel="noopener noreferrer"
+              >
                 {alt || "Open image"}
               </a>
             ) : (
@@ -73,12 +111,13 @@ export function ResearchMarkdown({
             ),
           table: ({ children }) => (
             <section
-              className="research-markdown-table"
+              data-testid="research-markdown-table"
+              className="my-3 max-w-full overflow-x-auto"
               aria-label="Response table"
               // oxlint-disable-next-line jsx-a11y/no-noninteractive-tabindex -- Keyboard users need to scroll wide tables inside the narrow chat pane.
               tabIndex={0}
             >
-              <table>{children}</table>
+              <table className="w-full border-collapse text-research-label">{children}</table>
             </section>
           ),
         }}

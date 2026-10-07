@@ -262,22 +262,25 @@ shadcn dialogs with Escape handling and focus restoration. Column menus contain
 editing, ordering, and deletion; refresh stays available directly in each header.
 
 Shared UI components live in `src/components/ui`; `components.json` configures
-the registry and theme entrypoint. Chat uses MessageScroller, Message, Bubble,
-Marker and InputGroup with Streamdown, reconnectable snapshot SSE, and saved
-conversations. The icon rail switches between chat and deck management;
+the registry and theme entrypoint. Research and Messages follow the
+[shadcn chatbot template](https://github.com/shadcn-ui/chatbot-template), composing
+MessageScroller, Message, Bubble and InputGroup without separate chat primitives.
+Research uses Marker and Streamdown for tool progress and streamed Markdown,
+with reconnectable snapshot SSE and saved conversations. Enter sends a research
+message; Shift+Enter inserts a line break and IME composition does not submit. The icon rail switches between chat and deck management;
 closing the mobile sheet or crossing the desktop breakpoint preserves chat
-drafts, selected accounts and live deck updates. Theme colors are declared in
-`src/ui.css`. The shared entrypoint `src/styles.css` loads the theme, tokens,
-base styles and feature styles in that order, so the UI lint rules can resolve
-application classes through the same stylesheet used by the app.
+drafts, selected accounts and live deck updates. All application styling uses Tailwind utilities in the components.
+`src/styles.css` contains the Tailwind imports, shared theme tokens, and base
+utilities; there are no feature stylesheets. Named pixel spacing tokens preserve
+the compact layouts alongside the existing rem scale. Tests use accessible
+roles and explicit data attributes rather than styling classes.
 
 `pnpm lint` runs Oxlint with type-aware linting and TypeScript checking through
 `oxlint-tsgolint`, including the
 [@shadcn/lint](https://github.com/shadcn-ui/lint) UI checks. The
 `shadcn/no-raw-colors` rule in `.oxlintrc.json` requires theme colors in JSX and
 class helpers, including shared UI components. Layout values remain available
-for the sidebar and deck. Component contracts allow only the existing workspace
-styles; Next.js-specific rules are omitted because this app uses TanStack Start.
+for the sidebar and deck. Component contracts allow only the required shared-component treatments; Next.js-specific rules are omitted because this app uses TanStack Start.
 `pnpm format` formats files with Oxfmt defaults, and
 `pnpm format:check` checks formatting without changing files. Knip checks application usage while retaining the public exports
 of registry components for composition. Additional design rules can be configured

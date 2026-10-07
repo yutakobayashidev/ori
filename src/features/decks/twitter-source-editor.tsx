@@ -38,7 +38,7 @@ export function TwitterSourceEditor({
   const id = useId();
   return (
     <>
-      <Label htmlFor={id}>
+      <Label className="grid min-w-0 gap-2 text-sm" htmlFor={id}>
         Column type
         <NativeSelect
           className="w-full"
@@ -77,8 +77,8 @@ function TwitterSearchEditor({
 }: EditorProps<Extract<Source, { kind: "search" }>>) {
   const id = useId();
   return (
-    <div className="deck-source-fields">
-      <Label htmlFor={`${id}-query`}>
+    <div data-testid="deck-source-fields" className="my-4 grid gap-4">
+      <Label className="grid min-w-0 gap-2 text-sm" htmlFor={`${id}-query`}>
         Twitter search query
         <Input
           id={`${id}-query`}
@@ -89,7 +89,7 @@ function TwitterSearchEditor({
           required
         />
       </Label>
-      <Label htmlFor={`${id}-product`}>
+      <Label className="grid min-w-0 gap-2 text-sm" htmlFor={`${id}-product`}>
         Sort by
         <NativeSelect
           className="w-full"
@@ -106,8 +106,13 @@ function TwitterSearchEditor({
           <NativeSelectOption value="Top">Top</NativeSelectOption>
         </NativeSelect>
       </Label>
-      <p className="deck-help">Use Twitter search operators such as from:, lang:, and since:.</p>
-      <Label className="deck-checkbox">
+      <p data-testid="deck-help" className="text-xs leading-normal text-muted-foreground">
+        Use Twitter search operators such as from:, lang:, and since:.
+      </p>
+      <Label
+        data-testid="deck-checkbox"
+        className="mb-3 flex min-h-[40px] items-center gap-2 text-sm"
+      >
         <Checkbox
           checked={source.following}
           onCheckedChange={(checked) => onChange({ ...source, following: checked })}
@@ -121,8 +126,8 @@ function TwitterSearchEditor({
 function TwitterUserEditor({ source, onChange }: EditorProps<Extract<Source, { kind: "user" }>>) {
   const id = useId();
   return (
-    <div className="deck-source-fields">
-      <Label htmlFor={id}>
+    <div data-testid="deck-source-fields" className="my-4 grid gap-4">
+      <Label className="grid min-w-0 gap-2 text-sm" htmlFor={id}>
         User
         <Input
           id={id}
@@ -144,8 +149,8 @@ function TwitterListEditor({
 }: EditorProps<Extract<Source, { kind: "list" }>> & { connectionId: string }) {
   const id = useId();
   return (
-    <div className="deck-source-fields">
-      <Label htmlFor={id}>
+    <div data-testid="deck-source-fields" className="my-4 grid gap-4">
+      <Label className="grid min-w-0 gap-2 text-sm" htmlFor={id}>
         List
         <Input
           id={id}
@@ -185,7 +190,11 @@ function TwitterListChoices({
       </p>
     );
   return (
-    <section className="deck-list-choices" aria-label="Lists for this profile">
+    <section
+      data-testid="deck-list-choices"
+      className="flex flex-wrap gap-2"
+      aria-label="Lists for this profile"
+    >
       {lists.data.length === 0 ? (
         <p>No lists found. You can enter a URL or ID instead.</p>
       ) : (

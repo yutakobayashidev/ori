@@ -27,7 +27,7 @@ it("focuses and briefly highlights a cited card without revealing sensitive cont
   article.scrollIntoView = scroll;
   rerender(<ResearchPostCard post={post} citationRequest={1} citationSnapshot />);
   expect(article).toHaveFocus();
-  expect(article).toHaveClass("citation-highlight");
+  expect(article).toHaveAttribute("data-citation-highlight", "true");
   expect(scroll).toHaveBeenCalledWith({
     block: "center",
     inline: "center",
@@ -46,11 +46,11 @@ it("focuses and briefly highlights a cited card without revealing sensitive cont
   act(() => {
     vi.advanceTimersByTime(2500);
   });
-  expect(article).not.toHaveClass("citation-highlight");
+  expect(article).not.toHaveAttribute("data-citation-highlight", "true");
   rerender(<ResearchPostCard post={post} citationRequest={2} />);
-  expect(article).toHaveClass("citation-highlight");
+  expect(article).toHaveAttribute("data-citation-highlight", "true");
   rerender(<ResearchPostCard post={post} />);
-  expect(article).not.toHaveClass("citation-highlight");
+  expect(article).not.toHaveAttribute("data-citation-highlight", "true");
 });
 
 it("waits for reveal before mounting CW content or sensitive media", () => {

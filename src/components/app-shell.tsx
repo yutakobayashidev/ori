@@ -1,5 +1,5 @@
 import { Columns3, MessageSquare, PanelLeftClose } from "lucide-react";
-import { type CSSProperties, type ReactNode, useState } from "react";
+import { type ReactNode, useState } from "react";
 import {
   Sidebar,
   SidebarInset,
@@ -22,15 +22,7 @@ type ShellProps = {
 export function AppShell(props: ShellProps) {
   return (
     <TooltipProvider delay={800}>
-      <SidebarProvider
-        className="workspace h-dvh min-h-0 overflow-hidden"
-        style={
-          {
-            "--sidebar-width": "25rem",
-            "--sidebar-width-icon": "4rem",
-          } as CSSProperties
-        }
-      >
+      <SidebarProvider className="h-dvh min-h-0 overflow-hidden [--sidebar-width:25rem] [--sidebar-width-icon:4rem]">
         <Workspace {...props} />
       </SidebarProvider>
     </TooltipProvider>
@@ -106,7 +98,10 @@ function Workspace({ sidebar, researchChat, children, hasTemporaryDecks }: Shell
           <span className="text-sm font-medium">Research</span>
           <span className="ml-auto text-xs text-muted-foreground">Research workspace</span>
         </header>
-        <section className="reader flex min-h-0 min-w-0 flex-1 flex-col" aria-label="Decks">
+        <section
+          className="overflow-hidden flex min-h-0 min-w-0 flex-1 flex-col"
+          aria-label="Decks"
+        >
           {children}
         </section>
       </SidebarInset>

@@ -49,7 +49,7 @@ export function ExecutionWorkbench({ selectedId, onSelect }: ExecutionWorkbenchP
     );
   }
   return (
-    <section className="execution-day" aria-label="Today’s plan">
+    <section className="min-w-0" aria-label="Today’s plan">
       {(
         [
           { id: "focus", label: "Start here", subtitle: "Just the next thing" },
@@ -57,11 +57,11 @@ export function ExecutionWorkbench({ selectedId, onSelect }: ExecutionWorkbenchP
           { id: "optional", label: "If there’s room", subtitle: "No need to fit it all in" },
         ] as const
       ).map((section) => (
-        <section className="execution-flow-group" key={section.id}>
-          <header className="execution-flow-heading">
-            <h2>{section.label}</h2>
+        <section className="mb-px-30" key={section.id}>
+          <header className="mb-px-12 flex items-baseline justify-between gap-px-12">
+            <h2 className="text-ui-14 font-semibold">{section.label}</h2>
           </header>
-          <div className="execution-flow-items">
+          <div className="grid gap-px-9">
             {tasks
               .filter((task) => task.section === section.id)
               .map((task) => {
@@ -71,16 +71,16 @@ export function ExecutionWorkbench({ selectedId, onSelect }: ExecutionWorkbenchP
                 const checked = steps.filter((step) => task.completedSteps?.includes(step)).length;
                 return (
                   <div
-                    className="execution-flow-card"
+                    className="group/flow overflow-hidden rounded-ui-16 border border-border bg-muted data-[kind=focus]:bg-activity-focus data-[kind=routine]:bg-activity-routine data-[kind=reply]:bg-activity-reply data-[kind=weight]:bg-activity-weight data-[kind=optional]:bg-activity-optional data-[expanded=true]:border-activity-expanded data-[status=done]:bg-background!"
                     key={task.id}
                     data-expanded={expanded}
                     data-kind={task.section}
                     data-status={task.status}
                   >
-                    <div className="execution-flow-row">
+                    <div className="flex items-center gap-px-13 px-px-18 py-px-16 max-md:gap-px-10 max-md:px-px-14 max-md:py-px-15">
                       <button
                         type="button"
-                        className="execution-complete"
+                        className="flex h-[28px] basis-[24px] shrink-0 grow-0 cursor-pointer items-center justify-center rounded-full text-muted-foreground enabled:hover:text-foreground disabled:cursor-default disabled:opacity-45 group-data-[status=done]/flow:text-success focus-visible:outline-2 focus-visible:outline-ring focus-visible:outline-offset-4"
                         aria-label={`${task.status === "todo" ? "Complete" : "Restore"} ${task.title}`}
                         aria-pressed={task.status === "done"}
                         disabled={
@@ -89,22 +89,27 @@ export function ExecutionWorkbench({ selectedId, onSelect }: ExecutionWorkbenchP
                         onClick={() => finish(task.id)}
                       >
                         {task.status === "done" ? (
-                          <Check />
+                          <Check className="size-[21px]" strokeWidth={1.5} />
                         ) : task.status === "later" ? (
-                          <Pause />
+                          <Pause className="size-[21px]" strokeWidth={1.5} />
                         ) : (
-                          <Circle />
+                          <Circle className="size-[21px]" strokeWidth={1.5} />
                         )}
                       </button>
                       <button
                         type="button"
-                        className="execution-flow-open"
+                        className="flex min-w-0 flex-1 cursor-pointer flex-col gap-px-5 rounded-ui-3 text-left focus-visible:outline-2 focus-visible:outline-ring focus-visible:outline-offset-4"
                         aria-expanded={expanded}
                         aria-controls={`detail-${task.id}`}
                         onClick={() => toggle(id)}
                       >
-                        <span className="execution-flow-title">{task.title}</span>
-                        <span className="execution-flow-description">
+                        <span
+                          data-testid="execution-flow-title"
+                          className="text-ui-14 font-medium leading-normal group-data-[status=done]/flow:text-muted-foreground max-md:text-ui-13"
+                        >
+                          {task.title}
+                        </span>
+                        <span className="text-ui-12 leading-normal text-muted-foreground max-md:text-ui-11">
                           {task.status === "done"
                             ? "Completed"
                             : task.status === "later"
@@ -116,10 +121,16 @@ export function ExecutionWorkbench({ selectedId, onSelect }: ExecutionWorkbenchP
                                   : "At your own pace"}
                         </span>
                       </button>
-                      <ChevronDown className="execution-expand-icon" aria-hidden="true" />
+                      <ChevronDown
+                        className="size-[15px] shrink-0 text-muted-foreground group-data-[expanded=true]/flow:rotate-180"
+                        aria-hidden="true"
+                      />
                     </div>
                     {expanded && (
-                      <div className="execution-inline-detail" id={`detail-${task.id}`}>
+                      <div
+                        className="pt-px-6 pr-px-22 pb-px-24 pl-px-55 max-md:px-px-18 max-md:pt-px-4 max-md:pb-px-20"
+                        id={`detail-${task.id}`}
+                      >
                         <TaskDetail task={task} onAction={() => onSelect("")} />
                       </div>
                     )}
@@ -129,7 +140,7 @@ export function ExecutionWorkbench({ selectedId, onSelect }: ExecutionWorkbenchP
             {section.id === "focus" &&
               replies.slice(0, 2).map((conversation) => (
                 <div
-                  className="execution-flow-card"
+                  className="group/flow overflow-hidden rounded-ui-16 border border-border bg-muted data-[kind=focus]:bg-activity-focus data-[kind=routine]:bg-activity-routine data-[kind=reply]:bg-activity-reply data-[kind=weight]:bg-activity-weight data-[kind=optional]:bg-activity-optional data-[expanded=true]:border-activity-expanded data-[status=done]:bg-background!"
                   key={conversation.id}
                   data-kind="reply"
                   data-status={
@@ -139,23 +150,28 @@ export function ExecutionWorkbench({ selectedId, onSelect }: ExecutionWorkbenchP
                       : statuses[conversation.id]
                   }
                 >
-                  <div className="execution-flow-row">
-                    <span className="execution-flow-icon">
+                  <div className="flex items-center gap-px-13 px-px-18 py-px-16 max-md:gap-px-10 max-md:px-px-14 max-md:py-px-15">
+                    <span className="flex h-[28px] basis-[24px] shrink-0 grow-0 items-center justify-center text-muted-foreground group-data-[status=done]/flow:text-success">
                       {statuses[conversation.id] === "sent" ||
                       statuses[conversation.id] === "dismissed" ? (
-                        <Check />
+                        <Check className="size-[21px]" strokeWidth={1.5} />
                       ) : (
-                        <MessageCircle />
+                        <MessageCircle className="size-[21px]" strokeWidth={1.5} />
                       )}
                     </span>
                     <Link
                       to="/support"
                       search={{ conversation: conversation.id, view: "all" }}
-                      className="execution-flow-open"
+                      className="flex min-w-0 flex-1 cursor-pointer flex-col gap-px-5 rounded-ui-3 text-left focus-visible:outline-2 focus-visible:outline-ring focus-visible:outline-offset-4"
                       aria-label={`Open conversation with ${conversation.name}`}
                     >
-                      <span className="execution-flow-title">Reply to {conversation.name}</span>
-                      <span className="execution-flow-description">
+                      <span
+                        data-testid="execution-flow-title"
+                        className="text-ui-14 font-medium leading-normal group-data-[status=done]/flow:text-muted-foreground max-md:text-ui-13"
+                      >
+                        Reply to {conversation.name}
+                      </span>
+                      <span className="text-ui-12 leading-normal text-muted-foreground max-md:text-ui-11">
                         {statuses[conversation.id] === "sent"
                           ? "Reply recorded · Preview only"
                           : statuses[conversation.id] === "dismissed"
@@ -167,35 +183,55 @@ export function ExecutionWorkbench({ selectedId, onSelect }: ExecutionWorkbenchP
                                 : conversation.subject}
                       </span>
                     </Link>
-                    <ArrowUpRight className="execution-expand-icon" aria-hidden="true" />
+                    <ArrowUpRight
+                      className="size-[15px] shrink-0 text-muted-foreground group-data-[expanded=true]/flow:rotate-180"
+                      aria-hidden="true"
+                    />
                   </div>
                 </div>
               ))}
             {section.id === "routine" && (
               <div
-                className="execution-flow-card"
+                className="group/flow overflow-hidden rounded-ui-16 border border-border bg-muted data-[kind=focus]:bg-activity-focus data-[kind=routine]:bg-activity-routine data-[kind=reply]:bg-activity-reply data-[kind=weight]:bg-activity-weight data-[kind=optional]:bg-activity-optional data-[expanded=true]:border-activity-expanded data-[status=done]:bg-background!"
                 data-expanded={selectedId === "weight"}
                 data-kind="weight"
                 data-status={weightEntry ? "done" : "todo"}
               >
-                <div className="execution-flow-row">
-                  <span className="execution-flow-icon">{weightEntry ? <Check /> : <Scale />}</span>
+                <div className="flex items-center gap-px-13 px-px-18 py-px-16 max-md:gap-px-10 max-md:px-px-14 max-md:py-px-15">
+                  <span className="flex h-[28px] basis-[24px] shrink-0 grow-0 items-center justify-center text-muted-foreground group-data-[status=done]/flow:text-success">
+                    {weightEntry ? (
+                      <Check className="size-[21px]" strokeWidth={1.5} />
+                    ) : (
+                      <Scale className="size-[21px]" strokeWidth={1.5} />
+                    )}
+                  </span>
                   <button
                     type="button"
-                    className="execution-flow-open"
+                    className="flex min-w-0 flex-1 cursor-pointer flex-col gap-px-5 rounded-ui-3 text-left focus-visible:outline-2 focus-visible:outline-ring focus-visible:outline-offset-4"
                     aria-expanded={selectedId === "weight"}
                     aria-controls="detail-weight"
                     onClick={() => toggle("weight")}
                   >
-                    <span className="execution-flow-title">Record weight</span>
-                    <span className="execution-flow-description">
+                    <span
+                      data-testid="execution-flow-title"
+                      className="text-ui-14 font-medium leading-normal group-data-[status=done]/flow:text-muted-foreground max-md:text-ui-13"
+                    >
+                      Record weight
+                    </span>
+                    <span className="text-ui-12 leading-normal text-muted-foreground max-md:text-ui-11">
                       {weightEntry ? `Recorded · ${weightEntry.text} kg` : "A quick check-in"}
                     </span>
                   </button>
-                  <ChevronDown className="execution-expand-icon" aria-hidden="true" />
+                  <ChevronDown
+                    className="size-[15px] shrink-0 text-muted-foreground group-data-[expanded=true]/flow:rotate-180"
+                    aria-hidden="true"
+                  />
                 </div>
                 {selectedId === "weight" && (
-                  <div className="execution-inline-detail" id="detail-weight">
+                  <div
+                    className="pt-px-6 pr-px-22 pb-px-24 pl-px-55 max-md:px-px-18 max-md:pt-px-4 max-md:pb-px-20"
+                    id="detail-weight"
+                  >
                     <WeightDetail
                       key={weightEntry?.id ?? "new"}
                       entry={weightEntry}
@@ -208,7 +244,9 @@ export function ExecutionWorkbench({ selectedId, onSelect }: ExecutionWorkbenchP
             {!tasks.some((task) => task.section === section.id && task.status === "todo") &&
               (section.id !== "focus" || !replies.length) &&
               section.id !== "routine" && (
-                <p className="execution-flow-empty">A little breathing room.</p>
+                <p className="py-px-16 text-ui-12 text-muted-foreground">
+                  A little breathing room.
+                </p>
               )}
           </div>
         </section>
@@ -248,20 +286,20 @@ function TaskDetail({ task, onAction }: { task: Task; onAction: () => void }) {
   }
   return (
     <>
-      <div className="execution-detail-symbol">
+      <div className="hidden">
         <ListChecks />
       </div>
-      <p className="execution-eyebrow">
+      <p className="hidden">
         {task.section === "routine"
           ? "Your routine"
           : task.section === "optional"
             ? "If there’s room"
             : "One next step"}
       </p>
-      <h2>{task.title}</h2>
+      <h2 className="hidden">{task.title}</h2>
       {steps.length > 0 ? (
         <>
-          <div className="execution-routine-progress">
+          <div className="mt-px-20 mb-px-8 flex justify-between gap-px-12 text-ui-11 text-muted-foreground">
             <span>
               {checked} of {steps.length} steps
             </span>
@@ -273,9 +311,10 @@ function TaskDetail({ task, onAction }: { task: Task; onAction: () => void }) {
                   : "At your pace"}
             </span>
           </div>
-          <div className="execution-step-list">
+          <div className="grid">
             {steps.map((step, index) => (
               <label
+                className="group/step flex cursor-pointer items-center gap-px-12 border-t border-border py-px-14 text-ui-13"
                 key={step}
                 htmlFor={`execution-step-${task.id}-${index}`}
                 data-checked={task.completedSteps?.includes(step) ?? false}
@@ -301,15 +340,19 @@ function TaskDetail({ task, onAction }: { task: Task; onAction: () => void }) {
                     )
                   }
                 />
-                <span className="execution-step-text">{step}</span>
-                <span className="execution-step-number">{String(index + 1).padStart(2, "0")}</span>
+                <span className="flex-1 group-data-[checked=true]/step:text-muted-foreground group-data-[checked=true]/step:line-through">
+                  {step}
+                </span>
+                <span className="text-ui-11 text-muted-foreground tabular-nums">
+                  {String(index + 1).padStart(2, "0")}
+                </span>
               </label>
             ))}
           </div>
         </>
       ) : (
         <>
-          <p className="execution-description">
+          <p className="max-w-[480px] text-ui-13 leading-relaxed-copy text-muted-foreground">
             {task.id === "review"
               ? "Look through the first-time experience. Leave a short note on anything that feels unclear."
               : task.section === "optional"
@@ -317,14 +360,16 @@ function TaskDetail({ task, onAction }: { task: Task; onAction: () => void }) {
                 : "Choose a small first step. You can leave a note if you need to pause."}
           </p>
           {task.id === "review" && (
-            <div className="execution-next-step">
-              <span>Start here</span>
-              <p>Open the materials and look at the first screen.</p>
+            <div className="mt-px-14 border-t border-border py-px-14">
+              <span className="text-ui-11 text-muted-foreground">Start here</span>
+              <p className="mt-px-5 text-ui-13 leading-loose-copy">
+                Open the materials and look at the first screen.
+              </p>
             </div>
           )}
         </>
       )}
-      <div className="execution-detail-actions">
+      <div className="mt-px-20 flex flex-wrap gap-px-8">
         {task.status !== "done" && (
           <Button
             onClick={() => setStatus("done")}
@@ -344,9 +389,13 @@ function TaskDetail({ task, onAction }: { task: Task; onAction: () => void }) {
           </Button>
         )}
       </div>
-      <section className="execution-resume-note" aria-label="Resume note">
-        <label htmlFor={`resume-${task.id}`}>A place to pick up</label>
+      <section className="mt-px-25 border-t border-border pt-px-20" aria-label="Resume note">
+        <label className="mb-px-10 block text-ui-12 font-medium" htmlFor={`resume-${task.id}`}>
+          A place to pick up
+        </label>
         <Textarea
+          variant="note"
+          className="min-h-[74px]"
           id={`resume-${task.id}`}
           placeholder="Where did you leave off?"
           value={note}
@@ -355,8 +404,10 @@ function TaskDetail({ task, onAction }: { task: Task; onAction: () => void }) {
             setNotice("");
           }}
         />
-        <div className="execution-note-footer">
-          <span role="status">{notice || "Leave a sentence for your future self."}</span>
+        <div className="mt-px-8 flex items-center justify-between gap-px-10 max-md:items-start">
+          <span className="text-ui-11 text-muted-foreground" role="status">
+            {notice || "Leave a sentence for your future self."}
+          </span>
           <Button
             variant="ghost"
             size="sm"
@@ -381,8 +432,8 @@ function TaskDetail({ task, onAction }: { task: Task; onAction: () => void }) {
           </Button>
         </div>
       </section>
-      <div className="execution-order">
-        <span>Order in your list</span>
+      <div className="mt-px-20 flex items-center justify-end gap-px-6 text-muted-foreground">
+        <span className="mr-auto text-ui-11">Order in your list</span>
         <Button
           variant="ghost"
           size="icon-sm"
@@ -410,14 +461,16 @@ function WeightDetail({ entry, onAction }: { entry?: JournalEntry; onAction: () 
   const [error, setError] = useState("");
   return (
     <>
-      <div className="execution-detail-symbol">
+      <div className="hidden">
         <Scale />
       </div>
-      <p className="execution-eyebrow">A quick check-in</p>
-      <h2>Record your weight</h2>
-      <p className="execution-description">Just a measurement. No target to hit.</p>
+      <p className="hidden">A quick check-in</p>
+      <h2 className="hidden">Record your weight</h2>
+      <p className="max-w-[480px] text-ui-13 leading-relaxed-copy text-muted-foreground">
+        Just a measurement. No target to hit.
+      </p>
       <form
-        className="execution-weight-form"
+        className="mt-px-18 flex flex-wrap items-end gap-px-12"
         onSubmit={(event) => {
           event.preventDefault();
           const value = Number(weight);
@@ -441,9 +494,13 @@ function WeightDetail({ entry, onAction }: { entry?: JournalEntry; onAction: () 
           onAction();
         }}
       >
-        <label htmlFor="execution-weight">Weight</label>
-        <div className="execution-weight-input">
+        <label className="w-full text-ui-12" htmlFor="execution-weight">
+          Weight
+        </label>
+        <div className="flex max-w-[180px] items-center gap-px-10">
           <Input
+            variant="measurement"
+            className="h-[42px]"
             id="execution-weight"
             inputMode="decimal"
             type="number"
@@ -459,10 +516,14 @@ function WeightDetail({ entry, onAction }: { entry?: JournalEntry; onAction: () 
               setError("");
             }}
           />
-          <span>kg</span>
+          <span className="text-ui-13 text-muted-foreground">kg</span>
         </div>
         {error && (
-          <p id="execution-weight-error" role="alert">
+          <p
+            className="w-full text-ui-12 text-destructive"
+            id="execution-weight-error"
+            role="alert"
+          >
             {error}
           </p>
         )}
@@ -471,12 +532,14 @@ function WeightDetail({ entry, onAction }: { entry?: JournalEntry; onAction: () 
         </Button>
       </form>
       {entry && (
-        <div className="execution-next-step">
-          <span>Recorded</span>
-          <p>{entry.text} kg</p>
+        <div className="mt-px-14 border-t border-border py-px-14">
+          <span className="text-ui-11 text-muted-foreground">Recorded</span>
+          <p className="mt-px-5 text-ui-13 leading-loose-copy">{entry.text} kg</p>
         </div>
       )}
-      <p className="execution-source-note">Your measurement also appears in Journal.</p>
+      <p className="mt-px-20 text-ui-11 text-muted-foreground">
+        Your measurement also appears in Journal.
+      </p>
     </>
   );
 }

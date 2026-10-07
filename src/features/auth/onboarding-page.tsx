@@ -46,17 +46,22 @@ export function OnboardingPage() {
 
   return (
     <AuthFrame>
-      <p className="auth-step">{step} of 2</p>
+      <p className="mb-px-16 text-ui-12 text-muted-foreground">{step} of 2</p>
       {step === 1 ? (
         <>
-          <header className="auth-heading">
-            <h1>A little context, to start.</h1>
-            <p>Your day, conversations, and reading, together in one place.</p>
+          <header className="mb-px-28">
+            <h1 className="text-ui-27 font-book tracking-tight leading-tight wrap-anywhere">
+              A little context, to start.
+            </h1>
+            <p className="mt-px-12 text-ui-14 leading-cozy text-muted-foreground">
+              Your day, conversations, and reading, together in one place.
+            </p>
           </header>
-          <form className="auth-form" onSubmit={next}>
-            <div className="auth-field">
+          <form className="grid gap-px-20" onSubmit={next}>
+            <div className="grid gap-px-9">
               <Label htmlFor="displayName">What should we call you?</Label>
               <Input
+                className="h-[40px]"
                 id="displayName"
                 name="displayName"
                 value={name}
@@ -69,7 +74,7 @@ export function OnboardingPage() {
             </div>
             <Button
               type="submit"
-              className="auth-submit"
+              className="mt-[4px] w-full justify-between"
               size="lg"
               disabled={pending || !name.trim()}
             >
@@ -80,38 +85,57 @@ export function OnboardingPage() {
         </>
       ) : (
         <>
-          <header className="auth-heading">
-            <h1>Start with today.</h1>
-            <p>You can take it one thing at a time.</p>
+          <header className="mb-px-28">
+            <h1 className="text-ui-27 font-book tracking-tight leading-tight wrap-anywhere">
+              Start with today.
+            </h1>
+            <p className="mt-px-12 text-ui-14 leading-cozy text-muted-foreground">
+              You can take it one thing at a time.
+            </p>
           </header>
-          <ul className="auth-overview">
-            <li>
-              <House aria-hidden="true" />
+          <ul className="m-0 mb-px-28 grid list-none gap-px-24 p-0">
+            <li className="flex items-start gap-px-14">
+              <House
+                className="mt-px-2 size-[18px] shrink-0 text-muted-foreground"
+                aria-hidden="true"
+              />
               <div>
-                <strong>A place to begin</strong>
-                <p>A brief and flexible tasks help you find your next step.</p>
+                <strong className="text-ui-14 font-medium">A place to begin</strong>
+                <p className="mt-[4px] text-ui-13 leading-cozy text-muted-foreground">
+                  A brief and flexible tasks help you find your next step.
+                </p>
               </div>
             </li>
-            <li>
-              <MessagesSquare aria-hidden="true" />
+            <li className="flex items-start gap-px-14">
+              <MessagesSquare
+                className="mt-px-2 size-[18px] shrink-0 text-muted-foreground"
+                aria-hidden="true"
+              />
               <div>
-                <strong>Room for the everyday</strong>
-                <p>Keep conversations and quick notes close at hand.</p>
+                <strong className="text-ui-14 font-medium">Room for the everyday</strong>
+                <p className="mt-[4px] text-ui-13 leading-cozy text-muted-foreground">
+                  Keep conversations and quick notes close at hand.
+                </p>
               </div>
             </li>
-            <li>
-              <BookOpen aria-hidden="true" />
+            <li className="flex items-start gap-px-14">
+              <BookOpen
+                className="mt-px-2 size-[18px] shrink-0 text-muted-foreground"
+                aria-hidden="true"
+              />
               <div>
-                <strong>Follow your curiosity</strong>
-                <p>Explore reading and research alongside your day.</p>
+                <strong className="text-ui-14 font-medium">Follow your curiosity</strong>
+                <p className="mt-[4px] text-ui-13 leading-cozy text-muted-foreground">
+                  Explore reading and research alongside your day.
+                </p>
               </div>
             </li>
           </ul>
-          <p className="auth-prototype">
+          <p className="border-t border-border pt-px-20 text-ui-12 leading-cozy text-muted-foreground">
             Home, contacts, notes, reading, and vitals currently use sample data. You can add
             connections from your profile menu whenever you’re ready.
           </p>
-          <div className="auth-actions">
+          <div className="mt-px-26 flex items-center justify-between gap-px-12">
             <Button variant="ghost" onClick={() => setStep(1)} disabled={pending}>
               Back
             </Button>
@@ -123,12 +147,12 @@ export function OnboardingPage() {
         </>
       )}
       {error && (
-        <p className="auth-error" role="alert">
+        <p className="text-ui-13 leading-cozy wrap-anywhere text-destructive" role="alert">
           {error}
         </p>
       )}
-      <footer className="auth-footer">
-        <span>{auth.owner?.email}</span>
+      <footer className="mt-px-32 flex items-center justify-between gap-px-12 text-ui-12 text-muted-foreground">
+        <span className="min-w-0 wrap-anywhere">{auth.owner?.email}</span>
         <Button variant="ghost" size="sm" onClick={signOut} disabled={pending}>
           Sign out
         </Button>

@@ -234,7 +234,7 @@ test("rejects invalid input without changing the active view", async ({ page }) 
     expect((await executeTool(page, "set_deck", { title: "変更しない", columns })).isError).toBe(
       true,
     );
-    await expect(page.locator(".deck-column h2")).toHaveText(["残す観点"]);
+    await expect(page.locator("[data-testid='deck-column'] h2")).toHaveText(["残す観点"]);
   }
   expect(savedCount()).toEqual({ count: 0 });
 });

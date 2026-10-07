@@ -1,6 +1,8 @@
 import { useQuery } from "@tanstack/react-query";
 import { CalendarPlus, Check, ChevronDown, CornerDownRight, Send } from "lucide-react";
 import { useId, useState } from "react";
+import { Avatar, AvatarFallback } from "#/components/ui/avatar";
+import { Bubble, BubbleContent } from "#/components/ui/bubble";
 import { Button } from "#/components/ui/button";
 import {
   Dialog,
@@ -11,7 +13,22 @@ import {
   DialogTitle,
 } from "#/components/ui/dialog";
 import { NativeSelect, NativeSelectOption } from "#/components/ui/native-select";
-import { Textarea } from "#/components/ui/textarea";
+import {
+  InputGroup,
+  InputGroupAddon,
+  InputGroupButton,
+  InputGroupText,
+  InputGroupTextarea,
+} from "#/components/ui/input-group";
+import { Message, MessageContent, MessageHeader } from "#/components/ui/message";
+import {
+  MessageScroller,
+  MessageScrollerButton,
+  MessageScrollerContent,
+  MessageScrollerItem,
+  MessageScrollerProvider,
+  MessageScrollerViewport,
+} from "#/components/ui/message-scroller";
 import type { Conversation } from "./mock-conversations";
 import { reviewReply } from "./server-functions";
 
@@ -39,41 +56,71 @@ export function ConversationDetail({
   });
   return (
     <article
-      className="conversation-workbench"
+      className="grid min-h-[calc(100dvh-64px)] min-w-0 grid-cols-1 @min-[780px]:h-[calc(100dvh-64px)] @min-[780px]:min-h-0 @min-[780px]:grid-cols-[minmax(0,1fr)_250px]"
       aria-label={`Conversation with ${conversation.name}`}
     >
-      <div className="conversation-thread">
-        <section className="conversation-messages" aria-label="Original messages">
-          {conversation.messages.map((message) => (
-            <div
-              key={message.id}
-              id={`${instanceId}-source-${message.id}`}
-              className="conversation-message"
-              data-direction={message.direction}
-              tabIndex={-1}
-            >
-              <p className="conversation-message-meta">
-                {message.direction === "in" ? conversation.name.split(" ")[0] : "You"}
-                <span>
-                  {message.channel} · {message.time}
-                </span>
-              </p>
-              <div className="conversation-bubble">{message.text}</div>
-            </div>
-          ))}
+      <div className="flex min-w-0 flex-col @min-[780px]:min-h-0">
+        <section
+          className="flex h-[45dvh] min-h-[220px] flex-col @min-[780px]:h-auto @min-[780px]:min-h-0 @min-[780px]:flex-1"
+          aria-label="Original messages"
+        >
+          <MessageScrollerProvider>
+            <MessageScroller className="flex-1">
+              <MessageScrollerViewport>
+                <MessageScrollerContent className="mx-auto w-full max-w-2xl gap-5 p-4">
+                  {conversation.messages.map((message) => (
+                    <MessageScrollerItem key={message.id} messageId={message.id}>
+                      <Message
+                        id={`${instanceId}-source-${message.id}`}
+                        align={message.direction === "out" ? "end" : "start"}
+                        tabIndex={-1}
+                      >
+                        <MessageContent>
+                          <MessageHeader>
+                            {message.direction === "in" ? conversation.name.split(" ")[0] : "You"}
+                            <span className="ml-2 font-normal">
+                              {message.channel} · {message.time}
+                            </span>
+                          </MessageHeader>
+                          <Bubble
+                            align={message.direction === "out" ? "end" : "start"}
+                            variant={message.direction === "out" ? "muted" : "outline"}
+                          >
+                            <BubbleContent>
+                              <p className="whitespace-pre-wrap">{message.text}</p>
+                            </BubbleContent>
+                          </Bubble>
+                        </MessageContent>
+                      </Message>
+                    </MessageScrollerItem>
+                  ))}
+                </MessageScrollerContent>
+              </MessageScrollerViewport>
+              <MessageScrollerButton />
+            </MessageScroller>
+          </MessageScrollerProvider>
         </section>
-        <section aria-label="Compose a reply" className="conversation-compose">
-          <div className="conversation-compose-heading">
-            <label htmlFor={`${instanceId}-reply`}>Reply</label>
-            <span>To {conversation.name.split(" ")[0]}</span>
+        <section
+          aria-label="Compose a reply"
+          className="mx-auto grid w-full max-w-2xl auto-rows-max content-start gap-3 p-4 @min-[780px]:max-h-[65%] @min-[780px]:shrink-0 @min-[780px]:overflow-y-auto"
+        >
+          <div className="flex items-center justify-between text-ui-12">
+            <label className="font-book" htmlFor={`${instanceId}-reply`}>
+              Reply
+            </label>
+            <span className="text-ui-11 text-muted-foreground">
+              To {conversation.name.split(" ")[0]}
+            </span>
           </div>
-          <details className="conversation-suggestions">
-            <summary>
-              Reply suggestions <ChevronDown aria-hidden="true" />
+          <details data-testid="conversation-suggestions">
+            <summary className="flex cursor-pointer list-none items-center gap-px-6 text-ui-11 text-muted-foreground focus-visible:outline-2 focus-visible:outline-ring focus-visible:outline-offset-4">
+              Reply suggestions <ChevronDown className="size-[12px]" aria-hidden="true" />
             </summary>
-            <div className="conversation-draft-options" aria-label="Reply suggestions">
+            <div className="grid gap-px-6 pt-px-10" aria-label="Reply suggestions">
               {conversation.drafts.map((option) => (
-                <button
+                <Button
+                  variant={tone === option.label ? "secondary" : "outline"}
+                  className="h-auto w-full justify-start"
                   key={option.label}
                   type="button"
                   aria-pressed={tone === option.label}
@@ -82,14 +129,17 @@ export function ConversationDetail({
                     setTone(option.label);
                   }}
                 >
-                  <span>{option.label}</span>
-                  <p>{option.text}</p>
-                </button>
+                  <span className="block text-left whitespace-normal">
+                    <span className="block text-xs text-muted-foreground">{option.label}</span>
+                    <span className="mt-1 block font-normal leading-relaxed">{option.text}</span>
+                  </span>
+                </Button>
               ))}
             </div>
           </details>
-          <div className="conversation-editor">
-            <Textarea
+          <InputGroup>
+            <InputGroupTextarea
+              className="min-h-[100px] max-h-[240px]"
               id={`${instanceId}-reply`}
               value={draft}
               onChange={(event) => {
@@ -97,22 +147,28 @@ export function ConversationDetail({
                 setTone("");
               }}
             />
-            <div className="conversation-compose-footer">
-              <span>Draft · {conversation.replyChannel}</span>
-              <Button size="sm" disabled={!draft.trim()} onClick={() => setReview("send")}>
+            <InputGroupAddon align="block-end">
+              <InputGroupText>Draft · {conversation.replyChannel}</InputGroupText>
+              <InputGroupButton
+                className="ml-auto"
+                size="sm"
+                variant="default"
+                disabled={!draft.trim()}
+                onClick={() => setReview("send")}
+              >
                 <Send />
                 Review reply
-              </Button>
-            </div>
-          </div>
+              </InputGroupButton>
+            </InputGroupAddon>
+          </InputGroup>
           {conversation.scheduleOptions.length > 0 && (
-            <details className="conversation-scheduling">
-              <summary>
-                <CalendarPlus aria-hidden="true" />
+            <details data-testid="conversation-scheduling">
+              <summary className="flex cursor-pointer list-none items-center gap-px-7 text-ui-11 text-muted-foreground focus-visible:outline-2 focus-visible:outline-ring focus-visible:-outline-offset-2">
+                <CalendarPlus className="size-[13px]" aria-hidden="true" />
                 Suggest a time
-                <ChevronDown aria-hidden="true" />
+                <ChevronDown className="size-[13px]" aria-hidden="true" />
               </summary>
-              <div>
+              <div className="mt-px-10 flex flex-wrap gap-px-6">
                 <NativeSelect
                   aria-label="Suggested times"
                   value={slot}
@@ -143,7 +199,7 @@ export function ConversationDetail({
                   aria-label="Preview calendar hold"
                   onClick={() => setReview("schedule")}
                 >
-                  <CalendarPlus />
+                  <CalendarPlus className="size-[13px]" />
                 </Button>
               </div>
             </details>
@@ -154,7 +210,7 @@ export function ConversationDetail({
               {scheduled} held in this preview
             </p>
           )}
-          <div className="conversation-triage">
+          <div className="mt-px-2 flex flex-wrap gap-px-4">
             <Button
               variant="ghost"
               size="sm"
@@ -172,47 +228,59 @@ export function ConversationDetail({
           </div>
         </section>
       </div>
-      <aside className="conversation-context" aria-label="Person and conversation context">
-        <details open className="conversation-context-details">
-          <summary>
+      <aside
+        className="min-w-0 border-t border-border bg-sidebar p-px-22 @min-[780px]:overflow-y-auto @min-[780px]:border-t-0 @min-[780px]:border-l"
+        aria-label="Person and conversation context"
+      >
+        <details open>
+          <summary className="flex cursor-pointer list-none items-center justify-between text-ui-11 font-medium focus-visible:outline-2 focus-visible:outline-ring focus-visible:-outline-offset-2">
             Context
-            <ChevronDown aria-hidden="true" />
+            <ChevronDown className="size-3.5" aria-hidden="true" />
           </summary>
-          <div className="conversation-person">
-            <span className="support-avatar" aria-hidden="true">
-              {conversation.name
-                .split(" ")
-                .map((part) => part[0])
-                .join("")}
-            </span>
-            <h3>{conversation.name}</h3>
-            <p>{conversation.role}</p>
+          <div className="grid justify-items-start py-px-20">
+            <Avatar size="lg" aria-hidden="true">
+              <AvatarFallback>
+                {conversation.name
+                  .split(" ")
+                  .map((part) => part[0])
+                  .join("")}
+              </AvatarFallback>
+            </Avatar>
+            <h3 className="mt-px-12 text-ui-13 font-book">{conversation.name}</h3>
+            <p className="mt-px-4 text-ui-11 text-muted-foreground">{conversation.role}</p>
           </div>
-          <header className="conversation-summary">
-            <span className="conversation-eyebrow">Summary</span>
-            <h2>{conversation.subject}</h2>
-            <p>{conversation.summary}</p>
+          <header className="border-t border-border py-px-20">
+            <span className="text-ui-10 text-muted-foreground">Summary</span>
+            <h2 className="mt-px-7 text-ui-12 font-book leading-normal tracking-subtitle">
+              {conversation.subject}
+            </h2>
+            <p className="mt-px-8 max-w-[64ch] text-ui-12 leading-relaxed-copy text-muted-foreground">
+              {conversation.summary}
+            </p>
           </header>
-          <section className="conversation-next">
-            <h3>
-              <CornerDownRight aria-hidden="true" />
+          <section className="border-y border-border py-px-20">
+            <h3 className="flex items-center gap-px-6 text-ui-11 font-book">
+              <CornerDownRight className="size-[13px]" aria-hidden="true" />
               Next step
             </h3>
-            <p>{conversation.nextStep}</p>
+            <p className="mt-px-12 text-ui-12 leading-relaxed-copy">{conversation.nextStep}</p>
             {conversation.deadline && (
-              <div className="conversation-deadline">
-                <span>Requested by</span>
-                <strong>{conversation.deadline}</strong>
+              <div className="mt-px-18 grid gap-px-5 text-ui-11">
+                <span className="text-muted-foreground">Requested by</span>
+                <strong className="font-medium">{conversation.deadline}</strong>
               </div>
             )}
           </section>
-          <section className="conversation-facts">
-            <h3>From the conversation</h3>
-            <ul>
+          <section className="pt-px-22">
+            <h3 className="flex items-center gap-px-6 text-ui-11 font-book">
+              From the conversation
+            </h3>
+            <ul className="grid gap-px-18 pt-px-16">
               {conversation.facts.map((fact) => (
                 <li key={fact.sourceId}>
-                  <p>{fact.text}</p>
+                  <p className="text-ui-11 leading-relaxed-copy">{fact.text}</p>
                   <a
+                    className="mt-px-5 inline-block text-ui-10 text-muted-foreground underline underline-offset-3"
                     href={`#${instanceId}-source-${fact.sourceId}`}
                     onClick={(event) => {
                       event.preventDefault();
@@ -262,27 +330,35 @@ export function ConversationDetail({
             </p>
           </div>
           {review === "send" && (
-            <section className="conversation-evaluation" aria-label="Jev review" aria-live="polite">
-              <h3>Jev review</h3>
+            <section
+              className="border-t border-border pt-px-16 text-ui-12"
+              aria-label="Jev review"
+              aria-live="polite"
+            >
+              <h3 className="mb-px-12 font-semibold">Jev review</h3>
               {evaluation.isPending ? (
-                <p role="status">Checking this reply against the conversation…</p>
+                <p className="mt-px-12 text-ui-11 leading-cozy text-muted-foreground" role="status">
+                  Checking this reply against the conversation…
+                </p>
               ) : evaluation.data?.status === "reviewed" ? (
                 <>
-                  <ul>
+                  <ul className="grid gap-px-10">
                     {evaluation.data.checks.map((check) => (
-                      <li key={check.id}>
+                      <li className="flex justify-between gap-px-16" key={check.id}>
                         <span>{check.label}</span>
-                        <strong>{Math.round(check.probability * 100)}%</strong>
+                        <strong className="font-medium tabular-nums">
+                          {Math.round(check.probability * 100)}%
+                        </strong>
                       </li>
                     ))}
                   </ul>
-                  <p>
+                  <p className="mt-px-12 text-ui-11 leading-cozy text-muted-foreground">
                     Estimated likelihood that each criterion is met. Review the wording yourself.
                   </p>
                 </>
               ) : (
                 <div>
-                  <p>
+                  <p className="mt-px-12 text-ui-11 leading-cozy text-muted-foreground">
                     {evaluation.data?.status === "unavailable"
                       ? evaluation.data.message
                       : "Review unavailable. Please try again."}

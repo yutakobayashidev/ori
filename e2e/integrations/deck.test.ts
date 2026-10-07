@@ -74,18 +74,18 @@ test("creates, switches, renames and deletes persisted deck profiles", async ({ 
   await page.getByRole("button", { name: "Create deck", exact: true }).click();
   await page.getByLabel("New deck name").fill("別の調査");
   await page.getByRole("button", { name: "Create", exact: true }).click();
-  await expect(page.locator(".deck-column")).toHaveCount(0);
+  await expect(page.locator("[data-testid='deck-column']")).toHaveCount(0);
   await addColumn(page, "別の観点", "second-deck", "alternate");
   await showDeckManagement(page);
   await page.getByLabel("Deck profile", { exact: true }).selectOption({ label: "最初の調査" });
   await closeMobileSidebar(page);
-  await expect(page.locator(".deck-column h2")).toHaveText(["最初の観点"]);
+  await expect(page.locator("[data-testid='deck-column'] h2")).toHaveText(["最初の観点"]);
   await page.reload();
   await expect(page.getByRole("heading", { level: 1 })).toHaveText("最初の調査");
   await showDeckManagement(page);
   await page.getByLabel("Deck profile", { exact: true }).selectOption({ label: "別の調査" });
   await closeMobileSidebar(page);
-  await expect(page.locator(".deck-column h2")).toHaveText(["別の観点"]);
+  await expect(page.locator("[data-testid='deck-column'] h2")).toHaveText(["別の観点"]);
   await showDeckManagement(page);
   await page.getByRole("button", { name: "Delete deck", exact: true }).click();
   await page.getByRole("button", { name: "Delete", exact: true }).click();
@@ -108,11 +108,17 @@ test("reads user and list timelines within columns and reorders, deletes and res
   await expect(list.getByText("list page 2")).toBeVisible();
   await list.getByRole("button", { name: "Actions for リストの投稿" }).click();
   await page.getByRole("menuitem", { name: "Move リストの投稿 left" }).click();
-  await expect(page.locator(".deck-column h2")).toHaveText(["リストの投稿", "アカウント"]);
+  await expect(page.locator("[data-testid='deck-column'] h2")).toHaveText([
+    "リストの投稿",
+    "アカウント",
+  ]);
   await list.getByRole("button", { name: "Actions for リストの投稿" }).click();
   await page.getByRole("menuitem", { name: "Delete リストの投稿" }).click();
   await page.getByRole("button", { name: "Undo" }).click();
-  await expect(page.locator(".deck-column h2")).toHaveText(["リストの投稿", "アカウント"]);
+  await expect(page.locator("[data-testid='deck-column'] h2")).toHaveText([
+    "リストの投稿",
+    "アカウント",
+  ]);
   await page.reload();
   await expect(user.getByText("alternate profile page 1")).toBeVisible();
   await expect(list.getByText("list page 1")).toBeVisible();
@@ -149,7 +155,7 @@ test("keeps the deck and editor accessible within narrow viewports", async ({
     expect(await page.evaluate(() => document.documentElement.scrollHeight <= innerHeight)).toBe(
       true,
     );
-    const board = await page.locator(".deck-board").boundingBox();
+    const board = await page.locator("[data-testid='deck-board']").boundingBox();
     expect(board).not.toBeNull();
     expect((board?.y ?? 0) + (board?.height ?? 0)).toBeLessThanOrEqual(901);
   }
@@ -184,7 +190,7 @@ test("closes the column editor with Escape and restores focus without applying e
   await page.keyboard.press("Escape");
   await expect(page.getByRole("dialog", { name: "Add column", exact: true })).toHaveCount(0);
   await expect(opener).toBeFocused();
-  await expect(page.locator(".deck-column")).toHaveCount(0);
+  await expect(page.locator("[data-testid='deck-column']")).toHaveCount(0);
   await opener.click();
   await expect(page.getByLabel("Column name", { exact: true })).toHaveValue("");
 });

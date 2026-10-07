@@ -58,10 +58,10 @@ export function JournalPage() {
 
   return (
     <TooltipProvider delay={500}>
-      <SidebarProvider className="journal-workspace">
+      <SidebarProvider className="h-dvh min-h-0 overflow-hidden">
         <WorkspaceNavigation />
-        <SidebarInset className="journal-main">
-          <header className="journal-header">
+        <SidebarInset className="min-w-0 overflow-hidden">
+          <header className="flex min-h-[68px] items-center justify-between gap-px-12 border-b border-border px-px-28 py-px-16 max-[600px]:flex-wrap max-[600px]:p-px-14">
             <h1 className="text-base font-semibold">Journal</h1>
             <Button
               variant="outline"
@@ -74,8 +74,8 @@ export function JournalPage() {
               Summarize entries
             </Button>
           </header>
-          <div className="journal-scroll">
-            <div className="journal-column">
+          <div className="min-h-0 flex-1 overflow-y-auto">
+            <div className="mx-auto w-full max-w-[760px] px-px-28 py-px-40 max-[600px]:px-px-14 max-[600px]:py-px-24">
               <EntryEditor
                 draft={draft}
                 onChange={setDraft}
@@ -85,15 +85,19 @@ export function JournalPage() {
                 }}
                 submitLabel="Save entry"
               />
-              <section className="journal-entries" aria-label="Journal entries">
-                {entries.length === 0 && <p className="journal-empty">No entries yet</p>}
+              <section className="mt-px-36" aria-label="Journal entries">
+                {entries.length === 0 && (
+                  <p className="py-px-40 text-center text-ui-14 text-muted-foreground">
+                    No entries yet
+                  </p>
+                )}
                 {entries.map((entry) => (
                   <article
                     key={entry.id}
-                    className="journal-entry"
+                    className="border-t border-border py-px-20"
                     aria-label={`${entryKindLabels[entry.kind]} entry`}
                   >
-                    <div className="journal-entry-heading">
+                    <div className="flex min-h-[28px] items-center gap-px-10">
                       <span className="text-sm font-medium">{entryKindLabels[entry.kind]}</span>
                       {superseded.has(entry.id) && (
                         <span className="text-xs text-muted-foreground">Original</span>
@@ -112,7 +116,7 @@ export function JournalPage() {
                         </Button>
                       )}
                     </div>
-                    <p className="journal-entry-text">
+                    <p className="my-px-12 text-ui-14 leading-relaxed-copy whitespace-pre-wrap wrap-anywhere">
                       {entry.text}
                       {entry.kind === "体重" ? " kg" : ""}
                     </p>
@@ -151,10 +155,15 @@ export function JournalPage() {
           <p className="text-sm text-muted-foreground">
             Select the entries to include. Nothing is sent externally.
           </p>
-          <div className="journal-review-list">
+          <div className="flex max-h-[220px] flex-col gap-px-16 overflow-auto p-px-4">
             {current.map((entry) => (
-              <label key={entry.id} className="journal-review-row" htmlFor={`review-${entry.id}`}>
+              <label
+                key={entry.id}
+                className="flex items-start gap-px-12 wrap-anywhere"
+                htmlFor={`review-${entry.id}`}
+              >
                 <Checkbox
+                  className="mt-[4px]"
                   id={`review-${entry.id}`}
                   checked={selected.has(entry.id)}
                   onCheckedChange={(checked) =>
@@ -180,7 +189,8 @@ export function JournalPage() {
           </div>
           <Textarea
             aria-label="Entry summary"
-            className="journal-summary"
+            variant="summary"
+            className="min-h-[180px] max-h-[280px] overflow-y-auto"
             readOnly
             value={buildSummary(current.filter((entry) => selected.has(entry.id)))}
           />
@@ -207,16 +217,17 @@ function EntryEditor({
     (draft.kind !== "体重" || (Number.isFinite(Number(draft.text)) && Number(draft.text) > 0));
   return (
     <form
-      className="journal-editor"
+      className="flex flex-col gap-px-16"
       onSubmit={(event) => {
         event.preventDefault();
         if (valid) onSubmit();
       }}
     >
-      <fieldset className="journal-kind-switch" aria-label="Entry type">
+      <fieldset className="flex flex-wrap gap-px-4 max-[600px]:gap-0" aria-label="Entry type">
         {kinds.map((kind) => (
           <Button
             key={kind}
+            className="max-[600px]:px-2"
             type="button"
             variant={draft.kind === kind ? "secondary" : "ghost"}
             size="sm"
@@ -242,6 +253,7 @@ function EntryEditor({
         </div>
       ) : (
         <Textarea
+          className="min-h-[112px]"
           aria-label="Entry text"
           placeholder={
             draft.kind === "服薬"
@@ -262,10 +274,14 @@ function EntryEditor({
           onChange={(event) => onChange({ ...draft, source: event.target.value })}
         />
       )}
-      <div className="journal-editor-footer">
-        <label className="journal-date-label" htmlFor={dateId}>
+      <div className="flex items-end justify-between gap-px-12 max-[600px]:flex-col max-[600px]:items-stretch">
+        <label
+          className="flex min-w-0 flex-col gap-px-8 text-ui-12 text-muted-foreground"
+          htmlFor={dateId}
+        >
           When it happened (optional)
           <Input
+            className="max-w-full"
             id={dateId}
             type="datetime-local"
             aria-label="When it happened"
@@ -273,7 +289,7 @@ function EntryEditor({
             onChange={(event) => onChange({ ...draft, occurredAt: event.target.value })}
           />
         </label>
-        <Button type="submit" disabled={!valid}>
+        <Button className="max-[600px]:self-end" type="submit" disabled={!valid}>
           {submitLabel}
         </Button>
       </div>

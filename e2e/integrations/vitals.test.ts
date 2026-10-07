@@ -4,7 +4,7 @@ test("filters body systems and opens lab history", async ({ page, a11y }) => {
   await page.goto("/vitals");
   await page.waitForLoadState("networkidle");
   await expect(page.getByRole("heading", { name: "Body", exact: true })).toBeVisible();
-  const systems = page.locator(".vital-system-card");
+  const systems = page.locator("[data-testid='vital-system-card']");
   await expect(systems).toHaveCount(8);
   await page
     .getByRole("group", { name: "Body systems", exact: true })
@@ -24,11 +24,11 @@ test("filters body systems and opens lab history", async ({ page, a11y }) => {
   await expect(dialog).toBeVisible();
   await dialog.getByRole("button", { name: "Close", exact: true }).last().click();
   await page.getByRole("button", { name: "Lab history", exact: true }).click();
-  await expect(page.locator(".vital-history")).toContainText("Jul 28");
-  await expect(page.locator(".vital-history")).toContainText("93");
+  await expect(page.locator("[data-testid='vital-history']")).toContainText("Jul 28");
+  await expect(page.locator("[data-testid='vital-history']")).toContainText("93");
   await page.reload();
   await page.waitForLoadState("networkidle");
-  await expect(page.locator(".vital-history")).toContainText("Jul 28");
+  await expect(page.locator("[data-testid='vital-history']")).toContainText("Jul 28");
   await page.getByRole("button", { name: "Systems", exact: true }).click();
   await page
     .getByRole("group", { name: "Body systems", exact: true })
@@ -61,7 +61,10 @@ test("explores environment charts and simulated climate controls", async ({ page
   await expect(
     page.getByRole("img", { name: "7D CO₂ simulated environmental readings" }),
   ).toBeVisible();
-  await page.locator(".vital-metric").filter({ hasText: "Room temperature" }).click();
+  await page
+    .locator("[data-testid='vital-metric']")
+    .filter({ hasText: "Room temperature" })
+    .click();
   const dialog = page.getByRole("dialog", { name: "Room temperature" });
   await expect(dialog).toContainText("64.0");
   await page.reload();

@@ -33,7 +33,8 @@ export function ColumnEditor({
 
   return (
     <form
-      className="deck-editor"
+      data-testid="deck-editor"
+      className="m-0 p-0"
       aria-label={column ? "Edit column" : "Add column"}
       onSubmit={async (event) => {
         event.preventDefault();
@@ -54,8 +55,8 @@ export function ColumnEditor({
         await onSave(parsed.data);
       }}
     >
-      <div className="deck-editor-fields">
-        <Label htmlFor={`${formId}-title`}>
+      <div data-testid="deck-editor-fields" className="grid gap-4">
+        <Label className="grid min-w-0 gap-2 text-sm" htmlFor={`${formId}-title`}>
           Column name
           <Input
             id={`${formId}-title`}
@@ -66,7 +67,7 @@ export function ColumnEditor({
             required
           />
         </Label>
-        <Label htmlFor={`${formId}-profile`}>
+        <Label className="grid min-w-0 gap-2 text-sm" htmlFor={`${formId}-profile`}>
           Connection profile
           <NativeSelect
             className="w-full"
@@ -102,13 +103,19 @@ export function ColumnEditor({
         connectionId={validConnection ? connectionId : ""}
         onChange={setSource}
       />
-      <p className="deck-help">This column uses the selected connection profile.</p>
+      <p data-testid="deck-help" className="text-xs leading-normal text-muted-foreground">
+        This column uses the selected connection profile.
+      </p>
       {error && (
-        <p role="alert" className="deck-error">
+        <p
+          role="alert"
+          data-testid="deck-error"
+          className="text-sm leading-body text-destructive wrap-anywhere"
+        >
           {error}
         </p>
       )}
-      <div className="deck-actions">
+      <div data-testid="deck-actions" className="flex flex-wrap items-center gap-2">
         <Button type="submit" disabled={!validConnection}>
           {column ? "Save changes" : "Add and search"}
         </Button>

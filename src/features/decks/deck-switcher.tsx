@@ -33,9 +33,14 @@ export function DeckSwitcher({
   errorNotice?: ReactNode;
 }) {
   return (
-    <div className="deck-workspaces">
-      <div className="deck-actions">
-        <Label htmlFor="deck-selection">Deck profile</Label>
+    <div data-testid="deck-workspaces" className="min-w-0">
+      <div
+        data-testid="deck-actions"
+        className="flex flex-wrap items-stretch gap-2 [&>[data-slot=native-select-wrapper]]:flex-[1_1_100%]"
+      >
+        <Label className="w-full text-xs text-muted-foreground" htmlFor="deck-selection">
+          Deck profile
+        </Label>
         <NativeSelect
           className="w-full"
           id="deck-selection"
@@ -55,6 +60,7 @@ export function DeckSwitcher({
         </NativeSelect>
         <Button
           variant="outline"
+          className="flex-1"
           aria-label="Create deck"
           title="Create deck"
           type="button"
@@ -68,6 +74,7 @@ export function DeckSwitcher({
         </Button>
         <Button
           variant="ghost"
+          className="flex-1"
           aria-label="Delete deck"
           title="Delete deck"
           type="button"
@@ -83,7 +90,8 @@ export function DeckSwitcher({
       {dialog === "create" ? (
         <Dialog title="Create deck" onClose={() => onDialogChange(null)}>
           <form
-            className="deck-rename"
+            data-testid="deck-rename"
+            className="m-0 flex flex-wrap items-end gap-3"
             onSubmit={async (event) => {
               event.preventDefault();
               const title = newTitle.trim();
@@ -91,7 +99,7 @@ export function DeckSwitcher({
               if (await onCreate(title)) onDialogChange(null);
             }}
           >
-            <Label htmlFor="new-deck-title">
+            <Label className="grid min-w-0 flex-[1_1_100%] gap-2 text-sm" htmlFor="new-deck-title">
               New deck name
               <Input
                 id="new-deck-title"
@@ -112,7 +120,10 @@ export function DeckSwitcher({
       ) : null}
       {dialog === "delete" ? (
         <Dialog title="Delete deck" onClose={() => onDialogChange(null)}>
-          <div className="deck-undo">
+          <div
+            data-testid="deck-undo"
+            className="flex flex-wrap items-center gap-2 px-4 py-2 text-sm wrap-anywhere"
+          >
             <p>Delete this deck and its column settings.</p>
             <Button
               variant="destructive"

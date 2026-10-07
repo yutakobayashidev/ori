@@ -154,7 +154,7 @@ test("keeps completed actions in their original positions with visible outcomes"
 }, testInfo) => {
   await page.goto("/");
   await page.waitForLoadState("networkidle");
-  const titles = page.locator(".execution-flow-title");
+  const titles = page.locator("[data-testid='execution-flow-title']");
   const before = await titles.allTextContents();
   await page.getByRole("button", { name: "Complete Review the documents", exact: true }).click();
   await expect(

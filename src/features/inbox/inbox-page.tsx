@@ -29,10 +29,22 @@ export function InboxPage() {
 
   return (
     <TooltipProvider delay={500}>
-      <SidebarProvider className="inbox-workspace" data-reading={readingMobile}>
-        <Sidebar collapsible="none" className="inbox-sidebar">
+      <SidebarProvider
+        data-testid="inbox-workspace"
+        className="group/inbox h-dvh min-h-0 overflow-hidden"
+        data-reading={readingMobile}
+      >
+        <Sidebar
+          collapsible="none"
+          data-testid="inbox-sidebar"
+          className="w-[420px] shrink-0 flex-row border-r border-border min-[768px]:max-[1100px]:w-[340px] max-md:w-full max-md:border-r-0 max-md:group-data-[reading=true]/inbox:hidden"
+        >
           <WorkspaceNavigation />
-          <Sidebar collapsible="none" className="inbox-list-panel">
+          <Sidebar
+            collapsible="none"
+            data-testid="inbox-list-panel"
+            className="w-auto min-w-0 flex-1"
+          >
             <SidebarHeader className="gap-4 border-b p-5">
               <h1 className="text-base font-semibold">Reader</h1>
               <div className="relative">
@@ -60,7 +72,10 @@ export function InboxPage() {
                 />
               ))}
               {visible.length === 0 && (
-                <div className="inbox-no-results">
+                <div
+                  data-testid="inbox-no-results"
+                  className="grid justify-items-start gap-px-12 px-px-20 py-px-32 text-ui-13 leading-relaxed-copy text-muted-foreground"
+                >
                   <p>No articles found</p>
                   <Button variant="outline" onClick={clearSearch}>
                     Clear search
@@ -70,12 +85,19 @@ export function InboxPage() {
             </SidebarContent>
           </Sidebar>
         </Sidebar>
-        <SidebarInset className="inbox-reader">
-          <header className="inbox-reader-toolbar">
+        <SidebarInset
+          data-testid="inbox-reader"
+          className="h-full min-w-0 overflow-hidden max-md:hidden max-md:group-data-[reading=true]/inbox:flex"
+        >
+          <header
+            data-testid="inbox-reader-toolbar"
+            className="flex min-h-[60px] items-center gap-px-12 border-b border-border px-px-26 py-px-10 max-md:px-px-12"
+          >
             <Button
               variant="ghost"
               size="icon"
-              className="inbox-back"
+              data-testid="inbox-back"
+              className="hidden max-md:inline-flex"
               aria-label="Back to articles"
               onClick={() => updateSearch({ article: undefined })}
             >
@@ -84,7 +106,8 @@ export function InboxPage() {
             <span className="text-xs text-muted-foreground">{selected?.source}</span>
           </header>
           <section
-            className="inbox-reader-scroll"
+            data-testid="inbox-reader-scroll"
+            className="min-h-0 flex-1 overflow-y-auto overscroll-contain"
             key={selected?.id}
             aria-label="Article content"
             // oxlint-disable-next-line jsx-a11y/no-noninteractive-tabindex -- The independently scrolling reader must be keyboard-scrollable.
@@ -110,28 +133,54 @@ function ArticleRow({
   return (
     <button
       type="button"
-      className="inbox-article-row"
+      data-testid="inbox-article-row"
+      className="flex w-full cursor-pointer flex-col items-stretch gap-px-11 border-b border-border px-px-20 py-px-22 text-left hover:bg-sidebar-accent aria-current:bg-muted aria-current:inset-shadow-selection"
       aria-current={selected ? "true" : undefined}
       onClick={onSelect}
     >
-      <span className="inbox-row-meta">
+      <span
+        data-testid="inbox-row-meta"
+        className="flex min-w-0 items-center gap-px-7 text-ui-11 text-muted-foreground"
+      >
         <span className="truncate">{article.source}</span>
         <time className="ml-auto shrink-0">{article.date}</time>
       </span>
-      <span className="inbox-row-title">{article.title}</span>
-      <span className="inbox-row-summary">{article.summary}</span>
+      <span
+        data-testid="inbox-row-title"
+        className="block text-ui-14 leading-chat font-semibold text-pretty"
+      >
+        {article.title}
+      </span>
+      <span
+        data-testid="inbox-row-summary"
+        className="line-clamp-2 text-ui-12 leading-relaxed-copy text-muted-foreground"
+      >
+        {article.summary}
+      </span>
     </button>
   );
 }
 
 function ArticleReader({ article }: { article: Article }) {
   return (
-    <article className="inbox-article" aria-label={article.title}>
-      <h2 className="inbox-article-title">{article.title}</h2>
-      <p className="inbox-byline text-xs text-muted-foreground">
+    <article
+      data-testid="inbox-article"
+      className="mx-auto max-w-[800px] px-px-52 pt-px-54 pb-px-40 min-[768px]:max-[1100px]:px-px-28 min-[768px]:max-[1100px]:py-px-36 max-md:px-px-24 max-md:py-px-30"
+      aria-label={article.title}
+    >
+      <h2
+        data-testid="inbox-article-title"
+        className="m-0 text-reader-title leading-post font-demibold tracking-tight wrap-anywhere text-pretty"
+      >
+        {article.title}
+      </h2>
+      <p data-testid="inbox-byline" className="my-px-30 text-xs text-muted-foreground">
         {article.author} · {article.date}
       </p>
-      <div className="inbox-article-body">
+      <div
+        data-testid="inbox-article-body"
+        className="text-ui-15 leading-reader tracking-wide [&_p+p]:mt-px-24"
+      >
         {article.paragraphs.map((paragraph) => (
           <p key={paragraph}>{paragraph}</p>
         ))}
