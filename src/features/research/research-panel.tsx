@@ -1,9 +1,15 @@
 import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { useServerFn } from "@tanstack/react-start";
-import { ArrowUpIcon, PlusIcon, SquareIcon } from "lucide-react";
+import { ArrowUpIcon, HistoryIcon, PlusIcon, SquareIcon, XIcon } from "lucide-react";
 import { type ReactNode, useCallback, useEffect, useId, useRef, useState } from "react";
 import { Bubble, BubbleContent } from "#/components/ui/bubble";
 import { Button } from "#/components/ui/button";
+import {
+  DropdownMenu,
+  DropdownMenuContent,
+  DropdownMenuItem,
+  DropdownMenuTrigger,
+} from "#/components/ui/dropdown-menu";
 import { Empty, EmptyDescription, EmptyHeader, EmptyTitle } from "#/components/ui/empty";
 import { Checkbox } from "#/components/ui/checkbox";
 import { Collapsible, CollapsibleContent, CollapsibleTrigger } from "#/components/ui/collapsible";
@@ -85,6 +91,11 @@ export function ResearchPanel({
   });
   const run = status.data?.run ?? null;
   const runId = run?.id ?? null;
+  const closedRuns = search.closedRuns ?? [];
+  const history = status.data?.history ?? [];
+  const openChats = history.filter(
+    (entry) => entry.id === selectedId || !closedRuns.includes(entry.id),
+  );
   const [draft, setDraft] = useState<ResearchDraft>({
     runId,
     topic: "",
@@ -276,7 +287,21 @@ export function ResearchPanel({
 
   function selectChat(id: string) {
     if (!id || id === run?.id) return;
-    setSearch({ run: id, citation: undefined });
+    const remaining = closedRuns.filter((closed) => closed !== id);
+    setSearch({
+      run: id,
+      citation: undefined,
+      closedRuns: remaining.length ? remaining : undefined,
+    });
+  }
+
+  function closeChat(id: string) {
+    const index = openChats.findIndex((entry) => entry.id === id);
+    const next = openChats[index + 1] ?? openChats[index - 1];
+    setSearch({
+      closedRuns: [...closedRuns.filter((closed) => closed !== id), id],
+      ...(id === selectedId ? { run: next?.id ?? "new", citation: undefined } : {}),
+    });
   }
 
   async function openDeck(deck: Deck) {
@@ -297,23 +322,38 @@ export function ResearchPanel({
       data-testid="research-history"
       className="flex h-12 min-w-0 shrink-0 items-stretch border-b bg-sidebar"
     >
-      <div className="flex min-w-0 flex-1 items-end gap-1 overflow-x-auto px-2 pt-2">
-        {status.data?.history?.map((entry) => (
-          <Button
-            key={entry.id}
-            type="button"
-            variant="tab"
-            size="tab"
-            aria-current={entry.id === selectedId ? "page" : undefined}
-            title={entry.title}
-            disabled={busy}
-            onClick={() => {
-              selectChat(entry.id);
-              onSelect?.();
-            }}
-          >
-            <span className="truncate">{entry.title}</span>
-          </Button>
+      <div className="flex min-w-0 flex-1 items-end gap-1 overflow-x-auto px-2 pt-1">
+        {openChats.map((entry) => (
+          <div key={entry.id} className="relative shrink-0">
+            <Button
+              type="button"
+              variant="tab"
+              motion="none"
+              size="tab"
+              aria-current={entry.id === selectedId ? "page" : undefined}
+              title={entry.title}
+              disabled={busy}
+              onClick={() => {
+                selectChat(entry.id);
+                onSelect?.();
+              }}
+            >
+              <span className="truncate">{entry.title}</span>
+            </Button>
+            <Button
+              type="button"
+              variant="ghost"
+              motion="none"
+              size="icon-xs"
+              className="absolute top-2 right-1"
+              aria-label={`Close ${entry.title}`}
+              title="Close tab"
+              disabled={busy}
+              onClick={() => closeChat(entry.id)}
+            >
+              <XIcon />
+            </Button>
+          </div>
         ))}
         {!selectedId && (
           <span
@@ -329,6 +369,7 @@ export function ResearchPanel({
         size="icon"
         type="button"
         className="mx-2 self-center"
+        motion="none"
         aria-label="New chat"
         title="New chat"
         disabled={busy || !run}
@@ -339,6 +380,36 @@ export function ResearchPanel({
       >
         <PlusIcon />
       </Button>
+      <DropdownMenu>
+        <DropdownMenuTrigger
+          render={
+            <Button
+              variant="ghost"
+              motion="none"
+              size="icon"
+              className="mr-2 self-center"
+              aria-label="Open chat history"
+              title="Chat history"
+              disabled={busy || history.length === 0}
+            />
+          }
+        >
+          <HistoryIcon />
+        </DropdownMenuTrigger>
+        <DropdownMenuContent align="end" className="w-64">
+          {history.map((entry) => (
+            <DropdownMenuItem
+              key={entry.id}
+              onClick={() => {
+                selectChat(entry.id);
+                onSelect?.();
+              }}
+            >
+              <span className="truncate">{entry.title}</span>
+            </DropdownMenuItem>
+          ))}
+        </DropdownMenuContent>
+      </DropdownMenu>
     </nav>
   );
 

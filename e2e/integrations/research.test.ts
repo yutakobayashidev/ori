@@ -348,9 +348,17 @@ test("keeps browser conversation selection independent and restores it on reload
     await researchPage.goTo(`?run=${first}`, { waitUntil: "domcontentloaded" });
     await workspacePage.showResearch();
     const history = page.getByRole("navigation", { name: "Chat history" });
-    const firstTab = history.getByRole("button", { name: "Browser one conversation" });
-    const secondTab = history.getByRole("button", { name: "Browser two conversation" });
+    const firstTab = history.getByRole("button", { name: "Browser one conversation", exact: true });
+    const secondTab = history.getByRole("button", {
+      name: "Browser two conversation",
+      exact: true,
+    });
     await expect(firstTab).toHaveAttribute("aria-current", "page");
+    await expect(firstTab).toHaveCSS("transition-duration", "0s");
+    await firstTab.hover();
+    await page.mouse.down();
+    await expect(firstTab).toHaveCSS("translate", "none");
+    await page.mouse.up();
     await workspacePage.showDeckManagement();
     await secondTab.click();
     await expect(page).toHaveURL(new RegExp(`run=${second}`));
@@ -358,6 +366,19 @@ test("keeps browser conversation selection independent and restores it on reload
     await expect(researchPage.conversation).toContainText("Browser two conversation");
     await page.goBack();
     await expect(firstTab).toHaveAttribute("aria-current", "page");
+    await history
+      .getByRole("button", { name: "Close Browser two conversation", exact: true })
+      .click();
+    await expect(secondTab).toHaveCount(0);
+    await expect(firstTab).toHaveAttribute("aria-current", "page");
+    await page.reload({ waitUntil: "domcontentloaded" });
+    await workspacePage.showResearch();
+    await expect(secondTab).toHaveCount(0);
+    await history.getByRole("button", { name: "Open chat history" }).click();
+    await page.getByRole("menuitem", { name: "Browser two conversation", exact: true }).click();
+    await expect(secondTab).toHaveAttribute("aria-current", "page");
+    await expect(researchPage.conversation).toContainText("Browser two conversation");
+    await firstTab.click();
     await secondResearch.goTo(`?run=${second}`, {
       waitUntil: "domcontentloaded",
     });

@@ -18,14 +18,19 @@ test("keeps the sidebar, composer and deck reachable at compact widths", async (
     const historyBounds = await history.boundingBox();
     const chatBounds = await chat.boundingBox();
     if (!historyBounds || !chatBounds) throw new Error("Chat and history must have visible bounds");
-    expect(historyBounds.x).toBe(0);
+    expect(historyBounds.x).toBe(chatBounds.x);
+    const navigationMark = await page
+      .getByRole("img", { name: "Workspace", exact: true })
+      .boundingBox();
+    if (!navigationMark) throw new Error("Workspace navigation must be visible");
+    expect(navigationMark.y).toBeLessThan(historyBounds.y + historyBounds.height);
     const availableWidth =
       width < 768
         ? await page
             .getByRole("dialog", { name: "Workspace" })
             .evaluate((element) => element.clientWidth)
         : width;
-    expect(historyBounds.width).toBe(availableWidth);
+    expect(historyBounds.width).toBe(availableWidth - chatBounds.x);
     expect(historyBounds.y + historyBounds.height).toBeLessThanOrEqual(chatBounds.y);
     const composer = researchPage.composer;
     await expect(composer).toBeVisible();

@@ -23,7 +23,7 @@ type ShellProps = {
 export function AppShell(props: ShellProps) {
   return (
     <TooltipProvider delay={800}>
-      <SidebarProvider className="h-dvh min-h-0 flex-col overflow-hidden [--sidebar-width:25rem] [--sidebar-width-icon:4rem]">
+      <SidebarProvider className="relative h-dvh min-h-0 overflow-hidden [--sidebar-width:25rem] [--sidebar-width-icon:4rem]">
         <Workspace {...props} />
       </SidebarProvider>
     </TooltipProvider>
@@ -51,82 +51,80 @@ function Workspace({
 
   return (
     <>
-      {(!isMobile || !openMobile) && history}
-      <div className="relative flex min-h-0 min-w-0 flex-1">
-        <Sidebar collapsible="icon" className="absolute! h-full overflow-hidden transition-none">
-          <div className="flex h-full w-full min-w-0 flex-col">
-            {isMobile && openMobile && history}
-            <div className="flex min-h-0 flex-1">
-              <WorkspaceNavigation
-                hasTemporaryDecks={hasTemporaryDecks}
-                footer={
-                  <SidebarMenuItem>
-                    <SidebarMenuButton
-                      aria-label="Close sidebar"
-                      tooltip={{ children: "Close sidebar", hidden: false }}
-                      onClick={() => (isMobile ? setOpenMobile(false) : setOpen(false))}
-                      className="size-10 justify-center p-0"
-                    >
-                      <PanelLeftClose />
-                    </SidebarMenuButton>
-                  </SidebarMenuItem>
-                }
-              >
-                {navigation.map((item) => (
-                  <SidebarMenuItem key={item.id}>
-                    <SidebarMenuButton
-                      aria-label={item.title}
-                      tooltip={{ children: item.title, hidden: false }}
-                      isActive={panel === item.id}
-                      onClick={() => {
-                        setPanel(item.id);
-                        if (isMobile) setOpenMobile(true);
-                        else setOpen(true);
-                      }}
-                      className="size-10 justify-center p-0"
-                    >
-                      <item.icon />
-                      <span className="sr-only">{item.title}</span>
-                    </SidebarMenuButton>
-                  </SidebarMenuItem>
-                ))}
-              </WorkspaceNavigation>
-              <Sidebar
-                collapsible="none"
-                className="min-w-0 flex-1 group-data-[collapsible=icon]:hidden"
-              >
-                <div className={panel === "chat" ? "flex min-h-0 flex-1 flex-col" : "hidden"}>
-                  {researchChat(() => setOpenMobile(false))}
-                </div>
-                <section
-                  aria-label="Deck manager"
-                  className={
-                    panel === "decks"
-                      ? "flex min-h-0 flex-1 flex-col overflow-y-auto p-4"
-                      : "hidden"
-                  }
+      {(!isMobile || !openMobile) && (
+        <div className="absolute inset-x-0 top-0 z-20 md:left-16">{history}</div>
+      )}
+      <Sidebar collapsible="icon" className="overflow-hidden transition-none">
+        <div className="flex h-full w-full min-w-0">
+          <WorkspaceNavigation
+            hasTemporaryDecks={hasTemporaryDecks}
+            footer={
+              <SidebarMenuItem>
+                <SidebarMenuButton
+                  aria-label="Close sidebar"
+                  tooltip={{ children: "Close sidebar", hidden: false }}
+                  onClick={() => (isMobile ? setOpenMobile(false) : setOpen(false))}
+                  className="size-10 justify-center p-0"
                 >
-                  <h2 className="mb-4 text-base font-semibold">Decks</h2>
-                  <div className="flex flex-col gap-4">{sidebar}</div>
-                </section>
-              </Sidebar>
-            </div>
-          </div>
-        </Sidebar>
-        <SidebarInset className="min-w-0 overflow-hidden">
-          <header className="flex h-12 shrink-0 items-center gap-2 border-b px-3">
-            <SidebarTrigger aria-label="Toggle sidebar" />
-            <span className="text-sm font-medium">Research</span>
-            <span className="ml-auto text-xs text-muted-foreground">Research workspace</span>
-          </header>
-          <section
-            className="overflow-hidden flex min-h-0 min-w-0 flex-1 flex-col"
-            aria-label="Decks"
+                  <PanelLeftClose />
+                </SidebarMenuButton>
+              </SidebarMenuItem>
+            }
           >
-            {children}
-          </section>
-        </SidebarInset>
-      </div>
+            {navigation.map((item) => (
+              <SidebarMenuItem key={item.id}>
+                <SidebarMenuButton
+                  aria-label={item.title}
+                  tooltip={{ children: item.title, hidden: false }}
+                  isActive={panel === item.id}
+                  onClick={() => {
+                    setPanel(item.id);
+                    if (isMobile) setOpenMobile(true);
+                    else setOpen(true);
+                  }}
+                  className="size-10 justify-center p-0"
+                >
+                  <item.icon />
+                  <span className="sr-only">{item.title}</span>
+                </SidebarMenuButton>
+              </SidebarMenuItem>
+            ))}
+          </WorkspaceNavigation>
+          <Sidebar
+            collapsible="none"
+            className="min-w-0 flex-1 group-data-[collapsible=icon]:hidden"
+          >
+            <div aria-hidden="true" className="hidden h-12 shrink-0 md:block" />
+            {isMobile && openMobile && history}
+            <div className={panel === "chat" ? "flex min-h-0 flex-1 flex-col" : "hidden"}>
+              {researchChat(() => setOpenMobile(false))}
+            </div>
+            <section
+              aria-label="Deck manager"
+              className={
+                panel === "decks" ? "flex min-h-0 flex-1 flex-col overflow-y-auto p-4" : "hidden"
+              }
+            >
+              <h2 className="mb-4 text-base font-semibold">Decks</h2>
+              <div className="flex flex-col gap-4">{sidebar}</div>
+            </section>
+          </Sidebar>
+        </div>
+      </Sidebar>
+      <SidebarInset className="min-w-0 overflow-hidden">
+        <div aria-hidden="true" className="h-12 shrink-0" />
+        <header className="flex h-12 shrink-0 items-center gap-2 border-b px-3">
+          <SidebarTrigger aria-label="Toggle sidebar" />
+          <span className="text-sm font-medium">Research</span>
+          <span className="ml-auto text-xs text-muted-foreground">Research workspace</span>
+        </header>
+        <section
+          className="overflow-hidden flex min-h-0 min-w-0 flex-1 flex-col"
+          aria-label="Decks"
+        >
+          {children}
+        </section>
+      </SidebarInset>
     </>
   );
 }

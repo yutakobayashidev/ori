@@ -17,6 +17,7 @@ const workspaceSearch = z.object({
     .optional()
     .catch(undefined),
   citation: text,
+  closedRuns: z.array(z.uuid()).optional().catch(undefined),
   vitalSection: z.enum(["Body", "Environment"]).optional().catch(undefined),
   vitalTab: text,
   vitalHistory: flag,

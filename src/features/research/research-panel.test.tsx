@@ -6,7 +6,7 @@ import type { ResearchHistoryEntry, ResearchRun } from "./model";
 import { ResearchPanel } from "./research-panel";
 
 const navigation = vi.hoisted(() => ({
-  search: {} as { run?: string; deck?: string; citation?: string },
+  search: {} as { run?: string; deck?: string; citation?: string; closedRuns?: string[] },
   set: vi.fn<(patch: { run?: string; deck?: string; citation?: string }) => void>(),
 }));
 vi.mock("../navigation/use-url-state", async () => {
@@ -834,4 +834,75 @@ it("submits with Enter while preserving Shift+Enter and IME composition", async 
   expect(actions.start).toHaveBeenCalledWith({
     data: expect.objectContaining({ topic: "Compare browser automation tools" }),
   });
+});
+
+it("closes an inactive tab without changing the current conversation", async () => {
+  navigation.search = { run: running.id, citation: "twitter:123" };
+  current = {
+    configured: true,
+    run: running,
+    history: [
+      { id: running.id, title: "Current chat", status: "running", updatedAt: 1000 },
+      { id: "other", title: "Other chat", status: "complete", updatedAt: 500 },
+    ],
+  };
+  show();
+  fireEvent.click(await screen.findByRole("button", { name: "Close Other chat" }));
+  expect(screen.queryByRole("button", { name: "Other chat" })).not.toBeInTheDocument();
+  expect(screen.getByRole("button", { name: "Current chat" })).toHaveAttribute(
+    "aria-current",
+    "page",
+  );
+  expect(navigation.set).toHaveBeenLastCalledWith({ closedRuns: ["other"] });
+  expect(actions.cancel).not.toHaveBeenCalled();
+});
+
+it("selects the adjacent chat when closing the active tab without stopping its running turn", async () => {
+  navigation.search = { run: running.id };
+  current = {
+    configured: true,
+    run: running,
+    history: [
+      { id: running.id, title: "Current chat", status: "running", updatedAt: 1000 },
+      { id: "next", title: "Next chat", status: "complete", updatedAt: 500 },
+    ],
+  };
+  show();
+  fireEvent.click(await screen.findByRole("button", { name: "Close Current chat" }));
+  expect(navigation.set).toHaveBeenLastCalledWith({
+    closedRuns: [running.id],
+    run: "next",
+    citation: undefined,
+  });
+  await waitFor(() =>
+    expect(screen.getByRole("button", { name: "Next chat" })).toHaveAttribute(
+      "aria-current",
+      "page",
+    ),
+  );
+  expect(screen.queryByRole("button", { name: "Current chat" })).not.toBeInTheDocument();
+  expect(actions.cancel).not.toHaveBeenCalled();
+});
+
+it("shows a new chat after closing the last tab and keeps the saved chat in history", async () => {
+  navigation.search = { run: running.id };
+  current = {
+    configured: true,
+    run: running,
+    history: [{ id: running.id, title: "Last chat", status: "running", updatedAt: 1000 }],
+  };
+  show();
+  fireEvent.click(await screen.findByRole("button", { name: "Close Last chat" }));
+  expect(navigation.set).toHaveBeenLastCalledWith({
+    closedRuns: [running.id],
+    run: "new",
+    citation: undefined,
+  });
+  await waitFor(() =>
+    expect(screen.getByRole("button", { name: "Open chat history" })).toBeEnabled(),
+  );
+  expect(screen.queryByRole("button", { name: "Last chat" })).not.toBeInTheDocument();
+  expect(screen.getByText("New chat")).toBeVisible();
+  expect(actions.start).not.toHaveBeenCalled();
+  expect(actions.cancel).not.toHaveBeenCalled();
 });
