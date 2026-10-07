@@ -9,11 +9,67 @@ import {
 } from "../src/features/auth/auth.server";
 import { openDatabase } from "../src/features/storage/database.server";
 
+import { WorkspacePage } from "./models/WorkspacePage";
+import { AuthPage } from "./models/AuthPage";
+import { OnboardingPage } from "./models/OnboardingPage";
+import { ConnectedAccountsDialog } from "./models/ConnectedAccountsDialog";
+import { HomePage } from "./models/HomePage";
+import { MessagesPage } from "./models/MessagesPage";
+import { JournalPage } from "./models/JournalPage";
+import { ReaderPage } from "./models/ReaderPage";
+import { VitalsPage } from "./models/VitalsPage";
+import { DeckPage } from "./models/DeckPage";
+import { ResearchPage } from "./models/ResearchPage";
+
 export const test = base.extend<{
+  workspacePage: WorkspacePage;
+  authPage: AuthPage;
+  onboardingPage: OnboardingPage;
+  connectedAccounts: ConnectedAccountsDialog;
+  homePage: HomePage;
+  messagesPage: MessagesPage;
+  journalPage: JournalPage;
+  readerPage: ReaderPage;
+  vitalsPage: VitalsPage;
+  deckPage: DeckPage;
+  researchPage: ResearchPage;
   a11y: () => AxeBuilder;
   resetDecks: undefined;
   sessionToken: string;
 }>({
+  workspacePage: async ({ page }, use) => {
+    await use(new WorkspacePage(page));
+  },
+  authPage: async ({ page }, use) => {
+    await use(new AuthPage(page));
+  },
+  onboardingPage: async ({ page }, use) => {
+    await use(new OnboardingPage(page));
+  },
+  connectedAccounts: async ({ page }, use) => {
+    await use(new ConnectedAccountsDialog(page));
+  },
+  homePage: async ({ page }, use) => {
+    await use(new HomePage(page));
+  },
+  messagesPage: async ({ page }, use) => {
+    await use(new MessagesPage(page));
+  },
+  journalPage: async ({ page }, use) => {
+    await use(new JournalPage(page));
+  },
+  readerPage: async ({ page }, use) => {
+    await use(new ReaderPage(page));
+  },
+  vitalsPage: async ({ page }, use) => {
+    await use(new VitalsPage(page));
+  },
+  deckPage: async ({ page }, use) => {
+    await use(new DeckPage(page));
+  },
+  researchPage: async ({ page }, use) => {
+    await use(new ResearchPage(page));
+  },
   // oxlint-disable-next-line no-empty-pattern -- Playwright requires destructured fixture arguments.
   sessionToken: async ({}, use) => {
     const path = process.env.TWITTER_LITE_E2E_DB_PATH;

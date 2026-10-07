@@ -4,6 +4,7 @@ test("HTTP MCP persists decks visible in Research without browser credentials", 
   playwright,
   baseURL,
   page,
+  deckPage,
 }) => {
   const client = await playwright.request.newContext({
     baseURL,
@@ -59,8 +60,8 @@ test("HTTP MCP persists decks visible in Research without browser credentials", 
     });
     expect(fetched.ok).toBe(true);
     expect(fetched.posts.length).toBeGreaterThan(0);
-    await page.goto(`/deck?deck=${created.deck.id}`);
-    await expect(page.getByRole("heading", { level: 1 })).toHaveText("HTTP MCP research");
+    await deckPage.goTo(`?deck=${created.deck.id}`);
+    await expect(deckPage.heading).toHaveText("HTTP MCP research");
     const updated = await tool("replace_deck", {
       deckId: created.deck.id,
       expectedRevision: 1,
@@ -72,7 +73,7 @@ test("HTTP MCP persists decks visible in Research without browser credentials", 
       await tool("delete_deck", { deckId: created.deck.id, expectedRevision: 1 }),
     ).toMatchObject({ ok: false, error: { code: "conflict" } });
     await page.reload();
-    await expect(page.getByRole("heading", { level: 1 })).toHaveText("Updated via HTTP");
+    await expect(deckPage.heading).toHaveText("Updated via HTTP");
     expect(
       await tool("delete_deck", { deckId: created.deck.id, expectedRevision: 2 }),
     ).toMatchObject({ ok: true });

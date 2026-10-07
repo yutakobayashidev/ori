@@ -247,6 +247,16 @@ X or a personal relay. Orval generates API fixture types from a pinned
 Generated files are committed; run `generate:e2e-openapi` only when changing
 the pin or selected operations. Runtime requests use Bird.
 
+Browser scenarios use the Page Object Model, following the
+[web-app-template E2E structure](https://github.com/hiroppy/web-app-template/tree/main/e2e).
+`e2e/models/` owns page-specific locators and user actions; `WorkspacePage`
+owns shared navigation and sidebar behavior. `e2e/fixtures.ts` supplies these
+objects per test, alongside the isolated database, session, and accessibility
+fixtures. Specs in `e2e/integrations/` retain scenario assertions, network mocks,
+API checks, and browser history/viewport controls. For a new screen, add its
+model and fixture instead of duplicating selectors across specs. A model can
+also be constructed with another browser page to test multiple sessions.
+
 `test:live` is an explicit, opt-in smoke test that performs one read-only Top
 search. For this standalone probe only, `BIRD_PROFILE_NAME` selects the account
 and `TWITTER_LITE_LIVE_QUERY` overrides the search text.

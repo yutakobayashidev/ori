@@ -1,10 +1,11 @@
 import type { DeckColumn } from "../../src/features/decks/model";
 import type { ResearchRun } from "../../src/features/research/model";
 import { expect, test } from "../fixtures";
-import { closeMobileSidebar, showDeckManagement, showResearch } from "../workspace";
+import { ResearchPage } from "../models/ResearchPage";
+import { WorkspacePage } from "../models/WorkspacePage";
 
-test("pushes the current research snapshot on each SSE connection", async ({ page }) => {
-  await page.goto("/deck");
+test("pushes the current research snapshot on each SSE connection", async ({ page, deckPage }) => {
+  await deckPage.goTo();
   const snapshots = await page.evaluate(async () => {
     const connect = () =>
       new Promise<unknown>((resolve, reject) => {
@@ -34,18 +35,18 @@ test("pushes the current research snapshot on each SSE connection", async ({ pag
 
 test("restores the conversation and growing temporary deck from reconnect snapshots", async ({
   page,
+  deckPage,
+  researchPage,
+  workspacePage,
 }) => {
-  await page.goto("/deck");
-  await showDeckManagement(page);
-  await page.getByRole("button", { name: "Add column", exact: true }).click();
-  const accounts = page.getByRole("combobox", {
-    name: "Connection profile",
-    exact: true,
-  });
+  await deckPage.goTo();
+  await workspacePage.showDeckManagement();
+  await deckPage.addColumnButton.click();
+  const accounts = deckPage.editorProfile;
   await accounts.selectOption({ label: "e2e" });
   const connectionId = await accounts.inputValue();
   await page.keyboard.press("Escape");
-  await closeMobileSidebar(page);
+  await workspacePage.closeMobileSidebar();
   const run: ResearchRun = {
     id: "36ad8cc7-318c-46ae-94fa-28d30336f027",
     threadId: "conversation-test",
@@ -90,17 +91,14 @@ test("restores the conversation and growing temporary deck from reconnect snapsh
       body: `data: ${JSON.stringify({ configured: true, run })}\n\n`,
     }),
   );
-  await page.goto(`/deck?run=${run.id}`);
-  await showResearch(page);
-  const conversation = page.getByRole("log", { name: "Research conversation" });
+  await deckPage.goTo(`?run=${run.id}`);
+  await workspacePage.showResearch();
+  const conversation = researchPage.conversation;
   await expect(conversation).toContainText("既存の観点を使って調査して");
   await expect(conversation).toContainText("list_decks: 完了");
   await expect(conversation).toContainText("既存の検索条件を再利用しています。");
-  await expect(conversation.locator('[data-slot="bubble-content"]')).not.toHaveCSS(
-    "background-color",
-    "rgba(0, 0, 0, 0)",
-  );
-  await expect(page.locator("[data-testid='deck-column'] h2")).toHaveText(["最初の観点"]);
+  await expect(researchPage.bubbles).not.toHaveCSS("background-color", "rgba(0, 0, 0, 0)");
+  await expect(deckPage.columnTitles).toHaveText(["最初の観点"]);
   run.deckVersion = 2;
   run.status = "complete";
   run.messages.push({
@@ -121,52 +119,47 @@ test("restores the conversation and growing temporary deck from reconnect snapsh
     },
   });
   await page.reload();
-  await showResearch(page);
+  await workspacePage.showResearch();
   await expect(conversation).toContainText("既存の観点を使って調査して");
   await expect(conversation).toContainText("比較する観点を追加しました。");
-  await expect(page.locator("[data-testid='deck-column'] h2")).toHaveText([
-    "最初の観点",
-    "比較の観点",
-  ]);
-  await closeMobileSidebar(page);
-  await expect(page.getByRole("button", { name: "Save as deck", exact: true })).toBeEnabled();
-  await showResearch(page);
-  const accountPicker = page.getByRole("button", {
-    name: "Connected accounts · 1",
-  });
+  await expect(deckPage.columnTitles).toHaveText(["最初の観点", "比較の観点"]);
+  await workspacePage.closeMobileSidebar();
+  await expect(deckPage.saveAsDeck).toBeEnabled();
+  await workspacePage.showResearch();
+  const accountPicker = researchPage.accountPicker(1);
   await accountPicker.click();
   await expect(accountPicker).toHaveAttribute("aria-expanded", "true");
-  await expect(page.getByRole("checkbox", { name: "e2e · Twitter" })).toBeChecked();
+  await expect(researchPage.account("e2e · Twitter")).toBeChecked();
   await accountPicker.click();
   await expect(accountPicker).toHaveAttribute("aria-expanded", "false");
-  await page.getByLabel("Message", { exact: true }).fill("この観点を詳しく");
-  await expect(page.getByRole("button", { name: "Send", exact: true })).toBeEnabled();
-  await page.getByRole("button", { name: "Close sidebar", exact: true }).click();
+  await researchPage.composer.fill("この観点を詳しく");
+  await expect(researchPage.send).toBeEnabled();
+  await workspacePage.closeSidebar.click();
   run.deckVersion = 3;
   if (run.deck) run.deck.title = "閉じている間に更新された調査";
-  await expect(page.getByRole("heading", { level: 1 })).toHaveText("閉じている間に更新された調査", {
+  await expect(deckPage.heading).toHaveText("閉じている間に更新された調査", {
     timeout: 15000,
   });
-  await showResearch(page);
-  await expect(page.getByLabel("Message", { exact: true })).toHaveValue("この観点を詳しく");
+  await workspacePage.showResearch();
+  await expect(researchPage.composer).toHaveValue("この観点を詳しく");
   await page.setViewportSize({ width: 600, height: 900 });
-  await expect(page.locator('[data-sidebar="sidebar"][data-mobile="true"]')).toHaveCount(1);
-  await showResearch(page);
-  await expect(page.getByLabel("Message", { exact: true })).toHaveValue("この観点を詳しく");
-  await page.getByRole("button", { name: "Connected accounts · 1" }).click();
-  await page.getByRole("checkbox", { name: "e2e · Twitter" }).uncheck();
+  await expect(workspacePage.mobileSidebar).toHaveCount(1);
+  await workspacePage.showResearch();
+  await expect(researchPage.composer).toHaveValue("この観点を詳しく");
+  await researchPage.accountPicker(1).click();
+  await researchPage.account("e2e · Twitter").uncheck();
   await page.setViewportSize({ width: 1100, height: 900 });
-  await expect(page.locator('[data-sidebar="sidebar"][data-mobile="true"]')).toHaveCount(0);
-  await showResearch(page);
-  await expect(page.getByLabel("Message", { exact: true })).toHaveValue("この観点を詳しく");
-  await page.getByRole("button", { name: "Connected accounts · 0" }).click();
-  await expect(page.getByRole("checkbox", { name: "e2e · Twitter" })).not.toBeChecked();
+  await expect(workspacePage.mobileSidebar).toHaveCount(0);
+  await workspacePage.showResearch();
+  await expect(researchPage.composer).toHaveValue("この観点を詳しく");
+  await researchPage.accountPicker(0).click();
+  await expect(researchPage.account("e2e · Twitter")).not.toBeChecked();
   await page.setViewportSize({ width: 600, height: 900 });
-  await expect(page.locator('[data-sidebar="sidebar"][data-mobile="true"]')).toHaveCount(1);
-  await showResearch(page);
-  await expect(page.getByLabel("Message", { exact: true })).toHaveValue("この観点を詳しく");
-  await page.getByRole("button", { name: "Connected accounts · 0" }).click();
-  await expect(page.getByRole("checkbox", { name: "e2e · Twitter" })).not.toBeChecked();
+  await expect(workspacePage.mobileSidebar).toHaveCount(1);
+  await workspacePage.showResearch();
+  await expect(researchPage.composer).toHaveValue("この観点を詳しく");
+  await researchPage.accountPicker(0).click();
+  await expect(researchPage.account("e2e · Twitter")).not.toBeChecked();
 });
 
 test("rejects a different tailnet owner at the SSE endpoint", async ({ request }) => {
@@ -178,20 +171,20 @@ test("rejects a different tailnet owner at the SSE endpoint", async ({ request }
 
 test("renders Markdown and reveals an unloaded citation in an offscreen deck column", async ({
   page,
+  deckPage,
+  researchPage,
+  workspacePage,
   a11y,
 }) => {
   await page.emulateMedia({ reducedMotion: "reduce" });
-  await page.goto("/deck");
-  await showDeckManagement(page);
-  await page.getByRole("button", { name: "Add column", exact: true }).click();
-  const accounts = page.getByRole("combobox", {
-    name: "Connection profile",
-    exact: true,
-  });
+  await deckPage.goTo();
+  await workspacePage.showDeckManagement();
+  await deckPage.addColumnButton.click();
+  const accounts = deckPage.editorProfile;
   await accounts.selectOption({ label: "e2e" });
   const connectionId = await accounts.inputValue();
   await page.keyboard.press("Escape");
-  await closeMobileSidebar(page);
+  await workspacePage.closeMobileSidebar();
   const source: DeckColumn = {
     id: "citation-column-2",
     title: "引用の観点",
@@ -252,27 +245,22 @@ test("renders Markdown and reveals an unloaded citation in an offscreen deck col
       body: `data: ${JSON.stringify({ configured: true, run })}\n\n`,
     }),
   );
-  await page.goto(`/deck?run=${run.id}`);
-  await showResearch(page);
-  const chat = page.getByRole("log", { name: "Research conversation" });
-  await expect(chat.getByRole("heading", { name: "調査結果" })).toBeVisible();
-  await expect(chat.getByRole("heading", { name: "調査結果" })).toHaveCSS("font-weight", "600");
-  await expect(chat.locator("ul")).toHaveCSS("list-style-type", "disc");
-  await expect(chat.locator("strong").filter({ hasText: "重要な発見" })).toBeVisible();
-  await expect(chat.getByRole("table")).toBeVisible();
-  await expect(page.getByText("AIが調査時に取得した引用本文", { exact: true })).toHaveCount(0);
-  await chat.getByRole("link", { name: "根拠の投稿" }).click();
-  const card = page.locator(
-    '[data-testid="research-post"][data-post-url="https://twitter.com/author/status/123456789"]',
-  );
+  await deckPage.goTo(`?run=${run.id}`);
+  await workspacePage.showResearch();
+  await expect(researchPage.messageHeading("調査結果")).toBeVisible();
+  await expect(researchPage.messageHeading("調査結果")).toHaveCSS("font-weight", "600");
+  await expect(researchPage.messageLists).toHaveCSS("list-style-type", "disc");
+  await expect(researchPage.emphasis("重要な発見")).toBeVisible();
+  await expect(researchPage.messageTables).toBeVisible();
+  await expect(deckPage.postText("AIが調査時に取得した引用本文")).toHaveCount(0);
+  await researchPage.citation("根拠の投稿").click();
+  const card = deckPage.post("https://twitter.com/author/status/123456789");
   await expect(card).toBeVisible();
   await expect(card).toHaveAttribute("data-citation-highlight", "true");
   await expect(card).toBeFocused();
   await expect(card).toContainText("Post saved during research");
   await expect(card).toContainText("AIが調査時に取得した引用本文");
-  expect(
-    await page.locator("[data-testid='deck-board']").evaluate((element) => element.scrollLeft),
-  ).toBeGreaterThan(0);
+  expect(await deckPage.board.evaluate((element) => element.scrollLeft)).toBeGreaterThan(0);
   expect(page.context().pages()).toHaveLength(1);
   await expect(page).toHaveURL(/citation=twitter%3A123456789/);
   const bookmarked = new URL(page.url());
@@ -284,45 +272,47 @@ test("renders Markdown and reveals an unloaded citation in an offscreen deck col
   });
   await page.goto(bookmarked.toString());
   await expect(card).toBeVisible();
-  await expect(card).toHaveClass(/citation-highlight/);
+  await expect(card).toHaveAttribute("data-citation-highlight", "true");
   await expect(page).toHaveURL(/citation=twitter%3A123456789/);
-  await expect(page.locator("[data-testid='deck-column']")).toHaveCount(3);
+  await expect(deckPage.columns).toHaveCount(3);
   expect(submitted).toEqual([]);
   expect((await a11y().analyze()).violations).toEqual([]);
 });
 
 test("explains unconfigured Codex and prevents starting research without affecting the deck", async ({
-  page,
+  deckPage,
+  researchPage,
+  workspacePage,
   a11y,
 }) => {
-  await page.goto("/deck");
-  const heading = page.getByRole("heading", { level: 1 });
+  await deckPage.goTo();
+  const heading = deckPage.heading;
   await expect(heading).toBeVisible();
   const originalTitle = await heading.textContent();
-  await showResearch(page);
-  const panel = page.getByRole("complementary", { name: "Research chat" });
+  await workspacePage.showResearch();
+  const panel = researchPage.panel;
   await expect(panel).toBeVisible();
-  await expect(
-    panel.getByText("The connection to Codex on your home server is not configured."),
-  ).toBeVisible();
-  await expect(panel.getByRole("button", { name: "Send", exact: true })).toBeDisabled();
-  await expect(panel.getByLabel("Message", { exact: true })).toBeDisabled();
+  await expect(researchPage.unconfiguredNotice).toBeVisible();
+  await expect(researchPage.send).toBeDisabled();
+  await expect(researchPage.composer).toBeDisabled();
   const accessibility = await a11y().analyze();
   expect(accessibility.violations).toEqual([]);
-  await closeMobileSidebar(page);
+  await workspacePage.closeMobileSidebar();
   await expect(heading).toHaveText(originalTitle ?? "");
-  await showDeckManagement(page);
-  await page.getByRole("button", { name: "Create deck", exact: true }).click();
-  await page.getByLabel("New deck name").fill("手動の調査");
-  await page.getByRole("button", { name: "Create", exact: true }).click();
-  await closeMobileSidebar(page);
+  await workspacePage.showDeckManagement();
+  await deckPage.createDeck.click();
+  await deckPage.newDeckName.fill("手動の調査");
+  await deckPage.confirmCreate.click();
+  await workspacePage.closeMobileSidebar();
   await expect(heading).toHaveText("手動の調査");
-  await showResearch(page);
+  await workspacePage.showResearch();
   await expect(panel).toBeVisible();
 });
 
 test("keeps browser conversation selection independent and restores it on reload", async ({
   page,
+  researchPage,
+  workspacePage,
   browser,
   context,
 }) => {
@@ -353,26 +343,22 @@ test("keeps browser conversation selection independent and restores it on reload
   });
   try {
     const secondPage = await other.newPage();
-    await page.goto(`/deck?run=${first}`, { waitUntil: "domcontentloaded" });
-    await showResearch(page);
-    await secondPage.goto(`/deck?run=${second}`, {
+    const secondResearch = new ResearchPage(secondPage);
+    const secondWorkspace = new WorkspacePage(secondPage);
+    await researchPage.goTo(`?run=${first}`, { waitUntil: "domcontentloaded" });
+    await workspacePage.showResearch();
+    await secondResearch.goTo(`?run=${second}`, {
       waitUntil: "domcontentloaded",
     });
-    await showResearch(secondPage);
-    await expect(page.getByRole("log", { name: "Research conversation" })).toContainText(
-      "Browser one conversation",
-    );
-    await expect(secondPage.getByRole("log", { name: "Research conversation" })).toContainText(
-      "Browser two conversation",
-    );
-    await secondPage.getByRole("button", { name: "New chat", exact: true }).click();
+    await secondWorkspace.showResearch();
+    await expect(researchPage.conversation).toContainText("Browser one conversation");
+    await expect(secondResearch.conversation).toContainText("Browser two conversation");
+    await secondResearch.newChat.click();
     await expect(secondPage).toHaveURL(/run=new/);
     await page.reload({ waitUntil: "domcontentloaded" });
-    await showResearch(page);
+    await workspacePage.showResearch();
     await expect(page).toHaveURL(new RegExp(`run=${first}`));
-    await expect(page.getByRole("log", { name: "Research conversation" })).toContainText(
-      "Browser one conversation",
-    );
+    await expect(researchPage.conversation).toContainText("Browser one conversation");
   } finally {
     await other.close();
     db.$client.prepare("DELETE FROM research_sessions WHERE id IN (?, ?)").run(first, second);

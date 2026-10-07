@@ -1,52 +1,50 @@
 import { expect, test } from "../fixtures";
 
 test("opens account management after hydration without inheriting real OAuth configuration", async ({
-  page,
+  deckPage,
+  workspacePage,
+  connectedAccounts,
 }) => {
-  await page.goto("/deck");
-  await expect(page.getByRole("button", { name: "Rename", includeHidden: true })).toBeEnabled();
-  const manage = page.getByRole("button", { name: "Manage connected accounts" });
-  if (!(await manage.isVisible())) {
-    await page.getByRole("button", { name: "Toggle sidebar" }).click();
-  }
-  await expect(manage).toBeEnabled();
-  await manage.click();
-  const dialog = page.getByRole("dialog", { name: "Connected accounts" });
-  await expect(dialog).toBeVisible();
-  await expect(dialog.getByText("No Mastodon servers have been configured yet.")).toBeVisible();
-  await expect(dialog.getByRole("button", { name: "Authorize with Mastodon" })).toHaveCount(0);
-  await page.keyboard.press("Escape");
-  await expect(dialog).toHaveCount(0);
-  await expect(manage).toBeFocused();
+  await deckPage.goTo();
+  await expect(workspacePage.researchReady).toBeEnabled();
+  await workspacePage.ensureSidebarOpen();
+  await expect(workspacePage.manageAccounts).toBeEnabled();
+  await connectedAccounts.open();
+  await expect(connectedAccounts.dialog).toBeVisible();
+  await expect(connectedAccounts.unconfiguredMastodon).toBeVisible();
+  await expect(connectedAccounts.authorizeMastodon).toHaveCount(0);
+  await connectedAccounts.close();
+  await expect(connectedAccounts.dialog).toHaveCount(0);
+  await expect(workspacePage.manageAccounts).toBeFocused();
 });
 
 test("opens account management from the inbox footer and restores focus on close", async ({
-  page,
+  readerPage,
+  workspacePage,
+  connectedAccounts,
   a11y,
 }) => {
-  await page.goto("/inbox");
-  await page.waitForLoadState("networkidle");
-  const manage = page.getByRole("button", { name: "Manage connected accounts" });
-  await expect(manage).toBeVisible();
-  await manage.click();
-  const dialog = page.getByRole("dialog", { name: "Connected accounts" });
-  await expect(dialog).toBeVisible();
-  await expect(dialog.getByText("No Mastodon servers have been configured yet.")).toBeVisible();
+  await readerPage.goTo();
+  await expect(workspacePage.manageAccounts).toBeVisible();
+  await connectedAccounts.open();
+  await expect(connectedAccounts.dialog).toBeVisible();
+  await expect(connectedAccounts.unconfiguredMastodon).toBeVisible();
   expect((await a11y().analyze()).violations).toEqual([]);
-  await page.keyboard.press("Escape");
-  await expect(dialog).toHaveCount(0);
-  await expect(manage).toBeFocused();
-  await expect(page.getByRole("textbox", { name: "Search articles" })).toBeVisible();
+  await connectedAccounts.close();
+  await expect(connectedAccounts.dialog).toHaveCount(0);
+  await expect(workspacePage.manageAccounts).toBeFocused();
+  await expect(readerPage.searchInput).toBeVisible();
 });
 
-test("rejects an unbound OAuth callback without contacting an instance", async ({ page }) => {
+test("rejects an unbound OAuth callback without contacting an instance", async ({
+  page,
+  deckPage,
+  workspacePage,
+}) => {
   await page.goto("/oauth/mastodon/callback?state=invalid&code=not-a-real-code");
   await expect(page).toHaveURL(/\/deck\?mastodon=failed$/);
-  await expect(page.getByRole("alert")).toContainText("Could not complete Mastodon authorization.");
-  await expect(page.getByRole("button", { name: "Rename", includeHidden: true })).toBeEnabled();
-  const manage = page.getByRole("button", { name: "Manage connected accounts" });
-  if (!(await manage.isVisible())) {
-    await page.getByRole("button", { name: "Toggle sidebar" }).click();
-  }
-  await expect(page.getByRole("button", { name: "Manage connected accounts" })).toBeEnabled();
+  await expect(deckPage.alert).toContainText("Could not complete Mastodon authorization.");
+  await expect(workspacePage.researchReady).toBeEnabled();
+  await workspacePage.ensureSidebarOpen();
+  await expect(workspacePage.manageAccounts).toBeEnabled();
 });

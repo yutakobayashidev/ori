@@ -110,8 +110,10 @@ nix develop -c pnpm typecheck
 nix develop -c pnpm test:e2e e2e/integrations/webmcp.test.ts
 ```
 
-E2E tests enable Chromium WebMCP/testing flags and invoke actual registered
-tools through `navigator.modelContextTesting`. Mock relay responses pass
+E2E tests enable Chromium's `WebMCP` feature and invoke actual registered
+tools through `document.modelContext.getTools()` and `executeTool()`. The pinned
+Chromium accepts the registered tool object and JSON-serialized arguments.
+Mock relay responses pass
 through real server functions and isolated database state.
 
 For interactive testing, enable `chrome://flags/#enable-webmcp-testing`,

@@ -1,20 +1,19 @@
 import { expect, test } from "../fixtures";
-import { closeMobileSidebar, showResearch } from "../workspace";
 
 test("keeps the sidebar, composer and deck reachable at compact widths", async ({
   page,
+  deckPage,
+  researchPage,
+  workspacePage,
   a11y,
 }, testInfo) => {
-  await page.goto("/deck");
+  await deckPage.goTo();
   for (const width of [320, 375, 414, 768]) {
     await page.setViewportSize({ width, height: 850 });
-    await showResearch(page);
-    const chat = page.getByRole("complementary", { name: "Research chat" });
+    await workspacePage.showResearch();
+    const chat = researchPage.panel;
     await expect(chat).toBeVisible();
-    const composer = chat.getByRole("textbox", {
-      name: "Message",
-      exact: true,
-    });
+    const composer = researchPage.composer;
     await expect(composer).toBeVisible();
     const bounds = await composer.boundingBox();
     if (!bounds) throw new Error("Composer must have a visible bounding box");
@@ -26,10 +25,10 @@ test("keeps the sidebar, composer and deck reachable at compact widths", async (
       path: testInfo.outputPath(`workspace-${width}.png`),
     });
     if (width === 320) expect((await a11y().analyze()).violations).toEqual([]);
-    await closeMobileSidebar(page);
+    await workspacePage.closeMobileSidebar();
   }
-  await page.getByRole("button", { name: "Toggle sidebar" }).click();
-  await expect(page.getByRole("complementary", { name: "Research chat" })).toBeHidden();
-  await page.getByRole("button", { name: "Research chat", exact: true }).click();
-  await expect(page.getByRole("complementary", { name: "Research chat" })).toBeVisible();
+  await workspacePage.toggleSidebar.click();
+  await expect(researchPage.panel).toBeHidden();
+  await workspacePage.researchChat.click();
+  await expect(researchPage.panel).toBeVisible();
 });

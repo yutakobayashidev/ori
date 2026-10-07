@@ -6,102 +6,86 @@ const coffeeSubject = "Catch up over coffee";
 test("reviews an edited reply and keeps the simulated result in history", async ({
   page,
   a11y,
+  messagesPage,
 }) => {
-  await page.goto("/support");
+  await messagesPage.goTo();
   await page.waitForLoadState("networkidle");
-  const rows = page.locator("[data-testid='support-row']");
+  const rows = messagesPage.rows;
   await expect(rows).toHaveCount(3);
-  await rows.filter({ hasText: reviewSubject }).click();
-  await page.locator("[data-testid='conversation-suggestions'] summary:visible").click();
-  await page.getByRole("button", { name: /^Polite/ }).click();
-  const reply = page.getByRole("textbox", { name: "Reply", exact: true });
+  await messagesPage.conversation(reviewSubject).click();
+  await messagesPage.chooseReplySuggestion(/^Polite/);
+  const reply = messagesPage.reply;
   await expect(reply).toHaveValue(/Thank you for sharing/);
   const edited = "I reviewed the materials. Let’s discuss the first-time experience.";
   await reply.fill(edited);
-  await page.locator("[data-testid='conversation-scheduling'] summary:visible").click();
   const slot = "Mon, Oct 5, 14:00–14:30";
-  await page.getByRole("combobox", { name: "Suggested times" }).selectOption(slot);
-  await page.getByRole("button", { name: "Add to reply" }).click();
+  await messagesPage.addSuggestedTime(slot);
   await expect(reply).toHaveValue(`${edited}\n\nWould ${slot} work for you?`);
-  await page.getByRole("button", { name: "Review reply" }).click();
-  const dialog = page.getByRole("dialog", { name: "Review reply" });
+  await messagesPage.reviewReply.click();
+  const dialog = messagesPage.reviewDialog;
   await expect(dialog).toContainText(edited);
   await expect(dialog).toContainText(slot);
   await expect(dialog).toContainText("No message will be sent");
   expect((await a11y().analyze()).violations).toEqual([]);
-  await dialog.getByRole("button", { name: "Back", exact: true }).click();
+  await messagesPage.editReply.click();
   await expect(reply).toHaveValue(new RegExp(edited));
-  await page.getByRole("button", { name: "Review reply" }).click();
-  await dialog.getByRole("button", { name: "Try sending" }).click();
+  await messagesPage.reviewReply.click();
+  await messagesPage.trySending.click();
   await expect(dialog).toHaveCount(0);
-  await expect(rows.filter({ hasText: reviewSubject })).toHaveCount(0);
-  await page.getByRole("button", { name: "Archive", exact: true }).click();
-  await rows.filter({ hasText: reviewSubject }).click();
-  await expect(page.locator("[data-testid='support-outcome']")).toContainText(edited);
-  await expect(page.locator("[data-testid='support-outcome']")).toContainText(slot);
+  await expect(messagesPage.conversation(reviewSubject)).toHaveCount(0);
+  await messagesPage.selectView("Archive");
+  await messagesPage.conversation(reviewSubject).click();
+  await expect(messagesPage.outcome).toContainText(edited);
+  await expect(messagesPage.outcome).toContainText(slot);
 });
 
-test("defers a conversation and restores it to the current queue", async ({ page }) => {
-  await page.goto("/support");
+test("defers a conversation and restores it to the current queue", async ({
+  page,
+  messagesPage,
+}) => {
+  await messagesPage.goTo();
   await page.waitForLoadState("networkidle");
-  const rows = page.locator("[data-testid='support-row']");
-  await rows.filter({ hasText: coffeeSubject }).click();
-  await expect(rows.filter({ hasText: coffeeSubject })).toHaveAttribute("aria-current", "true");
-  await page
-    .getByRole("textbox", { name: "Reply", exact: true })
-    .fill("土曜の予定を確認してから返事するね。");
-  await page.getByRole("button", { name: "Leave for later" }).click();
-  await expect(rows.filter({ hasText: coffeeSubject })).toHaveCount(0);
-  await page.getByRole("button", { name: "Set aside", exact: true }).click();
-  await rows.filter({ hasText: coffeeSubject }).click();
-  await expect(page.getByRole("textbox", { name: "Reply", exact: true })).toHaveValue(
-    "土曜の予定を確認してから返事するね。",
-  );
-  await page.getByRole("button", { name: "Move to Inbox" }).click();
-  const back = page.getByRole("button", { name: "Back to messages" });
-  if (await back.isVisible()) await back.click();
-  await expect(rows.filter({ hasText: coffeeSubject })).toBeVisible();
-  await expect(page.getByRole("button", { name: "Inbox", exact: true })).toHaveAttribute(
-    "aria-pressed",
-    "true",
-  );
+  await messagesPage.conversation(coffeeSubject).click();
+  await expect(messagesPage.conversation(coffeeSubject)).toHaveAttribute("aria-current", "true");
+  await messagesPage.reply.fill("土曜の予定を確認してから返事するね。");
+  await messagesPage.leaveForLater.click();
+  await expect(messagesPage.conversation(coffeeSubject)).toHaveCount(0);
+  await messagesPage.selectView("Set aside");
+  await messagesPage.conversation(coffeeSubject).click();
+  await expect(messagesPage.reply).toHaveValue("土曜の予定を確認してから返事するね。");
+  await messagesPage.moveToInbox.click();
+  await messagesPage.showConversationList();
+  await expect(messagesPage.conversation(coffeeSubject)).toBeVisible();
+  await expect(messagesPage.inbox).toHaveAttribute("aria-pressed", "true");
 });
 
 test("keeps corrections as new records and summarizes only selected current facts", async ({
   page,
   a11y,
+  journalPage,
 }) => {
-  await page.goto("/journal");
+  await journalPage.goTo();
   await page.waitForLoadState("networkidle");
-  await expect(page.getByRole("button", { name: "Save entry", exact: true })).toBeDisabled();
-  await page.getByRole("textbox", { name: "Entry text" }).fill("次はレビュー資料の導線を確認する");
-  await page.getByRole("button", { name: "Save entry", exact: true }).click();
-  await expect(page.getByRole("article", { name: "Note entry" })).toContainText(
-    "Occurred: Unknown",
-  );
-  await page.getByRole("button", { name: "Weight", exact: true }).click();
-  await page.getByRole("spinbutton", { name: "Weight", exact: true }).fill("65.2");
-  await page.getByRole("textbox", { name: "Source" }).fill("自宅の体重計");
-  await page.getByRole("button", { name: "Save entry", exact: true }).click();
-  await page
-    .getByRole("article", { name: "Weight entry" })
-    .getByRole("button", { name: "Correct" })
-    .click();
-  const correction = page.getByRole("dialog", { name: "Correct entry" });
-  await correction.getByRole("spinbutton", { name: "Weight", exact: true }).fill("65.8");
-  await correction.getByRole("button", { name: "Add correction" }).click();
-  const weights = page.getByRole("article", { name: "Weight entry" });
+  await expect(journalPage.saveEntry).toBeDisabled();
+  await journalPage.entryText.fill("次はレビュー資料の導線を確認する");
+  await journalPage.saveEntry.click();
+  await expect(journalPage.noteEntries).toContainText("Occurred: Unknown");
+  await journalPage.weightTab.click();
+  await journalPage.weight.fill("65.2");
+  await journalPage.source.fill("自宅の体重計");
+  await journalPage.saveEntry.click();
+  await journalPage.correctWeight("65.8");
+  const weights = journalPage.weightEntries;
   await expect(weights).toHaveCount(2);
   await expect(weights.filter({ hasText: "65.2 kg" })).toContainText("Original");
   await expect(weights.filter({ hasText: "65.8 kg" })).toContainText("Correction");
-  await page.getByRole("button", { name: "Summarize entries", exact: true }).click();
-  const review = page.getByRole("dialog", { name: "Summarize entries" });
-  const summary = review.getByRole("textbox", { name: "Entry summary" });
+  await journalPage.summarizeEntries.click();
+  const summary = journalPage.summary;
   await expect(summary).toHaveValue(/65.8 kg/);
   await expect(summary).not.toHaveValue(/65.2 kg/);
   await expect(summary).toHaveValue(/Source: 自宅の体重計/);
   await expect(summary).toHaveValue(/Entries with an unknown event time: 2 entries/);
-  await review.getByRole("checkbox", { name: /次はレビュー資料/ }).uncheck();
+  await journalPage.excludeFromSummary(/次はレビュー資料/);
   await expect(summary).not.toHaveValue(/次はレビュー資料/);
   await expect(summary).toHaveValue(
     /Medication and weight are unknown for periods without entries/,
@@ -112,22 +96,24 @@ test("keeps corrections as new records and summarizes only selected current fact
 test("fits communication and journal interactions in narrow screens", async ({
   page,
   a11y,
+  messagesPage,
+  journalPage,
+  workspacePage,
 }, testInfo) => {
   for (const width of [320, 375, 414, 768]) {
     await page.setViewportSize({ width, height: 850 });
-    await page.goto("/support");
+    await messagesPage.goTo();
     await page.waitForLoadState("networkidle");
     expect(await page.evaluate(() => document.documentElement.scrollWidth)).toBe(width);
-    await page.locator("[data-testid='support-row']").first().click();
-    await expect(page.getByRole("textbox", { name: "Reply", exact: true })).toBeVisible();
+    await messagesPage.rows.first().click();
+    await expect(messagesPage.reply).toBeVisible();
     expect(await page.evaluate(() => document.documentElement.scrollWidth)).toBe(width);
     if (width === 320) expect((await a11y().analyze()).violations).toEqual([]);
     await page.screenshot({ path: testInfo.outputPath(`messages-${width}.png`) });
-    const back = page.getByRole("button", { name: "Back to messages" });
-    if (await back.isVisible()) await back.click();
-    await page.getByRole("link", { name: "Journal", exact: true }).click();
-    await page.getByRole("button", { name: "Weight", exact: true }).click();
-    await expect(page.getByRole("spinbutton", { name: "Weight", exact: true })).toBeVisible();
+    await messagesPage.showConversationList();
+    await workspacePage.navigateTo("Journal");
+    await journalPage.weightTab.click();
+    await expect(journalPage.weight).toBeVisible();
     expect(await page.evaluate(() => document.documentElement.scrollWidth)).toBe(width);
     if (width === 320) expect((await a11y().analyze()).violations).toEqual([]);
   }
