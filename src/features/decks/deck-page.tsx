@@ -153,10 +153,11 @@ export function DeckPage() {
         if (activate) clearEditors();
       }}
     >
-      {(renderResearchPanel) => (
+      {(renderResearchPanel, researchHistory) => (
         <AppShell
           hasTemporaryDecks={workspace.decks.some((deck) => !deck.persisted)}
           researchChat={renderResearchPanel}
+          researchHistory={researchHistory}
           sidebar={
             <>
               <DeckSwitcher

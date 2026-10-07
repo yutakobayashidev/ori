@@ -117,7 +117,12 @@ function show(connections = [connection], ready = true) {
         onOpenDeck={onOpenDeck}
         onNavigateCitation={onNavigateCitation}
       >
-        {(renderPanel) => <div key={presentation}>{renderPanel()}</div>}
+        {(renderPanel, renderHistory) => (
+          <div key={presentation}>
+            {renderHistory()}
+            {renderPanel()}
+          </div>
+        )}
       </ResearchPanel>
     </QueryClientProvider>
   );
@@ -592,9 +597,7 @@ it("opens a saved chat with its context deck and selected accounts, preserving l
   fireEvent.change(screen.getByLabelText("Message"), {
     target: { value: "別の下書き" },
   });
-  fireEvent.change(screen.getByLabelText("Chat history"), {
-    target: { value: saved.id },
-  });
+  fireEvent.click(screen.getByRole("button", { name: "以前の調査" }));
   expect(await screen.findByText("保存した会話")).toBeVisible();
   fireEvent.click(screen.getByRole("link", { name: "前回の引用" }));
   expect(view.onNavigateCitation).toHaveBeenCalledWith(
@@ -659,7 +662,11 @@ it("restores a context-only chat on reload and permits browsing history during a
   };
   const view = show();
   await waitFor(() => expect(view.onOpenDeck).toHaveBeenCalledWith(contextDeck, true));
-  expect(screen.getByLabelText("Chat history")).toBeEnabled();
+  expect(screen.getByRole("button", { name: running.topic })).toBeEnabled();
+  expect(screen.getByRole("button", { name: running.topic })).toHaveAttribute(
+    "aria-current",
+    "page",
+  );
 });
 
 it("keeps newer scoped stream state when the selected chat fetch arrives late", async () => {
@@ -682,9 +689,7 @@ it("keeps newer scoped stream state when the selected chat fetch arrives late", 
       : Promise.resolve(current),
   );
   const view = show();
-  fireEvent.change(await screen.findByLabelText("Chat history"), {
-    target: { value: saved.id },
-  });
+  fireEvent.click(await screen.findByRole("button", { name: "Saved chat" }));
   await waitFor(() => expect(MockEventSource.instances).toHaveLength(2));
   expect(MockEventSource.instances[0]?.close).toHaveBeenCalledOnce();
   expect(MockEventSource.instances[1]?.url).toBe("/api/research/events?run=saved");

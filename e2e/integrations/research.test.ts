@@ -347,6 +347,17 @@ test("keeps browser conversation selection independent and restores it on reload
     const secondWorkspace = new WorkspacePage(secondPage);
     await researchPage.goTo(`?run=${first}`, { waitUntil: "domcontentloaded" });
     await workspacePage.showResearch();
+    const history = page.getByRole("navigation", { name: "Chat history" });
+    const firstTab = history.getByRole("button", { name: "Browser one conversation" });
+    const secondTab = history.getByRole("button", { name: "Browser two conversation" });
+    await expect(firstTab).toHaveAttribute("aria-current", "page");
+    await workspacePage.showDeckManagement();
+    await secondTab.click();
+    await expect(page).toHaveURL(new RegExp(`run=${second}`));
+    await expect(secondTab).toHaveAttribute("aria-current", "page");
+    await expect(researchPage.conversation).toContainText("Browser two conversation");
+    await page.goBack();
+    await expect(firstTab).toHaveAttribute("aria-current", "page");
     await secondResearch.goTo(`?run=${second}`, {
       waitUntil: "domcontentloaded",
     });

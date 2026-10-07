@@ -201,7 +201,7 @@ available. The backend handles tools even when the browser is closed.
 Use **New chat** to leave the current conversation and start a fresh Codex
 thread with your next message. The open deck and host reports remain available.
 A running turn continues in the background when you open another chat.
-Selection belongs to the current URL; another browser does not change it. **Chat history** reopens saved conversations with their account
+Selection belongs to the current URL; another browser does not change it. **Chat history** appears as a horizontally scrollable tab strip above the chat and deck, with a **+** button for a new chat. Tabs reopen saved conversations with their account
 selection, deck and citations; the next message resumes the same Codex thread.
 SQLite stores conversation snapshots. Active selection is not stored globally.
 Each turn is limited to 6 columns, 12 upstream requests shared between list

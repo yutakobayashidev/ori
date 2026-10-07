@@ -1,6 +1,6 @@
 import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { useServerFn } from "@tanstack/react-start";
-import { ArrowUpIcon, SquareIcon } from "lucide-react";
+import { ArrowUpIcon, PlusIcon, SquareIcon } from "lucide-react";
 import { type ReactNode, useCallback, useEffect, useId, useRef, useState } from "react";
 import { Bubble, BubbleContent } from "#/components/ui/bubble";
 import { Button } from "#/components/ui/button";
@@ -23,7 +23,6 @@ import {
   MessageScrollerProvider,
   MessageScrollerViewport,
 } from "#/components/ui/message-scroller";
-import { NativeSelect, NativeSelectOption } from "#/components/ui/native-select";
 import type { Connection } from "../connections/model";
 import type { Deck } from "../decks/model";
 import { useUrlState } from "../navigation/use-url-state";
@@ -51,6 +50,7 @@ type ResearchDraft = {
   selected: string[] | null;
 };
 type RenderResearchPanel = (onCitationNavigated?: () => void) => ReactNode;
+type RenderResearchHistory = (onSelect?: () => void) => ReactNode;
 
 export function ResearchPanel({
   ready,
@@ -65,14 +65,13 @@ export function ResearchPanel({
   connections: Connection[];
   onOpenDeck: (deck: Deck, activate?: boolean) => unknown;
   onNavigateCitation?: (url: string, citations: ResearchCitation[], restore?: boolean) => boolean;
-  children?: (renderPanel: RenderResearchPanel) => ReactNode;
+  children?: (renderPanel: RenderResearchPanel, renderHistory: RenderResearchHistory) => ReactNode;
 }) {
   const [search, setSearch] = useUrlState();
   const fetchStatus = useServerFn(loadResearchStatus);
   const start = useServerFn(startResearch);
   const cancel = useServerFn(cancelResearch);
   const client = useQueryClient();
-  const historyId = useId();
   const selectedId = search.run === "new" ? undefined : search.run;
   const selection = useRef(selectedId);
   useEffect(() => {
@@ -292,6 +291,57 @@ export function ResearchPanel({
     }
   }
 
+  const renderHistory: RenderResearchHistory = (onSelect) => (
+    <nav
+      aria-label="Chat history"
+      data-testid="research-history"
+      className="flex h-12 min-w-0 shrink-0 items-stretch border-b bg-sidebar"
+    >
+      <div className="flex min-w-0 flex-1 items-end gap-1 overflow-x-auto px-2 pt-2">
+        {status.data?.history?.map((entry) => (
+          <Button
+            key={entry.id}
+            type="button"
+            variant="tab"
+            size="tab"
+            aria-current={entry.id === selectedId ? "page" : undefined}
+            title={entry.title}
+            disabled={busy}
+            onClick={() => {
+              selectChat(entry.id);
+              onSelect?.();
+            }}
+          >
+            <span className="truncate">{entry.title}</span>
+          </Button>
+        ))}
+        {!selectedId && (
+          <span
+            className="flex h-10 w-48 shrink-0 items-center rounded-t-lg border-b-2 border-primary bg-background px-3 text-sm font-medium"
+            aria-current="page"
+          >
+            New chat
+          </span>
+        )}
+      </div>
+      <Button
+        variant="ghost"
+        size="icon"
+        type="button"
+        className="mx-2 self-center"
+        aria-label="New chat"
+        title="New chat"
+        disabled={busy || !run}
+        onClick={() => {
+          newChat();
+          onSelect?.();
+        }}
+      >
+        <PlusIcon />
+      </Button>
+    </nav>
+  );
+
   const renderPanel: RenderResearchPanel = (onCitationNavigated) => (
     <aside
       data-testid="research-panel"
@@ -303,34 +353,6 @@ export function ResearchPanel({
         className="flex shrink-0 flex-wrap items-center justify-between gap-2 border-b p-4"
       >
         <h2 className="m-0 text-base">Research chat</h2>
-        <Button variant="ghost" size="sm" type="button" disabled={busy || !run} onClick={newChat}>
-          New chat
-        </Button>
-        {(status.data?.history?.length ?? 0) > 0 && (
-          <label
-            data-testid="research-history"
-            className="flex w-full min-w-0 items-center gap-2 text-research-label text-muted-foreground [&>[data-slot=native-select-wrapper]]:min-w-0 [&>[data-slot=native-select-wrapper]]:flex-1"
-            htmlFor={historyId}
-          >
-            <span className="shrink-0">Chat history</span>
-            <NativeSelect
-              id={historyId}
-              size="sm"
-              value={run?.id ?? ""}
-              disabled={busy}
-              onChange={(event) => selectChat(event.target.value)}
-            >
-              <NativeSelectOption value="" disabled>
-                New chat
-              </NativeSelectOption>
-              {status.data?.history?.map((entry) => (
-                <NativeSelectOption key={entry.id} value={entry.id}>
-                  {entry.title}
-                </NativeSelectOption>
-              ))}
-            </NativeSelect>
-          </label>
-        )}
       </header>
       {reconnecting && (
         <p
@@ -410,7 +432,14 @@ export function ResearchPanel({
       />
     </aside>
   );
-  return children ? children(renderPanel) : renderPanel();
+  return children ? (
+    children(renderPanel, renderHistory)
+  ) : (
+    <>
+      {renderHistory()}
+      {renderPanel()}
+    </>
+  );
 }
 
 function ResearchConversation({
