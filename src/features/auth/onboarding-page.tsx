@@ -1,4 +1,4 @@
-import { useRouteContext } from "@tanstack/react-router";
+import { useHydrated, useRouteContext } from "@tanstack/react-router";
 import { ArrowRight, BookOpen, House, MessagesSquare } from "lucide-react";
 import { type FormEvent, useState } from "react";
 import { Button } from "#/components/ui/button";
@@ -8,13 +8,16 @@ import { authRequest } from "./auth-client";
 import { AuthFrame } from "./auth-page";
 
 export function OnboardingPage() {
+  const hydrated = useHydrated();
   const { auth } = useRouteContext({ from: "__root__" });
   const [name, setName] = useState(auth.owner?.name ?? "");
   const [step, setStep] = useState(1);
   const [pending, setPending] = useState(false);
   const [error, setError] = useState("");
+  const disabled = pending || !hydrated;
 
   async function finish() {
+    if (disabled) return;
     setPending(true);
     setError("");
     try {
@@ -27,6 +30,7 @@ export function OnboardingPage() {
   }
 
   async function signOut() {
+    if (disabled) return;
     setPending(true);
     setError("");
     try {
@@ -40,7 +44,7 @@ export function OnboardingPage() {
 
   function next(event: FormEvent<HTMLFormElement>) {
     event.preventDefault();
-    if (!name.trim()) return;
+    if (disabled || !name.trim()) return;
     setStep(2);
   }
 
@@ -57,7 +61,7 @@ export function OnboardingPage() {
               Your day, conversations, and reading, together in one place.
             </p>
           </header>
-          <form className="grid gap-px-20" onSubmit={next}>
+          <form method="post" className="grid gap-px-20" onSubmit={next}>
             <div className="grid gap-px-9">
               <Label htmlFor="displayName">What should we call you?</Label>
               <Input
@@ -69,14 +73,14 @@ export function OnboardingPage() {
                 autoComplete="given-name"
                 required
                 maxLength={80}
-                disabled={pending}
+                disabled={disabled}
               />
             </div>
             <Button
               type="submit"
               className="mt-[4px] w-full justify-between"
               size="lg"
-              disabled={pending || !name.trim()}
+              disabled={disabled || !name.trim()}
             >
               Continue
               <ArrowRight aria-hidden="true" />
@@ -132,14 +136,15 @@ export function OnboardingPage() {
             </li>
           </ul>
           <p className="border-t border-border pt-px-20 text-ui-12 leading-cozy text-muted-foreground">
-            Home, contacts, notes, reading, and vitals currently use sample data. You can add
-            connections from your profile menu whenever you’re ready.
+            Tasks and reply drafts are saved. Routine and journal entries reset on reload; Reader
+            and Vitals contain sample data. Add connections from your profile menu whenever you’re
+            ready.
           </p>
           <div className="mt-px-26 flex items-center justify-between gap-px-12">
-            <Button variant="ghost" onClick={() => setStep(1)} disabled={pending}>
+            <Button variant="ghost" onClick={() => setStep(1)} disabled={disabled}>
               Back
             </Button>
-            <Button size="lg" onClick={finish} disabled={pending}>
+            <Button size="lg" onClick={finish} disabled={disabled}>
               {pending ? "Saving…" : "Open workspace"}
               <ArrowRight aria-hidden="true" />
             </Button>
@@ -153,7 +158,7 @@ export function OnboardingPage() {
       )}
       <footer className="mt-px-32 flex items-center justify-between gap-px-12 text-ui-12 text-muted-foreground">
         <span className="min-w-0 wrap-anywhere">{auth.owner?.email}</span>
-        <Button variant="ghost" size="sm" onClick={signOut} disabled={pending}>
+        <Button variant="ghost" size="sm" onClick={signOut} disabled={disabled}>
           Sign out
         </Button>
       </footer>

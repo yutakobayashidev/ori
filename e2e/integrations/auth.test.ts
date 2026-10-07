@@ -14,7 +14,7 @@ test("creates the owner once and enters onboarding with a real session", async (
   db.$client.close();
   await context.clearCookies();
   await homePage.goTo();
-  await page.waitForLoadState("networkidle");
+  await expect(authPage.createAccountButton).toBeVisible();
   await expect(page).toHaveURL(/\/setup$/);
   expect((await a11y().analyze()).violations).toEqual([]);
   await authPage.createAccount({
@@ -24,7 +24,7 @@ test("creates the owner once and enters onboarding with a real session", async (
     setupCode: "isolated-e2e-setup-token-not-for-production",
   });
   await expect(page).toHaveURL(/\/onboarding$/);
-  await page.waitForLoadState("networkidle");
+  await expect(onboardingPage.continueButton).toBeEnabled();
   await onboardingPage.complete();
   await expect(homePage.greeting("Yuta")).toBeVisible();
 });
@@ -70,7 +70,7 @@ test("signs in and revokes the session on sign out", async ({
   await authPage.password.fill("E2E-only-passphrase-2026");
   await authPage.signInButton.click();
   await expect(page).toHaveURL("/");
-  await page.waitForLoadState("networkidle");
+  await expect(workspacePage.manageAccounts).toBeVisible();
   const token = (await context.cookies()).find((cookie) => cookie.name === "workspace_session");
   expect(token?.httpOnly).toBe(true);
   expect(token?.sameSite).toBe("Lax");
@@ -99,7 +99,7 @@ test("requires onboarding and remembers its completion and name", async ({
   try {
     expect((await request.get("/api/research/events")).status()).toBe(403);
     await homePage.goTo();
-    await page.waitForLoadState("networkidle");
+    await expect(onboardingPage.name).toBeVisible();
     await expect(page).toHaveURL(/\/onboarding$/);
     expect((await a11y().analyze()).violations).toEqual([]);
     await onboardingPage.name.fill("Yuta Test");

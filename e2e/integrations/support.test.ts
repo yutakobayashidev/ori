@@ -1,71 +1,68 @@
-import { expect, test } from "../fixtures";
+import { expect, test } from "../activity-fixtures";
 
-const reviewSubject = "Schedule next week’s design review";
-const coffeeSubject = "Catch up over coffee";
+test.beforeEach(async ({ activityMcp }) => {
+  await activityMcp.publish();
+});
 
-test("reviews an edited reply and keeps the simulated result in history", async ({
+test("saves an edited reply without recording a simulated send", async ({
   page,
   a11y,
   messagesPage,
+  activitiesPage,
+  activityMcp,
 }) => {
-  await messagesPage.goTo();
-  await page.waitForLoadState("networkidle");
-  const rows = messagesPage.rows;
-  await expect(rows).toHaveCount(3);
-  await messagesPage.conversation(reviewSubject).click();
-  await messagesPage.chooseReplySuggestion(/^Polite/);
-  const reply = messagesPage.reply;
-  await expect(reply).toHaveValue(/Thank you for sharing/);
+  await messagesPage.goTo("?activity=review-times&view=all");
   const edited = "I reviewed the materials. Let’s discuss the first-time experience.";
-  await reply.fill(edited);
-  const slot = "Mon, Oct 5, 14:00–14:30";
-  await messagesPage.addSuggestedTime(slot);
-  await expect(reply).toHaveValue(`${edited}\n\nWould ${slot} work for you?`);
-  await messagesPage.reviewReply.click();
-  const dialog = messagesPage.reviewDialog;
-  await expect(dialog).toContainText(edited);
-  await expect(dialog).toContainText(slot);
-  await expect(dialog).toContainText("No message will be sent");
+  await activitiesPage.saveReply(edited);
+  await expect(page.getByRole("status").filter({ hasText: "Draft saved" })).toBeVisible();
+  await expect(activitiesPage.details).toContainText("Sending messages is not connected yet.");
+  await expect(
+    activitiesPage.details.getByRole("button", { name: "Mark complete", exact: true }),
+  ).toHaveCount(0);
+  await page.reload();
+  await expect(activitiesPage.draft).toHaveValue(edited);
+  const activity = (await activityMcp.context()).activities.find(
+    (item) => item.id === "review-times",
+  );
+  expect(activity).toMatchObject({ userState: "available", userOverrides: { draft: edited } });
   expect((await a11y().analyze()).violations).toEqual([]);
-  await messagesPage.editReply.click();
-  await expect(reply).toHaveValue(new RegExp(edited));
-  await messagesPage.reviewReply.click();
-  await messagesPage.trySending.click();
-  await expect(dialog).toHaveCount(0);
-  await expect(messagesPage.conversation(reviewSubject)).toHaveCount(0);
-  await messagesPage.selectView("Archive");
-  await messagesPage.conversation(reviewSubject).click();
-  await expect(messagesPage.outcome).toContainText(edited);
-  await expect(messagesPage.outcome).toContainText(slot);
 });
 
-test("defers a conversation and restores it to the current queue", async ({
-  page,
+test("defers one reply while keeping another action in the same conversation available", async ({
   messagesPage,
+  activitiesPage,
+  activityMcp,
 }) => {
-  await messagesPage.goTo();
-  await page.waitForLoadState("networkidle");
-  await messagesPage.conversation(coffeeSubject).click();
-  await expect(messagesPage.conversation(coffeeSubject)).toHaveAttribute("aria-current", "true");
-  await messagesPage.reply.fill("土曜の予定を確認してから返事するね。");
-  await messagesPage.leaveForLater.click();
-  await expect(messagesPage.conversation(coffeeSubject)).toHaveCount(0);
-  await messagesPage.selectView("Set aside");
-  await messagesPage.conversation(coffeeSubject).click();
-  await expect(messagesPage.reply).toHaveValue("土曜の予定を確認してから返事するね。");
-  await messagesPage.moveToInbox.click();
-  await messagesPage.showConversationList();
-  await expect(messagesPage.conversation(coffeeSubject)).toBeVisible();
-  await expect(messagesPage.inbox).toHaveAttribute("aria-pressed", "true");
+  await messagesPage.goTo("?activity=review-times&view=all");
+  await activitiesPage.saveReply("土曜の予定を確認してから返事するね。");
+  await expect(activitiesPage.useProposedDraft).toBeVisible();
+  await activitiesPage.later.click();
+  await expect(activitiesPage.bringBack).toBeVisible();
+  await activitiesPage.action("Send the completed documents").click();
+  await expect(activitiesPage.details).toContainText("Ready when you are");
+  const snapshot = await activityMcp.context();
+  expect(snapshot.activities.find((item) => item.id === "review-times")?.userState).toBe(
+    "deferred",
+  );
+  expect(snapshot.activities.find((item) => item.id === "send-documents")?.userState).toBe(
+    "available",
+  );
+  await activitiesPage.action("Propose review times").click();
+  await expect(activitiesPage.draft).toHaveValue("土曜の予定を確認してから返事するね。");
+  await activitiesPage.bringBack.click();
+  await expect(activitiesPage.later).toBeVisible();
 });
 
 test("keeps corrections as new records and summarizes only selected current facts", async ({
   page,
   a11y,
   journalPage,
+  homePage,
+  workspacePage,
 }) => {
-  await journalPage.goTo();
-  await page.waitForLoadState("networkidle");
+  await homePage.goTo();
+  await workspacePage.navigateTo("Journal");
+  await page.waitForLoadState("domcontentloaded");
   await expect(journalPage.saveEntry).toBeDisabled();
   await journalPage.entryText.fill("次はレビュー資料の導線を確認する");
   await journalPage.saveEntry.click();
@@ -97,16 +94,17 @@ test("fits communication and journal interactions in narrow screens", async ({
   page,
   a11y,
   messagesPage,
+  activitiesPage,
   journalPage,
   workspacePage,
 }, testInfo) => {
   for (const width of [320, 375, 414, 768]) {
     await page.setViewportSize({ width, height: 850 });
     await messagesPage.goTo();
-    await page.waitForLoadState("networkidle");
+    await page.waitForLoadState("domcontentloaded");
     expect(await page.evaluate(() => document.documentElement.scrollWidth)).toBe(width);
     await messagesPage.rows.first().click();
-    await expect(messagesPage.reply).toBeVisible();
+    await expect(activitiesPage.draft).toBeVisible();
     expect(await page.evaluate(() => document.documentElement.scrollWidth)).toBe(width);
     if (width === 320) expect((await a11y().analyze()).violations).toEqual([]);
     await page.screenshot({ path: testInfo.outputPath(`messages-${width}.png`) });

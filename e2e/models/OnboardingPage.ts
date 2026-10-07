@@ -1,4 +1,4 @@
-import type { Locator, Page } from "@playwright/test";
+import { expect, type Locator, type Page } from "@playwright/test";
 
 export class OnboardingPage {
   readonly name: Locator;
@@ -12,11 +12,14 @@ export class OnboardingPage {
   }
 
   async goTo() {
-    await this.page.goto("/onboarding", { waitUntil: "networkidle" });
+    await this.page.goto("/onboarding");
+    await expect(
+      this.name.or(this.page.getByRole("textbox", { name: "Home input" })),
+    ).toBeVisible();
   }
 
   async complete() {
-    await this.page.waitForLoadState("networkidle");
+    await expect(this.continueButton).toBeEnabled();
     await this.continueButton.click();
     await this.openWorkspace.click();
   }

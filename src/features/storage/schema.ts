@@ -152,3 +152,33 @@ export const authThrottle = sqliteTable(
   },
   (table) => [check("auth_throttle_singleton", sql`${table.id} = 1`)],
 );
+
+export const activities = sqliteTable("activities", {
+  id: text("id").primaryKey(),
+  proposal: text("proposal", { mode: "json" })
+    .$type<import("../activities/model").ActivityProposal>()
+    .notNull(),
+  userState: text("user_state").$type<import("../activities/model").ActivityState>().notNull(),
+  userOverrides: text("user_overrides", { mode: "json" })
+    .$type<import("../activities/model").ActivityOverrides>()
+    .notNull(),
+  ...timestamps,
+});
+export const activityRevision = sqliteTable(
+  "activity_revision",
+  {
+    id: integer("id").primaryKey(),
+    revision: integer("revision").notNull(),
+  },
+  (table) => [
+    check("activity_revision_singleton", sql`${table.id} = 1`),
+    check("activity_revision_nonnegative", sql`${table.revision} >= 0`),
+  ],
+);
+export const activityReceipts = sqliteTable("activity_receipts", {
+  requestId: text("request_id").primaryKey(),
+  inputHash: text("input_hash").notNull(),
+  result: text("result", { mode: "json" })
+    .$type<import("../activities/model").ActivityReceipt>()
+    .notNull(),
+});

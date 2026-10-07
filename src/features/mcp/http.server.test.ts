@@ -42,6 +42,8 @@ it("initializes and lists persistent workspace tools without a browser session",
       "replace_deck",
       "delete_deck",
       "fetch_posts",
+      "get_activity_context",
+      "publish_activities",
     ]),
   );
 });

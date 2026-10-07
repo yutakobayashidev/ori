@@ -50,6 +50,13 @@ PKCE verifiers are authenticated encrypted envelopes in separate fields.
 Their associated data binds each secret to its record and purpose. Public
 connection responses never select those fields.
 
+Shared task/reply activities also live in SQLite: `activities` stores proposals,
+user overrides and execution state; `activity_revision` serializes changes;
+`activity_receipts` records exact mutation retries. These tables are included in
+the same database backup. Activity publication preserves user-owned edits and
+decisions, and sends browser invalidation only after the transaction commits.
+See the [Activity MCP contract](activity-mcp-design.md).
+
 ## Backups and restore
 
 Use the live SQLite backup API instead of copying only the main file while WAL

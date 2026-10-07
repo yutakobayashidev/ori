@@ -1,5 +1,4 @@
 import { ArrowLeft, MessageSquare, Search } from "lucide-react";
-import { useState } from "react";
 import { Avatar, AvatarFallback } from "#/components/ui/avatar";
 import { Button } from "#/components/ui/button";
 import { Input } from "#/components/ui/input";
@@ -12,54 +11,66 @@ import {
 } from "#/components/ui/sidebar";
 import { TooltipProvider } from "#/components/ui/tooltip";
 import { WorkspaceNavigation } from "#/components/workspace-navigation";
+import { ActivityFeedback, stateLabels } from "#/features/activities/activity-controls";
+import { useActivities } from "#/features/activities/activity-state";
+import type { Activity } from "#/features/activities/model";
+import { ReplyActivityDetail } from "#/features/activities/reply-activity-detail";
 import { useSearchInput } from "#/features/navigation/use-search-input";
 import { useUrlState } from "#/features/navigation/use-url-state";
-import { type Status, useWorkspaceState } from "#/features/workspace/workspace-state";
-import { ConversationDetail } from "./conversation-detail";
-import { conversations } from "./mock-conversations";
 
 const views = [
   { id: "now", label: "Inbox" },
   { id: "all", label: "All" },
   { id: "later", label: "Set aside" },
-  { id: "waiting", label: "Awaiting reply" },
+  { id: "waiting", label: "Waiting" },
   { id: "done", label: "Archive" },
 ] as const;
-
+function conversationKey(activity: Activity) {
+  if (activity.effective.kind !== "reply") return activity.id;
+  const sourceId = activity.effective.reply.sourceId;
+  const source = activity.effective.sources.find((source) => source.id === sourceId);
+  return source?.kind === "message"
+    ? JSON.stringify([source.provider, source.targetId, source.accountId, source.chatId])
+    : activity.id;
+}
 export function SupportPage() {
   const [search, updateSearch] = useUrlState();
   const view = search.view ?? "now";
-  const query = search.q ?? "";
-  const searchState = useSearchInput("conversation");
-  const { statuses, setStatuses, outcomes, setOutcomes } = useWorkspaceState();
-  const selectedId = search.conversation;
-  const [notice, setNotice] = useState("");
-  const visible = conversations.filter((item) => {
-    const status = statuses[item.id] ?? "now";
+  const query = (search.q ?? "").toLowerCase();
+  const searchState = useSearchInput("activity");
+  const { activities, loading } = useActivities();
+  const selectedId = search.activity;
+  const visible = activities.filter((activity) => {
+    const item = activity.effective;
+    if (item.kind !== "reply") return false;
+    const state = activity.userState;
+    const matchesView =
+      view === "all" ||
+      (view === "now"
+        ? state === "available" || state === "inProgress"
+        : view === "later"
+          ? state === "deferred"
+          : view === "waiting"
+            ? state === "waiting"
+            : state === "completed" || state === "dismissed");
     return (
-      (view !== "now" || item.replyRequired || statuses[item.id] === "now") &&
-      (view === "all" ||
-        (view === "done" ? status === "sent" || status === "dismissed" : status === view)) &&
-      `${item.name} ${item.subject} ${item.channels.join(" ")}`
+      matchesView &&
+      `${item.reply.recipientName} ${item.title} ${item.nextAction} ${item.reply.context}`
         .toLowerCase()
-        .includes(query.toLowerCase())
+        .includes(query)
     );
   });
-  const selected = visible.find((item) => item.id === selectedId) ?? visible[0];
-  function resolve(id: string, status: Exclude<Status, "now">, note?: string) {
-    setStatuses((current) => ({ ...current, [id]: status }));
-    if (note) setOutcomes((current) => ({ ...current, [id]: note }));
-    setNotice(
-      status === "sent"
-        ? "Reply preview recorded. No message sent."
-        : status === "later"
-          ? "Set aside for later"
-          : status === "waiting"
-            ? "Awaiting their reply"
-            : "Archived without replying",
-    );
-    updateSearch({ conversation: undefined });
+  const groups = new Map<string, Activity[]>();
+  for (const activity of visible) {
+    const key = conversationKey(activity);
+    const group = groups.get(key) ?? [];
+    group.push(activity);
+    groups.set(key, group);
   }
+  const selected = visible.find((activity) => activity.id === selectedId) ?? visible[0];
+  const related = selected ? (groups.get(conversationKey(selected)) ?? []) : [];
+  const recipient =
+    selected?.effective.kind === "reply" ? selected.effective.reply.recipientName : "";
   return (
     <TooltipProvider>
       <SidebarProvider
@@ -73,16 +84,16 @@ export function SupportPage() {
         >
           <WorkspaceNavigation />
           <Sidebar collapsible="none" className="w-auto min-w-0 flex-1">
-            <SidebarHeader className="p-5 gap-4">
+            <SidebarHeader className="gap-4 p-5">
               <div className="flex items-center gap-px-10">
                 <h1 className="text-ui-19 font-semibold tracking-title">Messages</h1>
-                <span className="text-ui-12 text-muted-foreground">{visible.length}</span>
+                <span className="text-ui-12 text-muted-foreground">{groups.size}</span>
               </div>
               <div className="relative">
-                <Search className="absolute left-3 top-2 size-4 text-muted-foreground" />
+                <Search className="absolute top-2 left-3 size-4 text-muted-foreground" />
                 <Input
                   aria-label="Search messages"
-                  placeholder="Search people or messages"
+                  placeholder="Search people or actions"
                   className="pl-9"
                   value={searchState.value}
                   onChange={searchState.onChange}
@@ -93,17 +104,17 @@ export function SupportPage() {
               <nav className="flex flex-wrap gap-px-4" aria-label="Conversation filters">
                 {views.map((tab) => (
                   <button
-                    className="cursor-pointer rounded-ui-6 px-px-9 py-px-6 text-ui-11 whitespace-nowrap text-muted-foreground aria-pressed:bg-sidebar-accent aria-pressed:text-foreground hover:bg-muted hover:text-foreground focus-visible:outline-2 focus-visible:outline-ring focus-visible:-outline-offset-2"
                     type="button"
                     key={tab.id}
+                    className="cursor-pointer rounded-ui-6 px-px-9 py-px-6 text-ui-11 whitespace-nowrap text-muted-foreground aria-pressed:bg-sidebar-accent aria-pressed:text-foreground hover:bg-muted"
                     aria-pressed={view === tab.id}
-                    onClick={() => {
+                    onClick={() =>
                       updateSearch({
                         view: tab.id === "now" ? undefined : tab.id,
+                        activity: undefined,
                         conversation: undefined,
-                      });
-                      setNotice("");
-                    }}
+                      })
+                    }
                   >
                     {tab.label}
                   </button>
@@ -111,48 +122,47 @@ export function SupportPage() {
               </nav>
             </SidebarHeader>
             <SidebarContent className="gap-0">
-              {visible.map((item) => (
-                <button
-                  type="button"
-                  data-testid="support-row"
-                  aria-label={`${item.name}: ${item.subject}`}
-                  className="mx-px-8 my-px-2 flex cursor-pointer gap-px-12 rounded-ui-10 px-px-14 py-px-12 text-left leading-normal hover:bg-sidebar-accent aria-current:bg-sidebar-accent active:bg-muted focus-visible:outline-2 focus-visible:outline-ring focus-visible:-outline-offset-2"
-                  aria-current={selected?.id === item.id ? "true" : undefined}
-                  key={item.id}
-                  onClick={() => updateSearch({ conversation: item.id })}
-                >
-                  <Avatar aria-hidden="true">
-                    <AvatarFallback>
-                      {item.name
-                        .split(" ")
-                        .map((part) => part[0])
-                        .join("")}
-                    </AvatarFallback>
-                  </Avatar>
-                  <span className="flex min-w-0 flex-1 flex-col gap-px-3">
-                    <span className="flex items-center justify-between gap-px-8">
-                      <strong className="text-ui-12 font-book">{item.name}</strong>
-                      <span className="text-ui-10 whitespace-nowrap text-muted-foreground">
-                        {item.updatedAt}
+              {[...groups.entries()].map(([key, group]) => {
+                const first = group[0];
+                if (!first || first.effective.kind !== "reply") return null;
+                const item = first.effective;
+                return (
+                  <button
+                    type="button"
+                    data-testid="support-row"
+                    key={key}
+                    aria-label={`${item.reply.recipientName}: ${item.title}`}
+                    aria-current={
+                      selected && conversationKey(selected) === key ? "true" : undefined
+                    }
+                    onClick={() => updateSearch({ activity: first.id, conversation: undefined })}
+                    className="mx-px-8 my-px-2 flex cursor-pointer gap-px-12 rounded-ui-10 px-px-14 py-px-12 text-left leading-normal hover:bg-sidebar-accent aria-current:bg-sidebar-accent"
+                  >
+                    <Avatar aria-hidden="true">
+                      <AvatarFallback>{item.reply.recipientName.slice(0, 2)}</AvatarFallback>
+                    </Avatar>
+                    <span className="flex min-w-0 flex-1 flex-col gap-px-3">
+                      <strong className="text-ui-12 font-book">{item.reply.recipientName}</strong>
+                      <span className="truncate text-ui-12 text-muted-foreground">
+                        {item.title}
+                      </span>
+                      <span className="text-ui-10 text-muted-foreground">
+                        {group.length > 1
+                          ? `${group.length} actions`
+                          : stateLabels[first.userState]}
                       </span>
                     </span>
-                    <span className="truncate text-ui-12 text-muted-foreground">
-                      {item.subject}
-                    </span>
-                    <span className="text-ui-10 text-muted-foreground">
-                      {item.channels.join(" · ")}
-                    </span>
-                  </span>
-                </button>
-              ))}
-              {!visible.length && (
+                  </button>
+                );
+              })}
+              {!visible.length && !loading && (
                 <p className="p-5 text-sm text-muted-foreground">
-                  {query ? "No results found" : "Nothing here. You’re all caught up."}
+                  {query ? "No results found" : "No reply activities in this view."}
                 </p>
               )}
             </SidebarContent>
-            <div className="px-px-20 py-px-16 text-ui-11 text-muted-foreground" role="status">
-              {notice || "Sample conversations"}
+            <div className="px-px-20 py-px-16">
+              <ActivityFeedback />
             </div>
           </Sidebar>
         </Sidebar>
@@ -166,70 +176,49 @@ export function SupportPage() {
               size="icon"
               className="hidden max-md:inline-flex"
               aria-label="Back to messages"
-              onClick={() => updateSearch({ conversation: undefined })}
+              onClick={() => updateSearch({ activity: undefined })}
             >
               <ArrowLeft />
             </Button>
             {selected && (
               <>
                 <Avatar aria-hidden="true">
-                  <AvatarFallback>
-                    {selected.name
-                      .split(" ")
-                      .map((part) => part[0])
-                      .join("")}
-                  </AvatarFallback>
+                  <AvatarFallback>{recipient.slice(0, 2)}</AvatarFallback>
                 </Avatar>
-                <div>
-                  <strong className="text-ui-13 font-book">{selected.name}</strong>
-                  <p className="mt-px-2 text-ui-10 text-muted-foreground">
-                    {selected.channels.join(" · ")}
-                  </p>
-                </div>
+                <strong className="text-ui-13 font-book">{recipient}</strong>
               </>
-            )}
-            {selected && view !== "now" && (
-              <div className="ml-auto">
-                <Button
-                  variant="outline"
-                  size="sm"
-                  onClick={() => {
-                    setStatuses((current) => ({ ...current, [selected.id]: "now" }));
-                    updateSearch({ view: undefined, conversation: selected.id });
-                  }}
-                >
-                  Move to Inbox
-                </Button>
-              </div>
             )}
           </header>
           <section
-            className="@container min-h-0 flex-1 overflow-y-auto wrap-anywhere"
+            className="@container flex min-h-0 flex-1 flex-col overflow-y-auto wrap-anywhere"
             aria-label="Message details"
           >
-            {conversations.map((conversation) => (
-              <div key={conversation.id} hidden={selected?.id !== conversation.id}>
-                <ConversationDetail
-                  conversation={conversation}
-                  onResolve={(status, note) => resolve(conversation.id, status, note)}
-                />
-                {outcomes[conversation.id] && (
-                  <div
-                    data-testid="support-outcome"
-                    className="border-t border-border p-px-24 text-ui-12"
+            <div className="px-4 md:hidden">
+              <ActivityFeedback />
+            </div>
+            {related.length > 1 && (
+              <nav
+                aria-label="Conversation actions"
+                className="flex shrink-0 flex-wrap gap-2 border-b border-border p-4"
+              >
+                {related.map((activity) => (
+                  <Button
+                    key={activity.id}
+                    variant={selected?.id === activity.id ? "secondary" : "ghost"}
+                    size="sm"
+                    onClick={() => updateSearch({ activity: activity.id })}
                   >
-                    <h2>Reply preview</h2>
-                    <p className="mt-px-8 whitespace-pre-wrap text-muted-foreground">
-                      {outcomes[conversation.id]}
-                    </p>
-                  </div>
-                )}
-              </div>
-            ))}
-            {!selected && (
+                    {activity.effective.title}
+                  </Button>
+                ))}
+              </nav>
+            )}
+            {selected ? (
+              <ReplyActivityDetail key={selected.id} activity={selected} />
+            ) : (
               <div className="grid justify-items-center gap-px-12 px-px-24 py-px-64 text-center text-ui-13 text-muted-foreground">
                 <MessageSquare aria-hidden="true" />
-                <p>Select a conversation</p>
+                <p>Select a reply activity</p>
               </div>
             )}
           </section>

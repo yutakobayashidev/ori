@@ -1,4 +1,30 @@
-# Execution support prototype
+# Execution support
+
+## Persistent task and reply inbox
+
+Home and Messages now share SQLite-backed activities. External Codex publishes
+concrete tasks and replies with `publish_activities` and reads proposals, user
+decisions, and effective content through `get_activity_context`. The
+[Activity MCP contract](activity-mcp-design.md) defines their data and retry rules.
+Home task creation uses the same service and preserves the owner's entered fields.
+
+Replies include the next action, a source message excerpt, context, and an optional
+draft. Home links to `/support?activity=<id>&view=all`; Messages groups activities
+by source conversation while keeping each commitment distinct. Draft edits,
+deferral, dismissal, and ordinary-task completion persist across reloads and
+refresh other open views after a committed write. Republishing cannot replace
+user overrides or reopen completed/deferred/dismissed activities.
+
+These reply surfaces use published excerpts, not fictional contacts or a full
+Beeper history sync. Real sending is not connected, and they do not simulate
+successful sending or allow a reply to be marked complete without delivery.
+
+## Earlier prototype and remaining local features
+
+The sections below describe the original prototype. Its sample conversation,
+scheduling, and simulated-send flows have been superseded on Home and Messages
+by the persistent inbox above. Routine steps and Journal remain local prototypes;
+their records are not copied into the persistent activity store.
 
 The shared sidebar opens `/support` (Messages) and `/journal` (Journal), alongside
 Reader and Research. These are UI-only prototypes with fictional contacts

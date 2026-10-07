@@ -1,4 +1,5 @@
 import { ArrowRight, LockKeyhole } from "lucide-react";
+import { useHydrated } from "@tanstack/react-router";
 import { type FormEvent, type ReactNode, useState } from "react";
 import { Button } from "#/components/ui/button";
 import { Input } from "#/components/ui/input";
@@ -34,12 +35,14 @@ function formText(data: FormData, name: string) {
 }
 
 function CredentialsForm({ setup }: { setup: boolean }) {
+  const hydrated = useHydrated();
   const [pending, setPending] = useState(false);
   const [error, setError] = useState("");
+  const disabled = pending || !hydrated;
 
   async function submit(event: FormEvent<HTMLFormElement>) {
     event.preventDefault();
-    if (pending) return;
+    if (disabled) return;
     const data = new FormData(event.currentTarget);
     const email = formText(data, "email").trim();
     const password = formText(data, "password");
@@ -85,7 +88,7 @@ function CredentialsForm({ setup }: { setup: boolean }) {
             : "Sign in to your personal workspace."}
         </p>
       </header>
-      <form onSubmit={submit} className="grid gap-px-20" aria-busy={pending}>
+      <form method="post" onSubmit={submit} className="grid gap-px-20" aria-busy={pending}>
         {setup && (
           <div className="grid gap-px-9">
             <Label htmlFor="name">Your name</Label>
@@ -96,7 +99,7 @@ function CredentialsForm({ setup }: { setup: boolean }) {
               autoComplete="given-name"
               required
               maxLength={80}
-              disabled={pending}
+              disabled={disabled}
             />
           </div>
         )}
@@ -110,7 +113,7 @@ function CredentialsForm({ setup }: { setup: boolean }) {
             autoComplete="username"
             required
             maxLength={254}
-            disabled={pending}
+            disabled={disabled}
           />
         </div>
         <div className="grid gap-px-9">
@@ -125,7 +128,7 @@ function CredentialsForm({ setup }: { setup: boolean }) {
             minLength={setup ? 15 : undefined}
             maxLength={128}
             aria-describedby={setup ? "password-hint" : undefined}
-            disabled={pending}
+            disabled={disabled}
           />
           {setup && (
             <p id="password-hint" className="text-ui-12 leading-cozy text-muted-foreground">
@@ -146,7 +149,7 @@ function CredentialsForm({ setup }: { setup: boolean }) {
                 required
                 minLength={15}
                 maxLength={128}
-                disabled={pending}
+                disabled={disabled}
               />
             </div>
             <div className="grid gap-px-9">
@@ -159,7 +162,7 @@ function CredentialsForm({ setup }: { setup: boolean }) {
                 autoComplete="off"
                 required
                 aria-describedby="setup-hint"
-                disabled={pending}
+                disabled={disabled}
               />
               <p id="setup-hint" className="text-ui-12 leading-cozy text-muted-foreground">
                 Use the setup code provided by your server administrator.
@@ -175,7 +178,7 @@ function CredentialsForm({ setup }: { setup: boolean }) {
         <Button
           type="submit"
           size="lg"
-          disabled={pending}
+          disabled={disabled}
           className="mt-[4px] w-full justify-between"
         >
           {pending

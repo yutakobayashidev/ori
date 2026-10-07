@@ -1,3 +1,5 @@
+import { useRouteContext } from "@tanstack/react-router";
+import { ActivityStateProvider } from "#/features/activities/activity-state";
 import {
   createContext,
   type Dispatch,
@@ -16,7 +18,6 @@ export type Task = {
   completedSteps?: string[];
 };
 
-export type Status = "now" | "later" | "waiting" | "sent" | "dismissed";
 export type EntryKind = "メモ" | "再開地点" | "服薬" | "体重";
 export const entryKindLabels: Record<EntryKind, string> = {
   メモ: "Note",
@@ -38,10 +39,6 @@ export type JournalEntry = {
 type WorkspaceState = {
   tasks: Task[];
   setTasks: Dispatch<SetStateAction<Task[]>>;
-  statuses: Record<string, Status>;
-  setStatuses: Dispatch<SetStateAction<Record<string, Status>>>;
-  outcomes: Record<string, string>;
-  setOutcomes: Dispatch<SetStateAction<Record<string, string>>>;
   entries: JournalEntry[];
   setEntries: Dispatch<SetStateAction<JournalEntry[]>>;
 };
@@ -49,13 +46,8 @@ type WorkspaceState = {
 const WorkspaceContext = createContext<WorkspaceState | null>(null);
 
 export function WorkspaceStateProvider({ children }: { children: ReactNode }) {
+  const { auth } = useRouteContext({ from: "__root__" });
   const [tasks, setTasks] = useState<Task[]>([
-    {
-      id: "review",
-      title: "Review the documents",
-      section: "focus",
-      status: "todo",
-    },
     {
       id: "morning",
       title: "Morning routine",
@@ -63,27 +55,22 @@ export function WorkspaceStateProvider({ children }: { children: ReactNode }) {
       status: "todo",
       steps: ["Drink water", "Get ready", "Have breakfast"],
     },
-    { id: "walk", title: "Go for a walk", section: "optional", status: "todo" },
   ]);
-  const [statuses, setStatuses] = useState<Record<string, Status>>({});
-  const [outcomes, setOutcomes] = useState<Record<string, string>>({});
   const [entries, setEntries] = useState<JournalEntry[]>([]);
 
   return (
-    <WorkspaceContext.Provider
-      value={{
-        tasks,
-        setTasks,
-        statuses,
-        setStatuses,
-        outcomes,
-        setOutcomes,
-        entries,
-        setEntries,
-      }}
-    >
-      {children}
-    </WorkspaceContext.Provider>
+    <ActivityStateProvider enabled={Boolean(auth.owner?.onboardingCompletedAt)}>
+      <WorkspaceContext.Provider
+        value={{
+          tasks,
+          setTasks,
+          entries,
+          setEntries,
+        }}
+      >
+        {children}
+      </WorkspaceContext.Provider>
+    </ActivityStateProvider>
   );
 }
 

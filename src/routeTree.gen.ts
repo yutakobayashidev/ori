@@ -21,6 +21,7 @@ import { Route as IndexRouteImport } from './routes/index'
 import { Route as ApiAuthRouteImport } from './routes/api/auth'
 import { Route as OauthMastodonCallbackRouteImport } from './routes/oauth/mastodon/callback'
 import { Route as ApiResearchEventsRouteImport } from './routes/api/research/events'
+import { Route as ApiActivitiesEventsRouteImport } from './routes/api/activities/events'
 
 const VitalsRoute = VitalsRouteImport.update({
   id: '/vitals',
@@ -82,6 +83,11 @@ const ApiResearchEventsRoute = ApiResearchEventsRouteImport.update({
   path: '/api/research/events',
   getParentRoute: () => rootRouteImport,
 } as any)
+const ApiActivitiesEventsRoute = ApiActivitiesEventsRouteImport.update({
+  id: '/api/activities/events',
+  path: '/api/activities/events',
+  getParentRoute: () => rootRouteImport,
+} as any)
 
 export interface FileRoutesByFullPath {
   '/': typeof IndexRoute
@@ -94,6 +100,7 @@ export interface FileRoutesByFullPath {
   '/support': typeof SupportRoute
   '/vitals': typeof VitalsRoute
   '/api/auth': typeof ApiAuthRoute
+  '/api/activities/events': typeof ApiActivitiesEventsRoute
   '/api/research/events': typeof ApiResearchEventsRoute
   '/oauth/mastodon/callback': typeof OauthMastodonCallbackRoute
 }
@@ -108,6 +115,7 @@ export interface FileRoutesByTo {
   '/support': typeof SupportRoute
   '/vitals': typeof VitalsRoute
   '/api/auth': typeof ApiAuthRoute
+  '/api/activities/events': typeof ApiActivitiesEventsRoute
   '/api/research/events': typeof ApiResearchEventsRoute
   '/oauth/mastodon/callback': typeof OauthMastodonCallbackRoute
 }
@@ -123,6 +131,7 @@ export interface FileRoutesById {
   '/support': typeof SupportRoute
   '/vitals': typeof VitalsRoute
   '/api/auth': typeof ApiAuthRoute
+  '/api/activities/events': typeof ApiActivitiesEventsRoute
   '/api/research/events': typeof ApiResearchEventsRoute
   '/oauth/mastodon/callback': typeof OauthMastodonCallbackRoute
 }
@@ -139,6 +148,7 @@ export interface FileRouteTypes {
     | '/support'
     | '/vitals'
     | '/api/auth'
+    | '/api/activities/events'
     | '/api/research/events'
     | '/oauth/mastodon/callback'
   fileRoutesByTo: FileRoutesByTo
@@ -153,6 +163,7 @@ export interface FileRouteTypes {
     | '/support'
     | '/vitals'
     | '/api/auth'
+    | '/api/activities/events'
     | '/api/research/events'
     | '/oauth/mastodon/callback'
   id:
@@ -167,6 +178,7 @@ export interface FileRouteTypes {
     | '/support'
     | '/vitals'
     | '/api/auth'
+    | '/api/activities/events'
     | '/api/research/events'
     | '/oauth/mastodon/callback'
   fileRoutesById: FileRoutesById
@@ -182,6 +194,7 @@ export interface RootRouteChildren {
   SupportRoute: typeof SupportRoute
   VitalsRoute: typeof VitalsRoute
   ApiAuthRoute: typeof ApiAuthRoute
+  ApiActivitiesEventsRoute: typeof ApiActivitiesEventsRoute
   ApiResearchEventsRoute: typeof ApiResearchEventsRoute
   OauthMastodonCallbackRoute: typeof OauthMastodonCallbackRoute
 }
@@ -272,6 +285,13 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof ApiResearchEventsRouteImport
       parentRoute: typeof rootRouteImport
     }
+    '/api/activities/events': {
+      id: '/api/activities/events'
+      path: '/api/activities/events'
+      fullPath: '/api/activities/events'
+      preLoaderRoute: typeof ApiActivitiesEventsRouteImport
+      parentRoute: typeof rootRouteImport
+    }
   }
 }
 
@@ -286,6 +306,7 @@ const rootRouteChildren: RootRouteChildren = {
   SupportRoute: SupportRoute,
   VitalsRoute: VitalsRoute,
   ApiAuthRoute: ApiAuthRoute,
+  ApiActivitiesEventsRoute: ApiActivitiesEventsRoute,
   ApiResearchEventsRoute: ApiResearchEventsRoute,
   OauthMastodonCallbackRoute: OauthMastodonCallbackRoute,
 }

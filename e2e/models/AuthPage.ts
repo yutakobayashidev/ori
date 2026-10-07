@@ -1,4 +1,4 @@
-import type { Locator, Page } from "@playwright/test";
+import { expect, type Locator, type Page } from "@playwright/test";
 
 export class AuthPage {
   readonly name: Locator;
@@ -24,7 +24,8 @@ export class AuthPage {
   }
 
   async goTo(mode: "login" | "setup" = "login") {
-    await this.page.goto(`/${mode}`, { waitUntil: "networkidle" });
+    await this.page.goto(`/${mode}`);
+    await expect(this.email).toBeVisible();
   }
 
   async signIn(email: string, password: string) {

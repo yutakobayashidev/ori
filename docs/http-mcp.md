@@ -7,17 +7,23 @@ listener, browser requirement, or nested Codex execution for external calls.
 
 ## Tools
 
-| Tool                 | Input and effect                                                                  |
-| -------------------- | --------------------------------------------------------------------------------- |
-| `list_connections`   | `{}`; discover account IDs and status, without credentials                        |
-| `list_lists`         | `connectionId`; discover Twitter or Mastodon lists                                |
-| `list_decks`         | `{}`; saved deck IDs, titles, revisions and column counts                         |
-| `get_deck`           | `deckId`; saved definition including column IDs and revision                      |
-| `create_deck`        | `title`, `columns`, optional new `deckId`; immediately persist                    |
-| `replace_deck`       | `deckId`, `expectedRevision`, `title`, complete `columns`; reject stale revisions |
-| `delete_deck`        | `deckId`, `expectedRevision`; permanently delete                                  |
-| `fetch_posts`        | `connectionId`, `source`, optional `cursor`; read without saving a deck           |
-| `fetch_column_posts` | `deckId`, `columnId`, optional `cursor`; read a saved column                      |
+For the shared inbox tools, see
+[Activity MCP design](activity-mcp-design.md). Replies and chores share one
+activity model across Home, Messages, and MCP.
+
+| Tool                   | Input and effect                                                                                                  |
+| ---------------------- | ----------------------------------------------------------------------------------------------------------------- |
+| `get_activity_context` | Optional `activityIds`, `cursor`, `limit`; proposals, effective content, user decisions and revision              |
+| `publish_activities`   | `requestId`, `expectedRevision`, `activities`; atomically persist task/reply proposals, preserving user decisions |
+| `list_connections`     | `{}`; discover account IDs and status, without credentials                                                        |
+| `list_lists`           | `connectionId`; discover Twitter or Mastodon lists                                                                |
+| `list_decks`           | `{}`; saved deck IDs, titles, revisions and column counts                                                         |
+| `get_deck`             | `deckId`; saved definition including column IDs and revision                                                      |
+| `create_deck`          | `title`, `columns`, optional new `deckId`; immediately persist                                                    |
+| `replace_deck`         | `deckId`, `expectedRevision`, `title`, complete `columns`; reject stale revisions                                 |
+| `delete_deck`          | `deckId`, `expectedRevision`; permanently delete                                                                  |
+| `fetch_posts`          | `connectionId`, `source`, optional `cursor`; read without saving a deck                                           |
+| `fetch_column_posts`   | `deckId`, `columnId`, optional `cursor`; read a saved column                                                      |
 
 Columns follow the [deck source contracts](webmcp-prototype.md). A deck has at
 most six columns. Preserve column IDs on edits. Stable deck and column IDs allow
@@ -30,6 +36,13 @@ and a continuation cursor. Reuse a cursor only with its original source/account.
 External tools are stateless and do not share the internal research turn's
 12-request budget. No tool writes to an SNS account. Tool failures return
 `isError: true` and a structured error in text content.
+
+Activity publication uses the same service as Home and Messages. Exact retries
+return the original receipt before revision checks; conflicting publications
+make no changes. Browser clients refresh on committed changes through the
+session-protected `/api/activities/events` stream. Reconnection also refreshes
+the saved snapshot. Source excerpts are supplied evidence, not a full synced
+conversation. Publishing a reply neither sends it nor marks it complete.
 
 ## Internal research
 
@@ -90,6 +103,7 @@ dotnix's flake input and `homes/nixos/UM790-Pro/twitter-lite.nix`.
 nix develop -c pnpm test
 nix develop -c pnpm typecheck
 nix develop -c pnpm test:e2e e2e/integrations/mcp-http.test.ts --project=desktop
+nix develop -c pnpm test:e2e e2e/integrations/activities.test.ts
 ```
 
 The HTTP E2E uses the actual app middleware, an isolated SQLite database, and

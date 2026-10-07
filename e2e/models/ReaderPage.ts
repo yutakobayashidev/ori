@@ -1,4 +1,5 @@
-import type { Locator, Page } from "@playwright/test";
+import { expect, type Locator, type Page } from "@playwright/test";
+import { navigateHydrated } from "./ready";
 
 export class ReaderPage {
   readonly rows: Locator;
@@ -30,7 +31,9 @@ export class ReaderPage {
   }
 
   async goTo(search = "") {
-    await this.page.goto(`/inbox${search}`, { waitUntil: "networkidle" });
+    await navigateHydrated(this.page, `/inbox${search}`);
+    if (new URL(this.page.url()).pathname === "/inbox")
+      await expect(this.searchInput).toBeVisible();
   }
 
   article(title: string) {

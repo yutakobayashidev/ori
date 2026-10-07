@@ -1,4 +1,14 @@
-import { expect, test } from "../fixtures";
+import type { Page } from "@playwright/test";
+import { expect, test } from "../activity-fixtures";
+import { waitForWorkspaceHydration } from "../models/ready";
+
+async function reloadHydrated(page: Page) {
+  await Promise.all([waitForWorkspaceHydration(page), page.reload()]);
+}
+
+test.beforeEach(async ({ activityMcp }) => {
+  await activityMcp.publish();
+});
 
 test("restores article selection with browser history and reload", async ({ page, readerPage }) => {
   await readerPage.goTo();
@@ -8,7 +18,7 @@ test("restores article selection with browser history and reload", async ({ page
   await expect(readerPage.articleTitle).toHaveText(heading);
   const selectedUrl = page.url();
   expect(new URL(selectedUrl).searchParams.get("article")).toBeTruthy();
-  await page.reload({ waitUntil: "networkidle" });
+  await reloadHydrated(page);
   await expect(readerPage.articleTitle).toHaveText(heading ?? "");
   await page.goBack();
   await expect(readerPage.workspace).toHaveAttribute("data-reading", "false");
@@ -24,14 +34,14 @@ test("restores search and replaces typing history", async ({
   workspacePage,
 }) => {
   await homePage.goTo();
-  await page.waitForLoadState("networkidle");
+  await page.waitForLoadState("domcontentloaded");
   await workspacePage.navigateTo("Reader");
   const search = readerPage.searchInput;
   await search.pressSequentially("browser");
   await expect(search).toHaveValue("browser");
   await expect.poll(() => new URL(page.url()).searchParams.get("q")).toBe("browser");
   const count = await readerPage.rows.count();
-  await page.reload({ waitUntil: "networkidle" });
+  await reloadHydrated(page);
   await expect(search).toHaveValue("browser");
   await expect(readerPage.rows).toHaveCount(count);
   await page.goBack();
@@ -46,7 +56,7 @@ test("restores account dialog without losing underlying article", async ({
   await readerPage.goTo();
   await connectedAccounts.open();
   await expect.poll(() => new URL(page.url()).searchParams.get("accounts")).toBe("true");
-  await page.reload({ waitUntil: "networkidle" });
+  await reloadHydrated(page);
   await expect(connectedAccounts.dialog).toBeVisible();
   await page.goBack();
   await expect(connectedAccounts.dialog).toHaveCount(0);
@@ -56,16 +66,16 @@ test("restores account dialog without losing underlying article", async ({
 
 test("restores a message view and conversation from its URL", async ({ page, messagesPage }) => {
   await messagesPage.goTo();
-  await page.waitForLoadState("networkidle");
+  await page.waitForLoadState("domcontentloaded");
   await messagesPage.selectView("All");
-  const row = messagesPage.rows.nth(1);
-  const heading = await messagesPage.rowName(1).innerText();
+  const row = messagesPage.rows.first();
+  const heading = await messagesPage.rowName(0).innerText();
   await row.click();
   await expect(messagesPage.toolbarName).toHaveText(heading);
   const url = page.url();
   expect(new URL(url).searchParams.get("view")).toBe("all");
-  expect(new URL(url).searchParams.get("conversation")).toBeTruthy();
-  await page.reload({ waitUntil: "networkidle" });
+  expect(new URL(url).searchParams.get("activity")).toBeTruthy();
+  await reloadHydrated(page);
   await expect(messagesPage.toolbarName).toHaveText(heading ?? "");
   await expect(messagesPage.workspace).toHaveAttribute("data-reading", "true");
 });
@@ -84,7 +94,7 @@ test("debounces search and cancels pending input on history navigation", async (
   messagesPage,
 }) => {
   await messagesPage.goTo();
-  await page.waitForLoadState("networkidle");
+  await page.waitForLoadState("domcontentloaded");
   await messagesPage.selectView("All");
   await expect(page).toHaveURL(/view=all/);
   await page.clock.install();

@@ -1,4 +1,5 @@
-import type { Locator, Page } from "@playwright/test";
+import { expect, type Locator, type Page } from "@playwright/test";
+import { navigateHydrated, waitForWorkspaceHydration } from "./ready";
 
 export class VitalsPage {
   readonly bodyHeading: Locator;
@@ -36,7 +37,16 @@ export class VitalsPage {
   }
 
   async goTo(search = "") {
-    await this.page.goto(`/vitals${search}`, { waitUntil: "networkidle" });
+    await navigateHydrated(this.page, `/vitals${search}`);
+    if (new URL(this.page.url()).pathname === "/vitals") await this.waitUntilReady();
+  }
+
+  async reload() {
+    await Promise.all([waitForWorkspaceHydration(this.page), this.page.reload()]);
+  }
+
+  async waitUntilReady() {
+    await expect(this.bodyHeading.or(this.environmentHeading)).toBeVisible();
   }
 
   async navigateTo(section: "Body" | "Environment") {

@@ -1,13 +1,10 @@
-import { Link } from "@tanstack/react-router";
 import {
   ArrowDown,
   ArrowUp,
-  ArrowUpRight,
   Check,
   ChevronDown,
   Circle,
   ListChecks,
-  MessageCircle,
   Pause,
   RotateCcw,
   Scale,
@@ -17,7 +14,9 @@ import { Button } from "#/components/ui/button";
 import { Checkbox } from "#/components/ui/checkbox";
 import { Input } from "#/components/ui/input";
 import { Textarea } from "#/components/ui/textarea";
-import { conversations } from "#/features/support/mock-conversations";
+import { ActivityCard } from "#/features/activities/activity-card";
+import { ActivityFeedback } from "#/features/activities/activity-controls";
+import { useActivities } from "#/features/activities/activity-state";
 import {
   type JournalEntry,
   type Task,
@@ -30,14 +29,12 @@ type ExecutionWorkbenchProps = {
 };
 
 export function ExecutionWorkbench({ selectedId, onSelect }: ExecutionWorkbenchProps) {
-  const { tasks, setTasks, statuses, entries } = useWorkspaceState();
+  const { tasks, setTasks, entries } = useWorkspaceState();
+  const { activities, loading } = useActivities();
   const currentEntries = entries.filter(
     (entry) => !entries.some((other) => other.correctionOf === entry.id),
   );
   const weightEntry = currentEntries.find((entry) => entry.kind === "体重");
-  const replies = conversations.filter(
-    (conversation) => conversation.replyRequired || statuses[conversation.id] === "now",
-  );
   function toggle(id: string) {
     onSelect(selectedId === id ? "" : id);
   }
@@ -50,6 +47,7 @@ export function ExecutionWorkbench({ selectedId, onSelect }: ExecutionWorkbenchP
   }
   return (
     <section className="min-w-0" aria-label="Today’s plan">
+      <ActivityFeedback />
       {(
         [
           { id: "focus", label: "Start here", subtitle: "Just the next thing" },
@@ -60,8 +58,21 @@ export function ExecutionWorkbench({ selectedId, onSelect }: ExecutionWorkbenchP
         <section className="mb-px-30" key={section.id}>
           <header className="mb-px-12 flex items-baseline justify-between gap-px-12">
             <h2 className="text-ui-14 font-semibold">{section.label}</h2>
+            {section.id === "routine" && (
+              <span className="text-xs text-muted-foreground">Session-only preview</span>
+            )}
           </header>
           <div className="grid gap-px-9">
+            {activities
+              .filter((activity) => activity.effective.section === section.id)
+              .map((activity) => (
+                <ActivityCard
+                  key={activity.id}
+                  activity={activity}
+                  expanded={selectedId === activity.id}
+                  onToggle={() => toggle(activity.id)}
+                />
+              ))}
             {tasks
               .filter((task) => task.section === section.id)
               .map((task) => {
@@ -137,59 +148,7 @@ export function ExecutionWorkbench({ selectedId, onSelect }: ExecutionWorkbenchP
                   </div>
                 );
               })}
-            {section.id === "focus" &&
-              replies.slice(0, 2).map((conversation) => (
-                <div
-                  className="group/flow overflow-hidden rounded-ui-16 border border-border bg-muted data-[kind=focus]:bg-activity-focus data-[kind=routine]:bg-activity-routine data-[kind=reply]:bg-activity-reply data-[kind=weight]:bg-activity-weight data-[kind=optional]:bg-activity-optional data-[expanded=true]:border-activity-expanded data-[status=done]:bg-background!"
-                  key={conversation.id}
-                  data-kind="reply"
-                  data-status={
-                    statuses[conversation.id] === "sent" ||
-                    statuses[conversation.id] === "dismissed"
-                      ? "done"
-                      : statuses[conversation.id]
-                  }
-                >
-                  <div className="flex items-center gap-px-13 px-px-18 py-px-16 max-md:gap-px-10 max-md:px-px-14 max-md:py-px-15">
-                    <span className="flex h-[28px] basis-[24px] shrink-0 grow-0 items-center justify-center text-muted-foreground group-data-[status=done]/flow:text-success">
-                      {statuses[conversation.id] === "sent" ||
-                      statuses[conversation.id] === "dismissed" ? (
-                        <Check className="size-[21px]" strokeWidth={1.5} />
-                      ) : (
-                        <MessageCircle className="size-[21px]" strokeWidth={1.5} />
-                      )}
-                    </span>
-                    <Link
-                      to="/support"
-                      search={{ conversation: conversation.id, view: "all" }}
-                      className="flex min-w-0 flex-1 cursor-pointer flex-col gap-px-5 rounded-ui-3 text-left focus-visible:outline-2 focus-visible:outline-ring focus-visible:outline-offset-4"
-                      aria-label={`Open conversation with ${conversation.name}`}
-                    >
-                      <span
-                        data-testid="execution-flow-title"
-                        className="text-ui-14 font-medium leading-normal group-data-[status=done]/flow:text-muted-foreground max-md:text-ui-13"
-                      >
-                        Reply to {conversation.name}
-                      </span>
-                      <span className="text-ui-12 leading-normal text-muted-foreground max-md:text-ui-11">
-                        {statuses[conversation.id] === "sent"
-                          ? "Reply recorded · Preview only"
-                          : statuses[conversation.id] === "dismissed"
-                            ? "No reply needed"
-                            : statuses[conversation.id] === "later"
-                              ? "Set aside"
-                              : statuses[conversation.id] === "waiting"
-                                ? "Waiting for their reply"
-                                : conversation.subject}
-                      </span>
-                    </Link>
-                    <ArrowUpRight
-                      className="size-[15px] shrink-0 text-muted-foreground group-data-[expanded=true]/flow:rotate-180"
-                      aria-hidden="true"
-                    />
-                  </div>
-                </div>
-              ))}
+
             {section.id === "routine" && (
               <div
                 className="group/flow overflow-hidden rounded-ui-16 border border-border bg-muted data-[kind=focus]:bg-activity-focus data-[kind=routine]:bg-activity-routine data-[kind=reply]:bg-activity-reply data-[kind=weight]:bg-activity-weight data-[kind=optional]:bg-activity-optional data-[expanded=true]:border-activity-expanded data-[status=done]:bg-background!"
@@ -242,7 +201,8 @@ export function ExecutionWorkbench({ selectedId, onSelect }: ExecutionWorkbenchP
               </div>
             )}
             {!tasks.some((task) => task.section === section.id && task.status === "todo") &&
-              (section.id !== "focus" || !replies.length) &&
+              !activities.some((activity) => activity.effective.section === section.id) &&
+              !loading &&
               section.id !== "routine" && (
                 <p className="py-px-16 text-ui-12 text-muted-foreground">
                   A little breathing room.

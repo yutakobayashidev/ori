@@ -43,6 +43,13 @@
       "when": 1790591720807,
       "tag": "0005_salty_madripoor",
       "breakpoints": true
+    },
+    {
+      "idx": 6,
+      "version": "6",
+      "when": 1791374963891,
+      "tag": "0006_cheerful_siren",
+      "breakpoints": true
     }
   ]
 }

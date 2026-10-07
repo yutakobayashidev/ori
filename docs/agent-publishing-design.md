@@ -4,6 +4,12 @@ Proposal, 2026-09-28. No endpoints, timers, or inference jobs in this document
 have been implemented. This supersedes the earlier proposal for app-managed
 inference and an application-owned life filesystem adapter.
 
+The [Activity MCP design](activity-mcp-design.md) (2026-10-07) narrows the first
+implementation to shared task/reply publication over the existing HTTP MCP.
+Its tool contract and initial scope take precedence over the proposed HTTP/CLI
+entrypoints and broader first slice below. The responsibility and user-state
+boundaries remain applicable.
+
 ## Responsibility
 
 External Codex reads Beeper and the life filesystem, reasons about them, and

@@ -2,6 +2,7 @@
 import { mkdtempSync, rmSync } from "node:fs";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
+import Database from "better-sqlite3";
 import { assert, afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import type { Deck } from "../decks/model";
 import { type AppDatabase, openDatabase } from "../storage/database.server";
@@ -136,21 +137,33 @@ describe("research history persistence", () => {
   });
 
   it("migrates away the old selection pointer without losing conversations", () => {
-    const database = open();
-    createResearchStore(database).save(run);
     const migration = migrations.find((entry) =>
       entry.sql.some((statement) => statement.includes("DROP TABLE `research_state`")),
     );
     assert.isDefined(migration);
-    // Recreate the preceding schema while retaining historical conversations.
-    database.$client
-      .prepare("DELETE FROM __drizzle_migrations WHERE created_at >= ?")
-      .run(migration.folderMillis);
-    database.$client.exec(`
-      CREATE TABLE research_state (id INTEGER PRIMARY KEY, active_session_id TEXT REFERENCES research_sessions(id));
-      INSERT INTO research_state VALUES (1, 'conversation-1');
-    `);
-    database.$client.close();
+    // Construct the actual preceding schema, so later migrations are also exercised.
+    const historical = new Database(join(directory, "research.db"));
+    try {
+      historical.exec(
+        "CREATE TABLE __drizzle_migrations (id INTEGER PRIMARY KEY AUTOINCREMENT, hash TEXT NOT NULL, created_at NUMERIC)",
+      );
+      for (const previous of migrations.filter(
+        (entry) => entry.folderMillis < migration.folderMillis,
+      )) {
+        for (const statement of previous.sql) historical.exec(statement);
+        historical
+          .prepare("INSERT INTO __drizzle_migrations (hash, created_at) VALUES (?, ?)")
+          .run(previous.hash, previous.folderMillis);
+      }
+      historical
+        .prepare(
+          "INSERT INTO research_sessions (id, title, status, updated_at, snapshot) VALUES (?, ?, ?, ?, ?)",
+        )
+        .run(run.id, run.topic, run.status, 1, JSON.stringify(run));
+      historical.exec("INSERT INTO research_state VALUES (1, 'conversation-1')");
+    } finally {
+      historical.close();
+    }
     const reopened = open();
     expect(createResearchStore(reopened).load(run.id)).toEqual(run);
     expect(

@@ -199,3 +199,75 @@ it("does not disclose upstream diagnostic messages", async () => {
   expect(result).toMatchObject({ ok: false, error: { code: "operation-failed" } });
   expect(JSON.stringify(result)).not.toContain("secret");
 });
+
+it("publishes shared activities across MCP callers and returns original receipts for retries", async () => {
+  const first = createWorkspaceTools();
+  const second = createWorkspaceTools();
+  expect(await first.execute("get_activity_context", {})).toMatchObject({
+    ok: true,
+    revision: 0,
+    activities: [],
+  });
+  const publication = {
+    requestId: "shopping-1",
+    expectedRevision: 0,
+    activities: [
+      {
+        id: "shopping",
+        kind: "task",
+        title: "Buy detergent",
+        nextAction: "Buy one refill",
+        sources: [],
+      },
+    ],
+  };
+  const receipt = await first.execute("publish_activities", publication);
+  expect(receipt).toMatchObject({ ok: true, revision: 1, activityIds: ["shopping"] });
+  expect(await second.execute("publish_activities", publication)).toEqual(receipt);
+  expect(await second.execute("get_activity_context", { activityIds: ["shopping"] })).toMatchObject(
+    {
+      ok: true,
+      revision: 1,
+      activities: [
+        {
+          id: "shopping",
+          userState: "available",
+          effective: { title: "Buy detergent", section: "optional" },
+        },
+      ],
+    },
+  );
+  expect(
+    await second.execute("publish_activities", { ...publication, requestId: "shopping-2" }),
+  ).toMatchObject({
+    ok: false,
+    error: { code: "revision-conflict" },
+  });
+});
+
+it("does not expose user decisions or sending as publishable fields", async () => {
+  const tools = createWorkspaceTools();
+  expect(
+    await tools.execute("publish_activities", {
+      requestId: "invalid-action",
+      expectedRevision: 0,
+      activities: [
+        {
+          id: "shopping",
+          kind: "task",
+          title: "Buy detergent",
+          nextAction: "Buy one refill",
+          sources: [],
+          userState: "completed",
+        },
+      ],
+    }),
+  ).toMatchObject({ ok: false, error: { code: "invalid-input" } });
+  expect(await tools.execute("get_activity_context", {})).toMatchObject({
+    revision: 0,
+    activities: [],
+  });
+  expect(
+    tools.definitions.find(({ name }) => name === "publish_activities")?.annotations,
+  ).toMatchObject({ readOnlyHint: false, openWorldHint: false });
+});

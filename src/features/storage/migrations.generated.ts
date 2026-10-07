@@ -56,4 +56,14 @@ export const migrations = [
     folderMillis: 1790591720807,
     hash: "766f6c07c16a178ba1614d1ef105dac67230ef4f16bb14403454ba4d5376c139",
   },
+  {
+    sql: [
+      "CREATE TABLE `activities` (\n\t`id` text PRIMARY KEY NOT NULL,\n\t`proposal` text NOT NULL,\n\t`user_state` text NOT NULL,\n\t`user_overrides` text NOT NULL,\n\t`created_at` integer NOT NULL,\n\t`updated_at` integer NOT NULL\n);\n",
+      "\nCREATE TABLE `activity_receipts` (\n\t`request_id` text PRIMARY KEY NOT NULL,\n\t`input_hash` text NOT NULL,\n\t`result` text NOT NULL\n);\n",
+      '\nCREATE TABLE `activity_revision` (\n\t`id` integer PRIMARY KEY NOT NULL,\n\t`revision` integer NOT NULL,\n\tCONSTRAINT "activity_revision_singleton" CHECK("activity_revision"."id" = 1),\n\tCONSTRAINT "activity_revision_nonnegative" CHECK("activity_revision"."revision" >= 0)\n);\n',
+    ],
+    bps: true,
+    folderMillis: 1791374963891,
+    hash: "9ee247ce9c65a31ccf530344e07c0e61eef45717949cf567d785331bf568ec73",
+  },
 ];

@@ -9,7 +9,7 @@ import { TooltipProvider } from "#/components/ui/tooltip";
 import { WorkspaceNavigation } from "#/components/workspace-navigation";
 import { articles } from "#/features/inbox/mock-articles";
 import { useUrlState } from "#/features/navigation/use-url-state";
-import { conversations } from "#/features/support/mock-conversations";
+import { useActivities } from "#/features/activities/activity-state";
 import { entryKindLabels, useWorkspaceState } from "#/features/workspace/workspace-state";
 import { DailyBrief } from "./daily-brief";
 import { ExecutionWorkbench } from "./execution-workbench";
@@ -17,7 +17,8 @@ import { type HomeAction, interpretAction } from "./interpret-action";
 
 export function HomePage() {
   const { auth } = useRouteContext({ from: "__root__" });
-  const { tasks, setTasks, setStatuses, entries, setEntries } = useWorkspaceState();
+  const { tasks, setTasks, entries, setEntries } = useWorkspaceState();
+  const { activities, create, change, busy, loading } = useActivities();
   const navigate = useNavigate();
   const input = useRef<HTMLTextAreaElement>(null);
   const [prompt, setPrompt] = useState("");
@@ -29,7 +30,7 @@ export function HomePage() {
   const [search, updateSearch] = useUrlState();
   const articleId = search.article;
   const openContact = (id: string) =>
-    void navigate({ to: "/support", search: { conversation: id, view: "all" } });
+    void navigate({ to: "/support", search: { activity: id, view: "all" } });
   const setArticleId = (id: string | undefined) =>
     updateSearch({ article: id, conversation: undefined });
   const article = articles.find((item) => item.id === articleId);
@@ -43,7 +44,20 @@ export function HomePage() {
     input.current?.focus();
   }
   function interpret() {
-    const result = interpretAction(prompt, tasks, conversations);
+    const result = interpretAction(
+      prompt,
+      [
+        ...tasks,
+        ...activities
+          .filter((item) => item.effective.kind === "task")
+          .map((item) => item.effective),
+      ],
+      activities.flatMap((item) =>
+        item.effective.kind === "reply"
+          ? [{ id: item.id, name: item.effective.reply.recipientName }]
+          : [],
+      ),
+    );
     if ("error" in result) {
       setNotice(result.error);
       setProposal(null);
@@ -52,9 +66,20 @@ export function HomePage() {
       setNotice("");
     }
   }
-  function apply(action: HomeAction) {
+  async function apply(action: HomeAction) {
     switch (action.type) {
       case "add-task":
+        if (action.section !== "routine") {
+          if (
+            !(await create({
+              title: action.title,
+              nextAction: action.title,
+              section: action.section,
+            }))
+          )
+            return;
+          break;
+        }
         setTasks((current) => [
           ...current,
           {
@@ -66,6 +91,20 @@ export function HomePage() {
         ]);
         break;
       case "task-status":
+        if (activities.some((item) => item.id === action.id)) {
+          if (
+            !(await change(action.id, {
+              state:
+                action.status === "done"
+                  ? "completed"
+                  : action.status === "later"
+                    ? "deferred"
+                    : "available",
+            }))
+          )
+            return;
+          break;
+        }
         setTasks((current) =>
           current.map((task) =>
             task.id === action.id ? { ...task, status: action.status } : task,
@@ -73,6 +112,11 @@ export function HomePage() {
         );
         break;
       case "task-move":
+        if (activities.some((item) => item.id === action.id)) {
+          setNotice("Open the activity to change its placement.");
+          setProposal(null);
+          return;
+        }
         moveTask(action.id, action.direction);
         break;
       case "routine-step":
@@ -93,7 +137,10 @@ export function HomePage() {
         openContact(action.id);
         break;
       case "contact-status":
-        setStatuses((current) => ({ ...current, [action.id]: action.status }));
+        if (
+          !(await change(action.id, { state: action.status === "later" ? "deferred" : "waiting" }))
+        )
+          return;
         break;
       case "journal":
         setEntries((current) => [
@@ -191,7 +238,7 @@ export function HomePage() {
                 </div>
               </form>
               <div className="mt-px-16 flex flex-wrap gap-x-px-20 gap-y-px-8 max-md:gap-px-12">
-                {["Add grocery shopping", "Reply to Aoki", "Note: Resume on page 2"].map((text) => (
+                {["Add grocery shopping", "Open messages", "Note: Resume on page 2"].map((text) => (
                   <button
                     className="flex cursor-pointer items-center gap-px-6 text-left text-ui-12 text-muted-foreground"
                     type="button"
@@ -206,7 +253,9 @@ export function HomePage() {
               {proposal && (
                 <div className="mt-px-20 flex flex-wrap items-center gap-px-12 rounded-ui-12 border border-border p-px-16">
                   <p className="min-w-[140px] flex-1 text-ui-14">{proposal.label}</p>
-                  <Button onClick={() => apply(proposal.action)}>Apply</Button>
+                  <Button disabled={busy || loading} onClick={() => void apply(proposal.action)}>
+                    Apply
+                  </Button>
                   <Button
                     variant="ghost"
                     size="icon"

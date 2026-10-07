@@ -1,4 +1,5 @@
 import type { Locator, Page } from "@playwright/test";
+import { navigateHydrated } from "./ready";
 
 export class JournalPage {
   readonly page: Page;
@@ -29,7 +30,7 @@ export class JournalPage {
     this.summary = this.summaryDialog.getByRole("textbox", { name: "Entry summary" });
   }
   async goTo(search = "") {
-    await this.page.goto(`/journal${search}`);
+    await navigateHydrated(this.page, `/journal${search}`);
   }
   async correctWeight(weight: string) {
     await this.weightEntries.getByRole("button", { name: "Correct" }).click();

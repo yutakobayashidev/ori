@@ -4,7 +4,7 @@ import { useEffect, useRef, useState } from "react";
 import { useUrlState } from "./use-url-state";
 
 // Only the uncommitted text is local. Results and restored views read the URL.
-export function useSearchInput(selection: "article" | "conversation") {
+export function useSearchInput(selection: "article" | "conversation" | "activity") {
   const [search, updateSearch] = useUrlState();
   const router = useRouter();
   const [draft, setDraft] = useState<string | null>(null);

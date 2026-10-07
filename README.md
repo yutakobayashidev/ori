@@ -11,27 +11,27 @@ original language.
 Home uses a Tiimo-inspired day flow with expandable activities and direct
 controls for routine steps, tasks, replies and weight entries. Messages uses
 a Beeper-inspired conversation layout with visible source messages, editable
-drafts and a contextual side panel. These execution surfaces remain mocks;
-their records share browser-session state and external sending is simulated.
-Reply review can call Jev through Vercel AI Gateway when the server has
-`AI_GATEWAY_API_KEY`. It checks the draft against the sample conversation;
-Beeper synchronization and sending remain unconnected.
+drafts and a contextual side panel. Tasks and reply activities share persistent
+SQLite records across Home, Messages, and MCP. User edits and decisions survive
+agent updates and reloads. Routines and Journal remain session-only prototypes;
+Beeper history synchronization and actual message sending remain unconnected.
 
 ## Workspaces and current status
 
 | Workspace | Route      | Current implementation                                                                                                 |
 | --------- | ---------- | ---------------------------------------------------------------------------------------------------------------------- |
-| Home      | `/`        | State-derived daily brief, flexible tasks and routines, and natural-language action proposals. Local prototype.        |
-| Messages  | `/support` | Sample conversations, editable replies, scheduling previews, and deferral. Sending is simulated.                       |
+| Home      | `/`        | Persistent mixed task/reply inbox and action proposals; routine and measurement controls remain local prototypes.      |
+| Messages  | `/support` | Published reply activities, source excerpts, persistent draft edits and deferral. No external sending.                 |
 | Journal   | `/journal` | Notes, resume points, medication and weight entries, append-only corrections, and summary previews. Local prototype.   |
 | Reader    | `/inbox`   | Searchable sample articles and a responsive article reader. Recommendation from activity history is not connected yet. |
 | Vitals    | `/vitals`  | Body and Environment dashboards with sample readings, charts, and simulated controls. No health or device connection.  |
 | Research  | `/deck`    | Twitter and Mastodon columns, connected accounts, persistent decks, and optional Codex research chat.                  |
 
-Home, Messages, and Journal share in-memory state across navigation; reloading
-resets it. The home input uses a deterministic English/Japanese interpreter to
-preview an action before confirmation, rather than an LLM. Research decks,
-connections, and chat history use server-side persistence.
+Home and Messages share activity IDs, user decisions, and drafts through a common
+server service. Journal and routine prototype state resets on reload. The home
+input uses a deterministic English/Japanese interpreter to preview an action
+before confirmation, rather than an LLM. Research decks, connections, and chat
+history also use server-side persistence.
 
 See [execution support](docs/execution-support.md) and the
 [vitals preview](docs/vitals-preview.md) for prototype scope.
@@ -324,6 +324,10 @@ The app serves Streamable HTTP MCP at `/mcp` on its existing port. External
 clients can list connections and SNS lists, read saved decks, create/replace/delete
 saved decks, and fetch posts from a source or saved column. These operations
 share the web UI's SQLite and SNS services; no resident Codex run is required.
+`get_activity_context` reads the shared task/reply inbox and user decisions;
+`publish_activities` creates or updates proposals with stable IDs, retry receipts,
+and revision checks. Publication preserves user edits and never sends messages.
+See the [Activity MCP contract](docs/activity-mcp-design.md) for inputs and examples.
 An OpenAI Secure MCP Tunnel client can forward to this private endpoint.
 
 MCP authentication is currently deferred: `/mcp` bypasses browser login and

@@ -1,4 +1,8 @@
-import { expect, test } from "../fixtures";
+import { expect, test } from "../activity-fixtures";
+
+test.beforeEach(async ({ activityMcp }) => {
+  await activityMcp.publish();
+});
 
 test("executes routine steps and records a measurement in the shared journal", async ({
   page,
@@ -8,7 +12,7 @@ test("executes routine steps and records a measurement in the shared journal", a
   workspacePage,
 }, testInfo) => {
   await homePage.goTo();
-  await page.waitForLoadState("networkidle");
+  await page.waitForLoadState("domcontentloaded");
   await homePage.morningRoutine.click();
   await expect(page).toHaveURL(/activity=task/);
   await homePage.routineStep(/Drink water/).check();
@@ -30,15 +34,16 @@ test("shows the day flow and conversation context at desktop width", async ({
   page,
   homePage,
   messagesPage,
+  activitiesPage,
 }, testInfo) => {
   await page.setViewportSize({ width: 1440, height: 1080 });
   await homePage.goTo();
-  await page.waitForLoadState("networkidle");
+  await page.waitForLoadState("domcontentloaded");
   await expect(homePage.todayPlan).toBeVisible();
   await page.screenshot({ path: testInfo.outputPath("home-desktop.png") });
-  await messagesPage.goTo("?conversation=design-review");
-  await page.waitForLoadState("networkidle");
-  await expect(messagesPage.reply).toBeVisible();
+  await messagesPage.goTo("?activity=review-times&view=all");
+  await page.waitForLoadState("domcontentloaded");
+  await expect(activitiesPage.draft).toBeVisible();
   await page.screenshot({ path: testInfo.outputPath("messages-desktop.png") });
 });
 
@@ -49,7 +54,7 @@ test("previews a natural-language memo and shares the executed record with journ
   workspacePage,
 }) => {
   await homePage.goTo();
-  await page.waitForLoadState("networkidle");
+  await page.waitForLoadState("domcontentloaded");
   const memo = "明日のレビューは導線から確認する";
   await homePage.previewCommand(`Note: ${memo}`);
   const execute = homePage.applyAction;
@@ -63,7 +68,7 @@ test("previews a natural-language memo and shares the executed record with journ
 
 test("keeps the home usable on narrow screens", async ({ page, a11y, homePage }, testInfo) => {
   await homePage.goTo();
-  await page.waitForLoadState("networkidle");
+  await page.waitForLoadState("domcontentloaded");
   for (const width of [320, 375, 414, 768]) {
     await page.setViewportSize({ width, height: 850 });
     await expect(homePage.input).toBeVisible();
@@ -73,80 +78,77 @@ test("keeps the home usable on narrow screens", async ({ page, a11y, homePage },
   }
 });
 
-test("adds tasks only after confirmation and can defer and restore them", async ({
+test("adds tasks only after confirmation and persists their deferred and completed state", async ({
   page,
   homePage,
+  activitiesPage,
+  activityMcp,
 }) => {
   await homePage.goTo();
-  await page.waitForLoadState("networkidle");
-  const complete = homePage.completeTask("grocery shopping");
+  const complete = activitiesPage.complete("grocery shopping");
   await homePage.previewCommand("Add grocery shopping");
   await expect(complete).toHaveCount(0);
   await homePage.applyAction.click();
   await expect(complete).toBeVisible();
   await homePage.previewCommand("Defer grocery shopping");
-  await expect(complete).toBeVisible();
   await homePage.applyAction.click();
-  await expect(complete).toHaveCount(0);
-  await homePage.restoreTask("grocery shopping").click();
+  await expect
+    .poll(
+      async () =>
+        (await activityMcp.context()).activities.find(
+          (item) => item.effective.title === "grocery shopping",
+        )?.userState,
+    )
+    .toBe("deferred");
+  await page.reload();
   await complete.click();
-  await expect(complete).toHaveCount(0);
-  await expect(homePage.restoreTask("grocery shopping")).toBeVisible();
+  await expect(activitiesPage.restore("grocery shopping")).toBeVisible();
 });
 
-test("opens a conversation page from home and retains outcomes on return", async ({
+test("opens a reply activity from home and retains its state through history and reload", async ({
   page,
   a11y,
   homePage,
   messagesPage,
   workspacePage,
+  activitiesPage,
 }) => {
   await homePage.goTo();
-  await page.waitForLoadState("networkidle");
-  const conversationLink = homePage.conversation("Haruka Aoki");
-  await expect(conversationLink).toHaveAttribute("href", /conversation=design-review/);
-  await conversationLink.click();
-  await expect(page).toHaveURL(/\/support\?.*conversation=design-review/);
-  await expect(messagesPage.dialogs).toHaveCount(0);
-  await expect(messagesPage.reply).toBeVisible();
+  await activitiesPage.openReply("review-times");
+  await expect(page).toHaveURL(/activity=review-times/);
+  await expect(activitiesPage.draft).toBeVisible();
   expect((await a11y().analyze()).violations).toEqual([]);
   await page.goBack();
-  await expect(conversationLink).toBeVisible();
+  await expect(activitiesPage.card("review-times")).toBeVisible();
   await page.goForward();
-  await expect(messagesPage.reply).toBeVisible();
+  await expect(activitiesPage.draft).toBeVisible();
   await page.reload();
-  await page.waitForLoadState("networkidle");
-  await expect(messagesPage.reply).toBeVisible();
-  await messagesPage.leaveForLater.click();
-  await workspacePage.navigateTo("Home");
-  await expect(conversationLink).toContainText("Set aside");
-  await conversationLink.click();
-  await expect(page).toHaveURL(/conversation=design-review/);
-  await expect(messagesPage.moveToInbox).toBeVisible();
-  await messagesPage.moveToInbox.click();
+  await expect(activitiesPage.draft).toBeVisible();
+  await activitiesPage.later.click();
   await messagesPage.showConversationList();
   await workspacePage.navigateTo("Home");
-  await expect(conversationLink).toBeVisible();
+  await expect(activitiesPage.card("review-times")).toContainText("Set aside");
+  await activitiesPage.openReply("review-times");
+  await activitiesPage.bringBack.click();
+  await expect(activitiesPage.later).toBeVisible();
 });
 
-test("updates the prose brief as priorities change and opens the referenced conversation", async ({
-  page,
+test("updates the prose brief as activities change and opens the referenced reply", async ({
   homePage,
   messagesPage,
   workspacePage,
+  activitiesPage,
 }) => {
   await homePage.goTo();
-  await page.waitForLoadState("networkidle");
   const brief = homePage.dailyBrief;
-  await expect(brief).toContainText("Review the documents");
-  await expect(brief).toContainText("3 conversations");
-  await homePage.completeTask("Review the documents").click();
-  await expect(brief).not.toContainText("Review the documents");
-  await homePage.openBriefConversation("Haruka Aoki");
-  await messagesPage.leaveForLater.click();
+  await expect(brief).toContainText("Buy detergent");
+  await activitiesPage.complete("Buy detergent").click();
+  await expect(brief).not.toContainText("Buy detergent");
+  await brief.getByRole("button", { name: "Propose review times", exact: true }).click();
+  await activitiesPage.later.click();
+  await messagesPage.showConversationList();
   await workspacePage.navigateTo("Home");
-  await expect(brief).toContainText("2 conversations");
-  await expect(brief).not.toContainText("Haruka Aoki");
+  await expect(brief).not.toContainText("Propose review times");
   await homePage.previewCommand("再開地点：資料の2ページ目から");
   await homePage.applyAction.click();
   await expect(brief).toContainText("資料の2ページ目から");
@@ -156,32 +158,19 @@ test("keeps completed actions in their original positions with visible outcomes"
   page,
   a11y,
   homePage,
-  messagesPage,
-  workspacePage,
+  activitiesPage,
 }, testInfo) => {
   await homePage.goTo();
-  await page.waitForLoadState("networkidle");
-  const titles = homePage.flowTitles;
-  const before = await titles.allTextContents();
-  await homePage.completeTask("Review the documents").click();
-  await expect(homePage.restoreTask("Review the documents")).toHaveAttribute(
-    "aria-pressed",
-    "true",
-  );
-  await expect(homePage.completedTask("Review the documents")).toBeVisible();
-  await homePage.conversation("Haruka Aoki").click();
-  await messagesPage.reviewReply.click();
-  await messagesPage.trySending.click();
-  await workspacePage.navigateTo("Home");
-  await expect(homePage.conversation("Haruka Aoki")).toContainText("Reply recorded");
+  await expect(activitiesPage.card("send-documents")).toBeVisible();
+  const before = await homePage.flowTitles.allTextContents();
+  await activitiesPage.complete("Buy detergent").click();
+  await expect(activitiesPage.restore("Buy detergent")).toHaveAttribute("aria-pressed", "true");
+  await expect(activitiesPage.card("buy-detergent")).toContainText("Completed");
   await homePage.recordMeasurement("65.2");
   await expect(homePage.recordedWeight("65.2")).toBeVisible();
-  expect(await titles.allTextContents()).toEqual(before);
+  expect(await homePage.flowTitles.allTextContents()).toEqual(before);
   expect((await a11y().analyze()).violations).toEqual([]);
   await page.screenshot({ path: testInfo.outputPath("completion-in-place.png") });
-  await homePage.restoreTask("Review the documents").click();
-  await expect(homePage.completeTask("Review the documents")).toHaveAttribute(
-    "aria-pressed",
-    "false",
-  );
+  await activitiesPage.restore("Buy detergent").click();
+  await expect(activitiesPage.complete("Buy detergent")).toHaveAttribute("aria-pressed", "false");
 });
