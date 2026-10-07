@@ -1,4 +1,5 @@
 import type { QueryClient } from "@tanstack/react-query";
+import { useEffect } from "react";
 import {
   createRootRouteWithContext,
   HeadContent,
@@ -44,14 +45,15 @@ export const Route = createRootRouteWithContext<RouterContext>()({
         content: "width=device-width, initial-scale=1",
       },
       { name: "referrer", content: "no-referrer" },
+      { name: "theme-color", content: "#171717" },
+      { name: "apple-mobile-web-app-title", content: "Workspace" },
       { title: "Personal Workspace" },
     ],
     links: [
       { rel: "stylesheet", href: appCss },
-      {
-        rel: "icon",
-        href: "data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 16 16'%3E%3Ccircle cx='8' cy='8' r='7' fill='%23255f6e'/%3E%3C/svg%3E",
-      },
+      { rel: "manifest", href: "/manifest.webmanifest", crossOrigin: "use-credentials" },
+      { rel: "icon", href: "/icons/workspace.svg", type: "image/svg+xml" },
+      { rel: "apple-touch-icon", href: "/icons/apple-touch-icon.png" },
     ],
   }),
   shellComponent: RootDocument,
@@ -67,6 +69,15 @@ function RootContent() {
 }
 
 function RootDocument({ children }: { children: React.ReactNode }) {
+  useEffect(() => {
+    if (import.meta.env.PROD && "serviceWorker" in navigator) {
+      void navigator.serviceWorker.register("/sw.js", { updateViaCache: "none" }).catch((error) => {
+        // oxlint-disable-next-line no-console -- Keep registration failures diagnosable without interrupting the app.
+        console.error("Service worker registration failed", error);
+      });
+    }
+  }, []);
+
   return (
     <html lang="en" className="dark">
       <head>

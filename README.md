@@ -96,6 +96,30 @@ code. See [owner login](docs/login.md) for configuration, sessions, and limits.
 
 `GET /health` returns `{"status":"ok"}` without authentication or database access.
 
+## Install as an app
+
+The production build supports installation as **Personal Workspace** through
+the browser's install menu (or Safari's **Add to Home Screen**). Open the app
+over HTTPS, such as its Tailscale Serve origin; localhost also works for testing.
+The installed app opens Home in a standalone window and uses the same owner
+login as the browser. Access to the private network is still required.
+
+A service worker displays a small offline page when a page cannot be reached.
+Reconnect and select **Try again** to reopen the same URL. Only this generic
+page is cached: personal data, authenticated pages, API responses, and mutations
+are never stored by the service worker. Offline reading/editing and background
+sync are not supported. Updates activate after existing app windows/tabs close,
+so an update does not reload an active draft. When changing `public/offline.html`,
+bump the cache version in `public/sw.js`.
+
+Service worker registration is disabled in development. Verify the production
+behavior with:
+
+```bash
+nix develop -c pnpm build
+nix develop -c env TWITTER_LITE_E2E_PRODUCTION=1 pnpm test:e2e e2e/integrations/pwa.spec.ts
+```
+
 ## Requirements and setup
 
 Use Nix, or Node.js `>=22.12.0` with pnpm `11.9.0`. The committed `.npmrc`
