@@ -81,6 +81,7 @@ or change direction.
 - Server-only encrypted Mastodon credentials and configurable Tailscale owner access
 - Read-only post cards with source links, text, media, and quotes
 - Experimental WebMCP tools to manage decks and read their columns
+- Same-port HTTP MCP for SNS retrieval and saved-deck operations through a private tunnel
 - Optional resident Codex research chat, cited host-side Markdown reports,
   and saved conversations with deck, account, and citation restoration
 
@@ -172,8 +173,11 @@ expired credentials. Authentication failures appear separately in chat; the
 underlying error and conversation ID are logged on the server.
 
 This provider does not register AI SDK `tools` as Codex dynamic tools.
-The existing validated, account-scoped research functions are exposed through
-its in-process `createSdkMcpServer` bridge instead. Streaming uses `streamText`
+The validated, account-scoped research functions are exposed through the app's
+own HTTP `/mcp` endpoint. Each turn has a separate registration that is removed
+when it finishes or is cancelled. Set `TWITTER_LITE_MCP_URL` when the app is not
+reachable at `http://127.0.0.1:${PORT:-3000}/mcp`. The app-server control connection
+still uses stdio; its MCP calls use HTTP. Streaming uses `streamText`
 and `smoothStream` with 15 ms pacing and Japanese-aware chunking:
 `/[\u3040-\u309F\u30A0-\u30FF]|\S+\s+/`.
 Streamdown renders the Markdown and animates new text only while the final
@@ -300,6 +304,18 @@ library, or make a temporary copy of a saved deck to experiment.
 Other unsaved temporary edits disappear on reload or navigation, including OAuth redirects.
 Existing version-2 browser decks have an explicit import action; invalid older
 data is left untouched. See [the deck model and persistence contract](docs/research-decks.md).
+
+## HTTP MCP
+
+The app serves Streamable HTTP MCP at `/mcp` on its existing port. External
+clients can list connections and SNS lists, read saved decks, create/replace/delete
+saved decks, and fetch posts from a source or saved column. These operations
+share the web UI's SQLite and SNS services; no resident Codex run is required.
+An OpenAI Secure MCP Tunnel client can forward to this private endpoint.
+
+MCP authentication is currently deferred: `/mcp` bypasses browser login and
+Tailscale identity checks. Keep the app on the private network. Browser routes
+retain their existing access checks. See [HTTP MCP and tunnel operation](docs/http-mcp.md).
 
 ## WebMCP
 

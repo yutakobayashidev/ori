@@ -1,20 +1,14 @@
 import { z } from "zod";
 import type { Connection } from "../connections/model";
-import { requireTwitterConnection } from "../connections/repository.server";
 import { type Deck, type DeckColumn, deckSchema } from "../decks/model";
 import { listDecks, loadDeck } from "../decks/repository.server";
 import { emptyToolInput, prepareDeck, setDeckInput } from "../decks/webmcp-contracts";
-import {
-  fetchMastodonLists,
-  fetchMastodonPage,
-  MastodonFeedError,
-} from "../platforms/mastodon-feed.server";
-import { mapTwitterPost } from "../platforms/twitter";
+import { MastodonFeedError } from "../platforms/mastodon-feed.server";
 import type { ResearchPage, ResearchPost } from "../platforms/types";
-import { getBirdReader } from "../posts/bird-client.server";
 import { InputError, listChoicesInputSchema } from "../posts/inputs";
-import { loadListChoices, loadListPage, loadUserPage, searchPage } from "../posts/post-service";
 import { ProfileUnavailableError } from "../profiles/errors";
+
+import { fetchPage, publicPost, SourceFailure, listSourceLists } from "./sources.server";
 
 const MAX_FETCHES = 12;
 const POSTS_PER_FETCH = 20;
@@ -28,50 +22,6 @@ const fetchInput = z
 const getDeckInput = z.object({ deckId: z.string().min(1).max(128) }).strict();
 const listInput = listChoicesInputSchema.strict();
 type FetchPage = (column: DeckColumn, cursor?: string) => Promise<ResearchPage>;
-class SourceFailure extends Error {
-  constructor(readonly code: string) {
-    super("The source could not be loaded.");
-  }
-}
-
-async function fetchPage(column: DeckColumn, cursor?: string): Promise<ResearchPage> {
-  if (column.source.platform === "mastodon")
-    return fetchMastodonPage({
-      connectionId: column.connectionId,
-      source: column.source,
-      cursor,
-    });
-  const reader = getBirdReader(await requireTwitterConnection(column.connectionId));
-  const input = { ...column.source, cursor };
-  const result =
-    input.kind === "search"
-      ? await searchPage(reader, input)
-      : input.kind === "user"
-        ? await loadUserPage(reader, input)
-        : await loadListPage(reader, input);
-  if (!result.ok) throw new SourceFailure(result.error.code);
-  return {
-    posts: result.page.tweets.map(mapTwitterPost),
-    nextCursor: result.page.nextCursor,
-  };
-}
-
-function publicPost(post: ResearchPost) {
-  const url = new URL(post.url);
-  if (!["https:", "http:"].includes(url.protocol) || url.username || url.password)
-    throw new SourceFailure("invalid-source-result");
-  return {
-    key: post.key,
-    nativeId: post.nativeId,
-    platform: post.platform,
-    url: url.href,
-    text: post.text,
-    author: { name: post.author.name, handle: post.author.handle },
-    ...(post.createdAt ? { createdAt: post.createdAt } : {}),
-    ...(post.contentWarning ? { contentWarning: post.contentWarning } : {}),
-    ...(post.sensitive ? { sensitive: true } : {}),
-  };
-}
 function failure(code: string, message: string) {
   return { ok: false as const, error: { code, message } };
 }
@@ -191,22 +141,7 @@ export function createResearchTools(
           if (fetches >= MAX_FETCHES)
             return failure("budget-exhausted", "This research has used its 12 fetch requests.");
           fetches += 1;
-          let lists: {
-            id: string;
-            name: string;
-            isPrivate?: boolean;
-            description?: string;
-            memberCount?: number;
-          }[];
-          if (connection.platform === "mastodon") {
-            lists = await fetchMastodonLists(connectionId);
-          } else {
-            const result = await loadListChoices(
-              getBirdReader(await requireTwitterConnection(connectionId)),
-            );
-            if (!result.ok) throw new SourceFailure(result.error.code);
-            lists = result.lists;
-          }
+          const lists = await listSourceLists(connectionId, connection.platform);
           return {
             ok: true,
             connectionId,

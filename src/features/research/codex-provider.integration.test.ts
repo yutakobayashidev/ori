@@ -1,13 +1,32 @@
 // @vitest-environment node
 import { mkdtemp, readFile, rm } from "node:fs/promises";
+import { createServer } from "node:http";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
 import { fileURLToPath } from "node:url";
-import { expect, it, vi } from "vitest";
+import { assert, expect, it, vi } from "vitest";
+import { handleMcpRequest } from "../mcp/http.server";
 import { executeCodexResearch } from "./codex-provider.server";
 
 it("streams and resumes through the real SDK provider with a local MCP roundtrip", async () => {
   const directory = await mkdtemp(join(tmpdir(), "codex-provider-"));
+  const server = createServer(async (incoming, outgoing) => {
+    const chunks: Buffer[] = [];
+    for await (const chunk of incoming) chunks.push(Buffer.from(chunk));
+    const response = await handleMcpRequest(
+      new Request(`http://127.0.0.1${incoming.url}`, {
+        method: incoming.method,
+        headers: incoming.headers as Record<string, string>,
+        body: incoming.method === "POST" ? Buffer.concat(chunks) : undefined,
+      }),
+    );
+    outgoing.writeHead(response.status, Object.fromEntries(response.headers));
+    outgoing.end(Buffer.from(await response.arrayBuffer()));
+  });
+  await new Promise<void>((resolve) => server.listen(0, "127.0.0.1", resolve));
+  const address = server.address();
+  assert.isNotNull(address);
+  assert(typeof address === "object");
   try {
     const execute = vi.fn<(name: string, input: unknown) => Promise<unknown>>(async () => ({
       ok: true,
@@ -20,6 +39,7 @@ it("streams and resumes through the real SDK provider with a local MCP roundtrip
         model: "fixture-model",
         reportRoot: directory,
         codexPath: fileURLToPath(new URL("./fixtures/codex-app-server.mjs", import.meta.url)),
+        mcpUrl: `http://127.0.0.1:${address.port}/mcp`,
       },
       cwd: directory,
       runId: "fixture-run",
@@ -68,6 +88,9 @@ it("streams and resumes through the real SDK provider with a local MCP roundtrip
     expect(methods).toContain("thread/resume");
     expect(methods).toContain("turn/interrupt");
   } finally {
+    await new Promise<void>((resolve, reject) =>
+      server.close((error) => (error ? reject(error) : resolve())),
+    );
     await rm(directory, { recursive: true, force: true });
   }
 }, 20_000);

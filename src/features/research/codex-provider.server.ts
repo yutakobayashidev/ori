@@ -3,13 +3,15 @@ import { homedir } from "node:os";
 import { resolve } from "node:path";
 import { promisify } from "node:util";
 import { smoothStream, streamText } from "ai";
-import { createCodexAppServer, createSdkMcpServer } from "ai-sdk-provider-codex-cli";
+import { createCodexAppServer } from "ai-sdk-provider-codex-cli";
+import { registerResearchTools } from "../mcp/http.server";
 
 const execFileAsync = promisify(execFile);
 export type CodexResearchConfig = {
   model: string;
   reportRoot: string;
   codexPath?: string;
+  mcpUrl?: string;
 };
 export type CodexResearchInput = {
   config: CodexResearchConfig;
@@ -92,56 +94,63 @@ export async function executeCodexResearch(input: CodexResearchInput): Promise<v
     input.signal.throwIfAborted();
     return result;
   }
-  const bridge = createSdkMcpServer({
-    name,
-    tools: input.tools.definitions.map((definition) => ({
-      ...definition,
-      execute: (args: unknown) => executeTool(definition.name, args),
-    })),
+  const url = new URL(
+    input.config.mcpUrl ||
+      process.env.TWITTER_LITE_MCP_URL ||
+      `http://127.0.0.1:${process.env.PORT || 3000}/mcp`,
+  );
+  const registration = registerResearchTools({
+    definitions: input.tools.definitions,
+    execute: executeTool,
   });
-  const provider = createCodexAppServer({
-    defaultSettings: {
-      codexPath: binary,
-      cwd: input.cwd,
-      env,
-      logger: false,
-      minCodexVersion: "0.156.0",
-      threadMode: "persistent",
-      resume: input.threadId,
-      approvalPolicy: "never",
-      sandboxPolicy: "workspace-write",
-      autoApprove: false,
-      developerInstructions: input.instructions,
-      mcpServers: { [name]: bridge },
-      serverRequests: {
-        onDynamicToolCall: async ({ params }) => {
-          const result = await executeTool(params.tool, params.arguments);
-          return {
-            contentItems: [{ type: "inputText", text: JSON.stringify(result) }],
-            success: !!result && typeof result === "object" && "ok" in result && result.ok === true,
-          };
+  url.searchParams.set("research", registration.id);
+  let provider: ReturnType<typeof createCodexAppServer> | undefined;
+  try {
+    provider = createCodexAppServer({
+      defaultSettings: {
+        codexPath: binary,
+        cwd: input.cwd,
+        env,
+        logger: false,
+        minCodexVersion: "0.156.0",
+        threadMode: "persistent",
+        resume: input.threadId,
+        approvalPolicy: "never",
+        sandboxPolicy: "workspace-write",
+        autoApprove: false,
+        developerInstructions: input.instructions,
+        mcpServers: { [name]: { transport: "http", url: url.toString() } },
+        serverRequests: {
+          onDynamicToolCall: async ({ params }) => {
+            const result = await executeTool(params.tool, params.arguments);
+            return {
+              contentItems: [{ type: "inputText", text: JSON.stringify(result) }],
+              success:
+                !!result && typeof result === "object" && "ok" in result && result.ok === true,
+            };
+          },
+        },
+        configOverrides: {
+          "shell_environment_policy.inherit": "none",
+          "features.multi_agent": false,
+          "features.hooks": false,
+          web_search: "disabled",
+          ...Object.fromEntries(
+            inherited.map((server) => [`mcp_servers.${server}.enabled`, false]),
+          ),
+          [`mcp_servers.${name}.enabled`]: true,
+          ...Object.fromEntries(
+            input.tools.definitions.map((tool) => [
+              `mcp_servers.${name}.tools.${tool.name}.approval_mode`,
+              "approve",
+            ]),
+          ),
+        },
+        onSessionCreated: (session) => {
+          if (!input.signal.aborted) input.onThread(session.threadId);
         },
       },
-      configOverrides: {
-        "shell_environment_policy.inherit": "none",
-        "features.multi_agent": false,
-        "features.hooks": false,
-        web_search: "disabled",
-        ...Object.fromEntries(inherited.map((server) => [`mcp_servers.${server}.enabled`, false])),
-        [`mcp_servers.${name}.enabled`]: true,
-        ...Object.fromEntries(
-          input.tools.definitions.map((tool) => [
-            `mcp_servers.${name}.tools.${tool.name}.approval_mode`,
-            "approve",
-          ]),
-        ),
-      },
-      onSessionCreated: (session) => {
-        if (!input.signal.aborted) input.onThread(session.threadId);
-      },
-    },
-  });
-  try {
+    });
     const result = streamText({
       model: provider(input.config.model),
       prompt: input.prompt,
@@ -165,6 +174,7 @@ export async function executeCodexResearch(input: CodexResearchInput): Promise<v
       throw new Error(step.rawFinishReason || "Codex could not complete the turn.");
     }
   } finally {
-    await provider.close();
+    registration.dispose();
+    await provider?.close();
   }
 }

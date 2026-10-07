@@ -2,7 +2,7 @@
 
 ## Registration
 
-The deck workspace exposes nine React-owned tools on `/` and `/deck`.
+The deck workspace exposes nine React-owned tools on `/deck`.
 `usewebmcp` handles native browser registration and cleanup. Tools become
 available after saved decks load. Connection discovery may still be pending;
 `list_connections` then returns `connections: null`.

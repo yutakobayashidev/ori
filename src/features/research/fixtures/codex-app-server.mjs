@@ -62,12 +62,19 @@ events.on("line", async (line) => {
           method: "POST",
           headers: {
             "content-type": "application/json",
+            accept: "application/json, text/event-stream",
             ...config[`${prefix}.http_headers`],
           },
           body: JSON.stringify({ jsonrpc: "2.0", id: 1, method, params }),
         });
         if (!response.ok) throw new Error(`MCP HTTP ${response.status}`);
-        return response.json();
+        const text = await response.text();
+        if (response.headers.get("content-type")?.includes("text/event-stream")) {
+          const data = text.split("\n").find((line) => line.startsWith("data:"));
+          if (!data) throw new Error("MCP response missing SSE data");
+          return JSON.parse(data.slice(5).trim());
+        }
+        return JSON.parse(text);
       };
       const catalog = await rpc("tools/list", {});
       if (!catalog.result.tools.some((tool) => tool.name === "list_decks"))

@@ -7,6 +7,22 @@ const health = createMiddleware().server(({ request, next }) => {
   return next();
 });
 
+// Private MCP clients do not carry a browser session or Tailscale identity.
+// Keep this exact endpoint ahead of browser-only access checks.
+const mcp = createMiddleware().server(async ({ request, next }) => {
+  const path = new URL(request.url).pathname;
+  // Explicitly report that this private endpoint does not advertise OAuth.
+  if (
+    ["/.well-known/oauth-protected-resource", "/.well-known/oauth-protected-resource/mcp"].includes(
+      path,
+    )
+  )
+    return new Response(null, { status: 404 });
+  if (path !== "/mcp") return next();
+  const { handleMcpRequest } = await import("./features/mcp/http.server");
+  return handleMcpRequest(request);
+});
+
 const ownerAccess = createMiddleware().server(async ({ request, next }) => {
   const { checkAccess, readAccessConfig } = await import("./features/access/policy.server");
   return checkAccess(request, readAccessConfig()) ?? next();
@@ -30,5 +46,5 @@ const storage = createMiddleware().server(async ({ next }) => {
 });
 
 export const startInstance = createStart(() => ({
-  requestMiddleware: [health, ownerAccess, csrf, storage, appSession],
+  requestMiddleware: [health, mcp, ownerAccess, csrf, storage, appSession],
 }));

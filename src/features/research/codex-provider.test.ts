@@ -2,12 +2,6 @@
 import { assert, beforeEach, expect, it, vi } from "vitest";
 import { type CodexResearchInput, executeCodexResearch } from "./codex-provider.server";
 
-type Bridge = {
-  name: string;
-  tools: (CodexResearchInput["tools"]["definitions"][number] & {
-    execute: (input: unknown) => Promise<unknown>;
-  })[];
-};
 type ProviderSettings = import("ai-sdk-provider-codex-cli").CodexAppServerSettings;
 const fake = vi.hoisted(() => ({
   inspect:
@@ -19,7 +13,8 @@ const fake = vi.hoisted(() => ({
       ) => Promise<{ stdout: string }>
     >(),
   create: vi.fn<(options: { defaultSettings: ProviderSettings }) => unknown>(),
-  bridge: vi.fn<(options: Bridge) => Bridge>(),
+  register: vi.fn<(tools: CodexResearchInput["tools"]) => { id: string; dispose: () => void }>(),
+  dispose: vi.fn<() => void>(),
   model: Object.assign(vi.fn<(id: string) => string>(), { close: vi.fn<() => Promise<void>>() }),
   stream: vi.fn<
     (options: unknown) => {
@@ -38,14 +33,15 @@ vi.mock("node:util", () => ({ promisify: (fn: unknown) => fn }));
 vi.mock("ai", () => ({ streamText: fake.stream, smoothStream: fake.smooth }));
 vi.mock("ai-sdk-provider-codex-cli", () => ({
   createCodexAppServer: fake.create,
-  createSdkMcpServer: fake.bridge,
 }));
+vi.mock("../mcp/http.server", () => ({ registerResearchTools: fake.register }));
 function input(): CodexResearchInput {
   return {
     config: {
       reportRoot: "/reports",
       model: "selected-model",
       codexPath: "/bin/codex",
+      mcpUrl: "http://127.0.0.1:3002/mcp",
     },
     cwd: "/reports/run",
     runId: "test-run",
@@ -72,7 +68,7 @@ beforeEach(() => {
     stdout: JSON.stringify([{ name: "external" }]),
   });
   fake.create.mockReturnValue(fake.model);
-  fake.bridge.mockImplementation((options) => options);
+  fake.register.mockReturnValue({ id: "turn-scope", dispose: fake.dispose });
   fake.model.mockReturnValue("model");
   fake.model.close.mockResolvedValue(undefined);
   fake.smooth.mockReturnValue("smoothing-transform");
@@ -121,19 +117,34 @@ it("uses the app-server provider for incremental Japanese streaming with persist
   expect(fake.model.close).toHaveBeenCalledOnce();
 });
 
-it("bridges the same validated research definitions into local MCP tools", async () => {
+it("connects Codex to the shared HTTP endpoint with this turn's scoped tools", async () => {
   const request = input();
   await executeCodexResearch(request);
-  const bridge = fake.bridge.mock.calls[0]?.[0];
-  assert.isDefined(bridge);
-  assert.isDefined(bridge.tools[0]);
-  expect(bridge.tools[0]).toMatchObject({
-    name: "list_decks",
-    inputSchema: { type: "object" },
+  const tools = fake.register.mock.calls[0]?.[0];
+  assert.isDefined(tools);
+  expect(tools.definitions).toEqual(request.tools.definitions);
+  expect(fake.create).toHaveBeenCalledWith({
+    defaultSettings: expect.objectContaining({
+      mcpServers: {
+        workspace_research_testrun: {
+          transport: "http",
+          url: "http://127.0.0.1:3002/mcp?research=turn-scope",
+        },
+      },
+    }),
   });
   const args = { example: "input" };
-  expect(await bridge.tools[0].execute(args)).toEqual({ ok: true, decks: [] });
+  expect(await tools.execute("list_decks", args)).toEqual({ ok: true, decks: [] });
   expect(request.tools.execute).toHaveBeenCalledWith("list_decks", args);
+  expect(fake.dispose).toHaveBeenCalledOnce();
+});
+
+it("removes the registered scope when provider startup fails", async () => {
+  fake.create.mockImplementationOnce(() => {
+    throw new Error("Startup failed");
+  });
+  await expect(executeCodexResearch(input())).rejects.toThrow("Startup failed");
+  expect(fake.dispose).toHaveBeenCalledOnce();
 });
 
 it("excludes web-app secrets and disables inherited MCP servers, hooks and extra tools", async () => {
@@ -235,10 +246,10 @@ it("propagates cancellation and prevents late bridge calls or metadata changes",
     controller.abort(new Error("Stopped")),
   );
   await expect(executeCodexResearch(request)).rejects.toThrow("Stopped");
-  const bridge = fake.bridge.mock.calls[0]?.[0];
-  assert.isDefined(bridge);
-  assert.isDefined(bridge.tools[0]);
-  await expect(bridge.tools[0].execute({})).rejects.toThrow("Stopped");
+  const tools = fake.register.mock.calls[0]?.[0];
+  assert.isDefined(tools);
+  await expect(tools.execute("list_decks", {})).rejects.toThrow("Stopped");
+  expect(fake.dispose).toHaveBeenCalledOnce();
   expect(request.tools.execute).not.toHaveBeenCalled();
   expect(request.onThread).not.toHaveBeenCalled();
   expect(fake.model.close).toHaveBeenCalledOnce();
