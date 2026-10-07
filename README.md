@@ -330,6 +330,14 @@ and revision checks. Publication preserves user edits and never sends messages.
 See the [Activity MCP contract](docs/activity-mcp-design.md) for inputs and examples.
 An OpenAI Secure MCP Tunnel client can forward to this private endpoint.
 
+`list_beeper_chats` and `read_beeper_chat` provide read-only conversation context
+from the configured headless Beeper Server. MCP 2.0 clients can subscribe to
+`beeper.message.received` for explicit chat IDs. The separate
+`twitter-lite-events-worker` process reconciles incoming messages and delivers
+signed webhooks from a durable SQLite queue. ChatGPT Work/dots can use these
+events to create task/reply proposals through the existing activity tools.
+See [Beeper MCP Events](docs/beeper-mcp-events.md) for setup and verification.
+
 MCP authentication is currently deferred: `/mcp` bypasses browser login and
 Tailscale identity checks. Keep the app on the private network. Browser routes
 retain their existing access checks. See [HTTP MCP and tunnel operation](docs/http-mcp.md).

@@ -66,4 +66,17 @@ export const migrations = [
     folderMillis: 1791374963891,
     hash: "9ee247ce9c65a31ccf530344e07c0e61eef45717949cf567d785331bf568ec73",
   },
+  {
+    sql: [
+      "CREATE TABLE `beeper_chat_checkpoints` (\n\t`target_id` text NOT NULL,\n\t`chat_id` text NOT NULL,\n\t`cursor` text,\n\t`anchor_message_id` text,\n\t`pending_anchor_message_id` text,\n\t`started_at` text NOT NULL,\n\tPRIMARY KEY(`target_id`, `chat_id`)\n);\n",
+      "\nCREATE TABLE `beeper_seen_messages` (\n\t`target_id` text NOT NULL,\n\t`chat_id` text NOT NULL,\n\t`message_id` text NOT NULL,\n\t`observed_at` text NOT NULL,\n\tPRIMARY KEY(`target_id`, `chat_id`, `message_id`)\n);\n",
+      "\nCREATE TABLE `mcp_event_outbox` (\n\t`id` text PRIMARY KEY NOT NULL,\n\t`subscription_id` text NOT NULL,\n\t`event_id` text NOT NULL,\n\t`body` text NOT NULL,\n\t`attempts` integer DEFAULT 0 NOT NULL,\n\t`next_attempt_at` integer NOT NULL,\n\t`created_at` integer NOT NULL,\n\t`delivered_at` integer,\n\t`failed_at` integer,\n\t`last_error` text,\n\tFOREIGN KEY (`subscription_id`) REFERENCES `mcp_event_subscriptions`(`id`) ON UPDATE no action ON DELETE cascade\n);\n",
+      "\nCREATE UNIQUE INDEX `mcp_event_outbox_identity` ON `mcp_event_outbox` (`subscription_id`,`event_id`);",
+      "\nCREATE INDEX `mcp_event_outbox_due` ON `mcp_event_outbox` (`next_attempt_at`);",
+      "\nCREATE TABLE `mcp_event_subscriptions` (\n\t`id` text PRIMARY KEY NOT NULL,\n\t`owner` text NOT NULL,\n\t`name` text NOT NULL,\n\t`arguments_json` text NOT NULL,\n\t`callback_url` text NOT NULL,\n\t`secret_ciphertext` text NOT NULL,\n\t`previous_secret_ciphertext` text,\n\t`rotation_expires_at` integer,\n\t`verified_at` integer NOT NULL,\n\t`expires_at` integer NOT NULL,\n\t`created_at` integer NOT NULL,\n\t`updated_at` integer NOT NULL\n);\n",
+    ],
+    bps: true,
+    folderMillis: 1791380009032,
+    hash: "747f8f6758ed08c8d3963117ec1eb93778b13cee7bd2317cabb5c4804eb59665",
+  },
 ];

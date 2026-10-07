@@ -13,6 +13,8 @@ activity model across Home, Messages, and MCP.
 
 | Tool                   | Input and effect                                                                                                  |
 | ---------------------- | ----------------------------------------------------------------------------------------------------------------- |
+| `list_beeper_chats`    | Optional `cursor`, `limit`; discover chats on the configured Beeper target                                        |
+| `read_beeper_chat`     | `chatId`, optional `cursor`; recent messages and pagination for context                                           |
 | `get_activity_context` | Optional `activityIds`, `cursor`, `limit`; proposals, effective content, user decisions and revision              |
 | `publish_activities`   | `requestId`, `expectedRevision`, `activities`; atomically persist task/reply proposals, preserving user decisions |
 | `list_connections`     | `{}`; discover account IDs and status, without credentials                                                        |
@@ -92,6 +94,12 @@ the Nix store. Point the tunnel at the actual app bind address and port. The
 tunnel client has separate local health/readiness endpoints. Check readiness
 after restarting the app, then select the dedicated tunnel when adding a custom
 MCP server in ChatGPT. Authentication is None for this prototype.
+
+For event-triggered task proposals, see [Beeper MCP Events](beeper-mcp-events.md).
+The same `/mcp` endpoint supports `events/list`, `events/subscribe`, and
+`events/unsubscribe`. Callback delivery is outbound HTTPS from the separate
+resident worker. Rescan the plugin after adding event support, then create a
+monitoring task in a supported Work chat or dots with explicit chat IDs.
 
 On UM790-Pro, dotnix declares the system service
 `tunnel-client-personal-workspace.service` in

@@ -1,6 +1,7 @@
 import { sql } from "drizzle-orm";
 import {
   check,
+  index,
   integer,
   primaryKey,
   sqliteTable,
@@ -182,3 +183,63 @@ export const activityReceipts = sqliteTable("activity_receipts", {
     .$type<import("../activities/model").ActivityReceipt>()
     .notNull(),
 });
+
+export const mcpEventSubscriptions = sqliteTable("mcp_event_subscriptions", {
+  id: text("id").primaryKey(),
+  owner: text("owner").notNull(),
+  name: text("name").notNull(),
+  argumentsJson: text("arguments_json").notNull(),
+  callbackUrl: text("callback_url").notNull(),
+  secretCiphertext: text("secret_ciphertext").notNull(),
+  previousSecretCiphertext: text("previous_secret_ciphertext"),
+  rotationExpiresAt: integer("rotation_expires_at"),
+  verifiedAt: integer("verified_at").notNull(),
+  expiresAt: integer("expires_at").notNull(),
+  ...timestamps,
+});
+
+export const mcpEventOutbox = sqliteTable(
+  "mcp_event_outbox",
+  {
+    id: text("id").primaryKey(),
+    subscriptionId: text("subscription_id")
+      .notNull()
+      .references(() => mcpEventSubscriptions.id, { onDelete: "cascade" }),
+    eventId: text("event_id").notNull(),
+    body: text("body").notNull(),
+    attempts: integer("attempts").notNull().default(0),
+    nextAttemptAt: integer("next_attempt_at").notNull(),
+    createdAt: integer("created_at").notNull(),
+    deliveredAt: integer("delivered_at"),
+    failedAt: integer("failed_at"),
+    lastError: text("last_error"),
+  },
+  (table) => [
+    uniqueIndex("mcp_event_outbox_identity").on(table.subscriptionId, table.eventId),
+    index("mcp_event_outbox_due").on(table.nextAttemptAt),
+  ],
+);
+
+export const beeperChatCheckpoints = sqliteTable(
+  "beeper_chat_checkpoints",
+  {
+    targetId: text("target_id").notNull(),
+    chatId: text("chat_id").notNull(),
+    cursor: text("cursor"),
+    anchorMessageId: text("anchor_message_id"),
+    pendingAnchorMessageId: text("pending_anchor_message_id"),
+    startedAt: text("started_at").notNull(),
+  },
+  (table) => [primaryKey({ columns: [table.targetId, table.chatId] })],
+);
+
+export const beeperSeenMessages = sqliteTable(
+  "beeper_seen_messages",
+  {
+    targetId: text("target_id").notNull(),
+    chatId: text("chat_id").notNull(),
+    messageId: text("message_id").notNull(),
+    observedAt: text("observed_at").notNull(),
+  },
+  (table) => [primaryKey({ columns: [table.targetId, table.chatId, table.messageId] })],
+);
