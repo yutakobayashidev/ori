@@ -13,6 +13,7 @@ import { useActivities } from "#/features/activities/activity-state";
 import { entryKindLabels, useWorkspaceState } from "#/features/workspace/workspace-state";
 import { DailyBrief } from "./daily-brief";
 import { ExecutionWorkbench } from "./execution-workbench";
+import { Greeting } from "./greeting";
 import { type HomeAction, interpretAction } from "./interpret-action";
 
 export function HomePage() {
@@ -191,7 +192,7 @@ export function HomePage() {
               <header className="mb-px-32">
                 <p className="text-sm text-muted-foreground">Today</p>
                 <h1 className="mt-px-12 text-home-greeting font-book tracking-home leading-normal max-md:text-ui-25">
-                  Good morning, {auth.owner?.name}
+                  <Greeting name={auth.owner?.name} />
                 </h1>
                 <DailyBrief onOpenContact={openContact} />
               </header>

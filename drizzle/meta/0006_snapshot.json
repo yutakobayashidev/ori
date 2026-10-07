@@ -151,12 +151,8 @@
           "name": "auth_sessions_owner_id_workspace_owner_id_fk",
           "tableFrom": "auth_sessions",
           "tableTo": "workspace_owner",
-          "columnsFrom": [
-            "owner_id"
-          ],
-          "columnsTo": [
-            "id"
-          ],
+          "columnsFrom": ["owner_id"],
+          "columnsTo": ["id"],
           "onDelete": "cascade",
           "onUpdate": "no action"
         }
@@ -239,12 +235,8 @@
           "name": "connection_credentials_connection_id_connections_id_fk",
           "tableFrom": "connection_credentials",
           "tableTo": "connections",
-          "columnsFrom": [
-            "connection_id"
-          ],
-          "columnsTo": [
-            "id"
-          ],
+          "columnsFrom": ["connection_id"],
+          "columnsTo": ["id"],
           "onDelete": "cascade",
           "onUpdate": "no action"
         },
@@ -252,12 +244,8 @@
           "name": "connection_credentials_app_id_oauth_apps_id_fk",
           "tableFrom": "connection_credentials",
           "tableTo": "oauth_apps",
-          "columnsFrom": [
-            "app_id"
-          ],
-          "columnsTo": [
-            "id"
-          ],
+          "columnsFrom": ["app_id"],
+          "columnsTo": ["id"],
           "onDelete": "restrict",
           "onUpdate": "no action"
         }
@@ -336,19 +324,12 @@
       "indexes": {
         "connections_account": {
           "name": "connections_account",
-          "columns": [
-            "platform",
-            "origin",
-            "account_id"
-          ],
+          "columns": ["platform", "origin", "account_id"],
           "isUnique": true
         },
         "connections_relay_profile": {
           "name": "connections_relay_profile",
-          "columns": [
-            "origin",
-            "relay_profile"
-          ],
+          "columns": ["origin", "relay_profile"],
           "isUnique": true
         }
       },
@@ -406,10 +387,7 @@
       "indexes": {
         "deck_columns_position": {
           "name": "deck_columns_position",
-          "columns": [
-            "deck_id",
-            "position"
-          ],
+          "columns": ["deck_id", "position"],
           "isUnique": true
         }
       },
@@ -418,12 +396,8 @@
           "name": "deck_columns_deck_id_decks_id_fk",
           "tableFrom": "deck_columns",
           "tableTo": "decks",
-          "columnsFrom": [
-            "deck_id"
-          ],
-          "columnsTo": [
-            "id"
-          ],
+          "columnsFrom": ["deck_id"],
+          "columnsTo": ["id"],
           "onDelete": "cascade",
           "onUpdate": "no action"
         },
@@ -431,22 +405,15 @@
           "name": "deck_columns_connection_id_connections_id_fk",
           "tableFrom": "deck_columns",
           "tableTo": "connections",
-          "columnsFrom": [
-            "connection_id"
-          ],
-          "columnsTo": [
-            "id"
-          ],
+          "columnsFrom": ["connection_id"],
+          "columnsTo": ["id"],
           "onDelete": "restrict",
           "onUpdate": "no action"
         }
       },
       "compositePrimaryKeys": {
         "deck_columns_deck_id_id_pk": {
-          "columns": [
-            "deck_id",
-            "id"
-          ],
+          "columns": ["deck_id", "id"],
           "name": "deck_columns_deck_id_id_pk"
         }
       },
@@ -603,11 +570,7 @@
       "indexes": {
         "oauth_apps_configuration": {
           "name": "oauth_apps_configuration",
-          "columns": [
-            "origin",
-            "redirect_uri",
-            "scopes"
-          ],
+          "columns": ["origin", "redirect_uri", "scopes"],
           "isUnique": true
         }
       },
@@ -675,12 +638,8 @@
           "name": "oauth_attempts_app_id_oauth_apps_id_fk",
           "tableFrom": "oauth_attempts",
           "tableTo": "oauth_apps",
-          "columnsFrom": [
-            "app_id"
-          ],
-          "columnsTo": [
-            "id"
-          ],
+          "columnsFrom": ["app_id"],
+          "columnsTo": ["id"],
           "onDelete": "cascade",
           "onUpdate": "no action"
         },
@@ -688,12 +647,8 @@
           "name": "oauth_attempts_connection_id_connections_id_fk",
           "tableFrom": "oauth_attempts",
           "tableTo": "connections",
-          "columnsFrom": [
-            "connection_id"
-          ],
-          "columnsTo": [
-            "id"
-          ],
+          "columnsFrom": ["connection_id"],
+          "columnsTo": ["id"],
           "onDelete": "cascade",
           "onUpdate": "no action"
         }

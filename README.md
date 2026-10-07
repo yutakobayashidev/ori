@@ -16,6 +16,10 @@ SQLite records across Home, Messages, and MCP. User edits and decisions survive
 agent updates and reloads. Routines and Journal remain session-only prototypes;
 Beeper history synchronization and actual message sending remain unconnected.
 
+Home's greeting follows the device's local time: morning from 05:00, afternoon
+from 12:00, and evening from 18:00 until 05:00. It refreshes while the page is
+open and when returning to the app.
+
 ## Workspaces and current status
 
 | Workspace | Route      | Current implementation                                                                                                 |

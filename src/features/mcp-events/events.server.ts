@@ -13,7 +13,7 @@ import {
   type WebhookSender,
 } from "./webhook.server";
 
-export const BEEPER_MESSAGE_EVENT = "beeper.message.received";
+const BEEPER_MESSAGE_EVENT = "beeper.message.received";
 // Explicit single-owner prototype trust boundary: callers can reach the private workspace MCP tunnel.
 // This is a storage namespace, not an authenticated user identity.
 const OWNER = "private-workspace";

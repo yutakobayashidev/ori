@@ -83,7 +83,7 @@ export function isPublicAddress(address: string) {
   }
   return false;
 }
-export type WebhookResponse = { status: number; body: string };
+type WebhookResponse = { status: number; body: string };
 export type WebhookSender = (
   url: string,
   body: string,

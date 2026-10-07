@@ -9,7 +9,7 @@ const required = (max: number) =>
     .max(max)
     .refine((value) => value.trim().length > 0);
 const section = z.enum(["focus", "optional"]);
-export const activityState = z.enum([
+const activityState = z.enum([
   "available",
   "inProgress",
   "waiting",
@@ -48,7 +48,7 @@ const base = {
   recommendation: z.strictObject({ section, reason: z.string().max(2000).optional() }).optional(),
   sources: z.array(z.discriminatedUnion("kind", [messageSource, lifeSource])).max(20),
 };
-export const activityProposal = z
+const activityProposal = z
   .discriminatedUnion("kind", [
     z.strictObject({ ...base, kind: z.literal("task") }),
     z.strictObject({
@@ -89,7 +89,7 @@ export const publishActivitiesInput = z
       new Set(value.activities.map((activity) => activity.id)).size === value.activities.length,
     "Activity IDs must be unique.",
   );
-export const activityOverrides = z.strictObject({
+const activityOverrides = z.strictObject({
   title: required(300).optional(),
   nextAction: required(2000).optional(),
   detail: z.string().max(8000).optional(),

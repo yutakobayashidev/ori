@@ -39,6 +39,7 @@ test("recovers from empty search and shares navigation with Research", async ({
   await expect(readerPage.editInterestsButton).toHaveCount(0);
   await workspacePage.navigateTo("Research");
   await expect(page).toHaveURL(/\/deck$/);
+  await expect(workspacePage.researchReady).toBeEnabled();
   await workspacePage.navigateTo("Reader");
   await expect(page).toHaveURL(/\/inbox$/);
   await expect(readerPage.rows).toHaveCount(9);

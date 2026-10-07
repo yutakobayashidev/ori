@@ -32,7 +32,7 @@ export class HomePage {
     return this.page.getByRole("button", { name: `Record weight Recorded · ${weight} kg` });
   }
   greeting(name: string) {
-    return this.page.getByRole("heading", { name: `Good morning, ${name}` });
+    return this.page.getByRole("heading", { level: 1 }).filter({ hasText: `, ${name}` });
   }
   async goTo(search = "") {
     await this.page.goto(`/${search}`);

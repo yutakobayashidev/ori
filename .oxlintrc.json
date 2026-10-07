@@ -19,9 +19,7 @@
     "react-perf",
     "jsx-a11y"
   ],
-  "jsPlugins": [
-    "@shadcn/lint"
-  ],
+  "jsPlugins": ["@shadcn/lint"],
   "rules": {
     "no-console": "error",
     "no-unused-vars": [
@@ -50,9 +48,7 @@
     "shadcn/no-arbitrary-values": [
       "error",
       {
-        "allow": [
-          "layout"
-        ]
+        "allow": ["layout"]
       }
     ],
     "shadcn/no-inline-styles": "error",
@@ -60,114 +56,59 @@
     "shadcn/no-restyle": [
       "error",
       {
-        "allow": [
-          "layout"
-        ],
+        "allow": ["layout"],
         "contracts": [
           {
             "pattern": "^Sidebar$",
-            "allow": [
-              "layout",
-              "border-r",
-              "border-r-0",
-              "border-border",
-              "transition-none"
-            ]
+            "allow": ["layout", "border-r", "border-r-0", "border-border", "transition-none"]
           },
           {
             "pattern": "^SidebarHeader$",
-            "allow": [
-              "layout",
-              "py-4",
-              "gap-4",
-              "border-b",
-              "p-5"
-            ]
+            "allow": ["layout", "py-4", "gap-4", "border-b", "p-5"]
           },
           {
             "pattern": "^SidebarGroup$",
-            "allow": [
-              "layout",
-              "px-3"
-            ]
+            "allow": ["layout", "px-3"]
           },
           {
             "pattern": "^SidebarFooter$",
-            "allow": [
-              "layout",
-              "px-3",
-              "pb-4"
-            ]
+            "allow": ["layout", "px-3", "pb-4"]
           },
           {
             "pattern": "^SidebarMenuButton$",
-            "allow": [
-              "layout",
-              "p-0"
-            ]
+            "allow": ["layout", "p-0"]
           },
           {
             "pattern": "^Label$",
-            "allow": [
-              "layout",
-              "gap-2",
-              "text-sm",
-              "text-xs",
-              "text-muted-foreground"
-            ]
+            "allow": ["layout", "gap-2", "text-sm", "text-xs", "text-muted-foreground"]
           },
           {
             "pattern": "^MessageScrollerContent$",
-            "allow": [
-              "layout",
-              "gap-5",
-              "p-4"
-            ]
+            "allow": ["layout", "gap-5", "p-4"]
           },
           {
             "pattern": "^(Marker|Collapsible)$",
-            "allow": [
-              "layout",
-              "text-research-label",
-              "text-muted-foreground"
-            ]
+            "allow": ["layout", "text-research-label", "text-muted-foreground"]
           },
           {
             "pattern": "^SidebarProvider$",
-            "allow": [
-              "layout",
-              "bg-vital-bg",
-              "text-vital-text",
-              "font-arial"
-            ]
+            "allow": ["layout", "bg-vital-bg", "text-vital-text", "font-arial"]
           },
           {
             "pattern": "^Button$",
-            "allow": [
-              "layout",
-              "px-2"
-            ]
+            "allow": ["layout", "px-2"]
           },
           {
             "pattern": "^Input$",
-            "allow": [
-              "layout",
-              "pl-9"
-            ]
+            "allow": ["layout", "pl-9"]
           },
           {
             "pattern": "^SidebarContent$",
-            "allow": [
-              "layout",
-              "gap-0"
-            ]
+            "allow": ["layout", "gap-0"]
           },
           {
             "pattern": "^Badge$",
-            "allow": [
-              "layout",
-              "gap-1"
-            ]
+            "allow": ["layout", "gap-1"]
           }
         ]
       }
@@ -177,17 +118,13 @@
   },
   "overrides": [
     {
-      "files": [
-        "scripts/**"
-      ],
+      "files": ["scripts/**"],
       "rules": {
         "no-console": "off"
       }
     },
     {
-      "files": [
-        "src/components/ui/**"
-      ],
+      "files": ["src/components/ui/**"],
       "rules": {
         "shadcn/no-arbitrary-values": "off",
         "shadcn/no-restyle": "off",
@@ -195,13 +132,8 @@
       }
     },
     {
-      "files": [
-        "src/**/*.{test,spec}.{ts,tsx}",
-        "tests/**/*.{ts,tsx}"
-      ],
-      "plugins": [
-        "vitest"
-      ],
+      "files": ["src/**/*.{test,spec}.{ts,tsx}", "tests/**/*.{ts,tsx}"],
+      "plugins": ["vitest"],
       "rules": {
         "typescript/unbound-method": "error",
         "vitest/expect-expect": "error",
@@ -211,9 +143,7 @@
       }
     },
     {
-      "files": [
-        "e2e/**/*.{ts,tsx}"
-      ],
+      "files": ["e2e/**/*.{ts,tsx}"],
       "rules": {
         "react/rules-of-hooks": "off"
       }

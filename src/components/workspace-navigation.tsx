@@ -1,4 +1,4 @@
-import { Link, useLocation, useRouteContext } from "@tanstack/react-router";
+import { Link, useHydrated, useLocation, useRouteContext } from "@tanstack/react-router";
 import { Activity, House, Inbox, Layers3, MessagesSquare, NotebookPen, Search } from "lucide-react";
 import type { ReactNode } from "react";
 import { Avatar, AvatarFallback } from "#/components/ui/avatar";
@@ -29,6 +29,7 @@ export function WorkspaceNavigation({
   hasTemporaryDecks,
 }: WorkspaceNavigationProps) {
   const { auth } = useRouteContext({ from: "__root__" });
+  const hydrated = useHydrated();
   const [search, updateSearch] = useUrlState();
   const managingAccounts = search.accounts;
   const setManagingAccounts = (open: boolean) => updateSearch({ accounts: open || undefined });
@@ -116,7 +117,9 @@ export function WorkspaceNavigation({
         <SidebarMenu className="mt-2">
           <SidebarMenuItem>
             <SidebarMenuButton
-              aria-label="Manage connected accounts"
+              render={
+                <button type="button" aria-label="Manage connected accounts" disabled={!hydrated} />
+              }
               tooltip={{ children: "Manage connected accounts", hidden: false }}
               className="size-10 justify-center p-0"
               onClick={() => setManagingAccounts(true)}
