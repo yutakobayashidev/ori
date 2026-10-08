@@ -160,7 +160,7 @@ export function ExecutionDetail({ activity }: { activity: Activity }) {
           </Empty>
         </div>
       ) : (
-        <MessageScrollerProvider autoScroll>
+        <MessageScrollerProvider>
           <MessageScroller className="flex-1">
             <MessageScrollerViewport role="log" aria-label="Execution conversation">
               <MessageScrollerContent className="p-4">
