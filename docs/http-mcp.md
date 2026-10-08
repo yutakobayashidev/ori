@@ -177,6 +177,13 @@ dotnix's flake input and `homes/nixos/UM790-Pro/twitter-lite.nix`.
 
 ## Verification
 
+The Board conversation also hosts the bundled Activity/reply MCP App using
+AppBridge. Its authenticated browser actions are restricted to the run's Activity;
+this does not expose general `/mcp` access or event subscriptions to the iframe.
+Run `pnpm exec playwright test --config e2e/execution.config.ts` to verify the
+right-hand Sheet, real embedded guest, draft saving, status reflection, and reload.
+Add `TWITTER_LITE_E2E_PRODUCTION=1` after `pnpm build` to test the production bundle.
+
 ```sh
 nix develop -c pnpm test
 nix develop -c pnpm typecheck

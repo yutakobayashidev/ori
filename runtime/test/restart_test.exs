@@ -10,6 +10,14 @@ defmodule WorkspaceRuntime.RestartTest do
       "threadId" => "saved-thread",
       "pendingInput" => %{"requestId" => 42, "questions" => []},
       "messages" => [],
+      "toolCalls" => [
+        %{
+          "id" => "unfinished",
+          "status" => "running",
+          "name" => "save_reply_draft",
+          "arguments" => %{}
+        }
+      ],
       "version" => 1
     }
 
@@ -21,5 +29,6 @@ defmodule WorkspaceRuntime.RestartTest do
     assert run["status"] == "interrupted"
     assert run["threadId"] == "saved-thread"
     assert run["pendingInput"]["requestId"] == 42
+    assert [%{"status" => "failed", "result" => %{"isError" => true}}] = run["toolCalls"]
   end
 end

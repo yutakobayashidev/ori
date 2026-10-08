@@ -16,6 +16,7 @@ import { Input } from "#/components/ui/input";
 import { SidebarProvider } from "#/components/ui/sidebar";
 import { TooltipProvider } from "#/components/ui/tooltip";
 import { Dialog, DialogContent, DialogTitle } from "#/components/ui/dialog";
+import { Sheet, SheetContent, SheetTitle } from "#/components/ui/sheet";
 import { WorkspaceNavigation } from "#/components/workspace-navigation";
 import { useActivities } from "#/features/activities/activity-state";
 import { ActivityFeedback } from "#/features/activities/activity-controls";
@@ -148,16 +149,19 @@ export function BoardPage() {
             </div>
           </BoardDrag>
         </main>
-        <Dialog
+        <Sheet
           open={!!selected}
           onOpenChange={(open) => {
             if (!open) setSelectedId(null);
           }}
         >
-          <DialogContent className="max-h-[90dvh] overflow-y-auto sm:max-w-3xl">
+          <SheetContent
+            side="right"
+            className="overflow-y-auto data-[side=right]:w-full data-[side=right]:sm:max-w-3xl"
+          >
             {selected && (
-              <>
-                <DialogTitle>{selected.effective.title}</DialogTitle>
+              <div className="grid gap-4 p-6 pt-12">
+                <SheetTitle>{selected.effective.title}</SheetTitle>
                 <p className="text-muted-foreground">{selected.effective.nextAction}</p>
                 {selected.effective.detail && (
                   <p className="whitespace-pre-wrap">{selected.effective.detail}</p>
@@ -189,10 +193,10 @@ export function BoardPage() {
                   </Link>
                 )}
                 <ExecutionDetail key={selected.id} activity={selected} />
-              </>
+              </div>
             )}
-          </DialogContent>
-        </Dialog>
+          </SheetContent>
+        </Sheet>
         <Dialog open={adding} onOpenChange={setAdding}>
           <DialogContent>
             <DialogTitle>New task</DialogTitle>

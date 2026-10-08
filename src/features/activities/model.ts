@@ -9,7 +9,7 @@ const required = (max: number) =>
     .max(max)
     .refine((value) => value.trim().length > 0);
 const section = z.enum(["focus", "optional"]);
-const activityState = z.enum([
+export const activityState = z.enum([
   "available",
   "inProgress",
   "waiting",

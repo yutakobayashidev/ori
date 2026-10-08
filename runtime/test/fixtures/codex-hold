@@ -1,0 +1,14 @@
+#!/bin/sh
+if [ "$1" = mcp ]; then
+  echo '[]'
+  exit 0
+fi
+while IFS= read -r line; do
+case "$line" in
+  *'"method":"initialize"'*) echo '{"id":1,"result":{}}';;
+  *'"method":"thread/start"'*|*'"method":"thread/resume"'*) echo '{"id":2,"result":{"thread":{"id":"thread-fixture"}}}';;
+  *'"method":"turn/start"'*)
+    echo '{"id":3,"result":{"turn":{"id":"turn-fixture"}}}'
+    ;;
+esac
+done

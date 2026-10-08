@@ -7,10 +7,14 @@ const health = createMiddleware().server(({ request, next }) => {
   return next();
 });
 
-// Private MCP clients do not carry a browser session or Tailscale identity.
-// Keep this exact endpoint ahead of browser-only access checks.
+// Private MCP clients and signed runtime callbacks do not carry browser sessions.
+// Handle only these exact endpoints ahead of browser-only access checks.
 const mcp = createMiddleware().server(async ({ request, next }) => {
   const path = new URL(request.url).pathname;
+  if (path === "/api/execution/tool") {
+    const { handleExecutionTool } = await import("./features/execution/dynamic-tool.server");
+    return handleExecutionTool(request);
+  }
   // Explicitly report that this private endpoint does not advertise OAuth.
   if (
     ["/.well-known/oauth-protected-resource", "/.well-known/oauth-protected-resource/mcp"].includes(

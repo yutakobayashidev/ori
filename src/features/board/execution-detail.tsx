@@ -1,4 +1,5 @@
-import { useEffect, useRef, useState } from "react";
+import { Fragment, useEffect, useRef, useState } from "react";
+import { ExecutionToolResult } from "./execution-app";
 import { ExecutionQuestions } from "./execution-questions";
 import { artifactLink } from "./artifact-link";
 import { Sparkles } from "lucide-react";
@@ -161,32 +162,52 @@ export function ExecutionDetail({ activity }: { activity: Activity }) {
         <>
           <div className="rounded-xl border bg-muted/20">
             <MessageScrollerProvider>
-              <MessageScroller className="h-80">
+              <MessageScroller className="h-[min(55dvh,42rem)]">
                 <MessageScrollerViewport role="log" aria-label="Execution conversation">
                   <MessageScrollerContent className="p-4">
+                    {run.toolCalls
+                      .filter(
+                        (call) =>
+                          !call.afterMessageId ||
+                          !run.messages.some((message) => message.id === call.afterMessageId),
+                      )
+                      .map((call) => (
+                        <MessageScrollerItem key={call.id} messageId={`tool:${call.id}`}>
+                          <ExecutionToolResult runId={run.id} call={call} />
+                        </MessageScrollerItem>
+                      ))}
                     {run.messages.map((message, index) => (
-                      <MessageScrollerItem key={message.id} messageId={message.id}>
-                        <p className="mb-1 text-xs font-medium text-muted-foreground">
-                          {message.role === "user" ? "You" : "AI"}
-                        </p>
-                        {message.role === "assistant" ? (
-                          <ResearchMarkdown
-                            text={message.text}
-                            resolveLink={(href) => artifactLink(run, href)}
-                            isAnimating={
-                              run.status === "running" && index === run.messages.length - 1
-                            }
-                          />
-                        ) : (
-                          <p className="whitespace-pre-wrap break-words text-sm leading-6">
-                            {index === 0 && run.handoff
-                              ? [run.handoff.instructions, run.handoff.completionCriteria]
-                                  .filter(Boolean)
-                                  .join("\n\n")
-                              : message.text}
+                      <Fragment key={message.id}>
+                        <MessageScrollerItem messageId={message.id}>
+                          <p className="mb-1 text-xs font-medium text-muted-foreground">
+                            {message.role === "user" ? "You" : "AI"}
                           </p>
-                        )}
-                      </MessageScrollerItem>
+                          {message.role === "assistant" ? (
+                            <ResearchMarkdown
+                              text={message.text}
+                              resolveLink={(href) => artifactLink(run, href)}
+                              isAnimating={
+                                run.status === "running" && index === run.messages.length - 1
+                              }
+                            />
+                          ) : (
+                            <p className="whitespace-pre-wrap break-words text-sm leading-6">
+                              {index === 0 && run.handoff
+                                ? [run.handoff.instructions, run.handoff.completionCriteria]
+                                    .filter(Boolean)
+                                    .join("\n\n")
+                                : message.text}
+                            </p>
+                          )}
+                        </MessageScrollerItem>
+                        {run.toolCalls
+                          .filter((call) => call.afterMessageId === message.id)
+                          .map((call) => (
+                            <MessageScrollerItem key={call.id} messageId={`tool:${call.id}`}>
+                              <ExecutionToolResult runId={run.id} call={call} />
+                            </MessageScrollerItem>
+                          ))}
+                      </Fragment>
                     ))}
                     {run.messages.length === 0 && (
                       <p className="text-sm text-muted-foreground">

@@ -9,6 +9,23 @@ export const executionStatus = z.enum([
   "cancelled",
   "interrupted",
 ]);
+export const executionToolCall = z.object({
+  id: z.string(),
+  name: z.string(),
+  arguments: z.record(z.string(), z.json()),
+  status: z.enum(["running", "completed", "failed"]),
+  result: z
+    .object({
+      content: z.array(z.record(z.string(), z.json())).optional(),
+      structuredContent: z.record(z.string(), z.json()).optional(),
+      _meta: z.record(z.string(), z.json()).optional(),
+      isError: z.boolean().optional(),
+    })
+    .optional(),
+  afterMessageId: z.string().optional(),
+});
+export type ExecutionToolCall = z.infer<typeof executionToolCall>;
+
 export const executionRun = z.object({
   id: z.string(),
   activityId: z.string().optional(),
@@ -17,6 +34,7 @@ export const executionRun = z.object({
   messages: z.array(
     z.object({ id: z.string(), role: z.enum(["user", "assistant"]), text: z.string() }),
   ),
+  toolCalls: z.array(executionToolCall).default([]),
   error: z.string().nullable().optional(),
   createdAt: z.number(),
   updatedAt: z.number(),

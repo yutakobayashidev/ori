@@ -23,6 +23,7 @@ if (!chromiumExecutable) {
 
 export default defineConfig({
   testDir: "./e2e",
+  testIgnore: "**/execution-app.test.ts",
   fullyParallel: false,
   workers: 1,
   use: {

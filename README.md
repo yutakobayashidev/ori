@@ -177,16 +177,28 @@ nix develop -c pnpm db:generate
 ## AI execution and Research
 
 Board, Home, and Messages share the same Activity IDs and user decisions. In Board,
-open a task, describe the requested outcome, and choose **Hand off to AI**. The
-execution conversation supports followups, questions, stopping, and downloading
-artifacts. AI completion enters review; the owner still decides whether the task
-is complete. Reply handoffs prepare work and drafts, never claim delivery.
+open a task in the right-hand Sheet, describe the requested outcome, and choose
+**Hand off to AI**. The execution conversation supports followups, questions,
+stopping, and downloading artifacts. Codex dynamic tools can read the current
+task, change its status when requested, and save reply drafts. Their results
+embed the existing MCP App so drafts can be edited and saved inside the conversation.
+Tool results survive reload; reopened cards read the latest shared Activity state.
+AI completion enters review; it does not automatically complete the task.
+Replies remain drafts and cannot be marked delivered.
 
 The Elixir/OTP service in `runtime/` owns Codex subprocesses for both Board and
 Research. It persists accepted work and thread IDs, limits concurrency, and marks
 unfinished work interrupted on restart. Explicit followups resume the saved thread.
-The TypeScript web backend owns Activities, sessions, scoped MCP tools, and SSE
+The TypeScript web backend owns Activities, sessions, scoped MCP/dynamic tools, and SSE
 presentation. Browser disconnection does not stop a job.
+
+Task dynamic tools use a signed, run-scoped `/api/execution/tool` callback.
+The browser's MCP App host uses AppBridge with the bundled UI in an opaque-origin
+sandbox. Its session-authenticated actions can only read/edit the selected Activity,
+including after execution ends. Agent mutations emit Activity events with `origin: agent`;
+edits made in the card emit `origin: user`. Both use the same revision checks and
+retry receipts. Pre-existing conversations gain tools on their next followup by
+starting a new Codex thread with their saved transcript; later turns resume normally.
 
 Run `codex login` as the runtime host user. Use Codex CLI 0.156.0 or
 newer; set `WORKSPACE_CODEX_PATH` if it is not on PATH.

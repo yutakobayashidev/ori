@@ -121,6 +121,11 @@ defmodule WorkspaceRuntime.Codex do
       }
       |> Map.reject(fn {_, v} -> is_nil(v) end)
 
+    params =
+      if is_nil(r["threadId"]) && c["dynamicTools"],
+        do: Map.put(params, "dynamicTools", c["dynamicTools"]),
+        else: params
+
     params = if r["threadId"], do: Map.put(params, "threadId", r["threadId"]), else: params
     send_rpc(port, 2, if(r["threadId"], do: "thread/resume", else: "thread/start"), params)
     loop(port, r, "", pending)
@@ -177,59 +182,43 @@ defmodule WorkspaceRuntime.Codex do
   end
 
   defp handle(port, r, %{"id" => id, "method" => "item/tool/call", "params" => params}, pending) do
-    servers = get_in(r, ["config", "mcpServers"]) || %{}
-
     result =
-      case Enum.at(Map.values(servers), 0) do
-        nil ->
-          %{
-            "success" => false,
-            "contentItems" => [
-              %{"type" => "inputText", "text" => "No scoped MCP server configured"}
-            ]
-          }
+      if endpoint = get_in(r, ["config", "toolEndpoint"]) do
+        call_id = params["callId"] || params["itemId"] || to_string(id)
+        saved = Enum.find(Store.call({:get, r["id"]})["toolCalls"] || [], &(&1["id"] == call_id))
 
-        server ->
-          body =
-            Jason.encode!(%{
-              "jsonrpc" => "2.0",
-              "id" => "runtime-tool",
-              "method" => "tools/call",
-              "params" => %{
-                "name" => params["tool"],
-                "arguments" => params["arguments"],
-                "_meta" => %{"io.modelcontextprotocol/protocolVersion" => "2026-07-28"}
-              }
-            })
+        response =
+          if saved && saved["result"] do
+            saved["result"]
+          else
+            Store.event(
+              r["id"],
+              {:tool_start,
+               %{
+                 "id" => call_id,
+                 "name" => params["tool"],
+                 "arguments" => params["arguments"],
+                 "status" => "running"
+               }}
+            )
 
-          headers = [
-            {~c"accept", ~c"application/json"},
-            {~c"mcp-method", ~c"tools/call"},
-            {~c"mcp-name", String.to_charlist(params["tool"])}
-          ]
-
-          case :httpc.request(
-                 :post,
-                 {String.to_charlist(server["url"]), headers, ~c"application/json", body},
-                 [timeout: 120_000],
-                 []
-               ) do
-            {:ok, {{_, 200, _}, _, response}} ->
-              %{
-                "success" =>
-                  case Jason.decode(to_string(response)) do
-                    {:ok, v} -> is_nil(v["error"]) and get_in(v, ["result", "isError"]) != true
-                    _ -> false
-                  end,
-                "contentItems" => [%{"type" => "inputText", "text" => to_string(response)}]
-              }
-
-            _ ->
-              %{
-                "success" => false,
-                "contentItems" => [%{"type" => "inputText", "text" => "Scoped tool call failed"}]
-              }
+            response = call_dynamic(endpoint, call_id, params)
+            Store.event(r["id"], {:tool_result, call_id, response})
+            response
           end
+
+        %{
+          "success" => response["isError"] != true,
+          "contentItems" => [
+            %{
+              "type" => "inputText",
+              "text" =>
+                Jason.encode!(Map.take(response, ["content", "structuredContent", "isError"]))
+            }
+          ]
+        }
+      else
+        legacy_tool(r, params)
       end
 
     write(port, %{"id" => id, "result" => result})
@@ -247,6 +236,93 @@ defmodule WorkspaceRuntime.Codex do
 
   defp handle(_, _, %{"error" => error}, _), do: raise("Codex error: #{Jason.encode!(error)}")
   defp handle(port, r, _, pending), do: loop(port, r, "", pending)
+
+  defp call_dynamic(endpoint, call_id, params) do
+    body =
+      Jason.encode!(%{
+        "toolCallId" => call_id,
+        "name" => params["tool"],
+        "arguments" => params["arguments"]
+      })
+
+    case :httpc.request(
+           :post,
+           {String.to_charlist(endpoint), [{~c"accept", ~c"application/json"}],
+            ~c"application/json", body},
+           [timeout: 120_000, connect_timeout: 10_000],
+           []
+         ) do
+      {:ok, {{_, 200, _}, _, raw}} ->
+        case Jason.decode(to_string(raw)) do
+          {:ok, result} when is_map(result) -> result
+          _ -> tool_error("Invalid tool response")
+        end
+
+      _ ->
+        tool_error("Tool callback failed")
+    end
+  rescue
+    _ -> tool_error("Tool callback failed")
+  end
+
+  defp tool_error(text),
+    do: %{"isError" => true, "content" => [%{"type" => "text", "text" => text}]}
+
+  defp legacy_tool(r, params) do
+    servers = get_in(r, ["config", "mcpServers"]) || %{}
+
+    case Enum.at(Map.values(servers), 0) do
+      nil ->
+        %{
+          "success" => false,
+          "contentItems" => [
+            %{"type" => "inputText", "text" => "No scoped MCP server configured"}
+          ]
+        }
+
+      server ->
+        body =
+          Jason.encode!(%{
+            "jsonrpc" => "2.0",
+            "id" => "runtime-tool",
+            "method" => "tools/call",
+            "params" => %{
+              "name" => params["tool"],
+              "arguments" => params["arguments"],
+              "_meta" => %{"io.modelcontextprotocol/protocolVersion" => "2026-07-28"}
+            }
+          })
+
+        headers = [
+          {~c"accept", ~c"application/json"},
+          {~c"mcp-method", ~c"tools/call"},
+          {~c"mcp-name", String.to_charlist(params["tool"])}
+        ]
+
+        case :httpc.request(
+               :post,
+               {String.to_charlist(server["url"]), headers, ~c"application/json", body},
+               [timeout: 120_000],
+               []
+             ) do
+          {:ok, {{_, 200, _}, _, response}} ->
+            %{
+              "success" =>
+                case Jason.decode(to_string(response)) do
+                  {:ok, v} -> is_nil(v["error"]) and get_in(v, ["result", "isError"]) != true
+                  _ -> false
+                end,
+              "contentItems" => [%{"type" => "inputText", "text" => to_string(response)}]
+            }
+
+          _ ->
+            %{
+              "success" => false,
+              "contentItems" => [%{"type" => "inputText", "text" => "Scoped tool call failed"}]
+            }
+        end
+    end
+  end
 
   defp send_rpc(port, id, method, params),
     do: write(port, %{"id" => id, "method" => method, "params" => params})

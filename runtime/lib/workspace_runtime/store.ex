@@ -16,7 +16,13 @@ defmodule WorkspaceRuntime.Store do
     :dets.foldl(
       fn {id, run}, _ ->
         if run["status"] in ["running", "waiting_input", "queued"],
-          do: :dets.insert(table, {id, Map.put(run, "status", "interrupted")})
+          do:
+            :dets.insert(
+              table,
+              {id,
+               Map.put(run, "status", "interrupted")
+               |> fail_pending_tools("Execution interrupted")}
+            )
       end,
       nil,
       table
@@ -78,6 +84,7 @@ defmodule WorkspaceRuntime.Store do
             "threadId" => p["threadId"],
             "messages" => [message("user", p["prompt"])],
             "artifacts" => [],
+            "toolCalls" => [],
             "requests" => %{},
             "creation" => p,
             "createdAt" => now(),
@@ -118,9 +125,24 @@ defmodule WorkspaceRuntime.Store do
         {:reply, {:error, "Run is active"}, s}
 
       true ->
+        upgrade =
+          get_in(p, ["config", "dynamicTools"]) && is_nil(get_in(r, ["config", "dynamicTools"]))
+
+        prompt =
+          if upgrade do
+            history = Enum.map_join(r["messages"], "\n\n", &(&1["role"] <> ": " <> &1["text"]))
+
+            "Previous conversation (context only; do not repeat completed actions):\n" <>
+              history <> "\n\nCurrent request:\n" <> p["text"]
+          else
+            p["text"]
+          end
+
+        r = if upgrade, do: Map.put(r, "threadId", nil), else: r
+
         r =
           r
-          |> Map.put("prompt", p["text"])
+          |> Map.put("prompt", prompt)
           |> Map.put("status", "queued")
           |> Map.put("error", nil)
           |> Map.put("pendingInput", nil)
@@ -145,7 +167,10 @@ defmodule WorkspaceRuntime.Store do
       r ->
         r =
           if r["status"] in ["queued", "running", "waiting_input"],
-            do: Map.put(r, "status", "cancelled") |> bump(),
+            do:
+              Map.put(r, "status", "cancelled")
+              |> fail_pending_tools("Execution cancelled")
+              |> bump(),
             else: r
 
         save(s, r)
@@ -192,9 +217,11 @@ defmodule WorkspaceRuntime.Store do
       r =
         case event do
           {:text, text} ->
+            boundary = r["toolBoundary"]
+
             Map.update!(r, "messages", fn messages ->
               case List.last(messages) do
-                %{"role" => "assistant"} ->
+                %{"role" => "assistant", "id" => message_id} when message_id != boundary ->
                   List.update_at(
                     messages,
                     -1,
@@ -206,8 +233,36 @@ defmodule WorkspaceRuntime.Store do
               end
             end)
 
+          {:tool_start, call} ->
+            after_id = List.last(r["messages"])["id"]
+
+            r
+            |> Map.put("toolBoundary", after_id)
+            |> Map.update(
+              "toolCalls",
+              [Map.put(call, "afterMessageId", after_id)],
+              &(&1 ++ [Map.put(call, "afterMessageId", after_id)])
+            )
+
+          {:tool_result, call_id, result} ->
+            Map.update!(r, "toolCalls", fn calls ->
+              Enum.map(calls, fn call ->
+                if call["id"] == call_id,
+                  do:
+                    Map.merge(call, %{
+                      "status" => if(result["isError"] == true, do: "failed", else: "completed"),
+                      "result" => result
+                    }),
+                  else: call
+              end)
+            end)
+
           {:patch, patch} ->
-            Map.merge(r, patch)
+            updated = Map.merge(r, patch)
+
+            if patch["status"] in ["failed", "interrupted", "cancelled"],
+              do: fail_pending_tools(updated, patch["error"] || "Execution stopped"),
+              else: updated
         end
         |> bump()
 
@@ -252,7 +307,13 @@ defmodule WorkspaceRuntime.Store do
         r = fetch(s, id)
 
         if r["status"] in ["running", "waiting_input"],
-          do: save(s, Map.merge(r, %{"status" => "failed", "error" => inspect(reason)}) |> bump())
+          do:
+            save(
+              s,
+              Map.merge(r, %{"status" => "failed", "error" => inspect(reason)})
+              |> fail_pending_tools("Execution stopped")
+              |> bump()
+            )
 
         send(self(), :dispatch)
         {:noreply, %{s | running: Map.delete(s.running, id)}}
@@ -268,7 +329,7 @@ defmodule WorkspaceRuntime.Store do
          [] -> nil
        end)
 
-  defp public(r), do: Map.drop(r, ["config", "prompt", "requests", "creation"])
+  defp public(r), do: Map.drop(r, ["config", "prompt", "requests", "creation", "toolBoundary"])
   defp maybe_public(nil), do: nil
   defp maybe_public(r), do: public(r)
 
@@ -297,6 +358,23 @@ defmodule WorkspaceRuntime.Store do
         false,
         s.table
       )
+
+  defp fail_pending_tools(r, reason) do
+    Map.update(r, "toolCalls", [], fn calls ->
+      Enum.map(calls, fn call ->
+        if call["status"] == "running",
+          do:
+            Map.merge(call, %{
+              "status" => "failed",
+              "result" => %{
+                "isError" => true,
+                "content" => [%{"type" => "text", "text" => reason}]
+              }
+            }),
+          else: call
+      end)
+    end)
+  end
 
   defp now, do: System.system_time(:millisecond)
   defp bump(r), do: r |> Map.put("updatedAt", now()) |> Map.update!("version", &(&1 + 1))

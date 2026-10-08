@@ -30,3 +30,17 @@ paths outside the canonical workspace, symlink escapes, and hidden files.
 Snapshot artifacts have {path,size}; messages have stable {id,role,text}.
 Questions use pendingInput {requestId,questions}; answer values are keyed by
 question ID as {answers: string[]}. Requests must match the live pending request.
+
+### Board dynamic tools
+
+Board runs register the explicitly scoped tools through Codex `thread/start.dynamicTools`.
+Codex tool requests call the signed `config.toolEndpoint`; their full MCP result
+(including UI metadata) is persisted in `toolCalls`, with `afterMessageId` for
+conversation ordering. UI metadata is not sent back to the model. Failed callbacks
+produce tool errors. Cancellation or restart marks unfinished tool records failed;
+completed results survive restart and duplicate call IDs do not replay mutations.
+
+Codex does not accept new dynamic tool definitions on `thread/resume`. The first
+follow-up on a legacy run that gains dynamic tools starts a new Codex thread, with
+the previous transcript supplied as context. The visible transcript remains intact;
+later follow-ups resume the new thread normally.

@@ -1,4 +1,5 @@
 import { createServerFn } from "@tanstack/react-start";
+import { executionAppInput, executionAppToolInput } from "./app-model";
 import {
   handoffInput,
   executionIdInput,
@@ -65,4 +66,21 @@ export const answerExecution = createServerFn({ method: "POST" })
       ok: true as const,
       run: await service.answerActivityExecution(data),
     })),
+  );
+
+export const loadExecutionApp = createServerFn({ method: "GET" })
+  .validator(executionAppInput)
+  .handler(({ data }) =>
+    run(async () => {
+      const app = await import("./app.server");
+      return { ok: true as const, ...(await app.loadExecutionApp(data)) };
+    }),
+  );
+export const callExecutionAppTool = createServerFn({ method: "POST" })
+  .validator(executionAppToolInput)
+  .handler(({ data }) =>
+    run(async () => {
+      const app = await import("./app.server");
+      return { ok: true as const, result: await app.callExecutionAppTool(data) };
+    }),
   );

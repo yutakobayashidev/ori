@@ -29,7 +29,11 @@ type Submission = {
   activityId: string;
   prompt: string;
   handoff: { instructions: string; completionCriteria: string };
-  config: { mcpServers: { workspace_task: { url: string; tools: string[] } } };
+  config: {
+    dynamicTools: { name: string }[];
+    toolEndpoint: string;
+    mcpServers: { workspace_task: { url: string; tools: string[] } };
+  };
 };
 let accepted: (typeof base & Partial<Submission>) | undefined;
 let posts: Submission[];
@@ -106,6 +110,12 @@ it("hands off effective content and keeps accepted context stable across retries
   expect(posts[0]?.prompt).toContain("Edited title");
   expect(posts[0]?.config.mcpServers.workspace_task.tools).toContain("read_beeper_chat");
   expect(posts[0]?.config.mcpServers.workspace_task.tools).not.toContain("update_activity");
+  expect(posts[0]?.config.dynamicTools.map(({ name }) => name)).toEqual([
+    "get_current_activity",
+    "set_activity_status",
+    "save_reply_draft",
+  ]);
+  expect(new URL(posts[0]?.config.toolEndpoint || "").pathname).toBe("/api/execution/tool");
   expect(first).not.toHaveProperty("config");
 });
 it("rejects a reused handoff ID with different instructions", async () => {

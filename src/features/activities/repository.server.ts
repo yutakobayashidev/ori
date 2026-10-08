@@ -284,10 +284,14 @@ export function publishActivities(input: unknown, database = getDatabase()): Act
     database,
   );
 }
-export function updateActivityUser(input: unknown, database = getDatabase()): ActivityReceipt {
+export function updateActivityUser(
+  input: unknown,
+  database = getDatabase(),
+  origin: "user" | "agent" = "user",
+): ActivityReceipt {
   const parsed = parse(updateActivityUserInput, input);
   return write(
-    "user",
+    origin === "user" ? "user" : "agent-decision",
     parsed,
     [parsed.id],
     (receipt, now) => {
@@ -321,7 +325,7 @@ export function updateActivityUser(input: unknown, database = getDatabase()): Ac
         enqueueEvent(
           "activity.status_changed",
           updated,
-          "user",
+          origin,
           receipt,
           database,
           now,
