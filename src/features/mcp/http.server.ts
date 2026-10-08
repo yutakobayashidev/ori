@@ -83,9 +83,19 @@ function serverFor(tools: Tools, workspace: boolean) {
 export async function handleMcpRequest(request: Request): Promise<Response> {
   const url = new URL(request.url);
   const id = url.searchParams.get("research");
-  const tools = id === null ? createWorkspaceTools() : research.get(id);
+  const execution = url.searchParams.get("execution");
+  if (id !== null && execution !== null) return new Response(null, { status: 400 });
+  let tools: Tools | undefined;
+  if (execution !== null) {
+    try {
+      const { createExecutionTools } = await import("../execution/tools.server");
+      tools = await createExecutionTools(execution, url.searchParams.get("proof") || "");
+    } catch {
+      return new Response("Execution runtime unavailable.", { status: 503 });
+    }
+  } else tools = id === null ? createWorkspaceTools() : research.get(id);
   if (!tools) return new Response("Research turn is no longer available.", { status: 404 });
-  const handler = createMcpHandler(() => serverFor(tools, id === null));
+  const handler = createMcpHandler(() => serverFor(tools, id === null && execution === null));
   const response = await handler.fetch(request);
   response.headers.set("Cache-Control", "no-store");
   return response;

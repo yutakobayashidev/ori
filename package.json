@@ -28,6 +28,7 @@
   },
   "dependencies": {
     "@base-ui/react": "1.8.0",
+    "@dnd-kit/core": "6.3.1",
     "@modelcontextprotocol/server": "2.0.0",
     "@shadcn/react": "^0.3.1",
     "@tanstack/react-pacer": "^0.23.0",
@@ -37,7 +38,6 @@
     "@tanstack/react-start": "1.168.27",
     "@yuta/bird": "0.10.1",
     "ai": "7.0.118",
-    "ai-sdk-provider-codex-cli": "2.3.0",
     "better-sqlite3": "13.0.3",
     "class-variance-authority": "0.7.1",
     "cn": "^0.4.0",

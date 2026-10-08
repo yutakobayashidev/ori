@@ -1,96 +1,92 @@
 // @vitest-environment node
-import { mkdtemp, readFile, rm } from "node:fs/promises";
 import { createServer } from "node:http";
-import { tmpdir } from "node:os";
-import { join } from "node:path";
-import { fileURLToPath } from "node:url";
 import { assert, expect, it, vi } from "vitest";
 import { handleMcpRequest } from "../mcp/http.server";
 import { executeCodexResearch } from "./codex-provider.server";
 
-it("streams and resumes through the real SDK provider with a local MCP roundtrip", async () => {
-  const directory = await mkdtemp(join(tmpdir(), "codex-provider-"));
-  const server = createServer(async (incoming, outgoing) => {
-    const chunks: Buffer[] = [];
-    for await (const chunk of incoming) chunks.push(Buffer.from(chunk));
-    const response = await handleMcpRequest(
-      new Request(`http://127.0.0.1${incoming.url}`, {
-        method: incoming.method,
-        headers: incoming.headers as Record<string, string>,
-        body: incoming.method === "POST" ? Buffer.concat(chunks) : undefined,
-      }),
-    );
-    outgoing.writeHead(response.status, Object.fromEntries(response.headers));
-    outgoing.end(Buffer.from(await response.arrayBuffer()));
+it("keeps scoped MCP tools available during remote execution and removes them afterward", async () => {
+  let scopeUrl = "";
+  let toolResult: unknown;
+  const server = createServer(async (req, res) => {
+    if (req.url === "/runs") {
+      const chunks: Buffer[] = [];
+      for await (const chunk of req) chunks.push(Buffer.from(chunk));
+      const run = JSON.parse(Buffer.concat(chunks).toString());
+      scopeUrl = (Object.values(run.config.mcpServers)[0] as { url: string }).url;
+      const result = await handleMcpRequest(
+        new Request(scopeUrl, {
+          method: "POST",
+          headers: {
+            "Content-Type": "application/json",
+            Accept: "application/json",
+            "Mcp-Method": "tools/call",
+            "Mcp-Name": "list_decks",
+          },
+          body: JSON.stringify({
+            jsonrpc: "2.0",
+            id: "tool",
+            method: "tools/call",
+            params: {
+              name: "list_decks",
+              arguments: {},
+              _meta: {
+                "io.modelcontextprotocol/protocolVersion": "2026-07-28",
+                "io.modelcontextprotocol/clientCapabilities": {},
+              },
+            },
+          }),
+        }),
+      );
+      toolResult = await result.json();
+      res.writeHead(201, { "Content-Type": "application/json" });
+      res.end("{}");
+    } else {
+      res.writeHead(200, { "Content-Type": "text/event-stream" });
+      res.end(
+        `event: snapshot\ndata: ${JSON.stringify({ status: "review", threadId: "durable", messages: [{ role: "assistant", text: "調査完了" }] })}\n\n`,
+      );
+    }
   });
   await new Promise<void>((resolve) => server.listen(0, "127.0.0.1", resolve));
   const address = server.address();
-  assert.isNotNull(address);
-  assert(typeof address === "object");
+  assert(address && typeof address === "object");
+  vi.stubEnv("WORKSPACE_RUNTIME_URL", `http://127.0.0.1:${address.port}`);
+  vi.stubEnv("WORKSPACE_RUNTIME_TOKEN", "fixture-token");
   try {
     const execute = vi.fn<(name: string, input: unknown) => Promise<unknown>>(async () => ({
       ok: true,
-      decks: [{ id: "fixture-deck" }],
+      decks: [],
     }));
-    const onThread = vi.fn<(id: string) => void>();
-    const output: string[] = [];
-    const request = {
-      config: {
-        model: "fixture-model",
-        reportRoot: directory,
-        codexPath: fileURLToPath(new URL("./fixtures/codex-app-server.mjs", import.meta.url)),
-        mcpUrl: `http://127.0.0.1:${address.port}/mcp`,
-      },
-      cwd: directory,
-      runId: "fixture-run",
-      prompt: "Use list_decks",
-      instructions: "Only use the supplied tool.",
+    const onText = vi.fn<(id: string, delta: string) => void>();
+    await executeCodexResearch({
+      config: { model: "fixture", reportRoot: "/tmp", mcpUrl: "http://127.0.0.1/mcp" },
+      cwd: "/tmp",
+      runId: "conversation",
+      prompt: "Research",
+      instructions: "Read only",
       signal: new AbortController().signal,
       tools: {
         definitions: [
           {
             name: "list_decks",
             description: "Read decks",
-            inputSchema: {
-              type: "object",
-              properties: {},
-              additionalProperties: false,
-            },
+            inputSchema: { type: "object", properties: {} },
           },
         ],
         execute,
       },
-      onThread,
-      onText: (_id: string, text: string) => {
-        output.push(text);
-      },
-    };
-    await executeCodexResearch(request);
-    expect(output.join("")).toBe("こんにちは世界。\nEnglish text\n末尾漢字");
-    expect(output.length).toBeGreaterThan(1);
-    expect(execute).toHaveBeenCalledWith("list_decks", {});
-    expect(onThread).toHaveBeenCalledWith("fixture-thread");
-    output.length = 0;
-    await executeCodexResearch({ ...request, threadId: "fixture-thread" });
-    expect(output.join("")).toBe("再開しました。");
-    expect(execute).toHaveBeenCalledTimes(3);
-    const cancellation = new AbortController();
-    await expect(
-      executeCodexResearch({
-        ...request,
-        prompt: "wait",
-        signal: cancellation.signal,
-        onText: () => cancellation.abort(new Error("Explicit stop")),
-      }),
-    ).rejects.toThrow("Explicit stop");
-    const methods = await readFile(join(directory, "rpc-methods.txt"), "utf8");
-    expect(methods).toContain("thread/start");
-    expect(methods).toContain("thread/resume");
-    expect(methods).toContain("turn/interrupt");
+      onText,
+      onThread: vi.fn<(id: string) => void>(),
+    });
+    expect(execute).toHaveBeenCalledExactlyOnceWith("list_decks", {});
+    expect(toolResult).toHaveProperty("result");
+    expect(onText).toHaveBeenCalledWith(expect.any(String), "調査完了");
+    const expired = await handleMcpRequest(new Request(scopeUrl));
+    expect(expired.status).toBe(404);
   } finally {
+    vi.unstubAllEnvs();
     await new Promise<void>((resolve, reject) =>
       server.close((error) => (error ? reject(error) : resolve())),
     );
-    await rm(directory, { recursive: true, force: true });
   }
-}, 20_000);
+});

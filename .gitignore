@@ -11,3 +11,5 @@ playwright-report/
 test-results/
 .data/
 *.setup-token
+runtime/_build/
+runtime/deps/

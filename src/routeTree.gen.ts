@@ -17,10 +17,13 @@ import { Route as LoginRouteImport } from './routes/login'
 import { Route as JournalRouteImport } from './routes/journal'
 import { Route as InboxRouteImport } from './routes/inbox'
 import { Route as DeckRouteImport } from './routes/deck'
+import { Route as BoardRouteImport } from './routes/board'
 import { Route as IndexRouteImport } from './routes/index'
 import { Route as ApiAuthRouteImport } from './routes/api/auth'
 import { Route as OauthMastodonCallbackRouteImport } from './routes/oauth/mastodon/callback'
 import { Route as ApiResearchEventsRouteImport } from './routes/api/research/events'
+import { Route as ApiExecutionEventsRouteImport } from './routes/api/execution/events'
+import { Route as ApiExecutionArtifactsRouteImport } from './routes/api/execution/artifacts'
 import { Route as ApiActivitiesEventsRouteImport } from './routes/api/activities/events'
 
 const VitalsRoute = VitalsRouteImport.update({
@@ -63,6 +66,11 @@ const DeckRoute = DeckRouteImport.update({
   path: '/deck',
   getParentRoute: () => rootRouteImport,
 } as any)
+const BoardRoute = BoardRouteImport.update({
+  id: '/board',
+  path: '/board',
+  getParentRoute: () => rootRouteImport,
+} as any)
 const IndexRoute = IndexRouteImport.update({
   id: '/',
   path: '/',
@@ -83,6 +91,16 @@ const ApiResearchEventsRoute = ApiResearchEventsRouteImport.update({
   path: '/api/research/events',
   getParentRoute: () => rootRouteImport,
 } as any)
+const ApiExecutionEventsRoute = ApiExecutionEventsRouteImport.update({
+  id: '/api/execution/events',
+  path: '/api/execution/events',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const ApiExecutionArtifactsRoute = ApiExecutionArtifactsRouteImport.update({
+  id: '/api/execution/artifacts',
+  path: '/api/execution/artifacts',
+  getParentRoute: () => rootRouteImport,
+} as any)
 const ApiActivitiesEventsRoute = ApiActivitiesEventsRouteImport.update({
   id: '/api/activities/events',
   path: '/api/activities/events',
@@ -91,6 +109,7 @@ const ApiActivitiesEventsRoute = ApiActivitiesEventsRouteImport.update({
 
 export interface FileRoutesByFullPath {
   '/': typeof IndexRoute
+  '/board': typeof BoardRoute
   '/deck': typeof DeckRoute
   '/inbox': typeof InboxRoute
   '/journal': typeof JournalRoute
@@ -101,11 +120,14 @@ export interface FileRoutesByFullPath {
   '/vitals': typeof VitalsRoute
   '/api/auth': typeof ApiAuthRoute
   '/api/activities/events': typeof ApiActivitiesEventsRoute
+  '/api/execution/artifacts': typeof ApiExecutionArtifactsRoute
+  '/api/execution/events': typeof ApiExecutionEventsRoute
   '/api/research/events': typeof ApiResearchEventsRoute
   '/oauth/mastodon/callback': typeof OauthMastodonCallbackRoute
 }
 export interface FileRoutesByTo {
   '/': typeof IndexRoute
+  '/board': typeof BoardRoute
   '/deck': typeof DeckRoute
   '/inbox': typeof InboxRoute
   '/journal': typeof JournalRoute
@@ -116,12 +138,15 @@ export interface FileRoutesByTo {
   '/vitals': typeof VitalsRoute
   '/api/auth': typeof ApiAuthRoute
   '/api/activities/events': typeof ApiActivitiesEventsRoute
+  '/api/execution/artifacts': typeof ApiExecutionArtifactsRoute
+  '/api/execution/events': typeof ApiExecutionEventsRoute
   '/api/research/events': typeof ApiResearchEventsRoute
   '/oauth/mastodon/callback': typeof OauthMastodonCallbackRoute
 }
 export interface FileRoutesById {
   __root__: typeof rootRouteImport
   '/': typeof IndexRoute
+  '/board': typeof BoardRoute
   '/deck': typeof DeckRoute
   '/inbox': typeof InboxRoute
   '/journal': typeof JournalRoute
@@ -132,6 +157,8 @@ export interface FileRoutesById {
   '/vitals': typeof VitalsRoute
   '/api/auth': typeof ApiAuthRoute
   '/api/activities/events': typeof ApiActivitiesEventsRoute
+  '/api/execution/artifacts': typeof ApiExecutionArtifactsRoute
+  '/api/execution/events': typeof ApiExecutionEventsRoute
   '/api/research/events': typeof ApiResearchEventsRoute
   '/oauth/mastodon/callback': typeof OauthMastodonCallbackRoute
 }
@@ -139,6 +166,7 @@ export interface FileRouteTypes {
   fileRoutesByFullPath: FileRoutesByFullPath
   fullPaths:
     | '/'
+    | '/board'
     | '/deck'
     | '/inbox'
     | '/journal'
@@ -149,11 +177,14 @@ export interface FileRouteTypes {
     | '/vitals'
     | '/api/auth'
     | '/api/activities/events'
+    | '/api/execution/artifacts'
+    | '/api/execution/events'
     | '/api/research/events'
     | '/oauth/mastodon/callback'
   fileRoutesByTo: FileRoutesByTo
   to:
     | '/'
+    | '/board'
     | '/deck'
     | '/inbox'
     | '/journal'
@@ -164,11 +195,14 @@ export interface FileRouteTypes {
     | '/vitals'
     | '/api/auth'
     | '/api/activities/events'
+    | '/api/execution/artifacts'
+    | '/api/execution/events'
     | '/api/research/events'
     | '/oauth/mastodon/callback'
   id:
     | '__root__'
     | '/'
+    | '/board'
     | '/deck'
     | '/inbox'
     | '/journal'
@@ -179,12 +213,15 @@ export interface FileRouteTypes {
     | '/vitals'
     | '/api/auth'
     | '/api/activities/events'
+    | '/api/execution/artifacts'
+    | '/api/execution/events'
     | '/api/research/events'
     | '/oauth/mastodon/callback'
   fileRoutesById: FileRoutesById
 }
 export interface RootRouteChildren {
   IndexRoute: typeof IndexRoute
+  BoardRoute: typeof BoardRoute
   DeckRoute: typeof DeckRoute
   InboxRoute: typeof InboxRoute
   JournalRoute: typeof JournalRoute
@@ -195,6 +232,8 @@ export interface RootRouteChildren {
   VitalsRoute: typeof VitalsRoute
   ApiAuthRoute: typeof ApiAuthRoute
   ApiActivitiesEventsRoute: typeof ApiActivitiesEventsRoute
+  ApiExecutionArtifactsRoute: typeof ApiExecutionArtifactsRoute
+  ApiExecutionEventsRoute: typeof ApiExecutionEventsRoute
   ApiResearchEventsRoute: typeof ApiResearchEventsRoute
   OauthMastodonCallbackRoute: typeof OauthMastodonCallbackRoute
 }
@@ -257,6 +296,13 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof DeckRouteImport
       parentRoute: typeof rootRouteImport
     }
+    '/board': {
+      id: '/board'
+      path: '/board'
+      fullPath: '/board'
+      preLoaderRoute: typeof BoardRouteImport
+      parentRoute: typeof rootRouteImport
+    }
     '/': {
       id: '/'
       path: '/'
@@ -285,6 +331,20 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof ApiResearchEventsRouteImport
       parentRoute: typeof rootRouteImport
     }
+    '/api/execution/events': {
+      id: '/api/execution/events'
+      path: '/api/execution/events'
+      fullPath: '/api/execution/events'
+      preLoaderRoute: typeof ApiExecutionEventsRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/api/execution/artifacts': {
+      id: '/api/execution/artifacts'
+      path: '/api/execution/artifacts'
+      fullPath: '/api/execution/artifacts'
+      preLoaderRoute: typeof ApiExecutionArtifactsRouteImport
+      parentRoute: typeof rootRouteImport
+    }
     '/api/activities/events': {
       id: '/api/activities/events'
       path: '/api/activities/events'
@@ -297,6 +357,7 @@ declare module '@tanstack/react-router' {
 
 const rootRouteChildren: RootRouteChildren = {
   IndexRoute: IndexRoute,
+  BoardRoute: BoardRoute,
   DeckRoute: DeckRoute,
   InboxRoute: InboxRoute,
   JournalRoute: JournalRoute,
@@ -307,6 +368,8 @@ const rootRouteChildren: RootRouteChildren = {
   VitalsRoute: VitalsRoute,
   ApiAuthRoute: ApiAuthRoute,
   ApiActivitiesEventsRoute: ApiActivitiesEventsRoute,
+  ApiExecutionArtifactsRoute: ApiExecutionArtifactsRoute,
+  ApiExecutionEventsRoute: ApiExecutionEventsRoute,
   ApiResearchEventsRoute: ApiResearchEventsRoute,
   OauthMastodonCallbackRoute: OauthMastodonCallbackRoute,
 }

@@ -1,256 +1,106 @@
 // @vitest-environment node
-import { assert, beforeEach, expect, it, vi } from "vitest";
+import { afterEach, beforeEach, expect, it, vi } from "vitest";
 import { type CodexResearchInput, executeCodexResearch } from "./codex-provider.server";
-
-type ProviderSettings = import("ai-sdk-provider-codex-cli").CodexAppServerSettings;
 const fake = vi.hoisted(() => ({
-  inspect:
-    vi.fn<
-      (
-        binary: string,
-        args: string[],
-        options: { env: Record<string, string> },
-      ) => Promise<{ stdout: string }>
-    >(),
-  create: vi.fn<(options: { defaultSettings: ProviderSettings }) => unknown>(),
   register: vi.fn<(tools: CodexResearchInput["tools"]) => { id: string; dispose: () => void }>(),
   dispose: vi.fn<() => void>(),
-  model: Object.assign(vi.fn<(id: string) => string>(), { close: vi.fn<() => Promise<void>>() }),
-  stream: vi.fn<
-    (options: unknown) => {
-      stream: AsyncIterable<{ type: string; id?: string; text?: string; error?: Error }>;
-      finalStep?: Promise<{
-        finishReason: "stop" | "error" | "length";
-        rawFinishReason?: string;
-        providerMetadata: { "codex-app-server": { threadId: string } };
-      }>;
-    }
-  >(),
-  smooth: vi.fn<(options: unknown) => string>(),
-}));
-vi.mock("node:child_process", () => ({ execFile: fake.inspect }));
-vi.mock("node:util", () => ({ promisify: (fn: unknown) => fn }));
-vi.mock("ai", () => ({ streamText: fake.stream, smoothStream: fake.smooth }));
-vi.mock("ai-sdk-provider-codex-cli", () => ({
-  createCodexAppServer: fake.create,
 }));
 vi.mock("../mcp/http.server", () => ({ registerResearchTools: fake.register }));
+const fetcher = vi.fn<typeof fetch>();
 function input(): CodexResearchInput {
   return {
-    config: {
-      reportRoot: "/reports",
-      model: "selected-model",
-      codexPath: "/bin/codex",
-      mcpUrl: "http://127.0.0.1:3002/mcp",
-    },
+    config: { model: "test", reportRoot: "/reports", mcpUrl: "http://127.0.0.1:3000/mcp" },
     cwd: "/reports/run",
-    runId: "test-run",
-    instructions: "Only research",
-    prompt: "Find relevant posts",
+    runId: "same-conversation",
+    prompt: "Research",
+    instructions: "Scoped research",
     signal: new AbortController().signal,
     tools: {
-      definitions: [
-        {
-          name: "list_decks",
-          description: "List decks",
-          inputSchema: { type: "object" },
-        },
-      ],
-      execute: vi.fn<CodexResearchInput["tools"]["execute"]>(async () => ({ ok: true, decks: [] })),
+      definitions: [],
+      execute: vi.fn<CodexResearchInput["tools"]["execute"]>(async () => ({ ok: true })),
     },
-    onThread: vi.fn<CodexResearchInput["onThread"]>(),
     onText: vi.fn<CodexResearchInput["onText"]>(),
+    onThread: vi.fn<CodexResearchInput["onThread"]>(),
   };
+}
+function snapshots(values: object[]) {
+  return new Response(
+    values.map((value) => `event: snapshot\ndata: ${JSON.stringify(value)}\n\n`).join(""),
+  );
 }
 beforeEach(() => {
   vi.clearAllMocks();
-  fake.inspect.mockResolvedValue({
-    stdout: JSON.stringify([{ name: "external" }]),
-  });
-  fake.create.mockReturnValue(fake.model);
-  fake.register.mockReturnValue({ id: "turn-scope", dispose: fake.dispose });
-  fake.model.mockReturnValue("model");
-  fake.model.close.mockResolvedValue(undefined);
-  fake.smooth.mockReturnValue("smoothing-transform");
-  fake.stream.mockReturnValue({
-    stream: (async function* () {
-      yield { type: "text-delta", id: "answer", text: "こんにちは" };
-      yield { type: "text-delta", id: "answer", text: "世界" };
-    })(),
-    finalStep: Promise.resolve({
-      finishReason: "stop",
-      providerMetadata: {
-        "codex-app-server": { threadId: "persistent-thread" },
-      },
-    }),
-  });
+  vi.stubEnv("WORKSPACE_RUNTIME_TOKEN", "test-token");
+  vi.stubEnv("WORKSPACE_RUNTIME_URL", "http://runtime.invalid");
+  vi.stubGlobal("fetch", fetcher);
+  fake.register.mockReturnValue({ id: "scope", dispose: fake.dispose });
 });
-
-it("uses the app-server provider for incremental Japanese streaming with persistent sessions", async () => {
-  const request = input();
-  request.threadId = "existing-thread";
-  await executeCodexResearch(request);
-  expect(fake.model).toHaveBeenCalledWith("selected-model");
-  expect(fake.create).toHaveBeenCalledWith({
-    defaultSettings: expect.objectContaining({
-      resume: "existing-thread",
-      threadMode: "persistent",
-      cwd: "/reports/run",
-    }),
-  });
-  expect(fake.smooth).toHaveBeenCalledWith({
-    delayInMs: 15,
-    chunking: /[\u3040-\u309F\u30A0-\u30FF]|\S+\s+/,
-  });
-  expect(fake.stream).toHaveBeenCalledWith(
-    expect.objectContaining({
-      model: "model",
-      prompt: request.prompt,
-      abortSignal: request.signal,
-      experimental_transform: "smoothing-transform",
-      maxRetries: 0,
-    }),
+afterEach(() => {
+  vi.unstubAllEnvs();
+  vi.unstubAllGlobals();
+});
+it("resumes the thread and emits only newly appended text across snapshots", async () => {
+  fetcher.mockResolvedValueOnce(Response.json({})).mockResolvedValueOnce(
+    snapshots([
+      { status: "running", threadId: "resumed", messages: [{ role: "assistant", text: "こん" }] },
+      { status: "running", threadId: "resumed", messages: [{ role: "assistant", text: "こん" }] },
+      {
+        status: "review",
+        threadId: "resumed",
+        messages: [{ role: "assistant", text: "こんにちは" }],
+      },
+    ]),
   );
-  expect(request.onText).toHaveBeenNthCalledWith(1, "answer", "こんにちは");
-  expect(request.onText).toHaveBeenNthCalledWith(2, "answer", "世界");
-  expect(request.onThread).toHaveBeenCalledWith("persistent-thread");
-  expect(fake.model.close).toHaveBeenCalledOnce();
-});
-
-it("connects Codex to the shared HTTP endpoint with this turn's scoped tools", async () => {
-  const request = input();
+  const request = { ...input(), threadId: "old-thread" };
   await executeCodexResearch(request);
-  const tools = fake.register.mock.calls[0]?.[0];
-  assert.isDefined(tools);
-  expect(tools.definitions).toEqual(request.tools.definitions);
-  expect(fake.create).toHaveBeenCalledWith({
-    defaultSettings: expect.objectContaining({
-      mcpServers: {
-        workspace_research_testrun: {
-          transport: "http",
-          url: "http://127.0.0.1:3002/mcp?research=turn-scope",
-        },
-      },
-    }),
+  const body = JSON.parse(fetcher.mock.calls[0]?.[1]?.body as string);
+  expect(body).toMatchObject({
+    threadId: "old-thread",
+    cwd: request.cwd,
+    config: { developerInstructions: request.instructions },
   });
-  const args = { example: "input" };
-  expect(await tools.execute("list_decks", args)).toEqual({ ok: true, decks: [] });
-  expect(request.tools.execute).toHaveBeenCalledWith("list_decks", args);
+  expect(Object.values(body.config.mcpServers)).toEqual([
+    { url: "http://127.0.0.1:3000/mcp?research=scope", tools: [] },
+  ]);
+  expect(request.onThread).toHaveBeenCalledExactlyOnceWith("resumed");
+  expect(vi.mocked(request.onText).mock.calls.map((call) => call[1])).toEqual(["こん", "にちは"]);
   expect(fake.dispose).toHaveBeenCalledOnce();
 });
-
-it("removes the registered scope when provider startup fails", async () => {
-  fake.create.mockImplementationOnce(() => {
-    throw new Error("Startup failed");
-  });
-  await expect(executeCodexResearch(input())).rejects.toThrow("Startup failed");
+it("assigns distinct execution IDs to followups in the same conversation", async () => {
+  fetcher.mockImplementation(async (_url, options) =>
+    options?.method === "POST" ? Response.json({}) : snapshots([{ status: "review" }]),
+  );
+  await executeCodexResearch(input());
+  await executeCodexResearch(input());
+  const first = JSON.parse(fetcher.mock.calls[0]?.[1]?.body as string);
+  const second = JSON.parse(fetcher.mock.calls[2]?.[1]?.body as string);
+  expect(first.id).not.toBe(second.id);
+});
+it("stops the actual runtime when streaming fails and disposes scoped tools", async () => {
+  fetcher
+    .mockResolvedValueOnce(Response.json({}))
+    .mockResolvedValueOnce(snapshots([{ status: "failed", error: "quota exceeded" }]))
+    .mockResolvedValueOnce(Response.json({}));
+  await expect(executeCodexResearch(input())).rejects.toThrow("quota exceeded");
+  expect(fetcher.mock.calls[2]?.[0]).toMatch(/\/stop$/);
   expect(fake.dispose).toHaveBeenCalledOnce();
 });
-
-it("excludes web-app secrets and disables inherited MCP servers, hooks and extra tools", async () => {
-  vi.stubEnv("WORKSPACE_SETUP_TOKEN", "secret-do-not-forward");
-  vi.stubEnv("UNRELATED_API_KEY", "private-key");
-  try {
-    await executeCodexResearch(input());
-    const settings = fake.create.mock.calls[0]?.[0].defaultSettings;
-    expect(settings?.env?.WORKSPACE_SETUP_TOKEN).toBe("");
-    expect(settings?.env?.UNRELATED_API_KEY).toBe("");
-    expect(settings?.env?.HOME).toBeTruthy();
-    expect(settings).toMatchObject({
-      approvalPolicy: "never",
-      sandboxPolicy: "workspace-write",
-      autoApprove: false,
-      configOverrides: {
-        "mcp_servers.external.enabled": false,
-        "mcp_servers.workspace_research_testrun.enabled": true,
-        "shell_environment_policy.inherit": "none",
-        "features.multi_agent": false,
-        "features.hooks": false,
-        web_search: "disabled",
-      },
-    });
-    expect(fake.inspect.mock.calls[0]?.[2].env.UNRELATED_API_KEY).toBeUndefined();
-  } finally {
-    vi.unstubAllEnvs();
-  }
-});
-
-it("fails closed on an unreadable or malformed inherited MCP configuration", async () => {
-  fake.inspect.mockResolvedValue({ stdout: "{invalid" });
-  await expect(executeCodexResearch(input())).rejects.toThrow("inspect");
-  expect(fake.create).not.toHaveBeenCalled();
-});
-
-it("preapproves only this run's supplied MCP tools while preserving global restrictions", async () => {
-  const request = input();
-  request.tools.definitions.push({
-    name: "fetch_column_posts",
-    description: "Read scoped posts",
-    inputSchema: { type: "object" },
-  });
-  await executeCodexResearch(request);
-  const settings = fake.create.mock.calls[0]?.[0].defaultSettings;
-  expect(settings).toMatchObject({
-    approvalPolicy: "never",
-    autoApprove: false,
-    sandboxPolicy: "workspace-write",
-  });
-  const overrides = settings?.configOverrides ?? {};
-  expect(
-    Object.fromEntries(Object.entries(overrides).filter(([key]) => key.endsWith("approval_mode"))),
-  ).toEqual({
-    "mcp_servers.workspace_research_testrun.tools.list_decks.approval_mode": "approve",
-    "mcp_servers.workspace_research_testrun.tools.fetch_column_posts.approval_mode": "approve",
-  });
-  expect(overrides["mcp_servers.external.enabled"]).toBe(false);
-});
-
-it("closes the provider after a stream error", async () => {
-  fake.stream.mockReturnValue({
-    stream: (async function* () {
-      yield { type: "error", error: new Error("Provider unavailable") };
-    })(),
-  });
-  await expect(executeCodexResearch(input())).rejects.toThrow("Provider unavailable");
-  expect(fake.model.close).toHaveBeenCalledOnce();
-});
-
-it.each([
-  ["error", "workspace routing discovery unauthorized (401)"],
-  ["length", "usage_limit_exceeded"],
-  ["length", "context_window_exceeded"],
-] as const)(
-  "rejects an incomplete %s finish without an error event: %s",
-  async (finishReason, rawFinishReason) => {
-    const request = input();
-    fake.stream.mockReturnValue({
-      stream: (async function* () {
-        yield { type: "finish" };
-      })(),
-      finalStep: Promise.resolve({
-        finishReason,
-        rawFinishReason,
-        providerMetadata: { "codex-app-server": { threadId: "failed-thread" } },
-      }),
-    });
-    await expect(executeCodexResearch(request)).rejects.toThrow(rawFinishReason);
-    expect(request.onThread).toHaveBeenCalledWith("failed-thread");
-    expect(fake.model.close).toHaveBeenCalledOnce();
-  },
-);
-
-it("propagates cancellation and prevents late bridge calls or metadata changes", async () => {
+it("stops cancellation even when it happens during submission", async () => {
   const controller = new AbortController();
-  const request = { ...input(), signal: controller.signal };
-  request.onText = vi.fn<CodexResearchInput["onText"]>(() =>
-    controller.abort(new Error("Stopped")),
+  fetcher
+    .mockImplementationOnce(async () => {
+      controller.abort(new Error("Stopped"));
+      return Response.json({});
+    })
+    .mockResolvedValueOnce(Response.json({}));
+  await expect(executeCodexResearch({ ...input(), signal: controller.signal })).rejects.toThrow(
+    "Stopped",
   );
-  await expect(executeCodexResearch(request)).rejects.toThrow("Stopped");
-  const tools = fake.register.mock.calls[0]?.[0];
-  assert.isDefined(tools);
-  await expect(tools.execute("list_decks", {})).rejects.toThrow("Stopped");
+  expect(fetcher.mock.calls[1]?.[0]).toMatch(/\/stop$/);
   expect(fake.dispose).toHaveBeenCalledOnce();
-  expect(request.tools.execute).not.toHaveBeenCalled();
-  expect(request.onThread).not.toHaveBeenCalled();
-  expect(fake.model.close).toHaveBeenCalledOnce();
+});
+it("fails closed when runtime configuration is missing", async () => {
+  vi.stubEnv("WORKSPACE_RUNTIME_TOKEN", "");
+  await expect(executeCodexResearch(input())).rejects.toThrow("WORKSPACE_RUNTIME_TOKEN");
+  expect(fake.register).not.toHaveBeenCalled();
 });

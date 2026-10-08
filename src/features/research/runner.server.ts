@@ -32,7 +32,7 @@ function researchConfig(): CodexResearchConfig | null {
   const reportRoot = process.env.TWITTER_LITE_REPORT_ROOT;
   const model = process.env.TWITTER_LITE_CODEX_MODEL;
   if (!reportRoot || !model || !isAbsolute(reportRoot)) return null;
-  return { reportRoot, model, codexPath: process.env.TWITTER_LITE_CODEX_PATH };
+  return { reportRoot, model };
 }
 
 export function createResearchService(

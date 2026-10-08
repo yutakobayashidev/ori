@@ -30,6 +30,7 @@ open and when returning to the app.
 | Reader    | `/inbox`   | Searchable sample articles and a responsive article reader. Recommendation from activity history is not connected yet. |
 | Vitals    | `/vitals`  | Body and Environment dashboards with sample readings, charts, and simulated controls. No health or device connection.  |
 | Research  | `/deck`    | Twitter and Mastodon columns, connected accounts, persistent decks, and optional Codex research chat.                  |
+| Board     | `/board`   | Shared tasks and replies in Kanban columns, with AI handoff, execution chat, questions, and artifacts.                 |
 
 Home and Messages share activity IDs, user decisions, and drafts through a common
 server service. Journal and routine prototype state resets on reload. The home
@@ -173,12 +174,22 @@ nix develop -c pnpm account:setup
 nix develop -c pnpm db:generate
 ```
 
-## Home Codex research prototype
+## AI execution and Research
 
-Run `codex login` as the host user. The backend uses Vercel AI SDK 7 and
-`ai-sdk-provider-codex-cli` 2.3 to manage a local Codex app-server over stdio.
-A separate WebSocket service is no longer required. Use Codex CLI 0.156.0 or
-newer; set an explicit executable path if it is not on PATH.
+Board, Home, and Messages share the same Activity IDs and user decisions. In Board,
+open a task, describe the requested outcome, and choose **Hand off to AI**. The
+execution conversation supports followups, questions, stopping, and downloading
+artifacts. AI completion enters review; the owner still decides whether the task
+is complete. Reply handoffs prepare work and drafts, never claim delivery.
+
+The Elixir/OTP service in `runtime/` owns Codex subprocesses for both Board and
+Research. It persists accepted work and thread IDs, limits concurrency, and marks
+unfinished work interrupted on restart. Explicit followups resume the saved thread.
+The TypeScript web backend owns Activities, sessions, scoped MCP tools, and SSE
+presentation. Browser disconnection does not stop a job.
+
+Run `codex login` as the runtime host user. Use Codex CLI 0.156.0 or
+newer; set `WORKSPACE_CODEX_PATH` if it is not on PATH.
 The child receives an environment allowlist; inherited MCP servers, hooks,
 web search and multi-agent execution are disabled for these research turns.
 The user's Codex settings are not changed.
@@ -188,25 +199,26 @@ Configure the web app in `.env.local`:
 ```dotenv
 TWITTER_LITE_CODEX_MODEL=gpt-6-astra
 TWITTER_LITE_REPORT_ROOT=/absolute/path/to/twitter-lite/.data/research
+WORKSPACE_RUNTIME_URL=http://127.0.0.1:4318
+WORKSPACE_RUNTIME_TOKEN_FILE=/absolute/path/outside/git/runtime-token
 # Optional:
-# TWITTER_LITE_CODEX_PATH=/absolute/path/to/codex
-# CODEX_HOME=/absolute/path/to/codex-home
 ```
 
-If your CLI sets `CODEX_HOME`, set the same path in the server environment
-(`.env.local` for development). A systemd service does not inherit your shell's
-environment. Without it, research uses `~/.codex`, which may have different or
-expired credentials. Authentication failures appear separately in chat; the
-underlying error and conversation ID are logged on the server.
+Create a random token file with permissions `0600` outside Git, then start the
+runtime with the same `WORKSPACE_RUNTIME_TOKEN_FILE` and a private
+`WORKSPACE_RUNTIME_ROOT`. From `runtime/`, run `mix deps.get` followed by
+`mix run --no-halt`; the private HTTP listener defaults to `127.0.0.1:4318`.
+Set `CODEX_HOME` in the runtime service to the same directory used by the signed-in
+CLI. The runtime and web app must share the report directory. A Nix release is
+available as `nix build .#workspace-runtime`; UM790-Pro services are managed in dotnix.
+See [the handoff design](docs/ai-handoff-design.md) and [runtime operations](runtime/README.md).
 
-This provider does not register AI SDK `tools` as Codex dynamic tools.
 The validated, account-scoped research functions are exposed through the app's
 own HTTP `/mcp` endpoint. Each turn has a separate registration that is removed
 when it finishes or is cancelled. Set `TWITTER_LITE_MCP_URL` when the app is not
 reachable at `http://127.0.0.1:${PORT:-3000}/mcp`. The app-server control connection
-still uses stdio; its MCP calls use HTTP. Streaming uses `streamText`
-and `smoothStream` with 15 ms pacing and Japanese-aware chunking:
-`/[\u3040-\u309F\u30A0-\u30FF]|\S+\s+/`.
+is owned by Elixir and uses stdio; its MCP calls use HTTP. Runtime snapshots stream
+to the web backend over SSE, which forwards Research text and deck progress.
 Streamdown renders the Markdown and animates new text only while the final
 assistant message is live; completed history is immediate and reduced-motion
 preferences are respected. `@shadcn/helpers/ai-sdk` supplies deterministic
@@ -356,6 +368,14 @@ share the web UI's SQLite and SNS services; no resident Codex run is required.
 and revision checks. Publication preserves user edits and never sends messages.
 See the [Activity MCP contract](docs/activity-mcp-design.md) for inputs and examples.
 An OpenAI Secure MCP Tunnel client can forward to this private endpoint.
+
+ChatGPT/MCP Apps can render research decks, post feeds, activities and reply drafts
+inside the conversation. These views reuse the web app's React columns, cards,
+activity controls, reply editor and stylesheet. UI actions call the same MCP
+endpoint; `update_activity` exposes revision-checked user edits to the app.
+Chapplin provides the client bridge. A separate Vite build embeds the single-file
+UI in the existing server, preserving its MCP 2.0 tools and events. See
+[MCP Apps UI](docs/http-mcp.md#mcp-apps-ui) for supported tools and verification.
 
 `list_beeper_chats` and `read_beeper_chat` provide read-only conversation context
 from the configured headless Beeper Server. MCP 2.0 clients can subscribe to

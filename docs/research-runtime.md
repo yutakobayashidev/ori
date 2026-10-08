@@ -1,58 +1,40 @@
 # Research runtime
 
-Research uses Vercel AI SDK 7 `streamText` with
-`ai-sdk-provider-codex-cli` 2.3's app-server provider. The provider owns its local
-stdio child, thread resumption, protocol decoding, and abort handling. The app
-owns accepted requests, account-scoped tools, snapshots, and report validation.
-The separate WebSocket launcher is removed.
+Research sends each turn to the shared Elixir execution service. The web app
+owns accepted requests, account-scoped MCP tools, UI snapshots, and report
+validation. Elixir owns the Codex subprocess, queue, interruption and persistent
+execution records. There is no local TypeScript Codex subprocess fallback.
 
-## Tools
+Set `WORKSPACE_RUNTIME_URL` (default `http://127.0.0.1:4318`) and
+`WORKSPACE_RUNTIME_TOKEN` or `WORKSPACE_RUNTIME_TOKEN_FILE` to match the runtime service. Configure the Codex binary
+in the service, not in the web application. Runtime and web process must share
+the report directory and the runtime must reach the scoped MCP URL.
 
-The provider does not register AI SDK `tools` as Codex dynamic tools. Existing
-research definitions and executors are exposed with `createSdkMcpServer` instead.
-Validation, connected-account scope, request budgets, evidence tracking, and
-read-only SNS behavior remain in `agent-tools.server.ts`. Provider execution is
-one agent turn; there is no second AI SDK tool loop replaying those calls.
-Only the registered research tools receive per-tool MCP approval overrides for
-non-interactive execution. Shell approvals and external MCP servers remain
-disabled. Failed or truncated Codex turns are treated as failures even when the
-provider emits a finish event without an error event.
-Resumed threads that already registered dynamic tools route their calls through
-`onDynamicToolCall` to the same validated executor.
+## Tools and lifecycle
 
-## Lifecycle and selection
+Each turn registers only its account-scoped research tools at the shared HTTP
+MCP endpoint. Validation, request budgets and evidence tracking remain in
+`agent-tools.server.ts`. Registration is removed when the turn ends. Execution
+uses a fresh runtime UUID for each turn, while the durable Codex thread ID is
+passed on followup. The runtime disables inherited MCP servers and restricts
+Codex execution. Legacy dynamic tools in resumed threads are bridged by the
+runtime to this same scoped endpoint.
 
-The background runner is keyed by conversation ID. Acceptance saves the user
-message before starting the model. A request ID identifies a new conversation
-and deduplicates retries within the process. Overlapping turns of the same
-conversation are rejected, while different conversations can run independently.
+Runtime snapshot SSE is converted to incremental assistant text without
+repeating previous snapshots. `review` means the model turn finished; failures,
+interruptions and input requests are surfaced to Research. Stop or a stream
+failure calls the runtime stop endpoint before disposing tools. Closing a
+browser only detaches its viewer and does not stop a turn.
 
-The URL selects a conversation. GET status and SSE subscribe to that ID;
-selecting history never starts or cancels a turn. Reconnection sends the latest
-complete snapshot. Closing a browser or changing its URL only detaches a viewer.
-Only Stop, the execution timeout, or a server-side failure aborts generation.
-Authentication expiry or logout closes the viewer's stream.
+SQLite retains Research messages, thread IDs, generated decks and citations.
+Unfinished Research conversations are marked interrupted after a web backend
+restart, requiring explicit followup. Runtime execution records persist
+independently; scoped tools do not survive a web restart. Reports stay under
+the configured report root. Research does not automatically replay failed turns.
 
-SQLite retains messages, thread IDs, generated decks, and citations. It no
-longer stores a global active conversation pointer. Browser views cannot change
-another browser's selection. After a backend restart, unfinished conversations
-are marked interrupted and require an explicit follow-up. No turn is replayed
-automatically. Reports remain files under the configured report root.
-
-## Streaming presentation
-
-The model stream uses `smoothStream` with 15 ms pacing and the supplied chunking
-pattern `/[\u3040-\u309F\u30A0-\u30FF]|\S+\s+/`. The trailing buffer flushes at the
-text-end event. The existing snapshot SSE remains the UI's reconnectable data
-channel; an HTTP request's lifetime never owns the model execution.
+## Presentation
 
 Streamdown displays partial Markdown and animates only the latest live answer.
-Completed messages render immediately. Reduced-motion preferences disable the
+Completed messages render immediately. Reduced-motion preferences disable
 animation. HTML is skipped, unsafe link protocols are rejected, images remain
-links, and retrieved post citations keep their deck navigation behavior.
-`@shadcn/helpers/ai-sdk` provides deterministic streaming fixtures for UI tests.
-
-References: [Codex provider](https://github.com/ben-vargas/ai-sdk-provider-codex-cli),
-[AI SDK smoothing](https://ai-sdk.dev/docs/reference/ai-sdk-core/smooth-stream),
-[Streamdown animation](https://streamdown.ai/docs/animation),
-[shadcn AI SDK helpers](https://ui.shadcn.com/docs/helpers/ai-sdk).
+links, and post citations preserve deck navigation.

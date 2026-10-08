@@ -1,5 +1,14 @@
 import { Link, useHydrated, useLocation, useRouteContext } from "@tanstack/react-router";
-import { Activity, House, Inbox, Layers3, MessagesSquare, NotebookPen, Search } from "lucide-react";
+import {
+  Activity,
+  House,
+  Inbox,
+  Layers3,
+  MessagesSquare,
+  NotebookPen,
+  Search,
+  Columns3,
+} from "lucide-react";
 import type { ReactNode } from "react";
 import { Avatar, AvatarFallback } from "#/components/ui/avatar";
 import {
@@ -36,6 +45,7 @@ export function WorkspaceNavigation({
   const pathname = useLocation({ select: (location) => location.pathname });
   const navigation = [
     { title: "Home", to: "/", icon: House, active: pathname === "/" },
+    { title: "Board", to: "/board", icon: Columns3, active: pathname === "/board" },
     {
       title: "Vitals",
       to: "/vitals",

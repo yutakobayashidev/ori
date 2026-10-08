@@ -1,16 +1,9 @@
-import { execFile } from "node:child_process";
-import { homedir } from "node:os";
-import { resolve } from "node:path";
-import { promisify } from "node:util";
-import { smoothStream, streamText } from "ai";
-import { createCodexAppServer } from "ai-sdk-provider-codex-cli";
+import { randomUUID } from "node:crypto";
+import { runtimeConnection } from "../execution/runtime-config.server";
 import { registerResearchTools } from "../mcp/http.server";
-
-const execFileAsync = promisify(execFile);
 export type CodexResearchConfig = {
   model: string;
   reportRoot: string;
-  codexPath?: string;
   mcpUrl?: string;
 };
 export type CodexResearchInput = {
@@ -33,148 +26,126 @@ export type CodexResearchInput = {
   onText: (id: string, delta: string) => void;
 };
 
-function environment() {
-  const allowed: Record<string, string> = {
-    HOME: homedir(),
-    CODEX_HOME: process.env.CODEX_HOME || resolve(homedir(), ".codex"),
-  };
-  for (const name of [
-    "PATH",
-    "LANG",
-    "LC_ALL",
-    "SSL_CERT_FILE",
-    "SSL_CERT_DIR",
-    "NIX_SSL_CERT_FILE",
-    "TMPDIR",
-  ]) {
-    if (process.env[name]) allowed[name] = process.env[name];
-  }
-  return allowed;
-}
-
-/** The provider owns stdio, streaming and interruption; our tools stay in-process. */
 export async function executeCodexResearch(input: CodexResearchInput): Promise<void> {
   input.signal.throwIfAborted();
-  const allowed = environment();
-  // The provider merges env over process.env. Explicit empty overrides prevent
-  // credentials belonging to the web app from reaching its Codex child.
-  const env = Object.fromEntries(Object.keys(process.env).map((name) => [name, ""]));
-  Object.assign(env, allowed);
-  const binary = input.config.codexPath || "codex";
-  const configured = await execFileAsync(binary, ["mcp", "list", "--json"], {
-    cwd: input.cwd,
-    env: allowed,
-    timeout: 15_000,
-    maxBuffer: 4 * 1024 * 1024,
-    signal: input.signal,
-  });
-  let inherited: string[];
-  try {
-    const values: unknown = JSON.parse(configured.stdout);
-    if (!Array.isArray(values)) throw new Error();
-    inherited = values.map((entry: unknown) => {
-      if (
-        !entry ||
-        typeof entry !== "object" ||
-        !("name" in entry) ||
-        typeof entry.name !== "string" ||
-        !/^[A-Za-z0-9_-]+$/.test(entry.name)
-      )
-        throw new Error();
-      return entry.name;
-    });
-  } catch {
-    throw new Error("Could not inspect Codex MCP configuration safely.");
-  }
-  input.signal.throwIfAborted();
-  const name = `workspace_research_${input.runId.replaceAll("-", "")}`;
-  async function executeTool(name: string, args: unknown) {
-    input.signal.throwIfAborted();
-    const result = await input.tools.execute(name, args);
-    input.signal.throwIfAborted();
-    return result;
-  }
-  const url = new URL(
-    input.config.mcpUrl ||
-      process.env.TWITTER_LITE_MCP_URL ||
-      `http://127.0.0.1:${process.env.PORT || 3000}/mcp`,
-  );
+  const { url: base, token } = await runtimeConnection();
+  const id = randomUUID();
+  const headers = { Authorization: `Bearer ${token}`, "Content-Type": "application/json" };
   const registration = registerResearchTools({
     definitions: input.tools.definitions,
-    execute: executeTool,
+    execute: async (name, args) => {
+      input.signal.throwIfAborted();
+      const result = await input.tools.execute(name, args);
+      input.signal.throwIfAborted();
+      return result;
+    },
   });
-  url.searchParams.set("research", registration.id);
-  let provider: ReturnType<typeof createCodexAppServer> | undefined;
+  async function stopRuntime() {
+    const stop = await fetch(`${base}/runs/${id}/stop`, {
+      method: "POST",
+      headers,
+      signal: AbortSignal.timeout(15_000),
+    });
+    if (!stop.ok && stop.status !== 404) {
+      throw new Error(`Could not stop Research runtime (${stop.status}).`);
+    }
+  }
+  let submitted = false;
+  let finished = false;
   try {
-    provider = createCodexAppServer({
-      defaultSettings: {
-        codexPath: binary,
+    const url = new URL(
+      input.config.mcpUrl ||
+        process.env.TWITTER_LITE_MCP_URL ||
+        `http://127.0.0.1:${process.env.PORT || 3000}/mcp`,
+    );
+    url.searchParams.set("research", registration.id);
+    submitted = true;
+    const response = await fetch(`${base}/runs`, {
+      method: "POST",
+      headers,
+      signal: AbortSignal.timeout(15_000),
+      body: JSON.stringify({
+        id,
+        prompt: input.prompt,
         cwd: input.cwd,
-        env,
-        logger: false,
-        minCodexVersion: "0.156.0",
-        threadMode: "persistent",
-        resume: input.threadId,
-        approvalPolicy: "never",
-        sandboxPolicy: "workspace-write",
-        autoApprove: false,
-        developerInstructions: input.instructions,
-        mcpServers: { [name]: { transport: "http", url: url.toString() } },
-        serverRequests: {
-          onDynamicToolCall: async ({ params }) => {
-            const result = await executeTool(params.tool, params.arguments);
-            return {
-              contentItems: [{ type: "inputText", text: JSON.stringify(result) }],
-              success:
-                !!result && typeof result === "object" && "ok" in result && result.ok === true,
-            };
+        threadId: input.threadId,
+        config: {
+          model: input.config.model,
+          developerInstructions: input.instructions,
+          mcpServers: {
+            [`workspace_research_${id.replaceAll("-", "")}`]: {
+              url: url.toString(),
+              tools: input.tools.definitions.map((tool) => tool.name),
+            },
           },
         },
-        configOverrides: {
-          "shell_environment_policy.inherit": "none",
-          "features.multi_agent": false,
-          "features.hooks": false,
-          web_search: "disabled",
-          ...Object.fromEntries(
-            inherited.map((server) => [`mcp_servers.${server}.enabled`, false]),
-          ),
-          [`mcp_servers.${name}.enabled`]: true,
-          ...Object.fromEntries(
-            input.tools.definitions.map((tool) => [
-              `mcp_servers.${name}.tools.${tool.name}.approval_mode`,
-              "approve",
-            ]),
-          ),
-        },
-        onSessionCreated: (session) => {
-          if (!input.signal.aborted) input.onThread(session.threadId);
-        },
-      },
-    });
-    const result = streamText({
-      model: provider(input.config.model),
-      prompt: input.prompt,
-      abortSignal: input.signal,
-      maxRetries: 0,
-      experimental_transform: smoothStream({
-        delayInMs: 15,
-        chunking: /[\u3040-\u309F\u30A0-\u30FF]|\S+\s+/,
       }),
     });
-    for await (const part of result.stream) {
-      input.signal.throwIfAborted();
-      if (part.type === "text-delta") input.onText(part.id, part.text);
-      if (part.type === "error") throw part.error;
-    }
+    if (!response.ok) throw new Error(`Research runtime rejected execution (${response.status}).`);
     input.signal.throwIfAborted();
-    const step = await result.finalStep;
-    const metadata = step.providerMetadata?.["codex-app-server"];
-    if (typeof metadata?.threadId === "string") input.onThread(metadata.threadId);
-    if (step.finishReason === "error" || step.finishReason === "length") {
-      throw new Error(step.rawFinishReason || "Codex could not complete the turn.");
+    const stream = await fetch(`${base}/runs/${id}/events`, { headers, signal: input.signal });
+    if (!stream.ok || !stream.body)
+      throw new Error(`Research runtime stream unavailable (${stream.status}).`);
+    const reader = stream.body.pipeThrough(new TextDecoderStream()).getReader();
+    let buffer = "";
+    const texts = new Map<number, string>();
+    let threadId = input.threadId;
+    try {
+      while (!finished) {
+        const { done, value } = await reader.read();
+        if (done) throw new Error("Research runtime disconnected before completion.");
+        buffer += value.replaceAll("\r", "");
+        let boundary: number;
+        while ((boundary = buffer.indexOf("\n\n")) >= 0) {
+          const frame = buffer.slice(0, boundary);
+          buffer = buffer.slice(boundary + 2);
+          const data = frame
+            .split("\n")
+            .filter((line) => line.startsWith("data:"))
+            .map((line) => line.slice(5).trimStart())
+            .join("\n");
+          if (!data) continue;
+          input.signal.throwIfAborted();
+          const snapshot = JSON.parse(data) as {
+            threadId?: string;
+            status: string;
+            error?: string;
+            messages?: { role: string; text: string }[];
+          };
+          if (snapshot.threadId && snapshot.threadId !== threadId) {
+            threadId = snapshot.threadId;
+            input.onThread(threadId);
+          }
+          for (const [index, message] of (snapshot.messages || []).entries()) {
+            if (message.role !== "assistant") continue;
+            const previous = texts.get(index) || "";
+            if (!message.text.startsWith(previous))
+              throw new Error("Research runtime replaced streamed text.");
+            const delta = message.text.slice(previous.length);
+            texts.set(index, message.text);
+            if (delta) input.onText(`${id}:${index}`, delta);
+            input.signal.throwIfAborted();
+          }
+          if (snapshot.status === "review") {
+            finished = true;
+            break;
+          }
+          if (["failed", "cancelled", "interrupted", "waiting_input"].includes(snapshot.status))
+            throw new Error(
+              snapshot.error || `Research runtime ended with status ${snapshot.status}.`,
+            );
+        }
+      }
+    } finally {
+      await reader.cancel();
     }
   } finally {
-    registration.dispose();
-    await provider?.close();
+    try {
+      if (submitted && !finished) {
+        await stopRuntime();
+      }
+    } finally {
+      registration.dispose();
+    }
   }
 }

@@ -22,7 +22,7 @@
             inherit (finalAttrs) pname version src;
             pnpm = pkgs.pnpm_11;
             fetcherVersion = 4;
-            hash = "sha256-Rb6im7siGqmP7woz/kHalfPygY3dpmLbFfyOcOx9/+w=";
+            hash = "sha256-3IeU3mWv4zptANrOtD+XOOAQpEXNRNCz9juhKKBReMU=";
           };
 
           nativeBuildInputs = with pkgs; [
@@ -60,8 +60,9 @@
         let
           pkgs = import nixpkgs { inherit system; };
           twitter-lite = mkTwitterLite pkgs;
+          workspace-runtime = pkgs.callPackage ./runtime/package.nix { };
         in {
-          inherit twitter-lite;
+          inherit twitter-lite workspace-runtime;
           default = twitter-lite;
         });
 
@@ -89,7 +90,7 @@
             }) agentLib.defaultLocalTargets;
         in {
           default = pkgs.mkShell {
-            packages = with pkgs; [ nodejs_22 pnpm chromium ];
+            packages = with pkgs; [ nodejs_22 pnpm chromium elixir ];
             shellHook = agentLib.mkShellHook {
               inherit pkgs bundle;
               targets = localTargets;
