@@ -5,6 +5,7 @@ it("keeps the selected view through login", () => {
   expect(safeReturnTo("/inbox?q=agents&article=browser#read")).toBe(
     "/inbox?q=agents&article=browser#read",
   );
+  expect(safeReturnTo("/board?activity=reply-one")).toBe("/board?activity=reply-one");
 });
 it.each([
   "https://outside.invalid",
