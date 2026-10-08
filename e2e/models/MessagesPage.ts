@@ -7,9 +7,6 @@ export class MessagesPage {
   readonly workspace: Locator;
   readonly rows: Locator;
   readonly reply: Locator;
-  readonly suggestions: Locator;
-  readonly scheduling: Locator;
-  readonly suggestedTimes: Locator;
   readonly reviewReply: Locator;
   readonly reviewDialog: Locator;
   readonly trySending: Locator;
@@ -28,9 +25,6 @@ export class MessagesPage {
     this.workspace = page.getByTestId("support-workspace");
     this.rows = page.getByTestId("support-row");
     this.reply = page.getByRole("textbox", { name: "Reply", exact: true });
-    this.suggestions = page.locator("[data-testid='conversation-suggestions'] summary:visible");
-    this.scheduling = page.locator("[data-testid='conversation-scheduling'] summary:visible");
-    this.suggestedTimes = page.getByRole("combobox", { name: "Suggested times" });
     this.reviewReply = page.getByRole("button", { name: "Review reply", exact: true });
     this.reviewDialog = page.getByRole("dialog", { name: "Review reply", exact: true });
     this.trySending = this.reviewDialog.getByRole("button", { name: "Try sending" });
@@ -50,18 +44,6 @@ export class MessagesPage {
   }
   async goTo(search = "") {
     await this.page.goto(`/support${search}`);
-  }
-  conversation(subject: string) {
-    return this.rows.filter({ hasText: subject });
-  }
-  async chooseReplySuggestion(tone: string | RegExp) {
-    await this.suggestions.click();
-    await this.page.getByRole("button", { name: tone }).click();
-  }
-  async addSuggestedTime(slot: string) {
-    await this.scheduling.click();
-    await this.suggestedTimes.selectOption(slot);
-    await this.page.getByRole("button", { name: "Add to reply" }).click();
   }
   async selectView(view: "Inbox" | "Archive" | "Set aside" | "All" | "Awaiting reply") {
     await this.filter(view).click();

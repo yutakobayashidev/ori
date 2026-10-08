@@ -35,9 +35,6 @@ export class ActivitiesPage {
   get bringBack() {
     return this.page.getByRole("button", { name: "Bring back", exact: true });
   }
-  get notNeeded() {
-    return this.page.getByRole("button", { name: "Not needed", exact: true });
-  }
   get sources() {
     return this.page.getByRole("region", { name: "Source excerpts" });
   }

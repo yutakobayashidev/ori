@@ -74,7 +74,7 @@ export const activityProposals: ActivityProposal[] = [
     }),
   ),
 ];
-export class ActivityMcp {
+class ActivityMcp {
   constructor(readonly client: APIRequestContext) {}
   async tool<T = Record<string, unknown>>(name: string, args: unknown = {}): Promise<T> {
     const response = await this.client.post("/mcp", {

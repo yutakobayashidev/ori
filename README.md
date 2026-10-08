@@ -164,7 +164,8 @@ nix develop -c pnpm lint
 nix develop -c pnpm format
 nix develop -c pnpm format:check
 nix develop -c pnpm typecheck
-nix develop -c pnpm knip
+nix develop -c pnpm check:code
+nix develop -c pnpm check:cycles
 nix develop -c pnpm test
 nix develop -c pnpm test:e2e
 nix develop -c pnpm test:live
@@ -173,6 +174,16 @@ nix develop -c pnpm start
 nix develop -c pnpm account:setup
 nix develop -c pnpm db:generate
 ```
+
+`check:code` runs [Fallow](https://fallow.tools/docs/cli/dead-code/) for unused
+code, dependencies, and circular imports; `check:cycles` runs only the circular
+import check. Both exit nonzero when findings remain. `.fallowrc.jsonc` adds the
+service worker, worker process, MCP iframe, and E2E entry points, keeps generated
+E2E code in the dependency graph without reporting its dead-code findings, and allows
+the shared UI components' exports. No architecture boundary rules are configured.
+The config documents scoped exceptions for dynamic service calls, Playwright
+fixtures, intentional export names, and framework-managed dependencies. Keep
+exceptions tied to verified consumers rather than disabling checks globally.
 
 ## AI execution and Research
 

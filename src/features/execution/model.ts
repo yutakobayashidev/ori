@@ -1,6 +1,6 @@
 import { z } from "zod";
 
-export const executionStatus = z.enum([
+const executionStatus = z.enum([
   "queued",
   "running",
   "waiting_input",
@@ -9,7 +9,7 @@ export const executionStatus = z.enum([
   "cancelled",
   "interrupted",
 ]);
-export const executionToolCall = z.object({
+const executionToolCall = z.object({
   id: z.string(),
   name: z.string(),
   arguments: z.record(z.string(), z.json()),

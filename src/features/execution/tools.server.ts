@@ -1,11 +1,6 @@
 import { createWorkspaceTools } from "../mcp/workspace-tools.server";
 import { executionScopeIsValid } from "./service.server";
-
-export function executionToolDefinitions() {
-  return createWorkspaceTools().definitions.filter(
-    ({ name }) => !["update_activity", "delete_deck"].includes(name),
-  );
-}
+import { executionToolDefinitions } from "./tool-definitions.server";
 
 export async function createExecutionTools(id: string, proof: string) {
   if (!(await executionScopeIsValid(id, proof))) return undefined;

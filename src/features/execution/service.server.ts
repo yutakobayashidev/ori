@@ -31,7 +31,7 @@ export async function executionScopeIsValid(id: string, proof: string) {
 }
 
 async function config(id: string) {
-  const { executionToolDefinitions } = await import("./tools.server");
+  const { executionToolDefinitions } = await import("./tool-definitions.server");
   const url = new URL(
     process.env.TWITTER_LITE_MCP_URL || `http://127.0.0.1:${process.env.PORT || 3000}/mcp`,
   );

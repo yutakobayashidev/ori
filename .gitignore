@@ -5,6 +5,7 @@
 !.env.example
 .output/
 .tanstack/
+.fallow/
 dist/
 node_modules/
 playwright-report/

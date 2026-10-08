@@ -40,20 +40,8 @@ export class HomePage {
   routineStep(name: string | RegExp) {
     return this.page.getByRole("checkbox", { name });
   }
-  completeTask(name: string) {
-    return this.page.getByRole("button", { name: `Complete ${name}`, exact: true });
-  }
   restoreTask(name: string) {
     return this.page.getByRole("button", { name: `Restore ${name}`, exact: true });
-  }
-  completedTask(name: string) {
-    return this.page.getByRole("button", { name: `${name} Completed`, exact: true });
-  }
-  conversation(name: string) {
-    return this.page.getByRole("link", { name: `Open conversation with ${name}` });
-  }
-  async openBriefConversation(name: string) {
-    await this.dailyBrief.getByRole("button", { name: `Reply to ${name}` }).click();
   }
   async previewCommand(command: string) {
     await this.input.fill(command);

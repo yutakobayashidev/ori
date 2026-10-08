@@ -1,0 +1,47 @@
+{
+  "$schema": "https://raw.githubusercontent.com/fallow-rs/fallow/v3.32.0/schema.json",
+  "entry": [
+    "playwright.config.ts",
+    "e2e/**/*.config.ts",
+    "e2e/**/*.{test,spec}.ts",
+    "e2e/mock-relay.mjs",
+    "e2e/fixtures/execution-runtime.mjs",
+    "public/sw.js",
+    "scripts/events-worker.ts",
+    "src/features/mcp-app/main.tsx",
+  ],
+  "ignoreFindings": ["e2e/generated/**"],
+  "ignoreExports": [
+    { "file": "src/components/ui/**", "exports": ["*"] },
+    // Called through the dynamically imported service passed to run() in server-functions.ts.
+    {
+      "file": "src/features/execution/service.server.ts",
+      "exports": ["followupActivityExecution", "stopActivityExecution", "answerActivityExecution"],
+    },
+    // Distinct server implementations and TanStack RPC wrappers intentionally share these names.
+    {
+      "file": "src/features/execution/app.server.ts",
+      "exports": ["loadExecutionApp", "callExecutionAppTool"],
+    },
+    // Each Playwright fixture module exports its own extended test function.
+    { "file": "e2e/*fixtures.ts", "exports": ["test"] },
+  ],
+  // Nitro is a production build plugin; React DOM is loaded by TanStack Start/chapplin.
+  // Axe is used only by the Playwright fixture, which fallow classifies as production code.
+  "ignoreDependencies": ["nitro", "react-dom", "@axe-core/playwright"],
+  "overrides": [
+    {
+      // Members are consumed through base.extend() in activity-fixtures.ts by the integration tests.
+      "files": ["e2e/models/ActivitiesPage.ts"],
+      "rules": { "unused-class-members": "off" },
+    },
+    {
+      // CallbackEndpointError.code is asserted structurally with toMatchObject() in events.test.ts.
+      "files": ["src/features/mcp-events/webhook.server.ts"],
+      "rules": { "unused-class-members": "off" },
+    },
+  ],
+  "rules": {
+    "circular-dependencies": "error",
+  },
+}
