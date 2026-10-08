@@ -120,6 +120,8 @@ it("fetches and paginates without a browser, temporary deck or accumulated resea
   expect(await createWorkspaceTools().execute("fetch_posts", { ...query, cursor: "next" })).toEqual(
     {
       ok: true,
+      column: { id: "source", title: "Source", ...query },
+      connectionLabel: "Account",
       posts: [
         {
           key: post.key,
@@ -270,4 +272,82 @@ it("does not expose user decisions or sending as publishable fields", async () =
   expect(
     tools.definitions.find(({ name }) => name === "publish_activities")?.annotations,
   ).toMatchObject({ readOnlyHint: false, openWorldHint: false });
+});
+
+it("persists widget activity decisions with the same revision and retry rules as the web app", async () => {
+  const tools = createWorkspaceTools();
+  await tools.execute("publish_activities", {
+    requestId: "proposal",
+    expectedRevision: 0,
+    activities: [
+      {
+        id: "widget-task",
+        kind: "task",
+        title: "Review plan",
+        nextAction: "Read the plan",
+        sources: [],
+      },
+    ],
+  });
+  const change = {
+    requestId: "widget-complete",
+    expectedRevision: 1,
+    id: "widget-task",
+    state: "completed",
+  };
+  const saved = await tools.execute("update_activity", change);
+  expect(saved).toMatchObject({ ok: true, revision: 2 });
+  expect(await tools.execute("update_activity", change)).toEqual(saved);
+  expect(await tools.execute("get_activity_context", {})).toMatchObject({
+    revision: 2,
+    activities: [expect.objectContaining({ id: "widget-task", userState: "completed" })],
+  });
+  expect(
+    await tools.execute("update_activity", { ...change, requestId: "stale", state: "available" }),
+  ).toMatchObject({ ok: false, error: { code: "revision-conflict" } });
+});
+
+it("continues a default-sized activity page using its original filter", async () => {
+  const tools = createWorkspaceTools();
+  const task = (id: string) => ({ id, kind: "task", title: id, nextAction: "Review", sources: [] });
+  await tools.execute("publish_activities", {
+    requestId: "first-page",
+    expectedRevision: 0,
+    activities: Array.from({ length: 50 }, (_, index) => task(`task-${index}`)),
+  });
+  await tools.execute("publish_activities", {
+    requestId: "last-page",
+    expectedRevision: 1,
+    activities: [task("task-50")],
+  });
+  const first = (await tools.execute("get_activity_context", {})) as {
+    activities: unknown[];
+    nextCursor: string;
+  };
+  expect(first.activities).toHaveLength(50);
+  expect(first.nextCursor).toEqual(expect.any(String));
+  const next = await tools.execute("get_activity_context", { limit: 50, cursor: first.nextCursor });
+  expect(next).toMatchObject({ ok: true, activities: [expect.any(Object)], nextCursor: null });
+});
+
+it("returns a normalized column for an Apps feed when Twitter defaults are omitted", async () => {
+  mocks.page.mockResolvedValue({ posts: [] });
+  expect(
+    await createWorkspaceTools().execute("fetch_posts", {
+      connectionId: "account",
+      source: { kind: "search", query: "WebMCP" },
+    }),
+  ).toMatchObject({
+    ok: true,
+    connectionLabel: "Account",
+    column: {
+      source: {
+        platform: "twitter",
+        kind: "search",
+        query: "WebMCP",
+        product: "Latest",
+        following: false,
+      },
+    },
+  });
 });

@@ -18,11 +18,11 @@ import {
   MessageScrollerViewport,
 } from "#/components/ui/message-scroller";
 import { ActivityControls, ActivityEditor, stateLabels } from "./activity-controls";
-import { useActivities } from "./activity-state";
+import { useActivityStore } from "./activity-store";
 import type { Activity } from "./model";
 
 export function ReplyActivityDetail({ activity }: { activity: Activity }) {
-  const { change, busy, revision, currentRevision } = useActivities();
+  const { change, busy, revision, currentRevision } = useActivityStore();
   const [editRevision, setEditRevision] = useState<number>();
   // undefined follows saved content; an empty string deliberately clears the draft.
   const [editedDraft, setEditedDraft] = useState<string>();

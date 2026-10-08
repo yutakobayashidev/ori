@@ -1,0 +1,40 @@
+diff --git a/dist/create-app-z5VFqGHD.js b/dist/create-app-z5VFqGHD.js
+index 761e8a38fa0d09ca00a6bf4b652b4b72f30cdc77..b6eab5238e75c65ef376571b9b5cf34f19f61d88 100644
+--- a/dist/create-app-z5VFqGHD.js
++++ b/dist/create-app-z5VFqGHD.js
+@@ -123,6 +123,9 @@ function createApp(config) {
+ 			toolResultSubscriber.dispose();
+ 			hostContextSubscriber.dispose();
+ 		});
++		hostContextSubscriber.emit(app.getHostContext());
++		toolInputSubscriber.emit({ arguments: window.openai.toolInput });
++		toolResultSubscriber.emit({ content: [], structuredContent: window.openai.toolOutput ?? undefined, _meta: window.openai.toolResponseMetadata ?? undefined });
+ 		return {
+ 			app,
+ 			subscribeHostContext: hostContextSubscriber.subscribe,
+@@ -160,18 +163,25 @@ function createApp(config) {
+ }
+ function createSubscriber() {
+ 	const handlers = /* @__PURE__ */ new Set();
++	let latest;
++	let emitted = false;
+ 	return {
+ 		subscribe: (handler) => {
+ 			handlers.add(handler);
++			if (emitted) handler(latest);
+ 			return () => {
+ 				handlers.delete(handler);
+ 			};
+ 		},
+ 		emit: (data) => {
++			latest = data;
++			emitted = true;
+ 			for (const handler of handlers) handler(data);
+ 		},
+ 		dispose: () => {
+ 			handlers.clear();
++			latest = undefined;
++			emitted = false;
+ 		}
+ 	};
+ }

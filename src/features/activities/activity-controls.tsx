@@ -2,7 +2,7 @@ import { useState } from "react";
 import { Button } from "#/components/ui/button";
 import { Input } from "#/components/ui/input";
 import { Textarea } from "#/components/ui/textarea";
-import { useActivities } from "./activity-state";
+import { useActivityStore } from "./activity-store";
 import type { Activity, ActivityOverrides, ActivityState } from "./model";
 
 export const stateLabels: Record<ActivityState, string> = {
@@ -15,7 +15,7 @@ export const stateLabels: Record<ActivityState, string> = {
 };
 
 export function ActivityFeedback() {
-  const { loading, error, refresh, retryPending } = useActivities();
+  const { loading, error, refresh, retryPending } = useActivityStore();
   if (loading)
     return (
       <div
@@ -40,7 +40,7 @@ export function ActivityFeedback() {
 }
 
 export function ActivityControls({ activity }: { activity: Activity }) {
-  const { change, busy } = useActivities();
+  const { change, busy } = useActivityStore();
   const setState = (state: ActivityState) => void change(activity.id, { state });
   return (
     <div className="mt-px-20 flex flex-wrap gap-px-8">
@@ -85,7 +85,7 @@ export function ActivityControls({ activity }: { activity: Activity }) {
 
 /** One editor for the shared action, regardless of which page opened it. */
 export function ActivityEditor({ activity }: { activity: Activity }) {
-  const { change, busy, revision, currentRevision } = useActivities();
+  const { change, busy, revision, currentRevision } = useActivityStore();
   const [editRevision, setEditRevision] = useState<number>();
   const [editing, setEditing] = useState(false);
   const [changedFields, setChangedFields] = useState<Set<keyof ActivityOverrides>>(new Set());

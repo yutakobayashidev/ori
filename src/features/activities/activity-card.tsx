@@ -1,4 +1,4 @@
-import { Link } from "@tanstack/react-router";
+import type { ReactNode } from "react";
 import { Check, ChevronDown, Circle, MessageCircle } from "lucide-react";
 import {
   ActivityControls,
@@ -6,19 +6,21 @@ import {
   ActivitySources,
   stateLabels,
 } from "./activity-controls";
-import { useActivities } from "./activity-state";
+import { useActivityStore } from "./activity-store";
 import type { Activity } from "./model";
 
 export function ActivityCard({
   activity,
   expanded,
   onToggle,
+  replyLink,
 }: {
   activity: Activity;
   expanded: boolean;
   onToggle: () => void;
+  replyLink?: ReactNode;
 }) {
-  const { busy, change } = useActivities();
+  const { busy, change } = useActivityStore();
   const item = activity.effective;
   return (
     <div
@@ -78,15 +80,7 @@ export function ActivityCard({
           {item.detail && (
             <p className="mt-3 whitespace-pre-wrap text-sm text-muted-foreground">{item.detail}</p>
           )}
-          {item.kind === "reply" && (
-            <Link
-              to="/support"
-              search={{ activity: activity.id, view: "all" }}
-              className="mt-4 inline-block text-sm underline underline-offset-4"
-            >
-              Review reply to {item.reply.recipientName}
-            </Link>
-          )}
+          {item.kind === "reply" && replyLink}
           <ActivityControls activity={activity} />
           <ActivityEditor activity={activity} />
           <ActivitySources activity={activity} />

@@ -7,30 +7,15 @@ import {
   useRef,
   useState,
 } from "react";
-import type { Activity, ActivityContext } from "./model";
+import type { ActivityContext } from "./model";
+import { ActivityStoreProvider, useActivityStore } from "./activity-store";
 import { changeActivity, createHomeActivity, loadActivities } from "./server-functions";
 
-type Changes = Omit<
-  Parameters<typeof changeActivity>[0]["data"],
-  "requestId" | "expectedRevision" | "id"
->;
 type NewTask = Omit<
   Parameters<typeof createHomeActivity>[0]["data"],
   "requestId" | "expectedRevision" | "id"
 >;
-type ActivityStore = {
-  revision: number;
-  currentRevision: () => number;
-  retryPending: (() => Promise<void>) | null;
-  activities: Activity[];
-  loading: boolean;
-  busy: boolean;
-  error: string;
-  refresh: () => Promise<boolean>;
-  change: (id: string, changes: Changes, expectedRevision?: number) => Promise<boolean>;
-  create: (task: NewTask) => Promise<boolean>;
-};
-const Context = createContext<ActivityStore | null>(null);
+const CreateContext = createContext<((task: NewTask) => Promise<boolean>) | null>(null);
 
 export function ActivityStateProvider({
   children,
@@ -122,7 +107,7 @@ export function ActivityStateProvider({
     });
   }
   return (
-    <Context.Provider
+    <ActivityStoreProvider
       value={{
         revision: snapshot?.revision ?? 0,
         currentRevision: () => revision.current,
@@ -141,7 +126,10 @@ export function ActivityStateProvider({
           };
           return mutate(() => changeActivity({ data }));
         },
-        create: (task) => {
+      }}
+    >
+      <CreateContext.Provider
+        value={(task) => {
           const data = {
             ...task,
             id: crypto.randomUUID(),
@@ -149,15 +137,16 @@ export function ActivityStateProvider({
             expectedRevision: revision.current,
           };
           return mutate(() => createHomeActivity({ data }));
-        },
-      }}
-    >
-      {children}
-    </Context.Provider>
+        }}
+      >
+        {children}
+      </CreateContext.Provider>
+    </ActivityStoreProvider>
   );
 }
 export function useActivities() {
-  const state = useContext(Context);
-  if (!state) throw new Error("ActivityStateProvider is required");
-  return state;
+  const state = useActivityStore();
+  const create = useContext(CreateContext);
+  if (!create) throw new Error("ActivityStateProvider is required");
+  return { ...state, create };
 }

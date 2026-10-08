@@ -96,3 +96,53 @@ it("marks unsuccessful tool execution as an MCP tool error", async () => {
   );
   expect(response.result.isError).toBe(true);
 });
+
+it("advertises an embedded UI and structured results only for workspace tools", async () => {
+  const catalog = await rpc(await handleMcpRequest(request("tools/list")));
+  const activity = catalog.result.tools.find(
+    (tool: { name: string }) => tool.name === "get_activity_context",
+  );
+  const uri = activity._meta.ui.resourceUri;
+  expect(
+    catalog.result.tools.find((tool: { name: string }) => tool.name === "update_activity")._meta.ui
+      .visibility,
+  ).toEqual(["app"]);
+  const resources = await rpc(await handleMcpRequest(request("resources/list")));
+  expect(resources.result.resources).toEqual(
+    expect.arrayContaining([
+      expect.objectContaining({ uri, mimeType: "text/html;profile=mcp-app" }),
+    ]),
+  );
+  const read = await rpc(await handleMcpRequest(request("resources/read", { uri })));
+  expect(read.result.contents[0].text).toContain('<div id="root">');
+  expect(read.result.contents[0]._meta.ui.csp.connectDomains).toEqual([]);
+  const missing = await rpc(
+    await handleMcpRequest(
+      request("resources/read", { uri: "ui://personal-workspace/missing.html" }),
+    ),
+  );
+  expect(missing).toHaveProperty("error.message");
+  expect(missing).not.toHaveProperty("result");
+  const failure = await rpc(
+    await handleMcpRequest(request("tools/call", { name: "get_deck", arguments: {} })),
+  );
+  expect(failure.result.structuredContent).toEqual(JSON.parse(failure.result.content[0].text));
+  expect(failure.result._meta.workspace).toEqual({ toolName: "get_deck", toolArguments: {} });
+
+  const research = registerResearchTools({
+    definitions: [{ name: "get_deck", description: "Scoped", inputSchema: {} }],
+    execute: async () => ({ ok: true }),
+  });
+  try {
+    const tools = await rpc(
+      await handleMcpRequest(request("tools/list", {}, `?research=${research.id}`)),
+    );
+    expect(tools.result.tools[0]).not.toHaveProperty("_meta");
+    const scoped = await rpc(
+      await handleMcpRequest(request("resources/list", {}, `?research=${research.id}`)),
+    );
+    expect(scoped.error).toBeDefined();
+  } finally {
+    research.dispose();
+  }
+});

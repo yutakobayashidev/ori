@@ -34,7 +34,8 @@ definition. Creation and deletion do not change another browser's selection;
 saved definitions refresh through the existing UI mechanism.
 
 Post retrieval returns up to 20 text records, source URLs, author information,
-and a continuation cursor. Reuse a cursor only with its original source/account.
+the normalized column, connection display name, and a continuation cursor.
+Reuse a cursor only with its original source/account.
 External tools are stateless and do not share the internal research turn's
 12-request budget. No tool writes to an SNS account. Tool failures return
 `isError: true` and a structured error in text content.
@@ -50,6 +51,66 @@ make no changes. Browser clients refresh on committed changes through the
 session-protected `/api/activities/events` stream. Reconnection also refreshes
 the saved snapshot. Source excerpts are supplied evidence, not a full synced
 conversation. Publishing a reply neither sends it nor marks it complete.
+
+## MCP Apps UI
+
+The workspace endpoint also serves an embedded MCP Apps resource. ChatGPT can
+render it through the existing Secure MCP Tunnel; no additional listener, public
+asset host, or browser session is needed. Restart/deploy the app, refresh the
+custom MCP connection in ChatGPT, and invoke one of these tools:
+
+| Tool                                      | Shared UI                                                                 |
+| ----------------------------------------- | ------------------------------------------------------------------------- |
+| `get_activity_context`                    | Activity cards, controls, editing, source excerpts and reply draft detail |
+| `get_deck`, `create_deck`, `replace_deck` | Research columns that fetch their posts through MCP                       |
+| `fetch_posts`, `fetch_column_posts`       | Research post cards, pagination and refresh                               |
+
+The UI imports the same `ResearchColumnView`, `ResearchPostCard`, `ActivityCard`,
+`ActivityControls`, `ActivityEditor`, and `ReplyActivityDetail` used by the web
+app, including shared UI primitives and `src/styles.css`. Web query hooks,
+TanStack server functions, router navigation and SSE stay outside the iframe.
+Apps use the Chapplin React bridge to call MCP tools. Theme tokens adapt to the
+host's light/dark mode. The current post contract remains text-only, with source
+links and content warnings; avatars, remote media and HTML are not added to MCP
+results. The resource permits no external asset or network domains.
+
+`update_activity` accepts the existing `updateActivityUserInput` contract:
+`requestId`, `expectedRevision`, `id`, and state/override changes. It is marked
+with `ui.visibility: ["app"]` for component use, and applies the same repository
+rules as the web UI. Exact retries are idempotent, stale edits are rejected, and
+reply completion is still prohibited until actual sending is implemented. App
+visibility is a host discovery hint, not an authentication boundary; the private
+network/tunnel access boundary remains essential. Draft saves never send messages.
+
+`scripts/mcp-app-plugin.ts` builds the iframe as one HTML document and embeds it
+in the server bundle via `virtual:workspace-mcp-app`. Normal `pnpm dev` and
+`pnpm build` handle this automatically. The server stays on
+`@modelcontextprotocol/server` v2; Chapplin's v1 `register(server)` generator
+and SSR plugin are not installed into the TanStack/Nitro build. UI metadata and
+resources apply only to the workspace catalog, not temporary research sessions.
+All workspace tools now also return `structuredContent`; existing text results
+and events remain available.
+
+Chapplin 1.3.1 has a local pnpm patch in `patches/`: it delivers initial
+`window.openai` values and retains the latest notification until React
+subscribes. Without it, an already-completed tool result can leave the app on its
+loading skeleton. Recheck both bridge tests before removing the patch on upgrade.
+
+Verification:
+
+```sh
+nix develop -c pnpm test
+nix develop -c pnpm typecheck
+nix develop -c pnpm build
+nix develop -c pnpm test:e2e e2e/integrations/mcp-app.test.ts e2e/integrations/mcp-app-research.test.ts e2e/integrations/mcp-http.test.ts
+```
+
+Browser tests read the actual bundled resource through `/mcp`, render it in an
+iframe, and bridge UI actions back to the real server. They cover initial
+ChatGPT globals, standard MCP Apps postMessage initialization, activity edits,
+reply draft persistence, post pagination, refresh and host theme changes. They
+simulate the host; a live ChatGPT connection must still be refreshed and checked
+after deployment.
 
 ## Internal research
 

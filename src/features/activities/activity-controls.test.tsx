@@ -4,12 +4,12 @@ import { ActivityEditor } from "./activity-controls";
 import type { Activity } from "./model";
 
 const store = vi.hoisted(() => ({
-  change: vi.fn<ReturnType<typeof import("./activity-state").useActivities>["change"]>(),
+  change: vi.fn<ReturnType<typeof import("./activity-store").useActivityStore>["change"]>(),
   busy: false,
   revision: 7,
   currentRevision: () => store.revision,
 }));
-vi.mock("./activity-state", () => ({ useActivities: () => store }));
+vi.mock("./activity-store", () => ({ useActivityStore: () => store }));
 const activity: Activity = {
   id: "review-materials",
   proposal: {

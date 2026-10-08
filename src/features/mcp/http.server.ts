@@ -6,6 +6,8 @@ import {
   type ToolAnnotations,
 } from "@modelcontextprotocol/server";
 import { z } from "zod";
+import appHtml from "virtual:workspace-mcp-app";
+import { workspaceAppResource, workspaceAppToolMeta, workspaceAppResultMeta } from "./app-resource";
 import {
   identitySchema,
   listMcpEvents,
@@ -39,9 +41,15 @@ export function registerResearchTools(tools: Tools) {
 }
 
 function serverFor(tools: Tools, workspace: boolean) {
-  const capabilities = { tools: {}, ...(workspace ? { events: {} } : {}) };
+  const capabilities = { tools: {}, ...(workspace ? { events: {}, resources: {} } : {}) };
   const server = new Server({ name: "personal-workspace", version: "1.0.0" }, { capabilities });
   if (workspace) {
+    server.setRequestHandler("resources/list", () => ({ resources: [workspaceAppResource] }));
+    server.setRequestHandler("resources/read", ({ params }) => {
+      if (params.uri !== workspaceAppResource.uri)
+        throw new ProtocolError(-32002, "Resource not found.");
+      return { contents: [{ ...workspaceAppResource, text: appHtml }] };
+    });
     server.setRequestHandler(
       "events/list",
       { params: z.object({ cursor: z.null().optional() }).default({}) },
@@ -67,6 +75,7 @@ function serverFor(tools: Tools, workspace: boolean) {
   server.setRequestHandler("tools/list", () => ({
     tools: tools.definitions.map((tool) => ({
       ...tool,
+      ...(workspace ? { _meta: workspaceAppToolMeta(tool.name) } : {}),
       inputSchema: { ...tool.inputSchema, type: "object" as const },
     })),
   }));
@@ -74,6 +83,12 @@ function serverFor(tools: Tools, workspace: boolean) {
     const result = await tools.execute(params.name, params.arguments ?? {});
     return {
       content: [{ type: "text" as const, text: JSON.stringify(result) }],
+      ...(workspace && result && typeof result === "object"
+        ? {
+            structuredContent: result as Record<string, unknown>,
+            _meta: workspaceAppResultMeta(params.name, params.arguments ?? {}),
+          }
+        : {}),
       isError: !(result && typeof result === "object" && "ok" in result && result.ok === true),
     };
   });

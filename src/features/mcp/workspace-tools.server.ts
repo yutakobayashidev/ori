@@ -4,11 +4,16 @@ import {
   listBeeperChatsInput,
   readBeeperChatInput,
 } from "../beeper/adapter.server";
-import { getActivityContextInput, publishActivitiesInput } from "../activities/model";
+import {
+  getActivityContextInput,
+  publishActivitiesInput,
+  updateActivityUserInput,
+} from "../activities/model";
 import {
   ActivityPersistenceError,
   getActivityContext,
   publishActivities,
+  updateActivityUser,
 } from "../activities/repository.server";
 import { listConnections } from "../connections/repository.server";
 import { columnSchema, type DeckColumn } from "../decks/model";
@@ -44,6 +49,12 @@ const sourceInput = listInput.extend({
 });
 const columnInput = getInput.extend({ columnId: deckId, cursor });
 const specs = [
+  {
+    name: "update_activity",
+    description:
+      "Save a user's activity decision or edit from the workspace UI. Requires the current revision and a stable requestId for retries. Reply completion remains enforced by the shared activity service. Never sends a message.",
+    schema: updateActivityUserInput,
+  },
   {
     name: "list_beeper_chats",
     description:
@@ -135,11 +146,17 @@ export function createWorkspaceTools() {
       annotations: {
         readOnlyHint: ![
           "publish_activities",
+          "update_activity",
           "create_deck",
           "replace_deck",
           "delete_deck",
         ].includes(name),
-        destructiveHint: ["publish_activities", "replace_deck", "delete_deck"].includes(name),
+        destructiveHint: [
+          "publish_activities",
+          "update_activity",
+          "replace_deck",
+          "delete_deck",
+        ].includes(name),
         openWorldHint: [
           "list_beeper_chats",
           "read_beeper_chat",
@@ -156,6 +173,7 @@ export function createWorkspaceTools() {
         if (!spec) return failure("unknown-tool", "This workspace tool is not available.");
         if (name === "get_activity_context") return getActivityContext(args);
         if (name === "publish_activities") return publishActivities(args);
+        if (name === "update_activity") return updateActivityUser(args);
         spec.schema.parse(args);
         if (name === "list_beeper_chats" || name === "read_beeper_chat") {
           try {
@@ -256,20 +274,21 @@ export function createWorkspaceTools() {
           };
         }
         const { connections } = await listConnections();
-        if (
-          !connections.some(
-            (connection) =>
-              connection.id === column.connectionId &&
-              connection.platform === column.source.platform &&
-              connection.status === "connected",
-          )
-        )
+        const connection = connections.find(
+          (connection) =>
+            connection.id === column.connectionId &&
+            connection.platform === column.source.platform &&
+            connection.status === "connected",
+        );
+        if (!connection)
           return failure("account-unavailable", "Choose a connected account matching this source.");
         const page = await fetchPage(column, pageCursor);
         const nextCursor =
           page.nextCursor && page.nextCursor !== pageCursor ? page.nextCursor : null;
         return {
           ok: true,
+          column,
+          connectionLabel: connection.displayName,
           posts: page.posts.slice(0, 20).map(publicPost),
           nextCursor,
           hasMore: nextCursor !== null,
@@ -288,7 +307,7 @@ export function createWorkspaceTools() {
         if (error instanceof SourceFailure || error instanceof MastodonFeedError)
           return failure(error.code, "The selected source could not be loaded.");
         return failure(
-          ["get_activity_context", "publish_activities"].includes(name)
+          ["get_activity_context", "publish_activities", "update_activity"].includes(name)
             ? "internal-error"
             : "operation-failed",
           "The workspace could not complete this request. No internal diagnostic details are exposed.",

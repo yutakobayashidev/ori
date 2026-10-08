@@ -1,3 +1,4 @@
+import { Link } from "@tanstack/react-router";
 import {
   ArrowDown,
   ArrowUp,
@@ -71,6 +72,17 @@ export function ExecutionWorkbench({ selectedId, onSelect }: ExecutionWorkbenchP
                   activity={activity}
                   expanded={selectedId === activity.id}
                   onToggle={() => toggle(activity.id)}
+                  replyLink={
+                    activity.effective.kind === "reply" ? (
+                      <Link
+                        to="/support"
+                        search={{ activity: activity.id, view: "all" }}
+                        className="mt-4 inline-block text-sm underline underline-offset-4"
+                      >
+                        Review reply to {activity.effective.reply.recipientName}
+                      </Link>
+                    ) : undefined
+                  }
                 />
               ))}
             {tasks
