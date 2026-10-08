@@ -1,5 +1,6 @@
 import { useEffect, useRef, useState } from "react";
 import { ExecutionQuestions } from "./execution-questions";
+import { artifactLink } from "./artifact-link";
 import { Sparkles } from "lucide-react";
 import { Button } from "#/components/ui/button";
 import { Textarea } from "#/components/ui/textarea";
@@ -171,6 +172,7 @@ export function ExecutionDetail({ activity }: { activity: Activity }) {
                         {message.role === "assistant" ? (
                           <ResearchMarkdown
                             text={message.text}
+                            resolveLink={(href) => artifactLink(run, href)}
                             isAnimating={
                               run.status === "running" && index === run.messages.length - 1
                             }

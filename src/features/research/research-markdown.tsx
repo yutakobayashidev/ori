@@ -15,10 +15,12 @@ export function ResearchMarkdown({
   text,
   isAnimating = false,
   onNavigateCitation,
+  resolveLink,
 }: {
   text: string;
   isAnimating?: boolean;
   onNavigateCitation?: (url: string) => boolean;
+  resolveLink?: (url: string) => string | undefined;
 }) {
   return (
     <div
@@ -31,7 +33,7 @@ export function ResearchMarkdown({
         animated
         controls={false}
         rehypePlugins={[]}
-        urlTransform={safeUrl}
+        urlTransform={(url) => safeUrl(resolveLink ? (resolveLink(url) ?? "") : url)}
         remarkPlugins={[remarkGfm]}
         skipHtml
         components={{
@@ -73,29 +75,32 @@ export function ResearchMarkdown({
           h6: ({ children }) => (
             <h6 className="mt-3.5 mb-1.5 text-research-body font-semibold">{children}</h6>
           ),
-          a: ({ href, children, title }) => (
-            <a
-              className="text-primary underline underline-offset-2"
-              href={href}
-              title={title}
-              target="_blank"
-              rel="noopener noreferrer"
-              onClick={(event) => {
-                if (
-                  href &&
-                  event.button === 0 &&
-                  !event.ctrlKey &&
-                  !event.metaKey &&
-                  !event.shiftKey &&
-                  !event.altKey &&
-                  onNavigateCitation?.(href)
-                )
-                  event.preventDefault();
-              }}
-            >
-              {children}
-            </a>
-          ),
+          a: ({ href, children, title }) =>
+            href ? (
+              <a
+                className="text-primary underline underline-offset-2"
+                href={href}
+                title={title}
+                target="_blank"
+                rel="noopener noreferrer"
+                onClick={(event) => {
+                  if (
+                    href &&
+                    event.button === 0 &&
+                    !event.ctrlKey &&
+                    !event.metaKey &&
+                    !event.shiftKey &&
+                    !event.altKey &&
+                    onNavigateCitation?.(href)
+                  )
+                    event.preventDefault();
+                }}
+              >
+                {children}
+              </a>
+            ) : (
+              <span>{children}</span>
+            ),
           img: ({ src, alt }) =>
             typeof src === "string" && src ? (
               <a

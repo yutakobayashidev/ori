@@ -31,7 +31,7 @@ it("blocks raw HTML and unsafe URLs without loading remote images", () => {
   );
   expect(container.querySelector("script")).toBeNull();
   expect(container.querySelector("img")).toBeNull();
-  expect(screen.getByText("危険").getAttribute("href")).not.toMatch(/^javascript:/);
+  expect(screen.getByText("危険").getAttribute("href") ?? "").not.toMatch(/^javascript:/);
   expect(screen.getByRole("link", { name: "画像の説明" })).toHaveAttribute(
     "href",
     "https://example.com/pixel.png",
