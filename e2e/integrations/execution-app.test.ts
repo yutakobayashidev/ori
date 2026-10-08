@@ -18,6 +18,10 @@ test("opens a right Sheet and edits a persisted reply card through the real AppB
   await expect(page.locator('[data-slot="dialog-content"]')).toHaveCount(0);
   const frame = page.frameLocator('iframe[title="Task and reply draft workspace"]');
   await expect(frame.getByRole("heading", { name: "Activities", exact: true })).toBeVisible();
+  const composer = page.getByRole("textbox", { name: "Follow-up instructions" });
+  await expect(composer).toBeInViewport({ ratio: 1 });
+  await expect(page.getByRole("button", { name: "Send follow-up" })).toBeInViewport({ ratio: 1 });
+  const initialComposerBounds = await composer.boundingBox();
   const resourceRequest = await appRequest;
   const resourceUrl = resourceRequest.url();
   const sessionlessHeaders = await resourceRequest.allHeaders();
@@ -52,6 +56,12 @@ test("opens a right Sheet and edits a persisted reply card through the real AppB
     .toBe("Thursday at 14:00 works for me. I will review the materials beforehand.");
   await frame.getByRole("button", { name: "Waiting", exact: true }).click();
   await expect(page.getByRole("combobox", { name: "Status", exact: true })).toHaveValue("waiting");
+  const conversation = page.getByRole("log", { name: "Execution conversation" });
+  await conversation.evaluate((element) => element.scrollTo(0, element.scrollHeight));
+  await expect(composer).toBeInViewport({ ratio: 1 });
+  await conversation.evaluate((element) => element.scrollTo(0, 0));
+  await expect(composer).toBeInViewport({ ratio: 1 });
+  expect((await composer.boundingBox())?.y).toBeCloseTo(initialComposerBounds?.y ?? -1, 0);
   await page.reload();
   await expect(sheet).toBeVisible();
   await frame.getByRole("button", { name: /Propose review times/ }).click();
@@ -71,4 +81,22 @@ test("opens a right Sheet and edits a persisted reply card through the real AppB
       .getByRole("button", { name: /Propose review times/ }),
   ).toBeVisible();
   expect(errors).toEqual([]);
+});
+
+test("keeps the initial delegation composer visible in the Sheet", async ({
+  page,
+  activityMcp,
+}, testInfo) => {
+  await activityMcp.publish();
+  await page.goto("/board?activity=buy-detergent");
+  const composer = page.getByRole("textbox", { name: "Work to delegate" });
+  await expect(composer).toHaveValue("Buy one refill of the usual detergent");
+  await expect(composer).toBeInViewport({ ratio: 1 });
+  await expect(page.getByRole("button", { name: "Hand off to AI" })).toBeEnabled();
+  await expect(page.getByRole("button", { name: "Hand off to AI" })).toBeInViewport({ ratio: 1 });
+  await expect(page.getByText("AI workspace", { exact: true })).toHaveCount(0);
+  await page.screenshot({
+    path: `/tmp/workspace-sheet-initial-${testInfo.project.name}.png`,
+    fullPage: true,
+  });
 });

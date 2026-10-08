@@ -157,41 +157,47 @@ export function BoardPage() {
         >
           <SheetContent
             side="right"
-            className="overflow-y-auto data-[side=right]:w-full data-[side=right]:sm:max-w-3xl"
+            className="overflow-hidden data-[side=right]:w-full data-[side=right]:sm:max-w-3xl"
           >
             {selected && (
-              <div className="grid gap-4 p-6 pt-12">
-                <SheetTitle>{selected.effective.title}</SheetTitle>
-                <p className="text-muted-foreground">{selected.effective.nextAction}</p>
-                {selected.effective.detail && (
-                  <p className="whitespace-pre-wrap">{selected.effective.detail}</p>
-                )}
-                <label className="flex items-center gap-3 text-sm">
-                  Status
-                  <select
-                    className="rounded-md border bg-background p-2"
-                    value={selected.userState}
-                    disabled={store.busy}
-                    onChange={(event) =>
-                      void store.change(selected.id, { state: event.target.value as ActivityState })
-                    }
-                  >
-                    {columns.map((column) => (
-                      <option key={column.state} value={column.state}>
-                        {column.label}
-                      </option>
-                    ))}
-                  </select>
-                </label>
-                {selected.effective.kind === "reply" && (
-                  <Link
-                    className="text-sm underline underline-offset-4"
-                    to="/support"
-                    search={{ activity: selected.id, view: "all" }}
-                  >
-                    Open reply in Messages
-                  </Link>
-                )}
+              <div className="flex min-h-0 flex-1 flex-col">
+                <div className="grid max-h-[30dvh] shrink-0 gap-3 overflow-y-auto border-b px-4 py-5 pr-12 sm:px-6 sm:pr-12">
+                  <SheetTitle>{selected.effective.title}</SheetTitle>
+                  <p className="text-sm text-muted-foreground">{selected.effective.nextAction}</p>
+                  {selected.effective.detail && (
+                    <p className="whitespace-pre-wrap">{selected.effective.detail}</p>
+                  )}
+                  <div className="flex flex-wrap items-center gap-x-4 gap-y-2">
+                    <label className="flex items-center gap-2 text-xs text-muted-foreground">
+                      Status
+                      <select
+                        className="rounded-md border bg-background px-2 py-1 text-foreground"
+                        value={selected.userState}
+                        disabled={store.busy}
+                        onChange={(event) =>
+                          void store.change(selected.id, {
+                            state: event.target.value as ActivityState,
+                          })
+                        }
+                      >
+                        {columns.map((column) => (
+                          <option key={column.state} value={column.state}>
+                            {column.label}
+                          </option>
+                        ))}
+                      </select>
+                    </label>
+                    {selected.effective.kind === "reply" && (
+                      <Link
+                        className="text-xs text-muted-foreground underline underline-offset-4"
+                        to="/support"
+                        search={{ activity: selected.id, view: "all" }}
+                      >
+                        Open reply in Messages
+                      </Link>
+                    )}
+                  </div>
+                </div>
                 <ExecutionDetail key={selected.id} activity={selected} />
               </div>
             )}

@@ -2,9 +2,11 @@ import { Fragment, useEffect, useRef, useState } from "react";
 import { ExecutionToolResult } from "./execution-app";
 import { ExecutionQuestions } from "./execution-questions";
 import { artifactLink } from "./artifact-link";
-import { Sparkles } from "lucide-react";
-import { Button } from "#/components/ui/button";
-import { Textarea } from "#/components/ui/textarea";
+import { DownloadIcon } from "lucide-react";
+import { Bubble, BubbleContent } from "#/components/ui/bubble";
+import { Message, MessageContent } from "#/components/ui/message";
+import { Empty, EmptyHeader, EmptyTitle, EmptyDescription } from "#/components/ui/empty";
+import { ExecutionComposer } from "./execution-composer";
 import {
   MessageScroller,
   MessageScrollerButton,
@@ -95,7 +97,10 @@ export function ExecutionDetail({ activity }: { activity: Activity }) {
       events.close();
     };
   }, [runId, runStatus]);
-  async function perform(action: () => Promise<{ ok: boolean; error?: { message: string } }>) {
+  async function perform(
+    action: () => Promise<{ ok: boolean; error?: { message: string } }>,
+    sent = false,
+  ) {
     setBusy(true);
     setError("");
     try {
@@ -107,81 +112,80 @@ export function ExecutionDetail({ activity }: { activity: Activity }) {
       pending.current = null;
       const latest = await listExecutions();
       if (latest.ok) setRuns(latest.runs ?? []);
-      setText("");
+      if (sent) setText((current) => (current === text ? "" : current));
     } catch {
       setError("Could not confirm this request. Refresh the session before trying again.");
     } finally {
       setBusy(false);
     }
   }
+  const active = !!run && ["queued", "running", "waiting_input"].includes(run.status);
+  const status = run
+    ? {
+        queued: "Queued",
+        running: "Working…",
+        waiting_input: "Your input is needed",
+        review: "Ready for review",
+        failed: "Could not finish",
+        cancelled: "Stopped",
+        interrupted: "Interrupted",
+      }[run.status]
+    : "";
   return (
-    <section className="mt-4 border-t pt-5" aria-label="AI session">
-      <h2 className="mb-3 flex items-center gap-2 font-medium">
-        <Sparkles className="size-4" />
-        AI workspace
-        {run && (
-          <span className="ml-auto rounded-md bg-muted px-2 py-1 text-xs">
-            {run.status.replaceAll("_", " ")}
+    <section className="flex min-h-0 flex-1 flex-col" aria-label="AI session">
+      {run && (
+        <div className="flex shrink-0 items-center justify-between px-4 pt-4 sm:px-6">
+          <h2 className="text-sm font-medium">Conversation</h2>
+          <span role="status" className="text-xs text-muted-foreground">
+            {status}
           </span>
-        )}
-      </h2>
+        </div>
+      )}
       {error && (
-        <p role="alert" className="mb-3 text-sm text-destructive">
+        <p role="alert" className="px-4 pt-3 text-sm text-destructive sm:px-6">
           {error}
         </p>
       )}
       {!run ? (
-        <form
-          onSubmit={(event) => {
-            event.preventDefault();
-            void perform(() =>
-              handoffActivity({
-                data: {
-                  activityId: activity.id,
-                  requestId: requestId("handoff:" + instructions),
-                  instructions,
-                },
-              }),
-            );
-          }}
-        >
-          <label className="text-sm" htmlFor="handoff-instructions">
-            Instructions and expected outcome
-          </label>
-          <Textarea
-            id="handoff-instructions"
-            className="my-3 min-h-28"
-            value={instructions}
-            onChange={(event) => setInstructions(event.target.value)}
-          />
-          <Button type="submit" disabled={busy || !loaded || !instructions.trim()}>
-            Hand off to AI
-          </Button>
-        </form>
+        <div className="flex min-h-0 flex-1 overflow-y-auto px-6">
+          <Empty>
+            <EmptyHeader>
+              <EmptyTitle>
+                {loaded ? "How can I help with this task?" : "Loading conversation…"}
+              </EmptyTitle>
+              <EmptyDescription>
+                Research, prepare a draft, or work through the next step together.
+              </EmptyDescription>
+            </EmptyHeader>
+          </Empty>
+        </div>
       ) : (
-        <>
-          <div className="rounded-xl border bg-muted/20">
-            <MessageScrollerProvider>
-              <MessageScroller className="h-[min(55dvh,42rem)]">
-                <MessageScrollerViewport role="log" aria-label="Execution conversation">
-                  <MessageScrollerContent className="p-4">
-                    {run.toolCalls
-                      .filter(
-                        (call) =>
-                          !call.afterMessageId ||
-                          !run.messages.some((message) => message.id === call.afterMessageId),
-                      )
-                      .map((call) => (
-                        <MessageScrollerItem key={call.id} messageId={`tool:${call.id}`}>
-                          <ExecutionToolResult runId={run.id} call={call} />
-                        </MessageScrollerItem>
-                      ))}
-                    {run.messages.map((message, index) => (
-                      <Fragment key={message.id}>
-                        <MessageScrollerItem messageId={message.id}>
-                          <p className="mb-1 text-xs font-medium text-muted-foreground">
-                            {message.role === "user" ? "You" : "AI"}
-                          </p>
+        <MessageScrollerProvider autoScroll>
+          <MessageScroller className="flex-1">
+            <MessageScrollerViewport role="log" aria-label="Execution conversation">
+              <MessageScrollerContent className="p-4">
+                {run.toolCalls
+                  .filter(
+                    (call) =>
+                      !call.afterMessageId ||
+                      !run.messages.some((message) => message.id === call.afterMessageId),
+                  )
+                  .map((call) => (
+                    <MessageScrollerItem key={call.id} messageId={`tool:${call.id}`}>
+                      <ExecutionToolResult runId={run.id} call={call} />
+                    </MessageScrollerItem>
+                  ))}
+                {run.messages.map((message, index) => (
+                  <Fragment key={message.id}>
+                    <MessageScrollerItem
+                      messageId={message.id}
+                      scrollAnchor={message.role === "user"}
+                    >
+                      <Message align={message.role === "user" ? "end" : "start"}>
+                        <MessageContent>
+                          <span className="sr-only">
+                            {message.role === "user" ? "You" : "Codex"}
+                          </span>
                           {message.role === "assistant" ? (
                             <ResearchMarkdown
                               text={message.text}
@@ -191,121 +195,108 @@ export function ExecutionDetail({ activity }: { activity: Activity }) {
                               }
                             />
                           ) : (
-                            <p className="whitespace-pre-wrap break-words text-sm leading-6">
-                              {index === 0 && run.handoff
-                                ? [run.handoff.instructions, run.handoff.completionCriteria]
-                                    .filter(Boolean)
-                                    .join("\n\n")
-                                : message.text}
-                            </p>
+                            <Bubble align="end" variant="muted">
+                              <BubbleContent>
+                                <p className="whitespace-pre-wrap">
+                                  {index === 0 && run.handoff
+                                    ? [run.handoff.instructions, run.handoff.completionCriteria]
+                                        .filter(Boolean)
+                                        .join("\n\n")
+                                    : message.text}
+                                </p>
+                              </BubbleContent>
+                            </Bubble>
                           )}
+                        </MessageContent>
+                      </Message>
+                    </MessageScrollerItem>
+                    {run.toolCalls
+                      .filter((call) => call.afterMessageId === message.id)
+                      .map((call) => (
+                        <MessageScrollerItem key={call.id} messageId={`tool:${call.id}`}>
+                          <ExecutionToolResult runId={run.id} call={call} />
                         </MessageScrollerItem>
-                        {run.toolCalls
-                          .filter((call) => call.afterMessageId === message.id)
-                          .map((call) => (
-                            <MessageScrollerItem key={call.id} messageId={`tool:${call.id}`}>
-                              <ExecutionToolResult runId={run.id} call={call} />
-                            </MessageScrollerItem>
-                          ))}
-                      </Fragment>
-                    ))}
-                    {run.messages.length === 0 && (
-                      <p className="text-sm text-muted-foreground">
-                        Waiting for the session to start.
-                      </p>
-                    )}
-                  </MessageScrollerContent>
-                </MessageScrollerViewport>
-                <MessageScrollerButton />
-              </MessageScroller>
-            </MessageScrollerProvider>
-          </div>
-          {run.error && (
-            <p role="alert" className="my-3 text-sm text-destructive">
-              {run.error}
-            </p>
-          )}
-          {run.status === "waiting_input" && run.pendingInput && (
-            <ExecutionQuestions
-              key={String(run.pendingInput.requestId)}
-              input={run.pendingInput}
-              busy={busy}
-              submit={(answers) =>
-                void perform(() =>
-                  answerExecution({
-                    data: { id: run.id, requestId: run.pendingInput?.requestId ?? "", answers },
-                  }),
-                )
-              }
-            />
-          )}
-          {!!run.artifacts?.length && (
-            <div className="my-3">
-              <h3 className="mb-2 text-sm font-medium">Artifacts</h3>
-              {run.artifacts.map((artifact) => (
-                <div key={artifact.path} className="rounded-lg border p-3 text-sm">
-                  <a
-                    className="underline"
-                    href={
-                      "/api/execution/artifacts?" +
-                      new URLSearchParams({ id: run.id, path: artifact.path })
+                      ))}
+                  </Fragment>
+                ))}
+                {run.error && (
+                  <p role="alert" className="text-sm text-destructive">
+                    {run.error}
+                  </p>
+                )}
+                {run.status === "waiting_input" && run.pendingInput && (
+                  <ExecutionQuestions
+                    key={String(run.pendingInput.requestId)}
+                    input={run.pendingInput}
+                    busy={busy}
+                    submit={(answers) =>
+                      void perform(() =>
+                        answerExecution({
+                          data: {
+                            id: run.id,
+                            requestId: run.pendingInput?.requestId ?? "",
+                            answers,
+                          },
+                        }),
+                      )
                     }
-                    download
-                  >
-                    {artifact.path.split("/").at(-1)}
-                  </a>
-                  <code className="block break-all text-xs text-muted-foreground">
-                    {artifact.path}
-                  </code>
-                </div>
-              ))}
-            </div>
-          )}
-          <form
-            className="mt-3"
-            onSubmit={(event) => {
-              event.preventDefault();
-              void perform(() =>
-                followupExecution({
-                  data: {
-                    id: run.id,
-                    requestId: requestId("followup:" + run.id + ":" + text),
-                    text,
-                  },
-                }),
-              );
-            }}
-          >
-            <Textarea
-              aria-label="Follow-up instructions"
-              placeholder="Add context, answer a question, or request a revision…"
-              value={text}
-              onChange={(event) => setText(event.target.value)}
-            />
-            <div className="mt-3 flex justify-between gap-3">
-              {["queued", "running", "waiting_input"].includes(run.status) && (
-                <Button
-                  type="button"
-                  variant="outline"
-                  disabled={busy}
-                  onClick={() => void perform(() => stopExecution({ data: { id: run.id } }))}
-                >
-                  Stop
-                </Button>
-              )}
-              <Button
-                type="submit"
-                className="ml-auto"
-                disabled={
-                  busy || !text.trim() || run.status === "running" || run.status === "queued"
-                }
-              >
-                Send follow-up
-              </Button>
-            </div>
-          </form>
-        </>
+                  />
+                )}
+                {!!run.artifacts.length && (
+                  <div className="flex flex-wrap gap-2" aria-label="Artifacts">
+                    {run.artifacts.map((artifact) => (
+                      <a
+                        key={artifact.path}
+                        className="flex min-w-0 items-center gap-2 rounded-lg border px-3 py-2 text-sm hover:bg-muted"
+                        href={
+                          "/api/execution/artifacts?" +
+                          new URLSearchParams({ id: run.id, path: artifact.path })
+                        }
+                        download
+                        title={artifact.path}
+                      >
+                        <DownloadIcon className="size-4 shrink-0" />
+                        <span className="truncate">{artifact.path.split("/").at(-1)}</span>
+                      </a>
+                    ))}
+                  </div>
+                )}
+              </MessageScrollerContent>
+            </MessageScrollerViewport>
+            <MessageScrollerButton />
+          </MessageScroller>
+        </MessageScrollerProvider>
       )}
+      <ExecutionComposer
+        value={run ? text : instructions}
+        onChange={run ? setText : setInstructions}
+        initial={!run}
+        active={active}
+        disabled={!loaded}
+        busy={busy}
+        onStop={run ? () => void perform(() => stopExecution({ data: { id: run.id } })) : undefined}
+        onSend={() =>
+          void perform(
+            () =>
+              run
+                ? followupExecution({
+                    data: {
+                      id: run.id,
+                      requestId: requestId("followup:" + run.id + ":" + text),
+                      text,
+                    },
+                  })
+                : handoffActivity({
+                    data: {
+                      activityId: activity.id,
+                      requestId: requestId("handoff:" + instructions),
+                      instructions,
+                    },
+                  }),
+            true,
+          )
+        }
+      />
     </section>
   );
 }
