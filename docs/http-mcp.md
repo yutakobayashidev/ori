@@ -95,11 +95,15 @@ tunnel client has separate local health/readiness endpoints. Check readiness
 after restarting the app, then select the dedicated tunnel when adding a custom
 MCP server in ChatGPT. Authentication is None for this prototype.
 
-For event-triggered task proposals, see [Beeper MCP Events](beeper-mcp-events.md).
+For event-triggered task proposals and inbox monitoring, see
+[Workspace MCP Events](beeper-mcp-events.md).
 The same `/mcp` endpoint supports `events/list`, `events/subscribe`, and
 `events/unsubscribe`. Callback delivery is outbound HTTPS from the separate
 resident worker. Rescan the plugin after adding event support, then create a
-monitoring task in a supported Work chat or dots with explicit chat IDs.
+monitoring task in a supported Work chat or dots. `beeper.message.received`
+requires explicit chat IDs. `activity.created` and `activity.status_changed`
+monitor the shared task/reply inbox, optionally filtered by activity IDs and
+operation origins (`user` by default; opt in to `agent` for MCP publications).
 
 On UM790-Pro, dotnix declares the system service
 `tunnel-client-personal-workspace.service` in

@@ -7,6 +7,8 @@ import { openDatabase, type AppDatabase } from "../storage/database.server";
 import { mcpEventOutbox, mcpEventSubscriptions } from "../storage/schema";
 import {
   subscribeMcpEvent,
+  listMcpEvents,
+  enqueueActivityEvent,
   unsubscribeMcpEvent,
   enqueueBeeperMessageEvent,
   deliverMcpEvents,
@@ -244,5 +246,168 @@ describe("signed public HTTPS delivery", () => {
     "https://callback.invalid/#secret",
   ])("rejects invalid callback %s", (url) => {
     expect(() => callbackUrl(url)).toThrow("Webhook callback could not be verified or reached.");
+  });
+});
+
+describe("activity events", () => {
+  const activity = {
+    activityId: "task-1",
+    kind: "task" as const,
+    title: "Review document",
+    nextAction: "Read the proposed changes",
+    state: "available" as const,
+    origin: "user" as const,
+    requestId: "request-1",
+    revision: 1,
+    occurredAt: new Date(now + 1).toISOString(),
+  };
+  const subscription = { ...input, name: "activity.created", arguments: {} };
+  it("discovers activity events with optional user-only filters and explicit previous state", () => {
+    const events = listMcpEvents().events;
+    expect(events.map((event) => event.name)).toEqual([
+      "beeper.message.received",
+      "activity.created",
+      "activity.status_changed",
+    ]);
+    expect(events[1]?.inputSchema.required ?? []).not.toContain("origins");
+    expect(events[2]?.payloadSchema.required).toContain("previousState");
+  });
+  it("defaults to user changes and only includes agent changes when explicitly subscribed", async () => {
+    const userOnly = await subscribeMcpEvent(subscription, database, { now, sender: verify });
+    const both = await subscribeMcpEvent(
+      { ...subscription, arguments: { origins: ["user", "agent"] } },
+      database,
+      { now, sender: verify },
+    );
+    enqueueActivityEvent("activity.created", activity, database, now);
+    enqueueActivityEvent(
+      "activity.created",
+      { ...activity, origin: "agent", activityId: "agent-task" },
+      database,
+      now,
+    );
+    const rows = database.select().from(mcpEventOutbox).all();
+    expect(rows.filter((row) => row.subscriptionId === userOnly.id)).toHaveLength(1);
+    expect(rows.filter((row) => row.subscriptionId === both.id)).toHaveLength(2);
+  });
+  it("canonicalizes explicit defaults, IDs and origin order for refresh and unsubscribe", async () => {
+    const first = await subscribeMcpEvent(subscription, database, { now, sender: verify });
+    const explicit = await subscribeMcpEvent(
+      { ...subscription, arguments: { origins: ["user"] } },
+      database,
+      { now, sender: verify },
+    );
+    expect(first.id).toBe(explicit.id);
+    const selected = await subscribeMcpEvent(
+      { ...subscription, arguments: { origins: ["agent", "user"], activityIds: ["b", "a", "a"] } },
+      database,
+      { now, sender: verify },
+    );
+    const reordered = await subscribeMcpEvent(
+      { ...subscription, arguments: { origins: ["user", "agent"], activityIds: ["a", "b"] } },
+      database,
+      { now, sender: verify },
+    );
+    expect(selected.id).toBe(reordered.id);
+    unsubscribeMcpEvent(subscription, database);
+    expect(database.select().from(mcpEventSubscriptions).all()).toHaveLength(1);
+  });
+  it("isolates event names, filters activity IDs, and deduplicates receipts", async () => {
+    await subscribeMcpEvent(input, database, { now, sender: verify });
+    await subscribeMcpEvent({ ...subscription, arguments: { activityIds: ["task-1"] } }, database, {
+      now,
+      sender: verify,
+    });
+    await subscribeMcpEvent({ ...subscription, name: "activity.status_changed" }, database, {
+      now,
+      sender: verify,
+    });
+    enqueueActivityEvent("activity.created", activity, database, now);
+    enqueueActivityEvent("activity.created", activity, database, now);
+    enqueueActivityEvent("activity.created", { ...activity, activityId: "other" }, database, now);
+    enqueueActivityEvent(
+      "activity.status_changed",
+      { ...activity, state: "completed", previousState: "available" },
+      database,
+      now,
+    );
+    enqueueBeeperMessageEvent(message, database, now);
+    expect(
+      database
+        .select()
+        .from(mcpEventOutbox)
+        .all()
+        .map((row) => JSON.parse(row.body).name)
+        .sort((left, right) => left.localeCompare(right)),
+    ).toEqual(["activity.created", "activity.status_changed", "beeper.message.received"]);
+    expect(getBeeperWatchChats(database, now)).toHaveLength(2);
+  });
+  it.each([
+    { name: "activity.created", arguments: { chatIds: ["chat"] } },
+    { name: "beeper.message.received", arguments: { origins: ["user"] } },
+    { name: "activity.created", arguments: { origins: [] } },
+    { name: "activity.status_changed", arguments: { activityIds: [] } },
+  ])("rejects mismatched or empty filters: $name $arguments", async (invalid) => {
+    const sender = vi.fn<WebhookSender>();
+    await expect(
+      subscribeMcpEvent({ ...input, ...invalid }, database, { now, sender }),
+    ).rejects.toMatchObject({ name: "ZodError" });
+    expect(sender).not.toHaveBeenCalled();
+  });
+  it("rejects missing previous state and same-state notifications", () => {
+    expect(() =>
+      enqueueActivityEvent("activity.status_changed", activity, database, now),
+    ).toThrowError(/previousState/);
+    expect(() =>
+      enqueueActivityEvent(
+        "activity.status_changed",
+        { ...activity, previousState: "available" },
+        database,
+        now,
+      ),
+    ).toThrowError(/state must change/);
+    expect(database.select().from(mcpEventOutbox).all()).toEqual([]);
+  });
+  it("excludes past events and expired subscriptions", async () => {
+    await subscribeMcpEvent({ ...subscription, ttlMs: 10 }, database, { now, sender: verify });
+    enqueueActivityEvent(
+      "activity.created",
+      { ...activity, occurredAt: new Date(now - 1).toISOString() },
+      database,
+      now,
+    );
+    enqueueActivityEvent("activity.created", activity, database, now + 10);
+    expect(database.select().from(mcpEventOutbox).all()).toEqual([]);
+  });
+  it("delivers activity payloads through the signed retrying outbox", async () => {
+    await subscribeMcpEvent({ ...subscription, name: "activity.status_changed" }, database, {
+      now,
+      sender: verify,
+    });
+    const data = {
+      ...activity,
+      kind: "reply" as const,
+      state: "completed" as const,
+      previousState: "available" as const,
+    };
+    const eventId = enqueueActivityEvent("activity.status_changed", data, database, now);
+    const sender = vi
+      .fn<WebhookSender>()
+      .mockResolvedValueOnce({ status: 503, body: "" })
+      .mockResolvedValue({ status: 200, body: "" });
+    await deliverMcpEvents(database, { now, sender });
+    expect(await deliverMcpEvents(database, { now: now + 5000, sender })).toEqual({
+      attempted: 1,
+      delivered: 1,
+    });
+    expect(JSON.parse(sender.mock.calls[0]?.[1] ?? "{}")).toEqual({
+      eventId,
+      name: "activity.status_changed",
+      timestamp: data.occurredAt,
+      data,
+      cursor: null,
+    });
+    expect(sender.mock.calls[0]?.[1]).toBe(sender.mock.calls[1]?.[1]);
+    expect(sender.mock.calls[0]?.[2]["webhook-id"]).toBe(eventId);
   });
 });

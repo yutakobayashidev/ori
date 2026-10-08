@@ -1,6 +1,8 @@
 import { createHash } from "node:crypto";
 import { and, asc, eq, gt, inArray } from "drizzle-orm";
 import { z } from "zod";
+import type { ActivityEventName } from "../mcp-events/activity-events";
+import { enqueueActivityEvent } from "../mcp-events/events.server";
 import { getDatabase, type AppDatabase } from "../storage/database.server";
 import { activities, activityReceipts, activityRevision } from "../storage/schema";
 import { notifyActivities } from "./events.server";
@@ -14,6 +16,7 @@ import {
   type ActivityErrorCode,
   type ActivityProposal,
   type ActivityReceipt,
+  type ActivityState,
 } from "./model";
 
 export class ActivityPersistenceError extends Error {
@@ -147,11 +150,39 @@ function anchor(proposal: ActivityProposal) {
     messageId: source.messageId,
   };
 }
+function enqueueEvent(
+  name: ActivityEventName,
+  row: typeof activities.$inferSelect,
+  origin: "user" | "agent",
+  receipt: ActivityReceipt,
+  database: AppDatabase,
+  now: number,
+  previousState?: ActivityState,
+) {
+  const { effective } = activity(row);
+  enqueueActivityEvent(
+    name,
+    {
+      activityId: row.id,
+      kind: effective.kind,
+      title: effective.title,
+      nextAction: effective.nextAction,
+      state: row.userState,
+      ...(previousState === undefined ? {} : { previousState }),
+      origin,
+      requestId: receipt.requestId,
+      revision: receipt.revision,
+      occurredAt: receipt.receivedAt,
+    },
+    database,
+    now,
+  );
+}
 function write(
   operation: string,
   input: { requestId: string; expectedRevision: number },
   ids: string[],
-  mutate: () => void,
+  mutate: (receipt: ActivityReceipt, now: number) => void,
   database: AppDatabase,
 ): ActivityReceipt {
   let changed = false;
@@ -171,14 +202,15 @@ function write(
       const current = revision(database);
       if (current !== input.expectedRevision)
         fail("revision-conflict", "Activities changed. Read the latest context before retrying.");
-      mutate();
+      const now = Date.now();
       const result: ActivityReceipt = {
         ok: true,
         requestId: input.requestId,
         revision: current + 1,
         activityIds: ids,
-        receivedAt: new Date().toISOString(),
+        receivedAt: new Date(now).toISOString(),
       };
+      mutate(result, now);
       database
         .insert(activityRevision)
         .values({ id: 1, revision: result.revision })
@@ -203,7 +235,7 @@ export function publishActivities(input: unknown, database = getDatabase()): Act
     "publish",
     parsed,
     parsed.activities.map((proposal) => proposal.id),
-    () => {
+    (receipt, now) => {
       for (const proposal of parsed.activities) {
         const existing = database
           .select()
@@ -219,7 +251,6 @@ export function publishActivities(input: unknown, database = getDatabase()): Act
             "immutable-field",
             "An existing activity cannot change kind or reply destination and message anchor.",
           );
-        const now = Date.now();
         database
           .insert(activities)
           .values({
@@ -232,6 +263,22 @@ export function publishActivities(input: unknown, database = getDatabase()): Act
           })
           .onConflictDoUpdate({ target: activities.id, set: { proposal, updatedAt: now } })
           .run();
+        if (!existing)
+          enqueueEvent(
+            "activity.created",
+            {
+              id: proposal.id,
+              proposal,
+              userState: "available",
+              userOverrides: {},
+              createdAt: now,
+              updatedAt: now,
+            },
+            "agent",
+            receipt,
+            database,
+            now,
+          );
       }
     },
     database,
@@ -243,7 +290,7 @@ export function updateActivityUser(input: unknown, database = getDatabase()): Ac
     "user",
     parsed,
     [parsed.id],
-    () => {
+    (receipt, now) => {
       const existing = database.select().from(activities).where(eq(activities.id, parsed.id)).get();
       if (!existing) fail("invalid-input", "This activity does not exist.");
       if (existing.proposal.kind === "reply" && parsed.state === "completed")
@@ -255,15 +302,31 @@ export function updateActivityUser(input: unknown, database = getDatabase()): Ac
         fail("invalid-input", "Only reply activities have drafts.");
       const userOverrides = { ...existing.userOverrides, ...parsed.overrides };
       for (const key of parsed.resetOverrides ?? []) delete userOverrides[key];
+      const updated = {
+        ...existing,
+        userState: parsed.state ?? existing.userState,
+        userOverrides,
+        updatedAt: now,
+      };
       database
         .update(activities)
         .set({
-          userState: parsed.state ?? existing.userState,
+          userState: updated.userState,
           userOverrides,
-          updatedAt: Date.now(),
+          updatedAt: now,
         })
         .where(eq(activities.id, parsed.id))
         .run();
+      if (updated.userState !== existing.userState)
+        enqueueEvent(
+          "activity.status_changed",
+          updated,
+          "user",
+          receipt,
+          database,
+          now,
+          existing.userState,
+        );
     },
     database,
   );
@@ -275,29 +338,27 @@ export function createUserActivity(input: unknown, database = getDatabase()): Ac
     "user-create",
     parsed,
     [parsed.id],
-    () => {
+    (receipt, now) => {
       if (database.select().from(activities).where(eq(activities.id, parsed.id)).get())
         fail("invalid-input", "This activity ID is already in use.");
       const { id, title, nextAction, section } = parsed;
-      const now = Date.now();
-      database
-        .insert(activities)
-        .values({
+      const row: typeof activities.$inferSelect = {
+        id,
+        proposal: {
           id,
-          proposal: {
-            id,
-            kind: "task",
-            title,
-            nextAction,
-            recommendation: { section },
-            sources: [],
-          },
-          userState: "available",
-          userOverrides: { title, nextAction, section },
-          createdAt: now,
-          updatedAt: now,
-        })
-        .run();
+          kind: "task",
+          title,
+          nextAction,
+          recommendation: { section },
+          sources: [],
+        },
+        userState: "available",
+        userOverrides: { title, nextAction, section },
+        createdAt: now,
+        updatedAt: now,
+      };
+      database.insert(activities).values(row).run();
+      enqueueEvent("activity.created", row, "user", receipt, database, now);
     },
     database,
   );

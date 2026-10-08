@@ -1,7 +1,9 @@
 // @vitest-environment node
 import { afterEach, beforeEach, expect, it, vi } from "vitest";
 import { openDatabase, type AppDatabase } from "../storage/database.server";
-import { mcpEventSubscriptions } from "../storage/schema";
+import { mcpEventOutbox, mcpEventSubscriptions } from "../storage/schema";
+import { createUserActivity, updateActivityUser } from "../activities/repository.server";
+import { deliverMcpEvents } from "../mcp-events/events.server";
 import { handleMcpRequest, registerResearchTools } from "./http.server";
 
 const mocks = vi.hoisted(() => ({
@@ -72,7 +74,13 @@ it("advertises events and verifies, persists, refreshes and removes a modern MCP
     result: { capabilities: { events: {}, tools: {} } },
   });
   expect(await rpc("events/list")).toMatchObject({
-    result: { events: [{ name: "beeper.message.received", delivery: ["webhook"] }] },
+    result: {
+      events: [
+        { name: "beeper.message.received", delivery: ["webhook"] },
+        { name: "activity.created", delivery: ["webhook"] },
+        { name: "activity.status_changed", delivery: ["webhook"] },
+      ],
+    },
   });
   const created = await rpc("events/subscribe", subscription);
   expect(created.error).toBeUndefined();
@@ -83,6 +91,90 @@ it("advertises events and verifies, persists, refreshes and removes a modern MCP
   expect(mocks.sender).toHaveBeenCalledTimes(1);
   expect(await rpc("events/unsubscribe", subscription)).toMatchObject({ result: {} });
   expect(database.select().from(mcpEventSubscriptions).all()).toHaveLength(0);
+});
+
+it("delivers task creation and status changes to subscriptions created through HTTP", async () => {
+  const created = await rpc("events/subscribe", {
+    ...subscription,
+    name: "activity.created",
+    arguments: {},
+  });
+  const changed = await rpc("events/subscribe", {
+    ...subscription,
+    name: "activity.status_changed",
+    arguments: { activityIds: ["task-example"] },
+  });
+  expect(created.error).toBeUndefined();
+  expect(changed.error).toBeUndefined();
+  createUserActivity(
+    {
+      requestId: "create-example",
+      expectedRevision: 0,
+      id: "task-example",
+      title: "Review the proposal",
+      nextAction: "Read the first draft",
+      section: "focus",
+    },
+    database,
+  );
+  updateActivityUser(
+    {
+      requestId: "complete-example",
+      expectedRevision: 1,
+      id: "task-example",
+      state: "completed",
+    },
+    database,
+  );
+  mocks.sender.mockClear();
+  mocks.sender.mockResolvedValue({ status: 202, body: "" });
+  expect(await deliverMcpEvents(database)).toEqual({ attempted: 2, delivered: 2 });
+  const payloads = mocks.sender.mock.calls.map(([, body]) => JSON.parse(body));
+  expect(payloads).toEqual(
+    expect.arrayContaining([
+      expect.objectContaining({
+        name: "activity.created",
+        data: expect.objectContaining({
+          activityId: "task-example",
+          state: "available",
+          origin: "user",
+          revision: 1,
+        }),
+      }),
+      expect.objectContaining({
+        name: "activity.status_changed",
+        data: expect.objectContaining({
+          activityId: "task-example",
+          previousState: "available",
+          state: "completed",
+          revision: 2,
+        }),
+      }),
+    ]),
+  );
+  expect(
+    database
+      .select()
+      .from(mcpEventOutbox)
+      .all()
+      .every((row) => row.deliveredAt !== null),
+  ).toBe(true);
+  expect(
+    await rpc("events/unsubscribe", {
+      ...subscription,
+      name: "activity.status_changed",
+      arguments: { activityIds: ["task-example"] },
+    }),
+  ).toMatchObject({ result: {} });
+  expect(database.select().from(mcpEventSubscriptions).all()).toHaveLength(1);
+});
+
+it("rejects filters belonging to a different event over HTTP", async () => {
+  expect(
+    await rpc("events/subscribe", { ...subscription, name: "activity.created" }),
+  ).toMatchObject({ error: { code: -32602 } });
+  expect(database.select().from(mcpEventSubscriptions).all()).toHaveLength(0);
+  expect(mocks.sender).not.toHaveBeenCalled();
 });
 
 it("rejects callback verification failure without saving the subscription", async () => {

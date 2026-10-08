@@ -42,6 +42,12 @@ flowchart LR
 一括公開の両方を用意せず、返信・雑用とも同じ検証と保存処理を通す。
 ここでの公開はワークスペースへの保存であり、外部へのメッセージ送信ではない。
 
+新規登録は `activity.created`、本人の状態変更は `activity.status_changed` として
+MCP Events でも購読できる。保存と通知キューへの追加は同じトランザクションで行う。
+既定は本人の操作のみを通知し、`publish_activities` による新規登録を含める場合は
+購読の `origins` に `agent` を指定する。詳細は
+[Activity events](beeper-mcp-events.md#activity-events) を参照。
+
 ### `get_activity_context`
 
 入力は省略可能。`activityIds` は最大50件。指定時は対象を絞り、存在しない ID は

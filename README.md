@@ -363,7 +363,12 @@ from the configured headless Beeper Server. MCP 2.0 clients can subscribe to
 `twitter-lite-events-worker` process reconciles incoming messages and delivers
 signed webhooks from a durable SQLite queue. ChatGPT Work/dots can use these
 events to create task/reply proposals through the existing activity tools.
-See [Beeper MCP Events](docs/beeper-mcp-events.md) for setup and verification.
+Clients can also subscribe to `activity.created` and `activity.status_changed`
+for the shared task/reply inbox. Activity saves enqueue notifications in the same
+SQLite transaction; retries and unchanged statuses do not create duplicates.
+Activity subscriptions default to user actions, with explicit opt-in for agent
+publications to avoid self-triggering monitors.
+See [Workspace MCP Events](docs/beeper-mcp-events.md) for setup and verification.
 
 MCP authentication is currently deferred: `/mcp` bypasses browser login and
 Tailscale identity checks. Keep the app on the private network. Browser routes

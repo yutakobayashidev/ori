@@ -1,6 +1,6 @@
-# Beeper new messages → ChatGPT → shared activities
+# Workspace MCP Events: Beeper messages and shared activities
 
-Implementation plan, 2026-10-07. This extends [Activity MCP](activity-mcp-design.md).
+This extends [Activity MCP](activity-mcp-design.md).
 
 ## Intended behavior
 
@@ -29,6 +29,55 @@ and redelivery of the same message must not become new incoming events.
 - ChatGPT performs interpretation under the owner's monitoring instructions.
   Message bodies and event excerpts are untrusted evidence, not instructions.
 - SQLite remains the source of truth for activities and user decisions.
+
+## Activity events
+
+Both task and reply activities use the same event contract:
+
+| Event                     | Trigger                                                                                    |
+| ------------------------- | ------------------------------------------------------------------------------------------ |
+| `activity.created`        | A new activity is saved from Home (`user`) or `publish_activities` (`agent`).              |
+| `activity.status_changed` | An existing activity's user state actually changes, for example `available` → `completed`. |
+
+Editing a title, draft, detail, or section does not emit these events. Updating an
+existing proposal through `publish_activities` does not create another activity
+event. User state and reply-completion restrictions remain unchanged.
+
+Subscription arguments are `{}` for all user-origin activities, or an object with:
+
+- `activityIds`: optional nonempty list of specific activity IDs.
+- `origins`: optional nonempty list containing `user`, `agent`, or both. Omitted
+  origins mean `["user"]`. These describe the application write path, not an
+  authenticated caller identity.
+
+The default prevents an agent publication from triggering the same monitor again.
+To observe agent-created tasks too, explicitly subscribe with
+`{"origins":["user","agent"]}`. Such monitors must avoid creating another task
+for every creation event, which would cause a feedback loop. There is no
+per-ChatGPT-session attribution in the private single-owner prototype.
+
+Event data includes `activityId`, `kind`, effective `title` and `nextAction`,
+`state`, `origin`, `requestId`, `revision`, and `occurredAt`. Status changes also
+include `previousState`. Full drafts, source excerpts, and activity details are
+retrieved through `get_activity_context` rather than copied into each webhook.
+Events describe the saved transition; read current context before acting because
+delivery may be delayed or out of order.
+
+The activity write, receipt, and matching webhook outbox entries commit in one
+SQLite transaction. A failed write queues nothing. Retrying the same request
+returns its existing receipt without another notification. Subscribing does not
+replay existing activities. The existing worker delivers these events alongside
+Beeper events, so no new service or database migration is needed.
+
+After deployment, rescan the plugin and ask a dot, for example:
+
+> Subscribe to Personal Workspace's `activity.created` and
+> `activity.status_changed` for user-origin changes. When I add a task, inspect
+> its context and help clarify the next action. When I complete a task, check
+> whether a related follow-up is needed. Update existing activities where
+> possible and preserve my decisions. Confirm the events and filters subscribed.
+
+The Beeper subscription does not automatically subscribe to activity events.
 
 ## Delivery contract
 
