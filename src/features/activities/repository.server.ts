@@ -4,10 +4,16 @@ import { z } from "zod";
 import type { ActivityEventName } from "../mcp-events/activity-events";
 import { enqueueActivityEvent } from "../mcp-events/events.server";
 import { getDatabase, type AppDatabase } from "../storage/database.server";
-import { activities, activityReceipts, activityRevision } from "../storage/schema";
+import {
+  activities,
+  activityReceipts,
+  activityRevision,
+  beeperSeenMessages,
+} from "../storage/schema";
 import { notifyActivities } from "./events.server";
 import {
   createHomeActivityInput,
+  completeActivityInput,
   getActivityContextInput,
   publishActivitiesInput,
   updateActivityUserInput,
@@ -65,7 +71,7 @@ function activity(row: typeof activities.$inferSelect): Activity {
   };
   if (effective.kind === "reply" && draft !== undefined)
     effective.reply = { ...effective.reply, draft };
-  return { id: row.id, proposal, userState, userOverrides, effective };
+  return { id: row.id, proposal, userState, userOverrides, effective, completion: row.completion };
 }
 const cursorSchema = z.strictObject({
   revision: z.number().int().nonnegative(),
@@ -271,6 +277,7 @@ export function publishActivities(input: unknown, database = getDatabase()): Act
               proposal,
               userState: "available",
               userOverrides: {},
+              completion: null,
               createdAt: now,
               updatedAt: now,
             },
@@ -297,8 +304,6 @@ export function updateActivityUser(
     (receipt, now) => {
       const existing = database.select().from(activities).where(eq(activities.id, parsed.id)).get();
       if (!existing) fail("invalid-input", "This activity does not exist.");
-      if (existing.proposal.kind === "reply" && parsed.state === "completed")
-        fail("invalid-input", "A reply can complete only after confirmed delivery.");
       if (
         existing.proposal.kind === "task" &&
         (parsed.overrides?.draft !== undefined || parsed.resetOverrides?.includes("draft"))
@@ -310,6 +315,7 @@ export function updateActivityUser(
         ...existing,
         userState: parsed.state ?? existing.userState,
         userOverrides,
+        completion: parsed.state && parsed.state !== "completed" ? null : existing.completion,
         updatedAt: now,
       };
       database
@@ -317,6 +323,7 @@ export function updateActivityUser(
         .set({
           userState: updated.userState,
           userOverrides,
+          completion: updated.completion,
           updatedAt: now,
         })
         .where(eq(activities.id, parsed.id))
@@ -358,11 +365,86 @@ export function createUserActivity(input: unknown, database = getDatabase()): Ac
         },
         userState: "available",
         userOverrides: { title, nextAction, section },
+        completion: null,
         createdAt: now,
         updatedAt: now,
       };
       database.insert(activities).values(row).run();
       enqueueEvent("activity.created", row, "user", receipt, database, now);
+    },
+    database,
+  );
+}
+
+/** Record a contextual completion decision, never send a message. */
+export function completeActivity(input: unknown, database = getDatabase()): ActivityReceipt {
+  const parsed = parse(completeActivityInput, input);
+  return write(
+    "complete",
+    parsed,
+    [parsed.id],
+    (receipt, now) => {
+      const existing = database.select().from(activities).where(eq(activities.id, parsed.id)).get();
+      if (!existing) fail("invalid-input", "This activity does not exist.");
+      if (existing.userState === "completed" || existing.userState === "dismissed")
+        fail("invalid-input", "This activity is already closed.");
+      const evidence = parsed.evidence;
+      const destination = anchor(existing.proposal);
+      if (destination && evidence.kind !== "beeper_message")
+        fail("invalid-input", "Reply completion requires an observed outgoing Beeper message.");
+      if (evidence.kind === "beeper_message") {
+        if (
+          destination &&
+          (destination.targetId !== evidence.targetId ||
+            destination.accountId !== evidence.accountId ||
+            destination.chatId !== evidence.chatId ||
+            destination.messageId === evidence.messageId)
+        )
+          fail(
+            "invalid-input",
+            "Completion evidence must be another message in the reply destination.",
+          );
+        const observed = database
+          .select()
+          .from(beeperSeenMessages)
+          .where(
+            and(
+              eq(beeperSeenMessages.targetId, evidence.targetId),
+              eq(beeperSeenMessages.chatId, evidence.chatId),
+              eq(beeperSeenMessages.messageId, evidence.messageId),
+            ),
+          )
+          .get();
+        if (
+          !observed?.outgoingEvidence ||
+          observed.outgoingEvidence.accountId !== evidence.accountId
+        )
+          fail("invalid-input", "This message has not been observed as an outgoing owner message.");
+      }
+      const updated = {
+        ...existing,
+        userState: "completed" as const,
+        completion: { reason: parsed.reason, evidence, completedAt: receipt.receivedAt },
+        updatedAt: now,
+      };
+      database
+        .update(activities)
+        .set({
+          userState: updated.userState,
+          completion: updated.completion,
+          updatedAt: now,
+        })
+        .where(eq(activities.id, parsed.id))
+        .run();
+      enqueueEvent(
+        "activity.status_changed",
+        updated,
+        "agent",
+        receipt,
+        database,
+        now,
+        existing.userState,
+      );
     },
     database,
   );

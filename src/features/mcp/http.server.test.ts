@@ -44,6 +44,7 @@ it("initializes and lists persistent workspace tools without a browser session",
       "fetch_posts",
       "get_activity_context",
       "publish_activities",
+      "complete_activity",
     ]),
   );
 });

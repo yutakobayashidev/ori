@@ -44,7 +44,7 @@ export function ActivityControls({ activity }: { activity: Activity }) {
   const setState = (state: ActivityState) => void change(activity.id, { state });
   return (
     <div className="mt-px-20 flex flex-wrap gap-px-8">
-      {activity.effective.kind === "task" && activity.userState !== "completed" && (
+      {activity.userState !== "completed" && (
         <Button disabled={busy} onClick={() => setState("completed")}>
           Mark complete
         </Button>
@@ -74,7 +74,7 @@ export function ActivityControls({ activity }: { activity: Activity }) {
           Bring back
         </Button>
       )}
-      {activity.effective.kind === "task" && activity.userState === "completed" && (
+      {activity.userState === "completed" && (
         <Button variant="outline" disabled={busy} onClick={() => setState("available")}>
           Bring back
         </Button>

@@ -17,6 +17,7 @@ activity model across Home, Messages, and MCP.
 | `read_beeper_chat`     | `chatId`, optional `cursor`; recent messages and pagination for context                                           |
 | `get_activity_context` | Optional `activityIds`, `cursor`, `limit`; proposals, effective content, user decisions and revision              |
 | `publish_activities`   | `requestId`, `expectedRevision`, `activities`; atomically persist task/reply proposals, preserving user decisions |
+| `complete_activity`    | `requestId`, `expectedRevision`, `id`, `reason`, `evidence`; record a specific task fulfilled outside the app     |
 | `list_connections`     | `{}`; discover account IDs and status, without credentials                                                        |
 | `list_lists`           | `connectionId`; discover Twitter or Mastodon lists                                                                |
 | `list_decks`           | `{}`; saved deck IDs, titles, revisions and column counts                                                         |
@@ -77,8 +78,10 @@ results. The resource permits no external asset or network domains.
 `update_activity` accepts the existing `updateActivityUserInput` contract:
 `requestId`, `expectedRevision`, `id`, and state/override changes. It is marked
 with `ui.visibility: ["app"]` for component use, and applies the same repository
-rules as the web UI. Exact retries are idempotent, stale edits are rejected, and
-reply completion is still prohibited until actual sending is implemented. App
+rules as the web UI. Exact retries are idempotent and stale edits are rejected.
+The owner can complete tasks and replies already handled in other apps without
+an in-app send or a delivery receipt. Automated reconciliation uses the separate
+evidence-backed `complete_activity` tool. App
 visibility is a host discovery hint, not an authentication boundary; the private
 network/tunnel access boundary remains essential. Draft saves never send messages.
 

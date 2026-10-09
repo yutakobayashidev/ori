@@ -1,6 +1,6 @@
 import { fireEvent, render, screen, waitFor } from "@testing-library/react";
 import { beforeEach, expect, it, vi } from "vitest";
-import { ActivityEditor } from "./activity-controls";
+import { ActivityControls, ActivityEditor } from "./activity-controls";
 import type { Activity } from "./model";
 
 const store = vi.hoisted(() => ({
@@ -37,6 +37,42 @@ beforeEach(() => {
   store.change.mockResolvedValue(true);
   store.busy = false;
   store.revision = 7;
+});
+
+it("lets the owner reopen a reply completed by an external monitor", () => {
+  const proposal = {
+    ...activity.proposal,
+    kind: "reply" as const,
+    reply: { recipientName: "Alice", sourceId: "request", context: "Reply with available dates" },
+  };
+  render(
+    <ActivityControls
+      activity={{
+        ...activity,
+        proposal,
+        effective: { ...proposal, section: "optional" },
+        userState: "completed",
+      }}
+    />,
+  );
+  fireEvent.click(screen.getByRole("button", { name: "Bring back" }));
+  expect(store.change).toHaveBeenCalledWith(activity.id, { state: "available" });
+  expect(screen.queryByRole("button", { name: "Mark complete" })).not.toBeInTheDocument();
+});
+
+it("lets the owner mark a reply handled outside the app complete", () => {
+  const proposal = {
+    ...activity.proposal,
+    kind: "reply" as const,
+    reply: { recipientName: "Alice", sourceId: "request", context: "Reply with available dates" },
+  };
+  render(
+    <ActivityControls
+      activity={{ ...activity, proposal, effective: { ...proposal, section: "optional" } }}
+    />,
+  );
+  fireEvent.click(screen.getByRole("button", { name: "Mark complete" }));
+  expect(store.change).toHaveBeenCalledWith(activity.id, { state: "completed" });
 });
 
 it("saves edited next action and an explicitly cleared detail without overriding untouched fields", async () => {

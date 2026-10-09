@@ -14,7 +14,9 @@ a Beeper-inspired conversation layout with visible source messages, editable
 drafts and a contextual side panel. Tasks and reply activities share persistent
 SQLite records across Home, Messages, and MCP. User edits and decisions survive
 agent updates and reloads. Routines and Journal remain session-only prototypes;
-Beeper history synchronization and actual message sending remain unconnected.
+Beeper history in the Messages screen and actual message sending remain unconnected.
+The headless Beeper listener can observe messages sent in the original chat apps;
+Dots can reconcile fulfilled tasks through evidence-backed MCP completion.
 
 Home's greeting follows the device's local time: morning from 05:00, afternoon
 from 12:00, and evening from 18:00 until 05:00. It refreshes while the page is
@@ -389,6 +391,11 @@ share the web UI's SQLite and SNS services; no resident Codex run is required.
 `get_activity_context` reads the shared task/reply inbox and user decisions;
 `publish_activities` creates or updates proposals with stable IDs, retry receipts,
 and revision checks. Publication preserves user edits and never sends messages.
+`complete_activity` records tasks fulfilled outside the app with a reason and
+evidence. Reply completion requires a matching owner-authored Beeper message
+observed by the listener; chores can also cite an external observation. Completion
+uses the same revision checks and retry receipts, preserves edits, and is marked
+as an agent action. `get_activity_context` returns the recorded completion basis.
 See the [Activity MCP contract](docs/activity-mcp-design.md) for inputs and examples.
 An OpenAI Secure MCP Tunnel client can forward to this private endpoint.
 
@@ -402,10 +409,15 @@ UI in the existing server, preserving its MCP 2.0 tools and events. See
 
 `list_beeper_chats` and `read_beeper_chat` provide read-only conversation context
 from the configured headless Beeper Server. MCP 2.0 clients can subscribe to
-`beeper.message.received` for explicit chat IDs. The separate
-`twitter-lite-events-worker` process reconciles incoming messages and delivers
+`beeper.message.received` and `beeper.message.sent` for explicit chat IDs. The separate
+`twitter-lite-events-worker` process reconciles observed messages and delivers
 signed webhooks from a durable SQLite queue. ChatGPT Work/dots can use these
 events to create task/reply proposals through the existing activity tools.
+The sent event observes owner-authored messages synced from Discord or other
+original apps; it does not send anything or prove recipient delivery. Existing
+incoming subscriptions are unchanged: completion monitors subscribe separately
+to sent events for the same selected chats and judge whether each specific task
+was fulfilled before calling `complete_activity`.
 Clients can also subscribe to `activity.created` and `activity.status_changed`
 for the shared task/reply inbox. Activity saves enqueue notifications in the same
 SQLite transaction; retries and unchanged statuses do not create duplicates.

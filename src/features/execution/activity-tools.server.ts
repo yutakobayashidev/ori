@@ -20,7 +20,7 @@ const specs = [
   {
     name: "set_activity_status",
     description:
-      "Change this conversation's task status as instructed by the owner. Use the latest expectedRevision from get_current_activity. Successful AI work alone does not mean the task is completed. Replies cannot be completed because sending is not connected. Displays the updated workspace card.",
+      "Change this conversation's task or reply status as instructed by the owner, including when they already replied in another app. Use the latest expectedRevision from get_current_activity. Successful AI work or drafting alone does not mean the task is completed. Never sends a message. Displays the updated workspace card.",
     schema: z.strictObject({ expectedRevision: revision, state: activityState }),
   },
   {

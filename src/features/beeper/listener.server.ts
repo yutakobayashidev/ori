@@ -6,7 +6,8 @@ export type BeeperCheckpoint = {
   pendingAnchorMessageId: string | null;
   startedAt: string;
 };
-export type BeeperIncomingMessage = {
+export type BeeperObservedMessage = {
+  eventName: "beeper.message.received" | "beeper.message.sent";
   targetId: string;
   accountId: string;
   chatId: string;
@@ -24,19 +25,19 @@ export interface BeeperListenerStore {
       targetId: string;
       chatId: string;
       checkpoint: BeeperCheckpoint;
-      messages: BeeperIncomingMessage[];
+      messages: BeeperObservedMessage[];
     },
   ): void;
 }
 
-function incoming(
+function observedMessage(
   message: BeeperMessage,
   targetId: string,
   startedAt: string,
   observedAt: string,
-): BeeperIncomingMessage | undefined {
+): BeeperObservedMessage | undefined {
   if (
-    message.isSender !== false ||
+    typeof message.isSender !== "boolean" ||
     message.isDeleted ||
     message.isHidden ||
     message.type === "REACTION" ||
@@ -45,6 +46,7 @@ function incoming(
   )
     return;
   return {
+    eventName: message.isSender ? "beeper.message.sent" : "beeper.message.received",
     targetId,
     accountId: message.accountID,
     chatId: message.chatID,
@@ -76,8 +78,8 @@ export async function reconcileBeeperChat(
     const observedAt = now();
     const messages = page.items
       .filter((message) => message.chatID === scope.chatId)
-      .map((message) => incoming(message, adapter.targetId, startedAt, observedAt))
-      .filter((message): message is BeeperIncomingMessage => message !== undefined);
+      .map((message) => observedMessage(message, adapter.targetId, startedAt, observedAt))
+      .filter((message): message is BeeperObservedMessage => message !== undefined);
     const finished =
       Boolean(
         saved?.anchorMessageId &&

@@ -77,16 +77,21 @@ describe("persistent MCP event subscriptions", () => {
   });
   it("honors expiry and unsubscribe discards outstanding deliveries", async () => {
     await subscribeMcpEvent({ ...input, ttlMs: 1000 }, database, { now, sender: verify });
-    enqueueBeeperMessageEvent(message, database, now);
+    enqueueBeeperMessageEvent("beeper.message.received", message, database, now);
     expect(getBeeperWatchChats(database, now + 1001)).toEqual([]);
     unsubscribeMcpEvent(input, database);
     expect(database.select().from(mcpEventOutbox).all()).toEqual([]);
   });
   it("deduplicates message replay, excludes other chats, retries stable IDs and rotates signatures", async () => {
     await subscribeMcpEvent(input, database, { now, sender: verify });
-    enqueueBeeperMessageEvent(message, database, now);
-    enqueueBeeperMessageEvent(message, database, now);
-    enqueueBeeperMessageEvent({ ...message, chatId: "other" }, database, now);
+    enqueueBeeperMessageEvent("beeper.message.received", message, database, now);
+    enqueueBeeperMessageEvent("beeper.message.received", message, database, now);
+    enqueueBeeperMessageEvent(
+      "beeper.message.received",
+      { ...message, chatId: "other" },
+      database,
+      now,
+    );
     expect(database.select().from(mcpEventOutbox).all()).toHaveLength(1);
     const sender = vi
       .fn<WebhookSender>()
@@ -113,7 +118,7 @@ describe("persistent MCP event subscriptions", () => {
   });
   it.each([410, 413, 400])("does not retry permanent HTTP %i failures", async (status) => {
     await subscribeMcpEvent(input, database, { now, sender: verify });
-    enqueueBeeperMessageEvent(message, database, now);
+    enqueueBeeperMessageEvent("beeper.message.received", message, database, now);
     const sender = vi.fn<WebhookSender>().mockResolvedValue({ status, body: "" });
     await deliverMcpEvents(database, { now, sender });
     expect(await deliverMcpEvents(database, { now: now + 100000, sender })).toEqual({
@@ -125,6 +130,7 @@ describe("persistent MCP event subscriptions", () => {
   it("does not enqueue messages predating the subscription", async () => {
     await subscribeMcpEvent(input, database, { now, sender: verify });
     enqueueBeeperMessageEvent(
+      "beeper.message.received",
       { ...message, occurredAt: new Date(now - 1).toISOString() },
       database,
       now,
@@ -135,8 +141,13 @@ describe("persistent MCP event subscriptions", () => {
 describe("outbox recovery", () => {
   it("stops between callbacks on shutdown and leaves remaining events queued", async () => {
     await subscribeMcpEvent(input, database, { now, sender: verify });
-    enqueueBeeperMessageEvent(message, database, now);
-    enqueueBeeperMessageEvent({ ...message, messageId: "second" }, database, now);
+    enqueueBeeperMessageEvent("beeper.message.received", message, database, now);
+    enqueueBeeperMessageEvent(
+      "beeper.message.received",
+      { ...message, messageId: "second" },
+      database,
+      now,
+    );
     const controller = new AbortController();
     const sender = vi.fn<WebhookSender>().mockImplementation(async () => {
       controller.abort();
@@ -176,7 +187,7 @@ describe("outbox recovery", () => {
     const path = join(directory, "workspace.sqlite");
     database = openDatabase(path);
     await subscribeMcpEvent(input, database, { now, sender: verify });
-    enqueueBeeperMessageEvent(message, database, now);
+    enqueueBeeperMessageEvent("beeper.message.received", message, database, now);
     database.$client.close();
     database = openDatabase(path);
     const sender = vi.fn<WebhookSender>().mockResolvedValue({ status: 200, body: "" });
@@ -188,7 +199,7 @@ describe("outbox recovery", () => {
   });
   it("stops retrying after eight transient failures", async () => {
     await subscribeMcpEvent(input, database, { now, sender: verify });
-    enqueueBeeperMessageEvent(message, database, now);
+    enqueueBeeperMessageEvent("beeper.message.received", message, database, now);
     const sender = vi.fn<WebhookSender>().mockResolvedValue({ status: 503, body: "" });
     for (let attempt = 0; attempt < 9; attempt++)
       await deliverMcpEvents(database, { now: now + attempt * 3_600_000, sender });
@@ -201,7 +212,7 @@ describe("outbox recovery", () => {
   });
   it("does not revive pre-expiry deliveries when a subscription is recreated", async () => {
     await subscribeMcpEvent({ ...input, ttlMs: 1000 }, database, { now, sender: verify });
-    enqueueBeeperMessageEvent(message, database, now);
+    enqueueBeeperMessageEvent("beeper.message.received", message, database, now);
     await subscribeMcpEvent(input, database, { now: now + 2000, sender: verify });
     const sender = vi.fn<WebhookSender>();
     await deliverMcpEvents(database, { now: now + 2000, sender });
@@ -266,11 +277,12 @@ describe("activity events", () => {
     const events = listMcpEvents().events;
     expect(events.map((event) => event.name)).toEqual([
       "beeper.message.received",
+      "beeper.message.sent",
       "activity.created",
       "activity.status_changed",
     ]);
-    expect(events[1]?.inputSchema.required ?? []).not.toContain("origins");
-    expect(events[2]?.payloadSchema.required).toContain("previousState");
+    expect(events[2]?.inputSchema.required ?? []).not.toContain("origins");
+    expect(events[3]?.payloadSchema.required).toContain("previousState");
   });
   it("defaults to user changes and only includes agent changes when explicitly subscribed", async () => {
     const userOnly = await subscribeMcpEvent(subscription, database, { now, sender: verify });
@@ -331,7 +343,7 @@ describe("activity events", () => {
       database,
       now,
     );
-    enqueueBeeperMessageEvent(message, database, now);
+    enqueueBeeperMessageEvent("beeper.message.received", message, database, now);
     expect(
       database
         .select()
@@ -410,4 +422,58 @@ describe("activity events", () => {
     expect(sender.mock.calls[0]?.[1]).toBe(sender.mock.calls[1]?.[1]);
     expect(sender.mock.calls[0]?.[2]["webhook-id"]).toBe(eventId);
   });
+});
+
+it("requires a separate outgoing subscription and preserves incoming subscriptions", async () => {
+  const received = await subscribeMcpEvent(input, database, { now, sender: verify });
+  enqueueBeeperMessageEvent("beeper.message.sent", message, database, now);
+  expect(database.select().from(mcpEventOutbox).all()).toHaveLength(0);
+  const sent = await subscribeMcpEvent(
+    { ...input, name: "beeper.message.sent", arguments: { chatIds: ["chat-a"] } },
+    database,
+    { now: now + 10, sender: verify },
+  );
+  expect(sent.id).not.toBe(received.id);
+  expect(getBeeperWatchChats(database, now + 10)).toEqual([
+    { chatId: "chat-a", startedAt: now },
+    { chatId: "chat-b", startedAt: now },
+  ]);
+  const fresh = { ...message, occurredAt: new Date(now + 11).toISOString() };
+  enqueueBeeperMessageEvent("beeper.message.sent", fresh, database, now + 11);
+  enqueueBeeperMessageEvent("beeper.message.sent", fresh, database, now + 11);
+  enqueueBeeperMessageEvent(
+    "beeper.message.sent",
+    { ...fresh, chatId: "chat-b" },
+    database,
+    now + 11,
+  );
+  enqueueBeeperMessageEvent(
+    "beeper.message.sent",
+    { ...fresh, messageId: "old", occurredAt: new Date(now + 9).toISOString() },
+    database,
+    now + 11,
+  );
+  enqueueBeeperMessageEvent(
+    "beeper.message.received",
+    { ...fresh, messageId: "incoming" },
+    database,
+    now + 11,
+  );
+  const rows = database.select().from(mcpEventOutbox).all();
+  expect(rows).toHaveLength(2);
+  expect(rows.find((row) => row.subscriptionId === sent.id)).toMatchObject({
+    body: expect.stringContaining('"name":"beeper.message.sent"'),
+  });
+  expect(rows.find((row) => row.subscriptionId === received.id)).toMatchObject({
+    body: expect.stringContaining('"name":"beeper.message.received"'),
+  });
+  unsubscribeMcpEvent(input, database);
+  expect(getBeeperWatchChats(database, now + 11)).toEqual([
+    { chatId: "chat-a", startedAt: now + 10 },
+  ]);
+  unsubscribeMcpEvent(
+    { ...input, name: "beeper.message.sent", arguments: { chatIds: ["chat-a"] } },
+    database,
+  );
+  expect(getBeeperWatchChats(database, now + 11)).toEqual([]);
 });

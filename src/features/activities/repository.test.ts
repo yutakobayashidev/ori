@@ -4,10 +4,12 @@ import { tmpdir } from "node:os";
 import { join } from "node:path";
 import { afterEach, beforeEach, expect, it, vi } from "vitest";
 import { openDatabase, type AppDatabase } from "../storage/database.server";
+import { beeperSeenMessages } from "../storage/schema";
 import { subscribeActivities } from "./events.server";
 import type { ActivityProposal } from "./model";
 import {
   createUserActivity,
+  completeActivity,
   getActivityContext,
   publishActivities,
   updateActivityUser,
@@ -192,25 +194,30 @@ it("rejects changing the kind of an existing activity", () => {
     expect.objectContaining({ code: "immutable-field" }),
   );
 });
-it("keeps two actions from the same conversation independent and never simulates sending", () => {
-  publish([reply, { ...reply, id: "send-final-materials" }]);
-  updateActivityUser(
-    { requestId: "defer", expectedRevision: 1, id: "review", state: "deferred" },
-    database,
-  );
-  expect(() =>
+it.each(["user", "agent"] as const)(
+  "allows %s completion of an externally handled reply independently",
+  (origin) => {
+    publish([reply, { ...reply, id: "send-final-materials" }]);
     updateActivityUser(
-      { requestId: "fake-send", expectedRevision: 2, id: "review", state: "completed" },
+      { requestId: "defer", expectedRevision: 1, id: "review", state: "deferred" },
       database,
-    ),
-  ).toThrow(expect.objectContaining({ code: "invalid-input" }));
-  expect(
-    getActivityContext({}, database).activities.map(({ id, userState }) => ({ id, userState })),
-  ).toEqual([
-    { id: "review", userState: "deferred" },
-    { id: "send-final-materials", userState: "available" },
-  ]);
-});
+    );
+    updateActivityUser(
+      { requestId: "externally-replied", expectedRevision: 2, id: "review", state: "completed" },
+      database,
+      origin,
+    );
+    expect(
+      getActivityContext({ activityIds: ["review"] }, database).activities[0]?.completion,
+    ).toBeNull();
+    expect(
+      getActivityContext({}, database).activities.map(({ id, userState }) => ({ id, userState })),
+    ).toEqual([
+      { id: "review", userState: "completed" },
+      { id: "send-final-materials", userState: "available" },
+    ]);
+  },
+);
 it("returns missing IDs and pages in ID order with a revision-bound cursor", () => {
   publish([reply, task]);
   const first = getActivityContext(
@@ -343,4 +350,152 @@ it("does not announce a failed transaction", () => {
   );
   expect(listener).not.toHaveBeenCalled();
   unsubscribe();
+});
+
+const completion = {
+  requestId: "complete",
+  expectedRevision: 1,
+  id: "review",
+  reason: "The owner supplied the requested meeting times in Discord.",
+  evidence: {
+    kind: "beeper_message" as const,
+    targetId: "personal",
+    accountId: "work",
+    chatId: "aoki",
+    messageId: "owner-reply",
+  },
+};
+function observeOwnerMessage() {
+  database
+    .insert(beeperSeenMessages)
+    .values({
+      targetId: "personal",
+      chatId: "aoki",
+      messageId: "owner-reply",
+      observedAt: "2026-10-09T01:00:01Z",
+      outgoingEvidence: { accountId: "work", occurredAt: "2026-10-09T01:00:00Z" },
+    })
+    .run();
+}
+it("persists evidence for an external reply and replays completion without a second notification", () => {
+  publish();
+  observeOwnerMessage();
+  const listener = vi.fn<() => void>();
+  const unsubscribe = subscribeActivities(listener);
+  const receipt = completeActivity(completion, database);
+  expect(completeActivity(completion, second)).toEqual(receipt);
+  expect(listener).toHaveBeenCalledTimes(1);
+  unsubscribe();
+  expect(getActivityContext({ activityIds: ["review"] }, second)).toMatchObject({
+    revision: 2,
+    activities: [
+      {
+        userState: "completed",
+        completion: {
+          reason: completion.reason,
+          evidence: completion.evidence,
+          completedAt: receipt.receivedAt,
+        },
+      },
+    ],
+  });
+  expect(getActivityContext({ activityIds: ["detergent"] }, second).activities[0]?.userState).toBe(
+    "available",
+  );
+});
+it.each([
+  { ...completion.evidence, targetId: "other" },
+  { ...completion.evidence, accountId: "other" },
+  { ...completion.evidence, chatId: "other" },
+  { ...completion.evidence, messageId: "message-one" },
+  { ...completion.evidence, messageId: "unknown" },
+  {
+    kind: "external",
+    reference: "Discord",
+    observedAt: "2026-10-09T01:00:00Z",
+    summary: "Replied",
+  },
+])("rejects unverified or unrelated reply completion %# without advancing revision", (evidence) => {
+  publish();
+  observeOwnerMessage();
+  expect(() => completeActivity({ ...completion, evidence }, database)).toThrow(
+    expect.objectContaining({ code: "invalid-input" }),
+  );
+  expect(getActivityContext({}, database).revision).toBe(1);
+});
+it("does not accept a seen incoming message as outgoing evidence", () => {
+  publish();
+  database
+    .insert(beeperSeenMessages)
+    .values({
+      targetId: "personal",
+      chatId: "aoki",
+      messageId: "owner-reply",
+      observedAt: "2026-10-09T01:00:00Z",
+    })
+    .run();
+  expect(() => completeActivity(completion, database)).toThrow(
+    expect.objectContaining({ code: "invalid-input" }),
+  );
+});
+it("preserves completion evidence on republication and clears it on reopening", () => {
+  publish();
+  observeOwnerMessage();
+  completeActivity(completion, database);
+  publish([reply], 2, "refresh");
+  expect(
+    getActivityContext({ activityIds: ["review"] }, database).activities[0]?.completion?.reason,
+  ).toBe(completion.reason);
+  updateActivityUser(
+    { requestId: "reopen", expectedRevision: 3, id: "review", state: "available" },
+    database,
+  );
+  expect(
+    getActivityContext({ activityIds: ["review"] }, database).activities[0]?.completion,
+  ).toBeNull();
+});
+it("completes a deferred chore using agent-reported external evidence but never overrides dismissal", () => {
+  publish();
+  updateActivityUser(
+    { requestId: "defer", expectedRevision: 1, id: task.id, state: "deferred" },
+    database,
+  );
+  const input = {
+    ...completion,
+    id: task.id,
+    expectedRevision: 2,
+    evidence: {
+      kind: "external",
+      reference: "life/2026-10-09.md",
+      observedAt: "2026-10-09T01:00:00Z",
+      summary: "Owner recorded buying detergent.",
+    },
+  };
+  completeActivity(input, database);
+  expect(getActivityContext({ activityIds: [task.id] }, database).activities[0]).toMatchObject({
+    userState: "completed",
+    completion: { evidence: input.evidence },
+  });
+  updateActivityUser(
+    { requestId: "dismiss", expectedRevision: 3, id: "review", state: "dismissed" },
+    database,
+  );
+  observeOwnerMessage();
+  expect(() =>
+    completeActivity({ ...completion, requestId: "another", expectedRevision: 4 }, database),
+  ).toThrow(expect.objectContaining({ code: "invalid-input" }));
+  expect(() =>
+    completeActivity({ ...input, requestId: "closed", expectedRevision: 4 }, database),
+  ).toThrow(expect.objectContaining({ code: "invalid-input" }));
+});
+it("checks completion revision and request identity before making changes", () => {
+  publish();
+  observeOwnerMessage();
+  expect(() => completeActivity({ ...completion, expectedRevision: 0 }, database)).toThrow(
+    expect.objectContaining({ code: "revision-conflict" }),
+  );
+  completeActivity(completion, database);
+  expect(() => completeActivity({ ...completion, reason: "Changed decision" }, database)).toThrow(
+    expect.objectContaining({ code: "idempotency-conflict" }),
+  );
 });

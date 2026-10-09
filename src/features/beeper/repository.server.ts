@@ -30,10 +30,17 @@ export function createBeeperListenerStore(
               chatId,
               messageId: message.messageId,
               observedAt: message.observedAt,
+              outgoingEvidence:
+                message.eventName === "beeper.message.sent"
+                  ? { accountId: message.accountId, occurredAt: message.occurredAt }
+                  : null,
             })
             .onConflictDoNothing()
             .run();
-          if (inserted.changes) enqueueBeeperMessageEvent(message, tx);
+          if (inserted.changes) {
+            const { eventName, ...data } = message;
+            enqueueBeeperMessageEvent(eventName, data, tx);
+          }
         }
         tx.insert(beeperChatCheckpoints)
           .values({ targetId, chatId, ...checkpoint })

@@ -330,6 +330,54 @@ it("continues a default-sized activity page using its original filter", async ()
   expect(next).toMatchObject({ ok: true, activities: [expect.any(Object)], nextCursor: null });
 });
 
+it("lets an external monitor complete a chore with evidence and retry without overwriting its basis", async () => {
+  const tools = createWorkspaceTools();
+  await tools.execute("publish_activities", {
+    requestId: "chore-proposal",
+    expectedRevision: 0,
+    activities: [
+      {
+        id: "shopping",
+        kind: "task",
+        title: "Buy detergent",
+        nextAction: "Buy one refill",
+        sources: [],
+      },
+    ],
+  });
+  const completion = {
+    requestId: "chore-done",
+    expectedRevision: 1,
+    id: "shopping",
+    reason: "The owner confirmed purchasing the refill.",
+    evidence: {
+      kind: "external",
+      reference: "owner-conversation:shopping-confirmation",
+      observedAt: "2026-10-09T01:00:00Z",
+      summary: "The owner said they bought the detergent refill today.",
+    },
+  };
+  const saved = await tools.execute("complete_activity", completion);
+  expect(saved).toMatchObject({ ok: true, revision: 2 });
+  expect(await createWorkspaceTools().execute("complete_activity", completion)).toEqual(saved);
+  expect(await tools.execute("get_activity_context", { activityIds: ["shopping"] })).toMatchObject({
+    revision: 2,
+    activities: [
+      {
+        id: "shopping",
+        userState: "completed",
+        completion: { reason: completion.reason, evidence: completion.evidence },
+      },
+    ],
+  });
+  expect(
+    await tools.execute("complete_activity", { ...completion, reason: "Another reason" }),
+  ).toMatchObject({ ok: false, error: { code: "idempotency-conflict" } });
+  expect(
+    tools.definitions.find(({ name }) => name === "complete_activity")?.annotations,
+  ).toMatchObject({ readOnlyHint: false, destructiveHint: true, openWorldHint: false });
+});
+
 it("returns a normalized column for an Apps feed when Twitter defaults are omitted", async () => {
   mocks.page.mockResolvedValue({ posts: [] });
   expect(

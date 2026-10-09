@@ -120,6 +120,33 @@ export const updateActivityUserInput = z
     "Do not set and reset the same field.",
   );
 export type ActivityProposal = z.infer<typeof activityProposal>;
+const completionEvidence = z.discriminatedUnion("kind", [
+  z.strictObject({
+    kind: z.literal("beeper_message"),
+    targetId: sourceId,
+    accountId: sourceId,
+    chatId: sourceId,
+    messageId: sourceId,
+  }),
+  z.strictObject({
+    kind: z.literal("external"),
+    reference: required(2048),
+    observedAt: z.iso.datetime({ offset: true }),
+    summary: required(4000),
+  }),
+]);
+export const completeActivityInput = z.strictObject({
+  requestId: id,
+  expectedRevision: z.number().int().nonnegative(),
+  id,
+  reason: required(2000),
+  evidence: completionEvidence,
+});
+export type ActivityCompletion = {
+  reason: string;
+  evidence: z.infer<typeof completionEvidence>;
+  completedAt: string;
+};
 export type ActivityState = z.infer<typeof activityState>;
 export type ActivityOverrides = z.infer<typeof activityOverrides>;
 export type Activity = {
@@ -127,6 +154,7 @@ export type Activity = {
   proposal: ActivityProposal;
   userState: ActivityState;
   userOverrides: ActivityOverrides;
+  completion?: ActivityCompletion | null;
   effective: ActivityProposal & { section: "focus" | "optional" };
 };
 export type ActivityContext = {

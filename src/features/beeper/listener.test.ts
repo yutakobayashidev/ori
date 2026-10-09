@@ -68,7 +68,6 @@ it("establishes the initial cursor without notifying historical messages", async
 });
 
 it.each([
-  { isSender: true },
   { isSender: undefined },
   { isDeleted: true },
   { isHidden: true },
@@ -277,4 +276,23 @@ it("restarts a disconnected watcher and reconciles persisted progress", async ()
   expect(adapter.watch).toHaveBeenCalledTimes(2);
   expect(adapter.readMessages).toHaveBeenCalledTimes(2);
   await stop();
+});
+
+it.each([
+  [false, "beeper.message.received"],
+  [true, "beeper.message.sent"],
+] as const)("classifies confirmed sender flag %s as %s", async (isSender, eventName) => {
+  const { adapter, store } = setup();
+  vi.mocked(adapter.readMessages).mockResolvedValue(
+    page([
+      message({ id: "fresh", isSender }),
+      message({ id: "historical", isSender, timestamp: "2026-10-07T00:00:00.000Z" }),
+    ]),
+  );
+  await reconcileBeeperChat(adapter, store, scope);
+  expect(store.commitPage).toHaveBeenCalledWith(
+    expect.objectContaining({
+      messages: [expect.objectContaining({ messageId: "fresh", eventName })],
+    }),
+  );
 });

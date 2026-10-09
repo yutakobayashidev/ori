@@ -7,16 +7,26 @@ This extends [Activity MCP](activity-mcp-design.md).
 The owner asks ChatGPT in a supported Work chat or dots to monitor selected
 Beeper conversations. ChatGPT creates an MCP Events subscription on the existing
 private `/mcp` endpoint. A resident UM790-Pro worker watches those conversations
-through the existing headless Beeper Server/CLI. It persists new incoming message
+through the existing headless Beeper Server/CLI. It persists new incoming and outgoing message
 identities and matching webhook deliveries before advancing its checkpoint.
 ChatGPT receives the event, reads conversation context and existing activities,
 and uses `publish_activities` to create or update concrete task/reply proposals.
-No message sending or automatic completion is added.
+The listener never sends messages or completes tasks by itself. Dots can inspect outgoing evidence and call the activity completion tool under the owner's instructions.
 
 The monitored conversations are explicit subscription filters. Merely connecting
 the plugin does not start monitoring all chats. Initial history supplies context,
-not a backlog of new-message triggers. Beeper edits, reactions, outgoing messages,
-and redelivery of the same message must not become new incoming events.
+not a backlog of new-message triggers. Reactions, notices, hidden/deleted messages,
+unknown sender direction, and redelivery do not trigger new events. Outgoing
+messages never become incoming events.
+
+`beeper.message.sent` is a separate opt-in subscription with the same
+`{"chatIds":["selected-chat"]}` filter. It observes owner messages (`isSender: true`)
+synced by Beeper, including replies sent from the original Discord or other
+messaging app. It is an observation, not a server delivery receipt. Existing
+`beeper.message.received` subscriptions stay unchanged; rescan the plugin and
+explicitly subscribe to `beeper.message.sent` in the same selected chats to let
+Dots assess completed commitments. An outgoing acknowledgement alone does not
+prove a task is complete: read context and match the actual commitment first.
 
 ## Responsibilities
 
@@ -41,7 +51,8 @@ Both task and reply activities use the same event contract:
 
 Editing a title, draft, detail, or section does not emit these events. Updating an
 existing proposal through `publish_activities` does not create another activity
-event. User state and reply-completion restrictions remain unchanged.
+event. Publication preserves user state. Owners can complete replies handled in
+other apps; automated monitors use `complete_activity` with supporting evidence.
 
 Subscription arguments are `{}` for all user-origin activities, or an object with:
 
@@ -81,7 +92,7 @@ The Beeper subscription does not automatically subscribe to activity events.
 
 ## Delivery contract
 
-Event name: `beeper.message.received`. Filters select specific chat IDs.
+Event names: `beeper.message.received` and `beeper.message.sent`. Both filter specific chat IDs independently.
 Subscription identities are deterministic from the single workspace owner,
 callback URL, event name, and normalized arguments. Subscriptions survive process
 restarts, expire unless refreshed, and stop when unsubscribed. There is no
@@ -102,7 +113,7 @@ Do not expose `/mcp` publicly or reuse this ownership model for multiple users.
 ## Acceptance evidence
 
 - Real headless Server/CLI discovery and bounded read/watch handshake on UM790-Pro.
-- Tests for baseline suppression, incoming-only selection, duplicate/edit handling,
+- Tests for baseline suppression, incoming/outgoing selection, duplicate/edit handling,
   disconnect reconciliation, and atomic checkpoint/outbox updates.
 - Tests for subscription refresh/expiry/unsubscribe, callback verification,
   signature validation, retries, and private-address rejection.
@@ -134,7 +145,7 @@ a minute. WebSocket notifications request an earlier reconciliation. It scans
 backwards using opaque `before` cursors to a saved message ID, persists progress
 in batches of at most twenty pages, and resumes after restart. A first scan may
 read older history but only messages timestamped at or after subscription start
-are eligible for notification. A first-seen incoming message may already have
+are eligible for notification. Each event subscription also suppresses messages older than its own start time. A first-seen message may already have
 been edited; deduplication is by message identity, not edited status.
 
 Use these commands for operator status; logs contain counts/errors, not bodies:
@@ -149,7 +160,7 @@ Use fixed read-only API commands and parse only required fields.
 
 ## Connect a ChatGPT monitor
 
-1. Rescan the Personal Workspace plugin and confirm `beeper.message.received`,
+1. Rescan the Personal Workspace plugin and confirm `beeper.message.received`, `beeper.message.sent`,
    `list_beeper_chats`, and `read_beeper_chat` appear.
 2. In a supported Work chat/dots, ask ChatGPT to list conversations and select the
    specific conversations to monitor. Only explicitly subscribed chats are read

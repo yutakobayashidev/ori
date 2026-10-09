@@ -77,6 +77,7 @@ it("advertises events and verifies, persists, refreshes and removes a modern MCP
     result: {
       events: [
         { name: "beeper.message.received", delivery: ["webhook"] },
+        { name: "beeper.message.sent", delivery: ["webhook"] },
         { name: "activity.created", delivery: ["webhook"] },
         { name: "activity.status_changed", delivery: ["webhook"] },
       ],
@@ -202,4 +203,15 @@ it("does not offer workspace event subscriptions to internal research callers", 
   } finally {
     registration.dispose();
   }
+});
+
+it("subscribes to outgoing observations independently through MCP HTTP", async () => {
+  const incoming = await rpc("events/subscribe", subscription);
+  const outgoing = { ...subscription, name: "beeper.message.sent" };
+  const sent = await rpc("events/subscribe", outgoing);
+  expect(sent.error).toBeUndefined();
+  expect(sent.result.id).not.toBe(incoming.result.id);
+  expect(database.select().from(mcpEventSubscriptions).all()).toHaveLength(2);
+  expect(await rpc("events/unsubscribe", outgoing)).toMatchObject({ result: {} });
+  expect(database.select().from(mcpEventSubscriptions).get()?.name).toBe("beeper.message.received");
 });

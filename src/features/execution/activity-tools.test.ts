@@ -165,7 +165,7 @@ it("rejects a stale draft instead of overwriting a concurrent owner edit", () =>
     getActivityContext({ activityIds: ["reply"] }, database).activities[0]?.effective,
   ).toMatchObject({ reply: { draft: "Owner's wording" } });
 });
-it("does not accept target overrides, send tools, reply completion or drafts on tasks", () => {
+it("does not accept target overrides, send tools or drafts on tasks", () => {
   expect(
     executeActivityTool(
       scope,
@@ -183,17 +183,6 @@ it("does not accept target overrides, send tools, reply completion or drafts on 
   ).toBe(true);
   expect(
     executeActivityTool(
-      scope,
-      {
-        toolCallId: "complete",
-        name: "set_activity_status",
-        arguments: { expectedRevision: 1, state: "completed" },
-      },
-      database,
-    ).isError,
-  ).toBe(true);
-  expect(
-    executeActivityTool(
       { ...scope, activityId: "task" },
       {
         toolCallId: "draft",
@@ -204,6 +193,24 @@ it("does not accept target overrides, send tools, reply completion or drafts on 
     ).isError,
   ).toBe(true);
   expect(getActivityContext({}, database).revision).toBe(1);
+});
+it("allows requested reply completion when the owner replied outside the app", () => {
+  expect(
+    executeActivityTool(
+      scope,
+      {
+        toolCallId: "complete",
+        name: "set_activity_status",
+        arguments: { expectedRevision: 1, state: "completed" },
+      },
+      database,
+    ),
+  ).toMatchObject({
+    isError: false,
+    structuredContent: {
+      activities: [expect.objectContaining({ id: "reply", userState: "completed" })],
+    },
+  });
 });
 it("allows requested task completion without treating AI turn completion as task completion", () => {
   const result = executeActivityTool(

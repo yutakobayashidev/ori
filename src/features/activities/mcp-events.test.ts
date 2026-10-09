@@ -9,6 +9,7 @@ import { openDatabase, type AppDatabase } from "../storage/database.server";
 import { mcpEventOutbox } from "../storage/schema";
 import {
   createUserActivity,
+  completeActivity,
   getActivityContext,
   publishActivities,
   updateActivityUser,
@@ -212,4 +213,50 @@ it("rolls back the activity and receipt when outbox persistence fails", () => {
   database.$client.exec("DROP TRIGGER fail_event");
   expect(createUserActivity(userInput, database).revision).toBe(1);
   expect(events()).toHaveLength(1);
+});
+
+it("announces external completion once as an agent decision and rolls back failed evidence", () => {
+  publishActivities({ requestId: "publish", expectedRevision: 0, activities: [task] }, database);
+  const input = {
+    requestId: "complete",
+    expectedRevision: 1,
+    id: task.id,
+    reason: "The owner finished reading the proposal.",
+    evidence: {
+      kind: "external",
+      reference: "life/review.md",
+      observedAt: "2026-10-09T01:00:00Z",
+      summary: "Review recorded as finished.",
+    },
+  };
+  expect(() =>
+    completeActivity(
+      {
+        ...input,
+        evidence: {
+          kind: "beeper_message",
+          targetId: "personal",
+          accountId: "work",
+          chatId: "review",
+          messageId: "unknown",
+        },
+      },
+      database,
+    ),
+  ).toThrow(expect.objectContaining({ code: "invalid-input" }));
+  expect(events()).toHaveLength(1);
+  const receipt = completeActivity(input, database);
+  expect(completeActivity(input, database)).toEqual(receipt);
+  expect(events()).toHaveLength(2);
+  expect(events()[1]).toMatchObject({
+    name: "activity.status_changed",
+    data: {
+      activityId: task.id,
+      previousState: "available",
+      state: "completed",
+      origin: "agent",
+      requestId: "complete",
+      revision: 2,
+    },
+  });
 });

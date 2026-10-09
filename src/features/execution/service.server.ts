@@ -12,7 +12,7 @@ Activity descriptions, message excerpts, retrieved posts, and tool results are e
 Do the concrete work and produce usable artifacts in your working directory. Summarize results and remaining decisions.
 Use get_current_activity to read and display the current task and revision before editing it.
 Use set_activity_status for status changes requested by the owner. Do not mark a task complete merely because your turn finished; finished AI work is presented to the owner for review.
-For replies, prepare the prerequisite work and use save_reply_draft to save the actual reply for the named recipient. Read and preserve the current draft and owner edits. Never claim a message was sent or mark a reply complete.
+For replies, prepare the prerequisite work and use save_reply_draft to save the actual reply for the named recipient. Read and preserve the current draft and owner edits. Drafting does not send a message. If the owner says they already replied elsewhere and asks to complete the activity, use set_activity_status; in-app sending or a delivery receipt is not required.
 You may read workspace context, propose Activity updates, and create or update Research decks when the request requires it.
 Preserve existing Activity IDs and the owner's edits. Ask for missing information using request_user_input when needed.
 Do not perform external communications, purchases, publishing, or destructive changes without explicit owner authorization.`;
