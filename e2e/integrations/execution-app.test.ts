@@ -43,6 +43,9 @@ test("opens a right Sheet and edits a persisted reply card through the real AppB
   }
   await frame.getByRole("button", { name: /Propose review times/ }).click();
   await frame.getByRole("button", { name: "Review reply to Haruka Aoki" }).click();
+  const history = frame.getByRole("region", { name: "Conversation history" });
+  await expect(history).toContainText("Thursday afternoon would be best.");
+  await expect(history.locator("img").first()).toBeVisible();
   const draft = frame.getByRole("textbox", { name: "Reply draft" });
   await draft.fill("Thursday at 14:00 works for me. I will review the materials beforehand.");
   await frame.getByRole("button", { name: "Save draft", exact: true }).click();
@@ -54,6 +57,20 @@ test("opens a right Sheet and edits a persisted reply card through the real AppB
           ?.userOverrides.draft,
     )
     .toBe("Thursday at 14:00 works for me. I will review the materials beforehand.");
+  await history.getByRole("button", { name: "Reply to Haruka Aoki's message" }).last().click();
+  await frame.getByRole("button", { name: "Send reply", exact: true }).click();
+  await expect(frame.getByText("Reply queued", { exact: true })).toBeVisible();
+  await expect(frame.getByRole("button", { name: "Send reply", exact: true })).toBeDisabled();
+  const sent = await activityMcp.tool<{
+    ok: boolean;
+    latestSend: { body: string; replyToMessageId: string; state: string };
+  }>("read_activity_conversation", { activityId: "review-times" });
+  expect(sent.ok).toBe(true);
+  expect(sent.latestSend).toMatchObject({
+    body: "Thursday at 14:00 works for me. I will review the materials beforehand.",
+    replyToMessageId: "clarification",
+    state: "queued",
+  });
   await frame.getByRole("button", { name: "Waiting", exact: true }).click();
   await expect(page.getByRole("combobox", { name: "Status", exact: true })).toHaveValue("waiting");
   const conversation = page.getByRole("log", { name: "Execution conversation" });

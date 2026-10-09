@@ -36,7 +36,7 @@ export class ActivitiesPage {
     return this.page.getByRole("button", { name: "Bring back", exact: true });
   }
   get sources() {
-    return this.page.getByRole("region", { name: "Source excerpts" });
+    return this.page.getByRole("region", { name: "Conversation history" });
   }
   get details() {
     return this.page.getByRole("region", { name: "Message details" });

@@ -1,4 +1,5 @@
 import { z } from "zod";
+import { executeMessagingTool, messagingToolDefinitions } from "../beeper/messaging-tools.server";
 import {
   createBeeperAdapter,
   listBeeperChatsInput,
@@ -147,37 +148,42 @@ const failure = (code: string, message: string) => ({
 
 export function createWorkspaceTools() {
   return {
-    definitions: specs.map(({ name, description, schema }) => ({
-      name,
-      description,
-      inputSchema: z.toJSONSchema(schema, { io: "input" }),
-      annotations: {
-        readOnlyHint: ![
-          "update_activity_progress",
-          "publish_activities",
-          "update_activity",
-          "create_deck",
-          "replace_deck",
-          "delete_deck",
-        ].includes(name),
-        destructiveHint: [
-          "update_activity_progress",
-          "publish_activities",
-          "update_activity",
-          "replace_deck",
-          "delete_deck",
-        ].includes(name),
-        openWorldHint: [
-          "list_beeper_chats",
-          "read_beeper_chat",
-          "list_connections",
-          "list_lists",
-          "fetch_posts",
-          "fetch_column_posts",
-        ].includes(name),
-      },
-    })),
+    definitions: [
+      ...messagingToolDefinitions,
+      ...specs.map(({ name, description, schema }) => ({
+        name,
+        description,
+        inputSchema: z.toJSONSchema(schema, { io: "input" }),
+        annotations: {
+          readOnlyHint: ![
+            "update_activity_progress",
+            "publish_activities",
+            "update_activity",
+            "create_deck",
+            "replace_deck",
+            "delete_deck",
+          ].includes(name),
+          destructiveHint: [
+            "update_activity_progress",
+            "publish_activities",
+            "update_activity",
+            "replace_deck",
+            "delete_deck",
+          ].includes(name),
+          openWorldHint: [
+            "list_beeper_chats",
+            "read_beeper_chat",
+            "list_connections",
+            "list_lists",
+            "fetch_posts",
+            "fetch_column_posts",
+          ].includes(name),
+        },
+      })),
+    ],
     async execute(name: string, args: unknown) {
+      if (messagingToolDefinitions.some((tool) => tool.name === name))
+        return executeMessagingTool(name, args);
       try {
         const spec = specs.find((entry) => entry.name === name);
         if (!spec) return failure("unknown-tool", "This workspace tool is not available.");

@@ -11,22 +11,26 @@ For the shared inbox tools, see
 [Activity MCP design](activity-mcp-design.md). Replies and chores share one
 activity model across Home, Messages, and MCP.
 
-| Tool                       | Input and effect                                                                                                                         |
-| -------------------------- | ---------------------------------------------------------------------------------------------------------------------------------------- |
-| `list_beeper_chats`        | Optional `cursor`, `limit`; discover chats on the configured Beeper target                                                               |
-| `read_beeper_chat`         | `chatId`, optional `cursor`; recent messages and pagination for context                                                                  |
-| `get_activity_context`     | Optional `activityIds`, `conversation`, `states`, `cursor`, `limit`; effective content, owner decisions, assessment and revision         |
-| `publish_activities`       | `requestId`, `expectedRevision`, `activities`; atomically persist task/reply proposals, preserving user decisions                        |
-| `update_activity_progress` | `requestId`, `expectedRevision`, `id`, `reason`, `evidence`, and `state` and/or `draft`; partial agent update with owner edits preserved |
-| `list_connections`         | `{}`; discover account IDs and status, without credentials                                                                               |
-| `list_lists`               | `connectionId`; discover Twitter or Mastodon lists                                                                                       |
-| `list_decks`               | `{}`; saved deck IDs, titles, revisions and column counts                                                                                |
-| `get_deck`                 | `deckId`; saved definition including column IDs and revision                                                                             |
-| `create_deck`              | `title`, `columns`, optional new `deckId`; immediately persist                                                                           |
-| `replace_deck`             | `deckId`, `expectedRevision`, `title`, complete `columns`; reject stale revisions                                                        |
-| `delete_deck`              | `deckId`, `expectedRevision`; permanently delete                                                                                         |
-| `fetch_posts`              | `connectionId`, `source`, optional `cursor`; read without saving a deck                                                                  |
-| `fetch_column_posts`       | `deckId`, `columnId`, optional `cursor`; read a saved column                                                                             |
+| Tool                         | Input and effect                                                                                                                                                                 |
+| ---------------------------- | -------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| `list_beeper_chats`          | Optional `cursor`, `limit`; discover chats on the configured Beeper target                                                                                                       |
+| `read_activity_conversation` | `activityId`, optional `cursor`; real history, participants, avatar IDs, draft hash/revision and latest send operation                                                           |
+| `send_activity_reply`        | `requestId`, `activityId`, `expectedRevision`, `expectedDraftHash`, exact `conversation`, optional `replyToMessageId`; queues the saved draft after explicit owner authorization |
+| `get_message_send`           | `operationId`; operation/upstream status without sending                                                                                                                         |
+| `get_beeper_asset`           | `assetId`; bounded avatar data URL, app-only visibility                                                                                                                          |
+| `read_beeper_chat`           | `chatId`, optional `cursor`; recent messages and pagination for context                                                                                                          |
+| `get_activity_context`       | Optional `activityIds`, `conversation`, `states`, `cursor`, `limit`; effective content, owner decisions, assessment and revision                                                 |
+| `publish_activities`         | `requestId`, `expectedRevision`, `activities`; atomically persist task/reply proposals, preserving user decisions                                                                |
+| `update_activity_progress`   | `requestId`, `expectedRevision`, `id`, `reason`, `evidence`, and `state` and/or `draft`; partial agent update with owner edits preserved                                         |
+| `list_connections`           | `{}`; discover account IDs and status, without credentials                                                                                                                       |
+| `list_lists`                 | `connectionId`; discover Twitter or Mastodon lists                                                                                                                               |
+| `list_decks`                 | `{}`; saved deck IDs, titles, revisions and column counts                                                                                                                        |
+| `get_deck`                   | `deckId`; saved definition including column IDs and revision                                                                                                                     |
+| `create_deck`                | `title`, `columns`, optional new `deckId`; immediately persist                                                                                                                   |
+| `replace_deck`               | `deckId`, `expectedRevision`, `title`, complete `columns`; reject stale revisions                                                                                                |
+| `delete_deck`                | `deckId`, `expectedRevision`; permanently delete                                                                                                                                 |
+| `fetch_posts`                | `connectionId`, `source`, optional `cursor`; read without saving a deck                                                                                                          |
+| `fetch_column_posts`         | `deckId`, `columnId`, optional `cursor`; read a saved column                                                                                                                     |
 
 Columns follow the [deck source contracts](webmcp-prototype.md). A deck has at
 most six columns. Preserve column IDs on edits. Stable deck and column IDs allow
@@ -38,7 +42,9 @@ Post retrieval returns up to 20 text records, source URLs, author information,
 the normalized column, connection display name, and a continuation cursor.
 Reuse a cursor only with its original source/account.
 External tools are stateless and do not share the internal research turn's
-12-request budget. No tool writes to an SNS account. Tool failures return
+12-request budget. Research tools do not write to SNS accounts; the separate
+`send_activity_reply` tool sends Beeper messages only under explicit owner authorization.
+Tool failures return
 `isError: true` and a structured error in text content.
 
 Tool input schemas must also work with non-JavaScript JSON Schema validators.
@@ -51,7 +57,11 @@ return the original receipt before revision checks; conflicting publications
 make no changes. Browser clients refresh on committed changes through the
 session-protected `/api/activities/events` stream. Reconnection also refreshes
 the saved snapshot. Source excerpts are supplied evidence, not a full synced
-conversation. Publishing a reply neither sends it nor marks it complete.
+conversation. `read_activity_conversation` retrieves the linked Beeper history.
+Publishing a reply neither sends it nor marks it complete. The send service records
+an immutable draft/destination snapshot and deduplicates request retries. The events
+worker submits and reconciles sends independently of subscriptions; unknown outcomes
+are never automatically resent. See [Beeper messaging](beeper-messaging-design.md).
 
 ## MCP Apps UI
 
@@ -60,11 +70,11 @@ render it through the existing Secure MCP Tunnel; no additional listener, public
 asset host, or browser session is needed. Restart/deploy the app, refresh the
 custom MCP connection in ChatGPT, and invoke one of these tools:
 
-| Tool                                      | Shared UI                                                                 |
-| ----------------------------------------- | ------------------------------------------------------------------------- |
-| `get_activity_context`                    | Activity cards, controls, editing, source excerpts and reply draft detail |
-| `get_deck`, `create_deck`, `replace_deck` | Research columns that fetch their posts through MCP                       |
-| `fetch_posts`, `fetch_column_posts`       | Research post cards, pagination and refresh                               |
+| Tool                                      | Shared UI                                                                |
+| ----------------------------------------- | ------------------------------------------------------------------------ |
+| `get_activity_context`                    | Activity cards, editing, Beeper history/avatars, reply draft and sending |
+| `get_deck`, `create_deck`, `replace_deck` | Research columns that fetch their posts through MCP                      |
+| `fetch_posts`, `fetch_column_posts`       | Research post cards, pagination and refresh                              |
 
 The UI imports the same `ResearchColumnView`, `ResearchPostCard`, `ActivityCard`,
 `ActivityControls`, `ActivityEditor`, and `ReplyActivityDetail` used by the web
@@ -72,8 +82,9 @@ app, including shared UI primitives and `src/styles.css`. Web query hooks,
 TanStack server functions, router navigation and SSE stay outside the iframe.
 Apps use the Chapplin React bridge to call MCP tools. Theme tokens adapt to the
 host's light/dark mode. The current post contract remains text-only, with source
-links and content warnings; avatars, remote media and HTML are not added to MCP
-results. The resource permits no external asset or network domains.
+links and content warnings; SNS avatars, remote media and HTML are not added to post
+results. Beeper avatars use opaque IDs and app-only bounded data URL responses.
+The resource permits no external asset or network domains.
 
 `update_activity` accepts the existing `updateActivityUserInput` contract:
 `requestId`, `expectedRevision`, `id`, and state/override changes. It is marked
@@ -182,7 +193,8 @@ dotnix's flake input and `homes/nixos/UM790-Pro/twitter-lite.nix`.
 
 The Board conversation also hosts the bundled Activity/reply MCP App using
 AppBridge. Its authenticated browser actions are restricted to the run's Activity;
-this does not expose general `/mcp` access or event subscriptions to the iframe.
+conversation, avatar and send operations are checked against that same Activity.
+This does not expose general `/mcp` access or event subscriptions to the iframe.
 Run `pnpm exec playwright test --config e2e/execution.config.ts` to verify the
 right-hand Sheet, real embedded guest, draft saving, status reflection, and reload.
 Add `TWITTER_LITE_E2E_PRODUCTION=1` after `pnpm build` to test the production bundle.

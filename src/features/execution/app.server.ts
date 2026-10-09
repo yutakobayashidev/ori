@@ -11,6 +11,9 @@ import { getExecutionRun } from "./service.server";
 import { ExecutionError } from "./runtime-client.server";
 import type { AppDatabase } from "../storage/database.server";
 import type { executionAppInput, executionAppToolInput } from "./app-model";
+import { executeMessagingTool } from "../beeper/messaging-tools.server";
+import { getMessageSend } from "../beeper/sends.server";
+import { activityHasAsset } from "../beeper/conversations.server";
 
 async function appActivity(input: z.infer<typeof executionAppInput>) {
   const run = await getExecutionRun(input.id);
@@ -43,6 +46,34 @@ export async function loadExecutionApp(input: z.infer<typeof executionAppInput>)
 export async function callExecutionAppTool(input: z.infer<typeof executionAppToolInput>) {
   const activityId = await appActivity(input);
   try {
+    if (
+      [
+        "read_activity_conversation",
+        "send_activity_reply",
+        "get_message_send",
+        "get_beeper_asset",
+      ].includes(input.name)
+    ) {
+      const args = input.arguments;
+      const savedSend = input.name === "get_message_send" ? getMessageSend(args) : null;
+      const allowed =
+        input.name === "get_beeper_asset"
+          ? typeof args.assetId === "string" && activityHasAsset(activityId, args.assetId)
+          : input.name === "get_message_send"
+            ? savedSend?.ok && savedSend.operation.activityId === activityId
+            : args.activityId === activityId;
+      if (!allowed)
+        return activityToolFailure(
+          "invalid-input",
+          "This card can only access its own conversation.",
+        );
+      const result = await executeMessagingTool(input.name, args);
+      return {
+        content: [{ type: "text" as const, text: JSON.stringify(result) }],
+        structuredContent: result,
+        isError: !result.ok,
+      };
+    }
     if (input.name === "get_activity_context") {
       const args = getActivityContextInput.parse(input.arguments);
       if (args.activityIds?.some((id) => id !== activityId))

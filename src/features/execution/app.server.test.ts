@@ -1,4 +1,6 @@
 // @vitest-environment node
+import { createHash } from "node:crypto";
+import { beeperConversations, beeperMessageSends } from "../storage/schema";
 import { afterEach, beforeEach, expect, it, vi } from "vitest";
 import { openDatabase, type AppDatabase } from "../storage/database.server";
 import {
@@ -12,7 +14,9 @@ import { executionRun } from "./model";
 const mocks = vi.hoisted(() => ({
   run: vi.fn<(...args: unknown[]) => unknown>(),
   event: vi.fn<(...args: unknown[]) => void>(),
+  messaging: vi.fn<(...args: unknown[]) => Promise<{ ok: true }>>(),
 }));
+vi.mock("../beeper/messaging-tools.server", () => ({ executeMessagingTool: mocks.messaging }));
 vi.mock("./service.server", () => ({
   getExecutionRun: mocks.run,
 }));
@@ -84,6 +88,7 @@ beforeEach(() => {
     }),
   );
   mocks.event.mockClear();
+  mocks.messaging.mockReset().mockResolvedValue({ ok: true });
 });
 afterEach(() => database.$client.close());
 
@@ -168,4 +173,113 @@ it("restores a saved card by its bundled resource contract regardless of the too
   const app = await loadExecutionApp(appInput);
   expect(app.result.structuredContent.activities.map((activity) => activity.id)).toEqual(["reply"]);
   expect(app.arguments).toEqual({ activityIds: ["reply"] });
+});
+
+it.each(["read_activity_conversation", "send_activity_reply"] as const)(
+  "scopes embedded %s to the card's activity before calling Beeper",
+  async (name) => {
+    expect(
+      await callExecutionAppTool({ ...appInput, name, arguments: { activityId: "task" } }),
+    ).toMatchObject({ isError: true });
+    expect(mocks.messaging).not.toHaveBeenCalled();
+    expect(
+      await callExecutionAppTool({ ...appInput, name, arguments: { activityId: "reply" } }),
+    ).toMatchObject({ isError: false });
+    expect(mocks.messaging).toHaveBeenCalledExactlyOnceWith(name, { activityId: "reply" });
+  },
+);
+
+it("looks up the persisted send's activity rather than trusting the supplied activity ID", async () => {
+  for (const activityId of ["reply", "task"])
+    database
+      .insert(beeperMessageSends)
+      .values({
+        id: `send-${activityId}`,
+        requestId: `request-${activityId}`,
+        payloadHash: "hash",
+        activityId,
+        targetId: "um790",
+        accountId: "work",
+        chatId: "chat",
+        body: "Reviewed text",
+        draftHash: "hash",
+        expectedRevision: 1,
+        state: "accepted",
+        createdAt: 1,
+        updatedAt: 1,
+      })
+      .run();
+  expect(
+    await callExecutionAppTool({
+      ...appInput,
+      name: "get_message_send",
+      arguments: { operationId: "send-task", activityId: "reply" },
+    }),
+  ).toMatchObject({ isError: true });
+  expect(
+    await callExecutionAppTool({
+      ...appInput,
+      name: "get_message_send",
+      arguments: { operationId: "send-task" },
+    }),
+  ).toMatchObject({ isError: true });
+  expect(
+    await callExecutionAppTool({
+      ...appInput,
+      name: "get_message_send",
+      arguments: { operationId: "missing" },
+    }),
+  ).toMatchObject({ isError: true });
+  expect(mocks.messaging).not.toHaveBeenCalled();
+  expect(
+    await callExecutionAppTool({
+      ...appInput,
+      name: "get_message_send",
+      arguments: { operationId: "send-reply" },
+    }),
+  ).toMatchObject({ isError: false });
+  expect(mocks.messaging).toHaveBeenCalledExactlyOnceWith("get_message_send", {
+    operationId: "send-reply",
+  });
+});
+
+it("allows only avatars observed in the delegated conversation", async () => {
+  const identity = { targetId: "um790", accountId: "work", chatId: "chat" };
+  const avatarId = "a".repeat(64);
+  database
+    .insert(beeperConversations)
+    .values({
+      id: createHash("sha256")
+        .update(JSON.stringify([identity.targetId, identity.accountId, identity.chatId]))
+        .digest("hex"),
+      ...identity,
+      data: {
+        ...identity,
+        title: "Aoki",
+        network: "Discord",
+        type: "single",
+        participants: [{ id: "aoki", avatarId }],
+        isMerged: false,
+      },
+      observedAt: 1,
+    })
+    .run();
+  expect(
+    await callExecutionAppTool({
+      ...appInput,
+      name: "get_beeper_asset",
+      arguments: { assetId: "b".repeat(64) },
+    }),
+  ).toMatchObject({ isError: true });
+  expect(mocks.messaging).not.toHaveBeenCalled();
+  expect(
+    await callExecutionAppTool({
+      ...appInput,
+      name: "get_beeper_asset",
+      arguments: { assetId: avatarId },
+    }),
+  ).toMatchObject({ isError: false });
+  expect(mocks.messaging).toHaveBeenCalledExactlyOnceWith("get_beeper_asset", {
+    assetId: avatarId,
+  });
 });

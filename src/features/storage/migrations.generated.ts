@@ -85,4 +85,17 @@ export const migrations = [
     folderMillis: 1791529683384,
     hash: "b5b6f27f029ee82c729cf2fb11edb23892cc0e1c5f0365d39bd3368e2fe363b7",
   },
+  {
+    sql: [
+      "CREATE TABLE `beeper_conversations` (\n\t`id` text PRIMARY KEY NOT NULL,\n\t`target_id` text NOT NULL,\n\t`account_id` text NOT NULL,\n\t`chat_id` text NOT NULL,\n\t`data` text NOT NULL,\n\t`observed_at` integer NOT NULL\n);\n",
+      "\nCREATE TABLE `beeper_media_assets` (\n\t`id` text PRIMARY KEY NOT NULL,\n\t`target_id` text NOT NULL,\n\t`source_uri` text NOT NULL,\n\t`observed_at` integer NOT NULL\n);\n",
+      "\nCREATE TABLE `beeper_message_sends` (\n\t`id` text PRIMARY KEY NOT NULL,\n\t`request_id` text NOT NULL,\n\t`payload_hash` text NOT NULL,\n\t`activity_id` text NOT NULL,\n\t`target_id` text NOT NULL,\n\t`account_id` text NOT NULL,\n\t`chat_id` text NOT NULL,\n\t`actual_chat_id` text,\n\t`body` text NOT NULL,\n\t`reply_to_message_id` text,\n\t`draft_hash` text NOT NULL,\n\t`expected_revision` integer NOT NULL,\n\t`state` text NOT NULL,\n\t`pending_message_id` text,\n\t`message_id` text,\n\t`error_code` text,\n\t`upstream_status` text,\n\t`created_at` integer NOT NULL,\n\t`updated_at` integer NOT NULL\n);\n",
+      "\nCREATE UNIQUE INDEX `beeper_message_sends_request_id_unique` ON `beeper_message_sends` (`request_id`);",
+      "\nCREATE UNIQUE INDEX `beeper_send_draft_claim` ON `beeper_message_sends` (`activity_id`,`expected_revision`,`draft_hash`);",
+      "\nCREATE TABLE `beeper_messages` (\n\t`id` text PRIMARY KEY NOT NULL,\n\t`target_id` text NOT NULL,\n\t`account_id` text NOT NULL,\n\t`chat_id` text NOT NULL,\n\t`message_id` text NOT NULL,\n\t`data` text NOT NULL,\n\t`observed_at` integer NOT NULL\n);\n",
+    ],
+    bps: true,
+    folderMillis: 1791533062737,
+    hash: "f007c1ec177801f7bef87cc5807096a47586239d4808e2890d7e95642291b597",
+  },
 ];

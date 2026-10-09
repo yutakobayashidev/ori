@@ -17,6 +17,17 @@ const messageSchema = z.object({
   accountID: id,
   timestamp: z.iso.datetime({ offset: true }),
   senderName: z.string().optional(),
+  senderID: id.optional(),
+  sortKey: z.string().optional(),
+  linkedMessageID: id.optional(),
+  sendStatus: z
+    .object({
+      status: z.enum(["SUCCESS", "PENDING", "FAIL_RETRIABLE", "FAIL_PERMANENT"]),
+      timestamp: z.string(),
+      reason: z.string().optional(),
+      deliveredToUsers: z.array(z.string()).optional(),
+    })
+    .optional(),
   text: z.string().optional(),
   type: z.string().optional(),
   isSender: z.boolean().optional(),
@@ -24,6 +35,53 @@ const messageSchema = z.object({
   isHidden: z.boolean().optional(),
   editedTimestamp: z.string().optional(),
 });
+const chatSchema = z.object({
+  id,
+  accountID: id,
+  title: z.string(),
+  network: z.string(),
+  type: z.string(),
+  imgURL: z
+    .string()
+    .nullish()
+    .transform((value) => value ?? undefined)
+    .optional(),
+  isReadOnly: z.boolean().optional(),
+  participants: z.object({
+    items: z.array(
+      z.object({
+        id,
+        fullName: z.string().optional(),
+        imgURL: z
+          .string()
+          .nullish()
+          .transform((value) => value ?? undefined)
+          .optional(),
+        isSelf: z.boolean().optional(),
+      }),
+    ),
+    hasMore: z.boolean().optional(),
+    total: z.number().optional(),
+  }),
+  capabilities: z
+    .object({
+      maxTextLength: z.number().optional(),
+      reply: z.number().int().min(-2).max(2).optional(),
+    })
+    .optional(),
+  merge: z.object({ chatIDs: z.array(id), defaultChatID: id.optional() }).optional(),
+});
+export type BeeperChat = z.infer<typeof chatSchema>;
+export interface BeeperMessagingAdapter extends BeeperAdapter {
+  readChat(this: void, chatId: string): Promise<BeeperChat>;
+  retrieveMessage(this: void, chatId: string, messageId: string): Promise<BeeperMessage>;
+  sendMessage(
+    this: void,
+    chatId: string,
+    input: { text: string; replyToMessageID?: string },
+  ): Promise<{ chatID: string; pendingMessageID: string }>;
+  readMedia(this: void, sourceUri: string): Promise<Buffer>;
+}
 const pageFields = {
   hasMore: z.boolean(),
   oldestCursor: z.string().nullable(),
@@ -56,15 +114,32 @@ export interface BeeperAdapter {
 
 export function createBeeperAdapter(
   options: { binary?: string; targetId?: string } = {},
-): BeeperAdapter {
+): BeeperMessagingAdapter {
   const binary = options.binary ?? process.env.TWITTER_LITE_BEEPER_CLI ?? "beeper-cli";
   const targetId = options.targetId ?? process.env.TWITTER_LITE_BEEPER_TARGET ?? "um790";
   const flags = ["--target", targetId, "--read-only", "--json"];
-  async function get(path: string): Promise<unknown> {
+  async function request(
+    path: string,
+    body?: { text: string; replyToMessageID?: string },
+  ): Promise<unknown> {
     return new Promise((resolve, reject) => {
       execFile(
         binary,
-        ["api", "get", path, ...flags, "--timeout", "20s"],
+        body
+          ? [
+              "api",
+              "post",
+              path,
+              "--target",
+              targetId,
+              "--json",
+              "--yes",
+              "--body",
+              JSON.stringify(body),
+              "--timeout",
+              "20s",
+            ]
+          : ["api", "get", path, ...flags, "--timeout", "20s"],
         {
           timeout: 25_000,
           maxBuffer: 4 * 1024 * 1024,
@@ -87,6 +162,51 @@ export function createBeeperAdapter(
   }
   return {
     targetId,
+    async readChat(chatId) {
+      return chatSchema.parse(await request(`/v1/chats/${encodeURIComponent(id.parse(chatId))}`));
+    },
+    async retrieveMessage(chatId, messageId) {
+      return messageSchema.parse(
+        await request(
+          `/v1/chats/${encodeURIComponent(id.parse(chatId))}/messages/${encodeURIComponent(id.parse(messageId))}`,
+        ),
+      );
+    },
+    async sendMessage(chatId, input) {
+      const body = z
+        .strictObject({ text: z.string().min(1).max(16000), replyToMessageID: id.optional() })
+        .parse(input);
+      return z
+        .object({ chatID: id, pendingMessageID: id })
+        .parse(await request(`/v1/chats/${encodeURIComponent(id.parse(chatId))}/messages`, body));
+    },
+    async readMedia(sourceUri) {
+      if (!/^(mxc|localmxc|file):\/\//.test(sourceUri))
+        throw new Error("Unsupported Beeper media reference.");
+      return new Promise((resolve, reject) => {
+        execFile(
+          binary,
+          [
+            "media",
+            "download",
+            sourceUri,
+            "--out",
+            "-",
+            "--target",
+            targetId,
+            "--quiet",
+            "--read-only",
+            "--timeout",
+            "20s",
+          ],
+          { encoding: "buffer", timeout: 25_000, maxBuffer: 2 * 1024 * 1024 },
+          (error, stdout) => {
+            if (error) reject(new Error("Beeper media unavailable."));
+            else resolve(stdout);
+          },
+        );
+      });
+    },
     async listChats(input) {
       const { cursor, limit } = listBeeperChatsInput.parse(input);
       const query = new URLSearchParams({ limit: String(limit) });
@@ -94,7 +214,7 @@ export function createBeeperAdapter(
         query.set("cursor", cursor);
         query.set("direction", "before");
       }
-      return chatPageSchema.parse(await get(`/v1/chats?${query}`));
+      return chatPageSchema.parse(await request(`/v1/chats?${query}`));
     },
     async readMessages(chatId, cursor, direction = "before") {
       id.parse(chatId);
@@ -104,7 +224,7 @@ export function createBeeperAdapter(
         query.set("direction", direction);
       }
       return messagePageSchema.parse(
-        await get(`/v1/chats/${encodeURIComponent(chatId)}/messages?${query}`),
+        await request(`/v1/chats/${encodeURIComponent(chatId)}/messages?${query}`),
       );
     },
     watch(chatIds, onChange, onClose) {

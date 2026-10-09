@@ -5,6 +5,7 @@ import { ActivityFeedback } from "#/features/activities/activity-controls";
 import { ActivityStoreProvider, type ActivityStore } from "#/features/activities/activity-store";
 import type { ActivityContext } from "#/features/activities/model";
 import { ReplyActivityDetail } from "#/features/activities/reply-activity-detail";
+import type { ActivityMessagingTransport } from "#/features/activities/messaging-client";
 
 type CallTool = (name: string, args: Record<string, unknown>) => Promise<Record<string, unknown>>;
 
@@ -25,10 +26,33 @@ export function Activities({
   callTool: CallTool;
   toolArguments?: Record<string, unknown>;
 }) {
+  const messaging = useMemo<ActivityMessagingTransport>(
+    () => ({
+      readConversation: async (input) =>
+        (await callTool("read_activity_conversation", input)) as unknown as Awaited<
+          ReturnType<ActivityMessagingTransport["readConversation"]>
+        >,
+      sendReply: async (input) =>
+        (await callTool("send_activity_reply", input)) as unknown as Awaited<
+          ReturnType<ActivityMessagingTransport["sendReply"]>
+        >,
+      getSend: async (input) =>
+        (await callTool("get_message_send", input)) as unknown as Awaited<
+          ReturnType<ActivityMessagingTransport["getSend"]>
+        >,
+      getAsset: async (input) =>
+        (await callTool("get_beeper_asset", input)) as unknown as Awaited<
+          ReturnType<ActivityMessagingTransport["getAsset"]>
+        >,
+    }),
+    [callTool],
+  );
   const filters = useMemo(
     () => ({
       limit: toolArguments?.limit ?? 50,
       ...(toolArguments?.activityIds ? { activityIds: toolArguments.activityIds } : {}),
+      ...(toolArguments?.conversation ? { conversation: toolArguments.conversation } : {}),
+      ...(toolArguments?.states ? { states: toolArguments.states } : {}),
     }),
     [toolArguments],
   );
@@ -156,6 +180,7 @@ export function Activities({
   return (
     <ActivityStoreProvider
       value={{
+        messaging,
         revision: snapshot.revision,
         currentRevision: () => current.current.revision,
         activities: snapshot.activities,

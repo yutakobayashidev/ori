@@ -10,6 +10,20 @@ import {
 import type { ActivityContext } from "./model";
 import { ActivityStoreProvider, useActivityStore } from "./activity-store";
 import { changeActivity, createHomeActivity, loadActivities } from "./server-functions";
+import {
+  loadReplyConversation,
+  sendReply,
+  loadMessageSend,
+  loadBeeperAsset,
+} from "../beeper/server-functions";
+import type { ActivityMessagingTransport } from "./messaging-client";
+
+const messaging: ActivityMessagingTransport = {
+  readConversation: (data) => loadReplyConversation({ data }),
+  sendReply: (data) => sendReply({ data }),
+  getSend: (data) => loadMessageSend({ data }),
+  getAsset: (data) => loadBeeperAsset({ data }),
+};
 
 type NewTask = Omit<
   Parameters<typeof createHomeActivity>[0]["data"],
@@ -109,6 +123,7 @@ export function ActivityStateProvider({
   return (
     <ActivityStoreProvider
       value={{
+        messaging,
         revision: snapshot?.revision ?? 0,
         currentRevision: () => revision.current,
         retryPending,

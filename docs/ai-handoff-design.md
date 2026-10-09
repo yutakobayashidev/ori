@@ -19,7 +19,8 @@ Select an existing card, describe the requested work and completion criteria,
 and hand it to AI. The card opens in a right-hand shadcn Sheet containing the
 execution conversation, questions, followups, stopping, and artifacts. A successful
 AI turn goes to review without automatically changing Activity state. The owner
-can request a task status change in the conversation; reply delivery is not supported.
+can request a task status change or explicitly authorize a saved Beeper reply.
+A send operation tracks upstream success separately from task completion.
 
 ## Conversation tools and embedded Apps
 
@@ -37,11 +38,12 @@ The runtime persists tool arguments, results, and their message position in DETS
 and streams them with conversation snapshots, including MCP App metadata.
 The browser renders successful Activity results with the existing MCP
 App HTML and AppBridge, in an opaque-origin sandbox with network access disabled.
-This host only serves the bundled resource and permits `get_activity_context` and
-`update_activity` for the run's Activity. Browser actions use owner session/CSRF
+This host only serves the bundled resource and scopes Activity reads/edits,
+Beeper conversation reads, avatar access and send operations to the run's Activity. Browser actions use owner session/CSRF
 checks rather than the short-lived execution proof, so saved cards remain editable
 after execution finishes. Reopening reads current Activity state. The existing
-reply editor saves drafts; no sending tool or transport is added.
+reply editor shares the web messaging service: saving remains separate from sending,
+and sends require explicit owner authorization. See [Beeper messaging](beeper-messaging-design.md).
 
 Followups resume the existing Codex thread with the current MCP configuration.
 

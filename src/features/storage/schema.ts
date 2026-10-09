@@ -246,3 +246,66 @@ export const beeperSeenMessages = sqliteTable(
   },
   (table) => [primaryKey({ columns: [table.targetId, table.chatId, table.messageId] })],
 );
+
+export const beeperConversations = sqliteTable("beeper_conversations", {
+  id: text("id").primaryKey(),
+  targetId: text("target_id").notNull(),
+  accountId: text("account_id").notNull(),
+  chatId: text("chat_id").notNull(),
+  data: text("data", { mode: "json" })
+    .$type<import("../beeper/conversation-model").Conversation>()
+    .notNull(),
+  observedAt: integer("observed_at").notNull(),
+});
+
+export const beeperMessages = sqliteTable("beeper_messages", {
+  id: text("id").primaryKey(),
+  targetId: text("target_id").notNull(),
+  accountId: text("account_id").notNull(),
+  chatId: text("chat_id").notNull(),
+  messageId: text("message_id").notNull(),
+  data: text("data", { mode: "json" })
+    .$type<import("../beeper/conversation-model").ConversationMessage>()
+    .notNull(),
+  observedAt: integer("observed_at").notNull(),
+});
+
+export const beeperMediaAssets = sqliteTable("beeper_media_assets", {
+  id: text("id").primaryKey(),
+  targetId: text("target_id").notNull(),
+  sourceUri: text("source_uri").notNull(),
+  observedAt: integer("observed_at").notNull(),
+});
+
+export const beeperMessageSends = sqliteTable(
+  "beeper_message_sends",
+  {
+    id: text("id").primaryKey(),
+    requestId: text("request_id").notNull().unique(),
+    payloadHash: text("payload_hash").notNull(),
+    activityId: text("activity_id").notNull(),
+    targetId: text("target_id").notNull(),
+    accountId: text("account_id").notNull(),
+    chatId: text("chat_id").notNull(),
+    actualChatId: text("actual_chat_id"),
+    body: text("body").notNull(),
+    replyToMessageId: text("reply_to_message_id"),
+    draftHash: text("draft_hash").notNull(),
+    expectedRevision: integer("expected_revision").notNull(),
+    state: text("state")
+      .$type<"queued" | "submitting" | "accepted" | "succeeded" | "failed" | "unknown">()
+      .notNull(),
+    pendingMessageId: text("pending_message_id"),
+    messageId: text("message_id"),
+    errorCode: text("error_code"),
+    upstreamStatus: text("upstream_status"),
+    ...timestamps,
+  },
+  (table) => [
+    uniqueIndex("beeper_send_draft_claim").on(
+      table.activityId,
+      table.expectedRevision,
+      table.draftHash,
+    ),
+  ],
+);

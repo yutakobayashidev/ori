@@ -1,12 +1,14 @@
 import { createContext, useContext } from "react";
 import type { z } from "zod";
 import type { Activity, updateActivityUserInput } from "./model";
+import type { ActivityMessagingTransport } from "./messaging-client";
 
 type Changes = Omit<
   z.input<typeof updateActivityUserInput>,
   "requestId" | "expectedRevision" | "id"
 >;
 export type ActivityStore = {
+  messaging?: ActivityMessagingTransport;
   revision: number;
   currentRevision: () => number;
   retryPending: (() => Promise<void>) | null;

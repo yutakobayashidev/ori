@@ -27,7 +27,7 @@ test("shares published chores and reply activities with Home, Messages and MCP w
   await expect(activitiesPage.sources).toContainText(
     "Please review the materials and suggest two times.",
   );
-  await expect(activitiesPage.sources).toContainText("not the full conversation history");
+  await expect(activitiesPage.sources).toContainText("Thursday afternoon would be best.");
   await expect(activitiesPage.action("Send the completed documents")).toBeVisible();
   const edited = "I checked the materials. Thursday at 14:00 works for me.";
   await activitiesPage.saveReply(edited);
@@ -67,12 +67,13 @@ test("shares published chores and reply activities with Home, Messages and MCP w
   expect(after.activities.find((item) => item.id === "buy-detergent")?.userState).toBe("completed");
   await page.reload();
   await expect(activitiesPage.draft).toHaveValue(edited);
+  // Reply tasks can be completed after work outside the app, independently of sending here.
   await expect(
-    activitiesPage.details.getByRole("button", {
-      name: /^(Send|Mark complete|Try sending)$/,
-      exact: true,
-    }),
-  ).toHaveCount(0);
+    activitiesPage.details.getByRole("button", { name: "Mark complete", exact: true }),
+  ).toBeEnabled();
+  await expect(
+    activitiesPage.details.getByRole("button", { name: "Send reply", exact: true }),
+  ).toBeEnabled();
   await activitiesPage.action("Send the completed documents").click();
   await expect(activitiesPage.draft).toHaveValue("A newer agent suggestion");
   await messagesPage.showConversationList();
@@ -139,4 +140,35 @@ test("retries publication without duplicates and rejects invalid batches without
     }),
   ).toMatchObject({ ok: false, error: { code: "invalid-input" } });
   expect(await activityMcp.context()).toEqual(snapshot);
+});
+
+test("sends a saved reply from Messages with an explicit quoted message", async ({
+  page,
+  activityMcp,
+}, testInfo) => {
+  await activityMcp.publish();
+  await page.goto("/support?activity=review-times");
+  const history = page.getByRole("region", { name: "Conversation history" });
+  await expect(history).toContainText("Thursday afternoon would be best.");
+  await expect(history.locator("img").first()).toBeVisible();
+  await expect(history).toContainText("Discord · e2e-account");
+  await history.getByRole("button", { name: "Reply to Haruka Aoki's message" }).last().click();
+  const send = page.getByRole("button", { name: "Send reply", exact: true });
+  await page.getByRole("textbox", { name: "Reply draft" }).fill("Thursday at 14:00 works for me.");
+  await expect(send).toBeDisabled();
+  await page.getByRole("button", { name: "Save draft", exact: true }).click();
+  await send.click();
+  await expect(page.getByText("Reply queued", { exact: true })).toBeVisible();
+  await expect(send).toBeDisabled();
+  const details = page.getByRole("region", { name: "Message details" });
+  expect(
+    await details.evaluate((element) => element.scrollWidth - element.clientWidth),
+  ).toBeLessThanOrEqual(1);
+  expect(
+    (await activityMcp.context()).activities.find((item) => item.id === "review-times")?.userState,
+  ).toBe("available");
+  await page.screenshot({ path: `/tmp/beeper-reply-${testInfo.project.name}.png`, fullPage: true });
+  await page.reload();
+  await expect(page.getByText("Reply queued", { exact: true })).toBeVisible();
+  await expect(send).toBeDisabled();
 });

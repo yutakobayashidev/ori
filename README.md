@@ -10,11 +10,12 @@ original language.
 
 Home uses a Tiimo-inspired day flow with expandable activities and direct
 controls for routine steps, tasks, replies and weight entries. Messages uses
-a Beeper-inspired conversation layout with visible source messages, editable
-drafts and a contextual side panel. Tasks and reply activities share persistent
+a Beeper conversation layout with real history, participant avatars, editable
+drafts, quoted text replies and a contextual side panel. Tasks and reply activities share persistent
 SQLite records across Home, Messages, and MCP. User edits and decisions survive
-agent updates and reloads. Routines and Journal remain session-only prototypes;
-Beeper history in the Messages screen and actual message sending remain unconnected.
+agent updates and reloads. Routines and Journal remain session-only prototypes.
+Reply sending snapshots the saved draft into a durable operation; upstream send
+success does not automatically complete the task.
 The headless Beeper listener can observe messages sent in the original chat apps;
 Dots can update task progress and reply proposals through shared MCP tools.
 
@@ -27,7 +28,7 @@ open and when returning to the app.
 | Workspace | Route      | Current implementation                                                                                                 |
 | --------- | ---------- | ---------------------------------------------------------------------------------------------------------------------- |
 | Home      | `/`        | Persistent mixed task/reply inbox and action proposals; routine and measurement controls remain local prototypes.      |
-| Messages  | `/support` | Published reply activities, source excerpts, persistent draft edits and deferral. No external sending.                 |
+| Messages  | `/support` | Reply activities, Beeper history and avatars, persistent drafts, quoted text sending and operation status.             |
 | Journal   | `/journal` | Notes, resume points, medication and weight entries, append-only corrections, and summary previews. Local prototype.   |
 | Reader    | `/inbox`   | Searchable sample articles and a responsive article reader. Recommendation from activity history is not connected yet. |
 | Vitals    | `/vitals`  | Body and Environment dashboards with sample readings, charts, and simulated controls. No health or device connection.  |
@@ -197,7 +198,8 @@ to read tasks, update their progress, and propose reply drafts. Their results
 embed the existing MCP App so drafts can be edited and saved inside the conversation.
 Tool results survive reload; reopened cards read the latest shared Activity state.
 AI completion enters review; it does not automatically complete the task.
-Drafts do not send messages. Replies handled in other apps can be marked complete.
+Saving a draft does not send it. Explicit owner-authorized sending uses the shared
+Beeper tools and a durable send operation. Replies handled in other apps can be marked complete.
 
 The Elixir/OTP service in `runtime/` owns Codex subprocesses for both Board and
 Research. It persists accepted work and thread IDs, limits concurrency, and marks
@@ -208,7 +210,8 @@ presentation. Browser disconnection does not stop a job.
 Task runs use a signed, run-scoped HTTP MCP connection. Activity progress writes
 are restricted to the delegated Activity; Dots uses the shared workspace endpoint.
 The browser's MCP App host uses AppBridge with the bundled UI in an opaque-origin
-sandbox. Its session-authenticated actions can only read/edit the selected Activity,
+sandbox. Its session-authenticated actions are restricted to the selected Activity,
+including its conversation, avatars and reply sends,
 including after execution ends. Agent mutations emit Activity events with `origin: agent`;
 edits made in the card emit `origin: user`. Both use the same revision checks and
 retry receipts. Followups resume their existing Codex thread with the current MCP configuration.
@@ -408,6 +411,14 @@ endpoint; `update_activity` exposes revision-checked user edits to the app.
 Chapplin provides the client bridge. A separate Vite build embeds the single-file
 UI in the existing server, preserving its MCP 2.0 tools and events. See
 [MCP Apps UI](docs/http-mcp.md#mcp-apps-ui) for supported tools and verification.
+
+`read_activity_conversation`, `send_activity_reply` and `get_message_send` share the
+web reply service with Dots and Codex. Read the saved draft hash/revision before
+sending; monitoring and draft generation do not authorize external messages.
+The app-only `get_beeper_asset` resolves opaque avatar IDs without exposing tokens
+or upstream paths. The events worker processes send operations independently of
+subscriptions and never automatically retries an unknown submission outcome.
+See [Beeper messaging](docs/beeper-messaging-design.md) for data and send semantics.
 
 `list_beeper_chats` and `read_beeper_chat` provide read-only conversation context
 from the configured headless Beeper Server. MCP 2.0 clients can subscribe to

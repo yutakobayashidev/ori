@@ -176,12 +176,43 @@ it("opens the existing reply detail and saves a draft through MCP without sendin
     userOverrides: {},
   };
   const page = { ...initial, activities: [reply] };
-  const callTool = vi
-    .fn<(name: string, args: Record<string, unknown>) => Promise<Record<string, unknown>>>()
-    .mockResolvedValueOnce({ ok: true, revision: 8 })
-    .mockResolvedValueOnce({
+  let revision = 7;
+  const callTool = vi.fn<
+    (name: string, args: Record<string, unknown>) => Promise<Record<string, unknown>>
+  >(async (name: string, _args: Record<string, unknown>): Promise<Record<string, unknown>> => {
+    if (name === "read_activity_conversation")
+      return {
+        ok: true,
+        revision,
+        draftHash: "a".repeat(64),
+        latestSend: null,
+        nextCursor: null,
+        conversation: {
+          targetId: "desktop",
+          accountId: "account",
+          chatId: "chat",
+          title: "Sam",
+          network: "Discord",
+          type: "single",
+          participants: [],
+          isMerged: false,
+        },
+        messages: [
+          {
+            id: "message",
+            text: "Is Friday good?",
+            timestamp: "2026-10-09T00:00:00Z",
+            isSender: false,
+          },
+        ],
+      };
+    if (name === "update_activity") {
+      revision = 8;
+      return { ok: true, revision };
+    }
+    return {
       ...page,
-      revision: 8,
+      revision,
       activities: [
         {
           ...reply,
@@ -192,24 +223,23 @@ it("opens the existing reply detail and saves a draft through MCP without sendin
           userOverrides: { draft: "Friday at noon works." },
         },
       ],
-    });
+    };
+  });
   render(<Activities initial={page} callTool={callTool} />);
   fireEvent.click(screen.getByRole("button", { name: /Reply to Sam.*Confirm Friday/ }));
   fireEvent.click(screen.getByRole("button", { name: "Review reply to Sam" }));
   expect(screen.getByRole("article", { name: "Conversation with Sam" })).toBeVisible();
-  expect(screen.getByText("Is Friday good?")).toBeVisible();
+  expect(await screen.findByText("Is Friday good?")).toBeVisible();
   fireEvent.change(screen.getByRole("textbox", { name: "Reply draft" }), {
     target: { value: "Friday at noon works." },
   });
   fireEvent.click(screen.getByRole("button", { name: "Save draft" }));
   expect(await screen.findByText("Draft saved")).toBeVisible();
-  expect(callTool).toHaveBeenNthCalledWith(1, "update_activity", {
+  expect(callTool).toHaveBeenCalledWith("update_activity", {
     id: "reply",
     requestId: expect.any(String),
     expectedRevision: 7,
     overrides: { draft: "Friday at noon works." },
   });
-  expect(
-    screen.getByText("Drafts are saved here. Sending messages is not connected yet."),
-  ).toBeVisible();
+  expect(callTool.mock.calls.some(([name]) => name === "send_activity_reply")).toBe(false);
 });

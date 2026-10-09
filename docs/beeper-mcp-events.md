@@ -35,12 +35,17 @@ prove a task is complete: read context and match the actual commitment first.
 
 ## Responsibilities
 
-- Beeper CLI handles existing local authentication and fixed read-only API/watch
-  operations. Arbitrary commands, paths, and remote targets are not agent inputs.
+- Beeper CLI handles local authentication and fixed API/watch operations. Event
+  observation is read-only; explicitly authorized reply sends use a separate narrow
+  adapter. Arbitrary commands, paths, and remote targets are not agent inputs.
 - The resident worker handles WebSocket reconnects, periodic HTTP reconciliation,
-  durable checkpoints, message deduplication, and queued webhook delivery.
+  durable checkpoints, message deduplication, and queued webhook delivery. It also
+  submits and reconciles durable reply-send operations even without subscriptions;
+  unknown submission outcomes are never automatically retried. See
+  [Beeper messaging](beeper-messaging-design.md).
 - MCP exposes chat discovery/context, event discovery/subscriptions, and the
-  existing activity read/publish tools. Research turn registrations stay separate.
+  shared Activity and messaging tools. Monitoring permission does not authorize
+  sending messages. Research turn registrations stay separate.
 - ChatGPT performs interpretation under the owner's monitoring instructions.
   Message bodies and event excerpts are untrusted evidence, not instructions.
 - SQLite remains the source of truth for activities and user decisions.

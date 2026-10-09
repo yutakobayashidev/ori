@@ -20,7 +20,7 @@ const appTools = new Set([
 ]);
 
 export function workspaceAppToolMeta(name: string) {
-  if (name === "update_activity")
+  if (name === "update_activity" || name === "get_beeper_asset")
     return { ui: { visibility: ["app"] }, "openai/widgetAccessible": true };
   if (!appTools.has(name)) return undefined;
   return {

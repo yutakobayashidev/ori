@@ -126,7 +126,7 @@ function clearActivities() {
   const database = openDatabase(path);
   try {
     database.$client.exec(
-      "DELETE FROM activities; DELETE FROM activity_receipts; DELETE FROM activity_revision;",
+      "DELETE FROM beeper_message_sends; DELETE FROM beeper_messages; DELETE FROM beeper_conversations; DELETE FROM beeper_media_assets; DELETE FROM activities; DELETE FROM activity_receipts; DELETE FROM activity_revision;",
     );
   } finally {
     database.$client.close();

@@ -1,6 +1,7 @@
 import { createWorkspaceTools } from "../mcp/workspace-tools.server";
 import { executionScopeIsValid, getExecutionRun } from "./service.server";
 import { executionToolDefinitions } from "./tool-definitions.server";
+import { getMessageSend } from "../beeper/sends.server";
 
 export async function createExecutionTools(id: string, proof: string) {
   if (!(await executionScopeIsValid(id, proof))) return undefined;
@@ -28,6 +29,28 @@ export async function createExecutionTools(id: string, proof: string) {
             error: {
               code: "activity-out-of-scope",
               message: "Only the delegated activity can be updated.",
+            },
+          };
+      }
+      if (
+        ["read_activity_conversation", "send_activity_reply", "get_message_send"].includes(name)
+      ) {
+        const run = await getExecutionRun(id);
+        const target = name === "get_message_send" ? getMessageSend(input) : null;
+        const activityId =
+          name === "get_message_send"
+            ? target?.ok
+              ? target.operation.activityId
+              : undefined
+            : input && typeof input === "object" && "activityId" in input
+              ? input.activityId
+              : undefined;
+        if (!run.activityId || activityId !== run.activityId)
+          return {
+            ok: false,
+            error: {
+              code: "activity-out-of-scope",
+              message: "Only the delegated activity can be accessed.",
             },
           };
       }
