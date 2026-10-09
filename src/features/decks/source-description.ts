@@ -31,6 +31,11 @@ export function describeSource(source: DeckColumn["source"]): {
           return { label: "Hashtag", query: `#${source.target}` };
       }
       break;
+    case "reddit":
+      return {
+        label: `Reddit · ${source.sort}${source.time === "all" ? "" : ` · ${source.time}`}`,
+        query: source.query,
+      };
   }
   const exhaustive: never = source;
   return exhaustive;

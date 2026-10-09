@@ -1,6 +1,7 @@
 import { z } from "zod";
 import type { Connection } from "#/features/connections/model";
 import { mastodonSourceSchema } from "#/features/platforms/mastodon-source";
+import { redditSourceSchema } from "#/features/platforms/reddit-source";
 import { InputError } from "#/features/posts/inputs";
 import { columnSchema, deckSchema, MAX_COLUMNS, newId } from "./model";
 
@@ -10,6 +11,7 @@ const toolColumn = columnSchema.omit({ id: true, source: true }).extend({
     .describe("Keep an existing column ID when editing; omit for a new column."),
   source: z.union([
     mastodonSourceSchema,
+    redditSourceSchema,
     z.discriminatedUnion("kind", [
       z
         .object({

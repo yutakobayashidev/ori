@@ -28,7 +28,7 @@ export class ResearchPage {
     await this.page.goto(`/deck${search}`, options);
   }
   accountPicker(count: number) {
-    return this.page.getByRole("button", { name: `Connected accounts · ${count}` });
+    return this.page.getByRole("button", { name: `Research sources · ${count}` });
   }
   account(name: string) {
     return this.page.getByRole("checkbox", { name, exact: true });

@@ -4,6 +4,7 @@ import type { DeckColumn } from "../decks/model";
 import { loadListPosts, loadUserPosts, searchPosts } from "../posts/server-functions";
 import { createPostFeedOptions, PostLoadError } from "../posts/use-post-feed";
 import { loadMastodonPosts } from "./mastodon-server-functions";
+import { loadRedditPosts } from "./reddit-server-functions";
 import { mapTwitterPost } from "./twitter";
 import type { ResearchPage, ResearchPost } from "./types";
 
@@ -20,6 +21,7 @@ export function flattenResearchPages(pages: ResearchPage[]): ResearchPost[] {
 
 export function useResearchFeed(column: DeckColumn) {
   const mastodon = useServerFn(loadMastodonPosts);
+  const reddit = useServerFn(loadRedditPosts);
   const loadUser = useServerFn(loadUserPosts);
   const loadList = useServerFn(loadListPosts);
   const search = useServerFn(searchPosts);
@@ -30,6 +32,17 @@ export function useResearchFeed(column: DeckColumn) {
     refetchOnWindowFocus: false,
     refetchOnReconnect: false,
     queryFn: async ({ pageParam }): Promise<ResearchPage> => {
+      if (column.source.platform === "reddit") {
+        const result = await reddit({
+          data: {
+            connectionId: column.connectionId,
+            source: column.source,
+            cursor: pageParam,
+          },
+        });
+        if (!result.ok) throw new PostLoadError(result.error);
+        return result.page;
+      }
       if (column.source.platform === "mastodon") {
         const result = await mastodon({
           data: {

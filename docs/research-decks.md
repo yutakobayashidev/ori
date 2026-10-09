@@ -14,7 +14,7 @@ restoration. Column menus offer editing, ordering, and deletion; refresh and
 pagination are manual. The adjacent chat uses MessageScroller, Message, Bubble,
 Marker and InputGroup with the existing research backend.
 
-Twitter and Mastodon can appear together, with different accounts in each
+Twitter, Mastodon, and Reddit can appear together, with a source binding in each
 column. Original-post links open their source site. Separate reader, search,
 list, user-profile, and conversation pages are not provided.
 
@@ -33,6 +33,7 @@ unique column IDs within each deck. Each column contains `id`, `title`,
 | Mastodon | `user`      | `target`: account handle or the connected instance's numeric account ID |
 | Mastodon | `list`      | `target`: numeric list ID for the connected account                     |
 | Mastodon | `hashtag`   | `target`: tag without `#`, containing letters, numbers, or underscores  |
+| Reddit   | `search`    | `query`, `sort` (`relevance`/`new`/`top`/`comments`), and `time` range  |
 
 `connectionId` is the account binding, distinct from a deck's name. Twitter
 connections resolve to profiles discovered from the configured relay.
@@ -40,6 +41,10 @@ Mastodon connections identify accounts by instance origin and remote account
 ID; OAuth tokens stay encrypted on the server. The connection manager supports
 adding, reconnecting, and disconnecting Mastodon accounts. See
 [storage and OAuth](storage-and-oauth.md) for configuration and recovery.
+Reddit is exposed as the virtual `reddit-public` source when `RDT_GATEWAY_URL`
+is configured. It uses the read-only rdt-gateway HTTP API, needs no account or
+credential, and is never stored as a connection row. Search results retain
+canonical Reddit post links and community names.
 
 The editor discovers lists for the selected account. Changing accounts clears
 target-based conditions so an instance-local ID is not reused accidentally.
@@ -55,7 +60,8 @@ separate results and cursors. Deck synchronization does not poll post feeds.
 
 - `column-editor.tsx` owns the title, connection binding, and final submission.
 - `column-source-editor.tsx` dispatches by platform and defines rebinding rules.
-- `twitter-source-editor.tsx` and `mastodon-source-editor.tsx` own each
+- `twitter-source-editor.tsx`, `mastodon-source-editor.tsx`, and
+  `reddit-source-editor.tsx` own each
   platform's source selection, fields, and account-specific list discovery.
 - `use-research-feed.ts` dispatches requests and keys the cache by connection
   and source. Server functions resolve credentials and fetch upstream pages.
@@ -67,6 +73,8 @@ Twitter posts use `twitter:<id>` keys. Mastodon posts use canonical status URIs
 for keys and retain the fetched instance's native status ID separately. Boosts
 keep the wrapper identity and identify the boosting account. Mastodon HTML is
 sanitized on the server; cards honor content warnings and sensitive media.
+Reddit uses `reddit:<id>` keys, requests `search.json` through the configured
+gateway, and validates post paths before constructing links on `www.reddit.com`.
 
 ## Saved decks and temporary views
 

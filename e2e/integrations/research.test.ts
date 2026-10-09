@@ -4,6 +4,36 @@ import { expect, test } from "../fixtures";
 import { ResearchPage } from "../models/ResearchPage";
 import { WorkspacePage } from "../models/WorkspacePage";
 
+test("loads a Reddit search column through the configured public gateway", async ({
+  page,
+  deckPage,
+  workspacePage,
+}) => {
+  await deckPage.goTo();
+  await expect(deckPage.rename).toBeEnabled({ timeout: 15000 });
+  await workspacePage.showDeckManagement();
+  await deckPage.addColumnButton.click();
+  const editor = page.getByRole("form", { name: "Add column", exact: true });
+  await editor.getByLabel("Column name", { exact: true }).fill("Reddit research");
+  await editor
+    .getByRole("combobox", { name: "Connection profile", exact: true })
+    .selectOption("reddit-public");
+  await editor.getByLabel("Reddit search query", { exact: true }).fill("self-hosted AI");
+  await editor.getByRole("combobox", { name: "Sort", exact: true }).selectOption("top");
+  await editor.getByRole("combobox", { name: "Time range", exact: true }).selectOption("week");
+  await editor.getByRole("button", { name: "Add and search" }).click();
+  const post = deckPage
+    .column("Reddit research")
+    .getByTestId("research-post")
+    .filter({ hasText: "Self-hosted AI discussion" });
+  await expect(post).toContainText("Self-hosted AI discussion");
+  await expect(post).toContainText("r/selfhosted");
+  await expect(post.getByRole("link", { name: "Open original post" })).toHaveAttribute(
+    "href",
+    "https://www.reddit.com/r/selfhosted/comments/reddit123/self_hosted_ai_discussion/",
+  );
+});
+
 test("pushes the current research snapshot on each SSE connection", async ({ page, deckPage }) => {
   await deckPage.goTo();
   const snapshots = await page.evaluate(async () => {

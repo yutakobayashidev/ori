@@ -95,6 +95,33 @@ const timeline = (entries) => ({ instructions: [{ entries }] });
 
 const server = createServer(async (request, response) => {
   const url = new URL(request.url ?? "/", `http://127.0.0.1:${port}`);
+  if (request.method === "GET" && url.pathname === "/search.json") {
+    if (url.searchParams.get("q") !== "self-hosted AI") {
+      fail(response, 400, "unexpected Reddit query");
+      return;
+    }
+    send(response, {
+      data: {
+        after: null,
+        children: [
+          {
+            data: {
+              id: "reddit123",
+              title: "Self-hosted AI discussion",
+              selftext: "A Reddit result for Research.",
+              author: "researcher",
+              subreddit: "selfhosted",
+              permalink: "/r/selfhosted/comments/reddit123/self_hosted_ai_discussion/",
+              created_utc: 1_750_000_000,
+              over_18: false,
+              spoiler: false,
+            },
+          },
+        ],
+      },
+    });
+    return;
+  }
   if (request.method === "GET" && url.pathname === "/profiles") {
     send(response, { profiles: ["e2e", "alternate"] });
     return;

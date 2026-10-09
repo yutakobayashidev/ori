@@ -120,3 +120,34 @@ it("builds a mixed-platform deck with explicit account bindings", () => {
     ["masto", "mastodon"],
   ]);
 });
+
+it("accepts public Reddit search columns through the WebMCP deck contract", () => {
+  const reddit: Connection = {
+    id: "reddit-public",
+    platform: "reddit",
+    origin: "https://rdt.home.yutakobayashi.com",
+    accountId: null,
+    displayName: "Reddit gateway",
+    status: "connected",
+  };
+  const deck = prepareDeck(
+    {
+      title: "Reddit research",
+      columns: [
+        {
+          title: "AI agents",
+          connectionId: reddit.id,
+          source: {
+            platform: "reddit",
+            kind: "search",
+            query: "AI agent",
+            sort: "relevance",
+            time: "week",
+          },
+        },
+      ],
+    },
+    [reddit],
+  );
+  expect(deck.columns[0]?.source.platform).toBe("reddit");
+});

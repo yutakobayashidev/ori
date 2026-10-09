@@ -66,6 +66,9 @@ export function ResearchPostCard({
             @{post.author.handle.replace(/^@/, "")}
           </span>
         </div>
+        {post.community && (
+          <span className="shrink-0 text-xs text-muted-foreground">{post.community}</span>
+        )}
         {post.createdAt ? (
           <time
             className="block shrink-0 text-xs text-muted-foreground tabular-nums"

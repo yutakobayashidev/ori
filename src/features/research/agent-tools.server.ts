@@ -4,6 +4,7 @@ import { type Deck, type DeckColumn, deckSchema } from "../decks/model";
 import { listDecks, loadDeck } from "../decks/repository.server";
 import { emptyToolInput, prepareDeck, setDeckInput } from "../decks/webmcp-contracts";
 import { MastodonFeedError } from "../platforms/mastodon-feed.server";
+import { RedditFeedError } from "../platforms/reddit.server";
 import type { ResearchPage, ResearchPost } from "../platforms/types";
 import { InputError, listChoicesInputSchema } from "../posts/inputs";
 import { ProfileUnavailableError } from "../profiles/errors";
@@ -74,7 +75,7 @@ export function createResearchTools(
       type: "function" as const,
       name: "list_lists",
       description:
-        'List Twitter or Mastodon lists for a selected connected account using {connectionId}. Twitter returns up to 100 lists without pagination. Reuse a returned ID in open_temporary_deck columns: {title: list.name, connectionId, source: {platform: list.platform, kind: "list", target: list.id}}. Read-only; returns list metadata, not posts. Shares the 12 upstream request budget with fetch_column_posts.',
+        'List Twitter or Mastodon lists for a selected connected account using {connectionId}. Reddit has no account lists. Twitter returns up to 100 lists without pagination. Reuse a returned ID in open_temporary_deck columns: {title: list.name, connectionId, source: {platform: list.platform, kind: "list", target: list.id}}. Read-only; returns list metadata, not posts. Shares the 12 upstream request budget with fetch_column_posts.',
       inputSchema: z.toJSONSchema(listInput, { io: "input" }),
     },
     {
@@ -138,6 +139,8 @@ export function createResearchTools(
           );
           if (!connection)
             return failure("account-unavailable", "Choose a selected connected account.");
+          if (connection.platform === "reddit")
+            return failure("unsupported-source", "Reddit does not have account lists.");
           if (fetches >= MAX_FETCHES)
             return failure("budget-exhausted", "This research has used its 12 fetch requests.");
           fetches += 1;
@@ -251,7 +254,11 @@ export function createResearchTools(
             "account-unavailable",
             "The selected account is unavailable. Check its connection.",
           );
-        if (error instanceof SourceFailure || error instanceof MastodonFeedError)
+        if (
+          error instanceof SourceFailure ||
+          error instanceof MastodonFeedError ||
+          error instanceof RedditFeedError
+        )
           return failure(
             error.code,
             "The selected source could not be loaded. Other columns may still be available.",

@@ -41,7 +41,7 @@ open and when returning to the app.
 | Journal   | `/journal`           | Notes, resume points, medication and weight entries, append-only corrections, and summary previews. Local prototype.   |
 | Reader    | `/inbox`             | Searchable sample articles and a responsive article reader. Recommendation from activity history is not connected yet. |
 | Vitals    | `/vitals`            | Body and Environment dashboards with sample readings, charts, and simulated controls. No health or device connection.  |
-| Research  | `/deck`              | Twitter and Mastodon columns, connected accounts, persistent decks, and optional Codex research chat.                  |
+| Research  | `/deck`              | Twitter, Mastodon, and Reddit columns, persistent decks, and optional Codex research chat.                             |
 | Board     | `/board`             | Shared tasks and replies in Kanban columns, with AI handoff, execution chat, questions, and artifacts.                 |
 | Focus     | `/focus/$activityId` | One task, visual timer, reply/source access, estimates and recorded effort.                                            |
 
@@ -90,6 +90,7 @@ or change direction.
 - Multiple named decks with up to six columns each
 - Twitter search, user timelines, and lists with independent relay accounts
 - Mastodon OAuth, multiple accounts, search, user, list, and hashtag columns
+- Public Reddit search through the configured read-only rdt-gateway
 - Native X search syntax, Top/Latest ranking, and optional `filter:follows`
 - List discovery for the account selected in the column editor
 - Column editing, ordering, deletion/undo, refresh, and cursor pagination
@@ -101,6 +102,11 @@ or change direction.
 - Same-port HTTP MCP for SNS retrieval and saved-deck operations through a private tunnel
 - Optional resident Codex research chat, cited host-side Markdown reports,
   and saved conversations with deck, account, and citation restoration
+
+Reddit Research uses the read-only HTTP gateway configured by `RDT_GATEWAY_URL`.
+It appears as a public source rather than an account connection and supports
+search, ranking, and time-range filters. The same source is available to the
+Research chat and saved or temporary decks.
 
 Original-post links open their source site; SNS reply threads are not rendered
 inside the app. Bluesky, Threads, and Nostr connectors are not implemented.
@@ -251,7 +257,7 @@ CLI. The runtime and web app must share the report directory. A Nix release is
 available as `nix build .#workspace-runtime`; UM790-Pro services are managed in dotnix.
 See [the handoff design](docs/ai-handoff-design.md) and [runtime operations](runtime/README.md).
 
-The validated, account-scoped research functions are exposed through the app's
+The validated, selected-source-scoped research functions are exposed through the app's
 own HTTP `/mcp` endpoint. Each turn has a separate registration that is removed
 when it finishes or is cancelled. Set `TWITTER_LITE_MCP_URL` when the app is not
 reachable at `http://127.0.0.1:${PORT:-3000}/mcp`. The app-server control connection
@@ -264,10 +270,11 @@ streaming fixtures for renderer tests.
 
 Use the chat on the left while browsing horizontally scrollable deck columns on
 the right. Messages continue the same Codex thread and include the currently
-open deck as context. The account selector controls which connections Codex can
-use. It can inspect saved deck definitions and reuse them as temporary views,
+open deck as context. The source selector controls which connections and public
+gateways Codex can use. It can inspect saved deck definitions and reuse them as temporary views,
 as well as create new views. `list_lists(connectionId)` discovers existing
-Twitter and Mastodon lists for a selected connected account; returned list IDs
+Twitter and Mastodon lists for a selected connected account; Reddit uses the
+configured public gateway and has no account lists. Returned list IDs
 can be reused in list columns. It uses the same catalog as the manual editor
 (Twitter requests up to 100 lists; list discovery is not paginated).
 The default prompt asks Codex to inspect existing decks and the selected

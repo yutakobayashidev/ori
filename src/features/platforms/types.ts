@@ -1,4 +1,4 @@
-type Platform = "twitter" | "mastodon" | "bluesky" | "threads" | "nostr";
+type Platform = "twitter" | "mastodon" | "reddit" | "bluesky" | "threads" | "nostr";
 
 export type ResearchPage = { posts: ResearchPost[]; nextCursor?: string };
 
@@ -18,6 +18,7 @@ export type ResearchPost = {
     handle: string;
     avatarUrl?: string;
   };
+  community?: string;
   createdAt?: string;
   media?: {
     type: "photo" | "video" | "gif";

@@ -47,6 +47,12 @@ list ID), and `hashtag` (tag without `#`). It does not accept Twitter ranking
 or following controls. Search availability and coverage depend on the
 instance; an empty successful result does not prove full-text support.
 
+Reddit requires `platform: "reddit"` and supports public `search` columns with
+`query`, `sort` (`relevance`, `new`, `top`, or `comments`), and `time`
+(`hour`, `day`, `week`, `month`, `year`, or `all`). The virtual `reddit-public`
+source is available only when `RDT_GATEWAY_URL` is configured. Reddit has no
+account lists or credentials.
+
 ## Mutation results and persistence
 
 `set_deck` returns `deck`, its actual `persisted` flag, and

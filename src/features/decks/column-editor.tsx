@@ -92,7 +92,11 @@ export function ColumnEditor({
             {available.map((connection) => (
               <NativeSelectOption key={connection.id} value={connection.id}>
                 {connection.displayName}
-                {connection.platform === "mastodon" ? " · Mastodon" : ""}
+                {connection.platform === "mastodon"
+                  ? " · Mastodon"
+                  : connection.platform === "reddit"
+                    ? " · Reddit"
+                    : ""}
               </NativeSelectOption>
             ))}
           </NativeSelect>

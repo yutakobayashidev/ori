@@ -1,7 +1,7 @@
 # Research runtime
 
 Research sends each turn to the shared Elixir execution service. The web app
-owns accepted requests, account-scoped MCP tools, UI snapshots, and report
+owns accepted requests, selected-source-scoped MCP tools, UI snapshots, and report
 validation. Elixir owns the Codex subprocess, queue, interruption and persistent
 execution records. There is no local TypeScript Codex subprocess fallback.
 
@@ -12,7 +12,7 @@ the report directory and the runtime must reach the scoped MCP URL.
 
 ## Tools and lifecycle
 
-Each turn registers only its account-scoped research tools at the shared HTTP
+Each turn registers only its selected-source-scoped research tools at the shared HTTP
 MCP endpoint. Validation, request budgets and evidence tracking remain in
 `agent-tools.server.ts`. Registration is removed when the turn ends. Execution
 uses a fresh runtime UUID for each turn, while the durable Codex thread ID is

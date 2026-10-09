@@ -2,7 +2,7 @@ import { z } from "zod";
 
 const connectionSchema = z.object({
   id: z.string().min(1),
-  platform: z.enum(["twitter", "mastodon"]),
+  platform: z.enum(["twitter", "mastodon", "reddit"]),
   origin: z.string().url(),
   accountId: z.string().nullable(),
   displayName: z.string(),

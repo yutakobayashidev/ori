@@ -22,8 +22,8 @@ activity model across Home, Messages, and MCP.
 | `get_activity_context`       | Optional `activityIds`, `conversation`, `states`, `cursor`, `limit`; effective content, owner decisions, assessment and revision                                                 |
 | `publish_activities`         | `requestId`, `expectedRevision`, `activities`; atomically persist task/reply proposals, preserving user decisions                                                                |
 | `update_activity_progress`   | `requestId`, `expectedRevision`, `id`, `reason`, `evidence`, and `state` and/or `draft`; partial agent update with owner edits preserved                                         |
-| `list_connections`           | `{}`; discover account IDs and status, without credentials                                                                                                                       |
-| `list_lists`                 | `connectionId`; discover Twitter or Mastodon lists                                                                                                                               |
+| `list_connections`           | `{}`; discover account IDs, the configured Reddit gateway, and status, without credentials                                                                                       |
+| `list_lists`                 | `connectionId`; discover Twitter or Mastodon lists (Reddit has no account lists)                                                                                                 |
 | `list_decks`                 | `{}`; saved deck IDs, titles, revisions and column counts                                                                                                                        |
 | `get_deck`                   | `deckId`; saved definition including column IDs and revision                                                                                                                     |
 | `create_deck`                | `title`, `columns`, optional new `deckId`; immediately persist                                                                                                                   |
@@ -40,6 +40,7 @@ saved definitions refresh through the existing UI mechanism.
 
 Post retrieval returns up to 20 text records, source URLs, author information,
 the normalized column, connection display name, and a continuation cursor.
+Reddit results include their `r/subreddit` community and canonical Reddit URL.
 Reuse a cursor only with its original source/account.
 External tools are stateless and do not share the internal research turn's
 12-request budget. Research tools do not write to SNS accounts; the separate

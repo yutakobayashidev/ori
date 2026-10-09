@@ -3,6 +3,7 @@ import type { Connection } from "../connections/model";
 import type { DeckColumn } from "../decks/model";
 import { fetchMastodonLists, fetchMastodonPage } from "../platforms/mastodon-feed.server";
 import { mapTwitterPost } from "../platforms/twitter";
+import { fetchRedditPage } from "../platforms/reddit.server";
 import type { ResearchPage, ResearchPost } from "../platforms/types";
 import { getBirdReader } from "../posts/bird-client.server";
 import { loadListChoices, loadListPage, loadUserPage, searchPage } from "../posts/post-service";
@@ -14,6 +15,12 @@ export class SourceFailure extends Error {
 }
 
 export async function fetchPage(column: DeckColumn, cursor?: string): Promise<ResearchPage> {
+  if (column.source.platform === "reddit")
+    return fetchRedditPage({
+      connectionId: column.connectionId,
+      source: column.source,
+      cursor,
+    });
   if (column.source.platform === "mastodon")
     return fetchMastodonPage({
       connectionId: column.connectionId,
@@ -46,12 +53,14 @@ export function publicPost(post: ResearchPost) {
     url: url.href,
     text: post.text,
     author: { name: post.author.name, handle: post.author.handle },
+    ...(post.community ? { community: post.community } : {}),
     ...(post.createdAt ? { createdAt: post.createdAt } : {}),
     ...(post.contentWarning ? { contentWarning: post.contentWarning } : {}),
     ...(post.sensitive ? { sensitive: true } : {}),
   };
 }
 export async function listSourceLists(connectionId: string, platform: Connection["platform"]) {
+  if (platform === "reddit") throw new SourceFailure("unsupported-source");
   let lists: {
     id: string;
     name: string;

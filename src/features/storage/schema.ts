@@ -18,7 +18,7 @@ export const connections = sqliteTable(
   "connections",
   {
     id: text("id").primaryKey(),
-    platform: text("platform", { enum: ["twitter", "mastodon"] }).notNull(),
+    platform: text("platform", { enum: ["twitter", "mastodon", "reddit"] }).notNull(),
     origin: text("origin").notNull(),
     accountId: text("account_id"),
     relayProfile: text("relay_profile"),

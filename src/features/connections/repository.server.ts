@@ -5,6 +5,7 @@ import { fetchProfileNames } from "../profiles/profile-service.server";
 import { type AppDatabase, getDatabase } from "../storage/database.server";
 import { connections } from "../storage/schema";
 import type { Connection } from "./model";
+import { redditGatewayConnection } from "./reddit-gateway.server";
 
 function relayOrigin(): string {
   const configured = process.env.TWITTER_RELAY_BASE_URL;
@@ -90,7 +91,11 @@ export async function listConnections(
     .from(connections)
     .orderBy(asc(connections.createdAt), asc(connections.id))
     .all();
-  return { connections: saved, ...(relayError ? { relayError } : {}) };
+  const reddit = redditGatewayConnection();
+  return {
+    connections: [...saved, ...(reddit ? [reddit] : [])],
+    ...(relayError ? { relayError } : {}),
+  };
 }
 
 export async function requireTwitterConnection(

@@ -10,6 +10,21 @@ let database: AppDatabase;
 beforeEach(() => {
   database = openDatabase(":memory:");
   vi.stubEnv("TWITTER_RELAY_BASE_URL", "https://relay.invalid/");
+  vi.stubEnv("RDT_GATEWAY_URL", "");
+});
+
+it("exposes the configured Reddit gateway as a virtual public source", async () => {
+  vi.stubEnv("RDT_GATEWAY_URL", "https://rdt.home.yutakobayashi.com");
+  const { connections: available } = await listConnections(database, async () => []);
+  expect(available).toContainEqual({
+    id: "reddit-public",
+    platform: "reddit",
+    origin: "https://rdt.home.yutakobayashi.com",
+    accountId: null,
+    displayName: "Reddit · rdt.home.yutakobayashi.com",
+    status: "connected",
+  });
+  expect(database.select().from(connections).all()).toEqual([]);
 });
 afterEach(() => {
   database.$client.close();

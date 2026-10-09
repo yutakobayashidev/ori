@@ -133,7 +133,7 @@ it("retains input, selected accounts, and the request ID across responsive view 
   actions.start.mockRejectedValue(new Error("internal credential detail"));
   const view = show([connection, { ...connection, id: "second", displayName: "second" }]);
   await waitFor(() => expect(screen.getByLabelText("Message")).toBeEnabled());
-  fireEvent.click(screen.getByRole("button", { name: "Connected accounts · 2" }));
+  fireEvent.click(screen.getByRole("button", { name: "Research sources · 2" }));
   fireEvent.click(screen.getByRole("checkbox", { name: "second · Twitter" }));
   fireEvent.change(screen.getByLabelText("Message"), {
     target: { value: "WebMCPの反応" },
@@ -145,7 +145,7 @@ it("retains input, selected accounts, and the request ID across responsive view 
   view.rerender(view.ui(true, undefined, "mobile"));
   expect(screen.getByRole("alert")).toHaveTextContent("Your draft has been kept");
   expect(screen.getByLabelText("Message")).toHaveValue("WebMCPの反応");
-  fireEvent.click(screen.getByRole("button", { name: "Connected accounts · 1" }));
+  fireEvent.click(screen.getByRole("button", { name: "Research sources · 1" }));
   expect(screen.getByRole("checkbox", { name: "second · Twitter" })).not.toBeChecked();
   expect(MockEventSource.instances).toHaveLength(1);
   expect(MockEventSource.instances[0]?.close).not.toHaveBeenCalled();
@@ -226,7 +226,7 @@ it("limits account selection to six and shows the host report path on completion
     })),
   );
   await screen.findByText("/home/owner/reports/webmcp.md");
-  fireEvent.click(screen.getByText("Connected accounts · 6"));
+  fireEvent.click(screen.getByText("Research sources · 6"));
   expect(screen.getByRole("checkbox", { name: "account6 · Twitter" })).toHaveAttribute(
     "aria-disabled",
     "true",
@@ -413,7 +413,7 @@ it("shows streamed conversation and sends follow-up input with the current deck 
 it("selects newly loaded connected accounts until the user changes their selection", async () => {
   const view = show([]);
   await waitFor(() => expect(screen.getByLabelText("Message")).toBeEnabled());
-  fireEvent.click(screen.getByRole("button", { name: "Connected accounts · 0" }));
+  fireEvent.click(screen.getByRole("button", { name: "Research sources · 0" }));
   await screen.findByText("Add a connected account first.");
   view.rerender(
     <QueryClientProvider client={view.client}>
@@ -608,7 +608,7 @@ it("opens a saved chat with its context deck and selected accounts, preserving l
   await waitFor(() => expect(view.onOpenDeck).toHaveBeenCalledWith(contextDeck, true));
   expect(screen.getByLabelText("Message")).toHaveValue("");
   expect(screen.getByText("Interrupted · Ready to resume")).toBeVisible();
-  fireEvent.click(screen.getByText("Connected accounts · 1"));
+  fireEvent.click(screen.getByText("Research sources · 1"));
   expect(screen.getByRole("checkbox", { name: "調査用アカウント · Twitter" })).not.toBeChecked();
   expect(screen.getByRole("checkbox", { name: "account2 · Twitter" })).toBeChecked();
   fireEvent.click(screen.getByRole("checkbox", { name: "調査用アカウント · Twitter" }));

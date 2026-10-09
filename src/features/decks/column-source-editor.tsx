@@ -3,6 +3,7 @@ import type { Connection } from "../connections/model";
 import { defaultMastodonSource, MastodonSourceEditor } from "./mastodon-source-editor";
 import type { DeckColumn } from "./model";
 import { defaultTwitterSource, TwitterSourceEditor } from "./twitter-source-editor";
+import { defaultRedditSource, RedditSourceEditor } from "./reddit-source-editor";
 
 type Source = DeckColumn["source"];
 
@@ -12,6 +13,8 @@ export function defaultColumnSource(platform: Connection["platform"]): Source {
       return defaultTwitterSource();
     case "mastodon":
       return defaultMastodonSource();
+    case "reddit":
+      return defaultRedditSource();
   }
 }
 
@@ -25,6 +28,8 @@ export function rebindColumnSource(source: Source, platform: Connection["platfor
       return defaultTwitterSource(source.kind === "hashtag" ? "search" : source.kind);
     case "mastodon":
       return defaultMastodonSource(source.kind);
+    case "reddit":
+      return defaultRedditSource();
   }
 }
 
@@ -46,5 +51,7 @@ export function ColumnSourceEditor({
       return (
         <MastodonSourceEditor source={source} connectionId={connectionId} onChange={onChange} />
       );
+    case "reddit":
+      return <RedditSourceEditor source={source} onChange={onChange} />;
   }
 }

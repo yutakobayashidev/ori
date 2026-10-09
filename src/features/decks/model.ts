@@ -1,5 +1,6 @@
 import { z } from "zod";
 import { mastodonSourceSchema } from "#/features/platforms/mastodon-source";
+import { redditSourceSchema } from "#/features/platforms/reddit-source";
 import {
   buildSearchQuery,
   normalizeListTarget,
@@ -70,6 +71,7 @@ export const columnSchema = z
     source: z.union([
       z.discriminatedUnion("kind", [searchSourceSchema, userSourceSchema, listSourceSchema]),
       mastodonSourceSchema,
+      redditSourceSchema,
     ]),
   })
   .strict();

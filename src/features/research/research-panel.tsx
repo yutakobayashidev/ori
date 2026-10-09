@@ -666,7 +666,7 @@ function ResearchComposer({
           />
           <InputGroupAddon align="block-end">
             <CollapsibleTrigger render={<InputGroupButton size="sm" />}>
-              Connected accounts · {validSelection.length}
+              Research sources · {validSelection.length}
             </CollapsibleTrigger>
             {active ? (
               <InputGroupButton
@@ -699,7 +699,7 @@ function ResearchComposer({
             data-testid="research-accounts"
             className="grid max-h-[160px] min-w-0 gap-2 overflow-auto border p-3"
           >
-            <legend>Accounts for research (up to 6)</legend>
+            <legend>Sources for research (up to 6)</legend>
             {available.length === 0 ? (
               <p>Add a connected account first.</p>
             ) : (
@@ -725,7 +725,11 @@ function ResearchComposer({
                     }
                   />
                   {connection.displayName} ·{" "}
-                  {connection.platform === "twitter" ? "Twitter" : "Mastodon"}
+                  {connection.platform === "twitter"
+                    ? "Twitter"
+                    : connection.platform === "mastodon"
+                      ? "Mastodon"
+                      : "Reddit"}
                 </label>
               ))
             )}

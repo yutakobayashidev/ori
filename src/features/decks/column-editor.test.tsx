@@ -44,6 +44,14 @@ const connections: Connection[] = [
     displayName: "@second",
     status: "connected",
   },
+  {
+    id: "reddit-public",
+    platform: "reddit",
+    origin: "https://rdt.home.yutakobayashi.com",
+    accountId: null,
+    displayName: "Reddit · rdt.home.yutakobayashi.com",
+    status: "connected",
+  },
 ];
 
 beforeEach(() => {
@@ -122,6 +130,33 @@ it("creates hashtags and resets unsupported source kind when changing to Twitter
   expect(screen.getByLabelText("Column type")).toHaveValue("search");
   expect(screen.getByLabelText("Twitter search query")).toHaveValue("");
   expect(screen.queryByRole("option", { name: "Hashtag" })).toBeNull();
+});
+
+it("creates a Reddit search column with sort and time range", async () => {
+  const save = show();
+  fireEvent.change(screen.getByLabelText("Connection profile"), {
+    target: { value: "reddit-public" },
+  });
+  fireEvent.change(screen.getByLabelText("Reddit search query"), {
+    target: { value: "self-hosted AI" },
+  });
+  fireEvent.change(screen.getByLabelText("Sort"), { target: { value: "top" } });
+  fireEvent.change(screen.getByLabelText("Time range"), { target: { value: "month" } });
+  fireEvent.submit(screen.getByRole("form", { name: "Add column" }));
+  await waitFor(() =>
+    expect(save).toHaveBeenCalledWith(
+      expect.objectContaining({
+        connectionId: "reddit-public",
+        source: {
+          platform: "reddit",
+          kind: "search",
+          query: "self-hosted AI",
+          sort: "top",
+          time: "month",
+        },
+      }),
+    ),
+  );
 });
 
 it("loads lists for each account and clears the selected list when the binding changes", async () => {
