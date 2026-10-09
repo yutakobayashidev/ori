@@ -1,5 +1,6 @@
+import { useQuery } from "@tanstack/react-query";
 import { ArrowLeft, MessageSquare, Search } from "lucide-react";
-import { Avatar, AvatarFallback } from "#/components/ui/avatar";
+import { Avatar, AvatarFallback, AvatarImage } from "#/components/ui/avatar";
 import { Button } from "#/components/ui/button";
 import { Input } from "#/components/ui/input";
 import {
@@ -17,6 +18,23 @@ import type { Activity } from "#/features/activities/model";
 import { ReplyActivityDetail } from "#/features/activities/reply-activity-detail";
 import { useSearchInput } from "#/features/navigation/use-search-input";
 import { useUrlState } from "#/features/navigation/use-url-state";
+
+import { loadReplyAvatar } from "#/features/beeper/server-functions";
+
+function ConversationAvatar({ activity, name }: { activity: Activity; name: string }) {
+  const { data } = useQuery({
+    queryKey: ["reply-avatar", conversationKey(activity)],
+    queryFn: () => loadReplyAvatar({ data: { activityId: activity.id } }),
+    staleTime: 5 * 60_000,
+    retry: false,
+  });
+  return (
+    <Avatar aria-hidden="true">
+      {data?.dataUrl && <AvatarImage src={data.dataUrl} alt="" />}
+      <AvatarFallback>{name.slice(0, 2)}</AvatarFallback>
+    </Avatar>
+  );
+}
 
 const views = [
   { id: "now", label: "Inbox" },
@@ -138,9 +156,7 @@ export function SupportPage() {
                     onClick={() => updateSearch({ activity: first.id, conversation: undefined })}
                     className="mx-px-8 my-px-2 flex cursor-pointer gap-px-12 rounded-ui-10 px-px-14 py-px-12 text-left leading-normal hover:bg-sidebar-accent aria-current:bg-sidebar-accent"
                   >
-                    <Avatar aria-hidden="true">
-                      <AvatarFallback>{item.reply.recipientName.slice(0, 2)}</AvatarFallback>
-                    </Avatar>
+                    <ConversationAvatar activity={first} name={item.reply.recipientName} />
                     <span className="flex min-w-0 flex-1 flex-col gap-px-3">
                       <strong className="text-ui-12 font-book">{item.reply.recipientName}</strong>
                       <span className="truncate text-ui-12 text-muted-foreground">
@@ -182,9 +198,7 @@ export function SupportPage() {
             </Button>
             {selected && (
               <>
-                <Avatar aria-hidden="true">
-                  <AvatarFallback>{recipient.slice(0, 2)}</AvatarFallback>
-                </Avatar>
+                <ConversationAvatar activity={selected} name={recipient} />
                 <strong className="text-ui-13 font-book">{recipient}</strong>
               </>
             )}

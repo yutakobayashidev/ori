@@ -4,6 +4,7 @@ import { publishActivities } from "../activities/repository.server";
 import { openDatabase, type AppDatabase } from "../storage/database.server";
 import { beeperMessages } from "../storage/schema";
 import type { BeeperMessagingAdapter } from "./adapter.server";
+import { readActivityAvatar } from "./avatar.server";
 import { activityHasAsset, readActivityConversation } from "./conversations.server";
 import { getBeeperAsset, rememberBeeperAsset } from "./media.server";
 let database: AppDatabase;
@@ -219,4 +220,22 @@ it("orders recent history oldest first and removes newly hidden messages from ca
       .all()
       .map((row) => row.messageId),
   ).toEqual(["new"]);
+});
+
+it("loads an unopened direct chat avatar without fetching history", async () => {
+  const result = await readActivityAvatar({ activityId: "reply" }, database, adapter);
+  expect(result.dataUrl).toMatch(/^data:image\/png;base64,/);
+  expect(adapter.readMessages).not.toHaveBeenCalled();
+  expect(JSON.stringify(result)).not.toContain("mxc://");
+});
+it("does not substitute a group member avatar or expose another account's avatar", async () => {
+  vi.mocked(adapter.readChat).mockResolvedValueOnce({ ...chat, type: "group" });
+  expect(await readActivityAvatar({ activityId: "reply" }, database, adapter)).toEqual({
+    dataUrl: null,
+  });
+  vi.mocked(adapter.readChat).mockResolvedValueOnce({ ...chat, accountID: "other" });
+  expect(await readActivityAvatar({ activityId: "reply" }, database, adapter)).toEqual({
+    dataUrl: null,
+  });
+  expect(adapter.readMedia).not.toHaveBeenCalled();
 });

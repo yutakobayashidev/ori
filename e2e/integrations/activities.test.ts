@@ -147,7 +147,10 @@ test("sends a saved reply from Messages with an explicit quoted message", async 
   activityMcp,
 }, testInfo) => {
   await activityMcp.publish();
+  await page.goto("/support");
+  await expect(page.getByTestId("support-row").first().locator("img")).toBeVisible();
   await page.goto("/support?activity=review-times");
+  await expect(page.getByTestId("support-toolbar").locator("img")).toBeVisible();
   const history = page.getByRole("region", { name: "Conversation history" });
   await expect(history).toContainText("Thursday afternoon would be best.");
   await expect(history.locator("img").first()).toBeVisible();

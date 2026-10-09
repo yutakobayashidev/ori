@@ -88,6 +88,11 @@ delivery receipt. Dots uses `update_activity_progress` to record its contextual 
 
 ## Avatars
 
+The Messages conversation list and selected-conversation header share a cached avatar
+query. This reads chat metadata without loading message history, so unopened
+conversations also display their icons. Direct chats without a chat image use the
+other participant's avatar; groups keep their own image or initials.
+
 Conversation and participant metadata register immutable source references under
 opaque IDs. Browser and embedded UI request those IDs through the shared service;
 tokens, upstream URLs and host paths are not exposed. Images are bounded to 2 MiB,

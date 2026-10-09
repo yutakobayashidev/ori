@@ -3,6 +3,13 @@ import { getBeeperAssetInput, readActivityConversationInput } from "./conversati
 import { getMessageSendInput, sendActivityReplyInput } from "./sends-model";
 import type { ActivityMessagingTransport } from "../activities/messaging-client";
 
+export const loadReplyAvatar = createServerFn({ method: "GET" })
+  .validator(readActivityConversationInput.pick({ activityId: true }))
+  .handler(async ({ data }) => {
+    const { readActivityAvatar } = await import("./avatar.server");
+    return readActivityAvatar(data);
+  });
+
 export const loadReplyConversation = createServerFn({ method: "GET" })
   .validator(readActivityConversationInput)
   .handler(async ({ data }) => {
