@@ -1,19 +1,10 @@
 import { useActivities } from "#/features/activities/activity-state";
 import { useWorkspaceState } from "#/features/workspace/workspace-state";
-import { useDayPlan } from "../day-plan/use-day-plan";
 
 export function DailyBrief({ onOpenContact }: { onOpenContact: (id: string) => void }) {
   const { entries } = useWorkspaceState();
   const { activities, loading, error } = useActivities();
-  const day = useDayPlan();
-  const tasks = (day.plan?.selections ?? [])
-    .filter((selection) => !selection.excluded)
-    .flatMap((selection) => {
-      const activity = activities.find((item) => item.id === selection.activityId);
-      return activity
-        ? [{ ...activity, effective: { ...activity.effective, section: selection.section } }]
-        : [];
-    })
+  const tasks = activities
     .filter((activity) => activity.userState === "available" || activity.userState === "inProgress")
     .map((activity) => activity.effective);
   const focus = tasks.find((task) => task.section === "focus");
@@ -25,7 +16,7 @@ export function DailyBrief({ onOpenContact }: { onOpenContact: (id: string) => v
       entry.kind === "再開地点" && !entries.some((other) => other.correctionOf === entry.id),
   );
 
-  if (loading || error || day.loading) return null;
+  if (loading || error) return null;
   return (
     <section
       className="mt-px-20 max-w-[760px] text-ui-15 leading-brief wrap-anywhere"

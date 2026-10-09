@@ -6,7 +6,7 @@ import {
   setRemaining,
   emitTimeChange,
 } from "../focus/storage.server";
-import { activityTime, daySelections } from "../storage/schema";
+import { activityTime } from "../storage/schema";
 import { createHash } from "node:crypto";
 import { and, asc, eq, gt, inArray, sql } from "drizzle-orm";
 import { z } from "zod";
@@ -95,6 +95,7 @@ function activity(
     effective.reply = { ...effective.reply, draft };
   return {
     id: row.id,
+    origin: row.origin,
     proposal,
     userState,
     userOverrides,
@@ -310,6 +311,7 @@ export function publishActivities(input: unknown, database = getDatabase()): Act
           .insert(activities)
           .values({
             id: proposal.id,
+            origin: existing?.origin ?? "agent",
             proposal,
             userState: "available",
             userOverrides: {},
@@ -335,6 +337,7 @@ export function publishActivities(input: unknown, database = getDatabase()): Act
             "activity.created",
             {
               id: proposal.id,
+              origin: "agent",
               proposal,
               userState: "available",
               userOverrides: {},
@@ -461,6 +464,7 @@ export function createUserActivity(input: unknown, database = getDatabase()): Ac
       const { id, title, nextAction, section } = parsed;
       const row: typeof activities.$inferSelect = {
         id,
+        origin: "user",
         proposal: {
           id,
           kind: "task",
@@ -476,26 +480,6 @@ export function createUserActivity(input: unknown, database = getDatabase()): Ac
         updatedAt: now,
       };
       database.insert(activities).values(row).run();
-      if (parsed.day) {
-        const siblings = database
-          .select()
-          .from(daySelections)
-          .where(and(eq(daySelections.date, parsed.day.date), eq(daySelections.section, section)))
-          .all();
-        database
-          .insert(daySelections)
-          .values({
-            activityId: id,
-            ...parsed.day,
-            section,
-            rank: Math.max(-1, ...siblings.map((item) => item.rank)) + 1,
-            origin: "user",
-            reason: "Owner confirmed adding this task to today.",
-            userAdjustedAt: now,
-            updatedAt: now,
-          })
-          .run();
-      }
       enqueueEvent("activity.created", row, "user", receipt, database, now);
     },
     database,

@@ -28,10 +28,11 @@ export function ActivityCard({
   return (
     <div
       data-activity-id={activity.id}
+      data-origin={activity.origin}
       data-kind={item.kind === "reply" ? "reply" : item.section}
       data-status={activity.userState === "completed" ? "done" : activity.userState}
       data-expanded={expanded}
-      className="group/flow overflow-hidden rounded-ui-16 border border-border bg-muted data-[kind=focus]:bg-activity-focus data-[kind=reply]:bg-activity-reply data-[kind=optional]:bg-activity-optional data-[expanded=true]:border-activity-expanded data-[status=done]:bg-background!"
+      className="group/flow overflow-hidden rounded-ui-16 border border-border bg-muted data-[kind=focus]:bg-activity-focus data-[kind=reply]:bg-activity-reply data-[kind=optional]:bg-activity-optional data-[origin=agent]:border-l-2 data-[origin=agent]:border-l-activity-lilac data-[expanded=true]:border-activity-expanded data-[status=done]:bg-background!"
     >
       <div className="flex items-center gap-px-13 px-px-18 py-px-16 max-md:gap-px-10 max-md:px-px-14 max-md:py-px-15">
         {item.kind === "task" ? (
@@ -74,6 +75,11 @@ export function ActivityCard({
               : stateLabels[activity.userState]}
           </span>
         </button>
+        {activity.origin === "agent" && (
+          <span className="rounded-full bg-activity-lilac/20 px-2 py-0.5 text-ui-10 font-medium text-foreground">
+            AI
+          </span>
+        )}
         <ChevronDown className="size-4 text-muted-foreground group-data-[expanded=true]/flow:rotate-180" />
       </div>
       <div className="flex flex-wrap items-center justify-between gap-2 px-px-18 pb-3 pl-px-55 max-md:px-px-14">

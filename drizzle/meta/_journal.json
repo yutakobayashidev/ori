@@ -78,6 +78,13 @@
       "when": 1791538562333,
       "tag": "0010_clever_black_queen",
       "breakpoints": true
+    },
+    {
+      "idx": 11,
+      "version": "6",
+      "when": 1791539550679,
+      "tag": "0011_oval_starfox",
+      "breakpoints": true
     }
   ]
 }

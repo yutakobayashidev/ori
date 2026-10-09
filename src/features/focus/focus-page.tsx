@@ -14,7 +14,13 @@ import { useFocus } from "./focus-state";
 import { defaultFocusBudget, projectedRemainingSeconds, sessionActiveSeconds } from "./time";
 import { ActivityTimeDetails } from "./time-details";
 
-export function FocusPage({ activityId }: { activityId: string }) {
+export function FocusPage({
+  activityId,
+  embedded = false,
+}: {
+  activityId: string;
+  embedded?: boolean;
+}) {
   const { activities, loading } = useActivityStore();
   const focus = useFocus();
   const now = useFocusClock(focus?.snapshot?.serverNow);
@@ -44,20 +50,24 @@ export function FocusPage({ activityId }: { activityId: string }) {
         })
       : null;
   return (
-    <main className="min-h-dvh bg-background px-5 py-6 sm:px-8">
-      <header className="mx-auto flex max-w-5xl items-center justify-between">
-        <Link
-          to="/"
-          className="inline-flex items-center gap-2 rounded-md text-sm text-muted-foreground hover:text-foreground focus-visible:ring-2 focus-visible:ring-ring"
-        >
-          <ArrowLeft className="size-4" />
-          Today
-        </Link>
-        <span className="text-sm text-muted-foreground">
-          {session ? "Your focus" : "One thing at a time"}
-        </span>
-      </header>
-      <div className="mx-auto max-w-xl pt-10 pb-16 text-center sm:pt-14">
+    <main
+      className={embedded ? "bg-background px-2 py-2" : "min-h-dvh bg-background px-5 py-6 sm:px-8"}
+    >
+      {!embedded && (
+        <header className="mx-auto flex max-w-5xl items-center justify-between">
+          <Link
+            to="/"
+            className="inline-flex items-center gap-2 rounded-md text-sm text-muted-foreground hover:text-foreground focus-visible:ring-2 focus-visible:ring-ring"
+          >
+            <ArrowLeft className="size-4" />
+            Today
+          </Link>
+          <span className="text-sm text-muted-foreground">
+            {session ? "Your focus" : "One thing at a time"}
+          </span>
+        </header>
+      )}
+      <div className={`mx-auto max-w-xl pb-8 text-center ${embedded ? "pt-2" : "pt-10 sm:pt-14"}`}>
         <ActivityFeedback />
         {loading ? (
           <p className="text-muted-foreground">Loading your task…</p>

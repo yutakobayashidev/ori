@@ -406,7 +406,7 @@ it("returns a normalized column for an Apps feed when Twitter defaults are omitt
   });
 });
 
-it("publishes AI time estimates without selecting today and updates remaining work with evidence", async () => {
+it("publishes automatically classified AI activities and updates remaining work with evidence", async () => {
   const tools = createWorkspaceTools();
   expect(
     await tools.execute("publish_activities", {
@@ -418,6 +418,7 @@ it("publishes AI time estimates without selecting today and updates remaining wo
           kind: "task",
           title: "Review",
           nextAction: "Read draft",
+          recommendation: { section: "focus", reason: "Next actionable commitment" },
           sources: [],
           timeEstimate: { estimatedMinutes: 30, reason: "Read and summarize" },
         },
@@ -425,23 +426,19 @@ it("publishes AI time estimates without selecting today and updates remaining wo
     }),
   ).toMatchObject({ ok: true });
   expect(await tools.execute("get_activity_context", {})).toMatchObject({
-    activities: [{ time: { estimatedMinutes: 30, estimateOrigin: "agent" } }],
+    activities: [
+      {
+        effective: { section: "focus" },
+        time: { estimatedMinutes: 30, estimateOrigin: "agent" },
+      },
+    ],
   });
-  const day = { date: "2026-10-09", timeZone: "Asia/Tokyo" };
-  expect(await tools.execute("get_day_plan", day)).toMatchObject({ ok: true, selections: [] });
-  expect(
-    await tools.execute("update_day_plan", {
-      ...day,
-      requestId: "select",
-      expectedRevision: 1,
-      reason: "One useful next step",
-      changes: [{ activityId: "timed", section: "focus", rank: 0 }],
-    }),
-  ).toMatchObject({ ok: true });
+  expect(tools.definitions.some((tool) => tool.name === "update_day_plan")).toBe(false);
+  expect(tools.definitions.some((tool) => tool.name === "get_day_plan")).toBe(false);
   expect(
     await tools.execute("update_activity_progress", {
       requestId: "remaining",
-      expectedRevision: 2,
+      expectedRevision: 1,
       id: "timed",
       remainingMinutes: 10,
       reason: "Reading is finished",
@@ -463,10 +460,4 @@ it("publishes AI time estimates without selecting today and updates remaining wo
       },
     ],
   });
-  expect(
-    tools.definitions.find((tool) => tool.name === "update_day_plan")?.annotations.readOnlyHint,
-  ).toBe(false);
-  expect(
-    tools.definitions.find((tool) => tool.name === "get_day_plan")?.annotations.readOnlyHint,
-  ).toBe(true);
 });

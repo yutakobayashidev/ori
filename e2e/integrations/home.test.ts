@@ -2,7 +2,6 @@ import { expect, test } from "../activity-fixtures";
 
 test.beforeEach(async ({ activityMcp }) => {
   await activityMcp.publish();
-  await activityMcp.selectToday();
 });
 
 test("executes routine steps and records a measurement in the shared journal", async ({
@@ -90,7 +89,6 @@ test("adds tasks only after confirmation and persists their deferred and complet
   await homePage.previewCommand("Add grocery shopping");
   await expect(complete).toHaveCount(0);
   await homePage.applyAction.click();
-  await page.getByRole("button", { name: "Show other selected candidates" }).click();
   await expect(complete).toBeVisible();
   await homePage.previewCommand("Defer grocery shopping");
   await homePage.applyAction.click();
@@ -103,10 +101,10 @@ test("adds tasks only after confirmation and persists their deferred and complet
     )
     .toBe("deferred");
   await page.reload();
+  await expect(homePage.dailyBrief).toBeVisible();
   await expect(complete).toHaveCount(0);
   await homePage.previewCommand("Restore grocery shopping");
   await homePage.applyAction.click();
-  await page.getByRole("button", { name: "Show other selected candidates" }).click();
   await complete.click();
   await expect(activitiesPage.restore("grocery shopping")).toBeVisible();
 });

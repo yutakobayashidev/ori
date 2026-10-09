@@ -15,8 +15,6 @@ import { Button } from "#/components/ui/button";
 import { Checkbox } from "#/components/ui/checkbox";
 import { Input } from "#/components/ui/input";
 import { Textarea } from "#/components/ui/textarea";
-import { useDayPlan } from "#/features/day-plan/use-day-plan";
-import { DayPlanPicker, DaySelectionControls } from "#/features/day-plan/day-plan-picker";
 import { ActivityCard } from "#/features/activities/activity-card";
 import { ActivityFeedback } from "#/features/activities/activity-controls";
 import { useActivities } from "#/features/activities/activity-state";
@@ -34,17 +32,6 @@ type ExecutionWorkbenchProps = {
 export function ExecutionWorkbench({ selectedId, onSelect }: ExecutionWorkbenchProps) {
   const { tasks, setTasks, entries } = useWorkspaceState();
   const { activities, loading } = useActivities();
-  const dayPlan = useDayPlan();
-  const [showAll, setShowAll] = useState<Record<string, boolean>>({});
-  const selections = (dayPlan.plan?.selections ?? []).filter(
-    (selection) =>
-      !selection.excluded &&
-      activities.some(
-        (activity) =>
-          activity.id === selection.activityId &&
-          !["dismissed", "deferred"].includes(activity.userState),
-      ),
-  );
   const currentEntries = entries.filter(
     (entry) => !entries.some((other) => other.correctionOf === entry.id),
   );
@@ -62,24 +49,6 @@ export function ExecutionWorkbench({ selectedId, onSelect }: ExecutionWorkbenchP
   return (
     <section className="min-w-0" aria-label="Today’s plan">
       <ActivityFeedback />
-      <DayPlanPicker
-        activities={activities}
-        selections={dayPlan.plan?.selections ?? []}
-        busy={dayPlan.busy || !dayPlan.plan}
-        update={dayPlan.update}
-      />
-      {dayPlan.error && (
-        <div role="alert" className="mb-4 text-sm">
-          {dayPlan.error}{" "}
-          <Button
-            variant="ghost"
-            size="sm"
-            onClick={() => (dayPlan.retry ? void dayPlan.retry() : dayPlan.reload())}
-          >
-            Retry
-          </Button>
-        </div>
-      )}
       {(
         [
           { id: "focus", label: "Start here", subtitle: "Just the next thing" },
@@ -95,12 +64,13 @@ export function ExecutionWorkbench({ selectedId, onSelect }: ExecutionWorkbenchP
             )}
           </header>
           <div className="grid gap-px-9">
-            {selections
-              .filter((selection) => selection.section === section.id)
-              .slice(0, showAll[section.id] ? undefined : section.id === "focus" ? 1 : 3)
-              .map((selection) => {
-                const activity = activities.find((entry) => entry.id === selection.activityId);
-                if (!activity) return null;
+            {activities
+              .filter(
+                (activity) =>
+                  activity.effective.section === section.id &&
+                  !["dismissed", "deferred"].includes(activity.userState),
+              )
+              .map((activity) => {
                 return (
                   <div key={activity.id}>
                     <ActivityCard
@@ -119,28 +89,9 @@ export function ExecutionWorkbench({ selectedId, onSelect }: ExecutionWorkbenchP
                         ) : undefined
                       }
                     />
-                    <DaySelectionControls
-                      selection={selection}
-                      siblings={selections.filter((entry) => entry.section === section.id)}
-                      title={activity.effective.title}
-                      busy={dayPlan.busy}
-                      update={dayPlan.update}
-                    />
                   </div>
                 );
               })}
-            {selections.filter((selection) => selection.section === section.id).length >
-              (section.id === "focus" ? 1 : 3) && (
-              <Button
-                variant="ghost"
-                size="sm"
-                onClick={() =>
-                  setShowAll((current) => ({ ...current, [section.id]: !current[section.id] }))
-                }
-              >
-                {showAll[section.id] ? "Show fewer" : "Show other selected candidates"}
-              </Button>
-            )}
             {tasks
               .filter((task) => section.id === "routine" && task.section === section.id)
               .map((task) => {
@@ -268,13 +219,14 @@ export function ExecutionWorkbench({ selectedId, onSelect }: ExecutionWorkbenchP
                 )}
               </div>
             )}
-            {!selections.some((selection) => selection.section === section.id) &&
+            {!activities.some(
+              (activity) =>
+                activity.effective.section === section.id &&
+                !["dismissed", "deferred"].includes(activity.userState),
+            ) &&
               !loading &&
-              !dayPlan.loading &&
               section.id !== "routine" && (
-                <p className="py-px-16 text-ui-12 text-muted-foreground">
-                  Nothing selected. Choose a candidate whenever you’re ready.
-                </p>
+                <p className="py-px-16 text-ui-12 text-muted-foreground">Nothing here right now.</p>
               )}
           </div>
         </section>

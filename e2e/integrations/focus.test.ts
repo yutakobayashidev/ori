@@ -21,25 +21,28 @@ test("AI estimates support one-click focus, pause, reload and external completio
     },
   ]);
   await homePage.goTo();
-  await expect(activitiesPage.card("focus-task")).toHaveCount(0);
-  await activityMcp.selectToday(["focus-task"]);
   const card = activitiesPage.card("focus-task");
   await expect(card).toContainText("About 40 min");
+  await expect(card).toHaveAttribute("data-origin", "agent");
   await card.getByRole("button", { name: "Focus on Review the proposal" }).click();
-  await expect(page).toHaveURL(/\/focus\/focus-task/);
-  await expect(page.getByRole("timer")).toBeVisible();
-  await expect(page.getByRole("button", { name: "Pause", exact: true })).toBeVisible();
+  const focusDialog = page.getByRole("dialog", { name: "Focus" });
+  await expect(focusDialog).toBeVisible();
+  await expect(focusDialog.getByRole("timer")).toBeVisible();
+  await expect(focusDialog.getByRole("button", { name: "Pause", exact: true })).toBeVisible();
   await expect(
-    page.getByText("Read the summary and note the one change needed", { exact: true }),
+    focusDialog.getByText("Read the summary and note the one change needed", { exact: true }),
   ).toBeVisible();
-  await page.getByRole("button", { name: "Pause", exact: true }).click();
-  await expect(page.getByRole("button", { name: "Resume", exact: true })).toBeVisible();
-  const paused = await page.getByRole("timer").textContent();
+  await focusDialog.getByRole("button", { name: "Pause", exact: true }).click();
+  await expect(focusDialog.getByRole("button", { name: "Resume", exact: true })).toBeVisible();
+  const paused = await focusDialog.getByRole("timer").textContent();
   await page.reload();
-  await expect(page.getByRole("button", { name: "Resume", exact: true })).toBeVisible();
-  await expect(page.getByRole("timer")).toHaveText(paused ?? "missing timer");
+  const reloadedCard = activitiesPage.card("focus-task");
+  await reloadedCard.getByRole("button", { name: "Focus on Review the proposal" }).click();
+  const reloadedDialog = page.getByRole("dialog", { name: "Focus" });
+  await expect(reloadedDialog.getByRole("button", { name: "Resume", exact: true })).toBeVisible();
+  await expect(reloadedDialog.getByRole("timer")).toHaveText(paused ?? "missing timer");
   await page.screenshot({ path: `/tmp/focus-${testInfo.project.name}.png`, fullPage: true });
-  await page.getByRole("button", { name: "Resume", exact: true }).click();
+  await reloadedDialog.getByRole("button", { name: "Resume", exact: true }).click();
   const context = await activityMcp.context();
   expect(
     await activityMcp.tool("update_activity_progress", {
@@ -58,13 +61,13 @@ test("AI estimates support one-click focus, pause, reload and external completio
       ],
     }),
   ).toMatchObject({ ok: true });
-  await expect(page.getByRole("button", { name: "Pause", exact: true })).toHaveCount(0);
+  await expect(reloadedDialog.getByRole("button", { name: "Pause", exact: true })).toHaveCount(0);
   const done = await activityMcp.context();
   expect(done.activities[0]?.userState).toBe("completed");
   expect(done.activities[0]?.time?.actualSeconds).not.toBeNull();
 });
 
-test("today stays small and owner exclusions survive agent reselection", async ({
+test("AI recommendations appear without triage and owner exclusions persist", async ({
   page,
   homePage,
   activityMcp,
@@ -81,32 +84,15 @@ test("today stays small and owner exclusions survive agent reselection", async (
     },
   ]);
   await homePage.goTo();
-  await expect(activitiesPage.card("candidate")).toHaveCount(0);
-  await page.getByRole("button", { name: "Choose from inbox" }).click();
-  const picker = page.getByRole("region", { name: "Choose today's candidates" });
-  await expect(picker).toContainText("About 5 min");
-  await picker.getByRole("button", { name: "Start here", exact: true }).click();
   await expect(activitiesPage.card("candidate")).toBeVisible();
-  await page.getByRole("button", { name: "Remove from today", exact: true }).click();
+  await activitiesPage.expand("candidate");
+  await activitiesPage
+    .card("candidate")
+    .getByRole("button", { name: "Later", exact: true })
+    .click();
   await expect(activitiesPage.card("candidate")).toHaveCount(0);
   const context = await activityMcp.context();
-  expect(context.activities[0]?.userState).toBe("available");
-  const day = await page.evaluate(() => {
-    const date = new Date();
-    return {
-      date: `${date.getFullYear()}-${String(date.getMonth() + 1).padStart(2, "0")}-${String(date.getDate()).padStart(2, "0")}`,
-      timeZone: Intl.DateTimeFormat().resolvedOptions().timeZone,
-    };
-  });
-  expect(
-    await activityMcp.tool("update_day_plan", {
-      ...day,
-      requestId: randomUUID(),
-      expectedRevision: context.revision,
-      reason: "Try to reselect",
-      changes: [{ activityId: "candidate", section: "focus", rank: 0 }],
-    }),
-  ).toMatchObject({ ok: false, error: { code: "state-conflict" } });
+  expect(context.activities[0]?.userState).toBe("deferred");
   await page.reload();
   await expect(activitiesPage.card("candidate")).toHaveCount(0);
 });

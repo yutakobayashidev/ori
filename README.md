@@ -19,11 +19,10 @@ success does not automatically complete the task.
 The headless Beeper listener can observe messages sent in the original chat apps;
 Dots can update task progress and reply proposals through shared MCP tools.
 
-Dots supplies rough task-duration estimates with its proposals and can revise remaining
-work from conversation evidence. Home keeps a separate daily selection under Start here
-and If there's room; new inbox tasks do not automatically join today's plan. Choose from
-inbox adds candidates, and owner choices are protected from agent reselection.
-Focus opens one task with a visual timer, a separate remaining-work estimate and a
+Dots supplies rough task-duration estimates and recommends `Start here` or `If there's
+room` for each activity. Home shows those recommendations as soon as they arrive; users
+can set work aside without selecting every new item. AI-added activities have a subtle
+AI marker. Focus opens as a sheet with a visual timer, a separate remaining-work estimate and a
 conditional finish time. Sessions survive reloads, support pause/resume and extra time,
 and record effort without automatically completing tasks when the timer reaches zero.
 Manual estimate overrides and work-log corrections are optional. Calendar integration

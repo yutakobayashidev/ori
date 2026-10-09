@@ -1,5 +1,4 @@
 import { z } from "zod";
-import { getDayPlanInput } from "../day-plan/model";
 
 const id = z.string().min(1).max(128);
 const sourceId = z.string().min(1).max(256);
@@ -182,6 +181,7 @@ export type ActivityState = z.infer<typeof activityState>;
 export type ActivityOverrides = z.infer<typeof activityOverrides>;
 export type Activity = {
   id: string;
+  origin?: "user" | "agent";
   proposal: ActivityProposal;
   userState: ActivityState;
   userOverrides: ActivityOverrides;
@@ -222,5 +222,4 @@ export const createHomeActivityInput = z.strictObject({
   title: required(300),
   nextAction: required(2000),
   section,
-  day: getDayPlanInput.optional(),
 });

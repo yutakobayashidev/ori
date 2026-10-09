@@ -156,6 +156,9 @@ export const authThrottle = sqliteTable(
 
 export const activities = sqliteTable("activities", {
   id: text("id").primaryKey(),
+  origin: text("origin", { enum: ["user", "agent"] })
+    .notNull()
+    .default("agent"),
   assessment: text("assessment", { mode: "json" }).$type<
     import("../activities/model").ActivityAssessment
   >(),

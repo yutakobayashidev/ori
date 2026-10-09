@@ -1,8 +1,11 @@
-import { Link, useNavigate, useRouterState } from "@tanstack/react-router";
+import { Link, useRouterState } from "@tanstack/react-router";
 import { Pause, Play, Timer } from "lucide-react";
 import { Button } from "#/components/ui/button";
 import { useActivityStore } from "#/features/activities/activity-store";
 import type { Activity } from "#/features/activities/model";
+import { useState } from "react";
+import { Sheet, SheetContent, SheetHeader, SheetTitle } from "#/components/ui/sheet";
+import { FocusPage } from "./focus-page";
 import { useFocus, useRequiredFocus } from "./focus-state";
 import { formatCountdown, useFocusClock } from "./focus-clock";
 import { sessionActiveSeconds } from "./time";
@@ -47,23 +50,31 @@ export function StartFocusButton({ activity }: { activity: Activity }) {
 }
 function StartFocusAction({ activity }: { activity: Activity }) {
   const focus = useRequiredFocus();
-  const navigate = useNavigate();
+  const [open, setOpen] = useState(false);
   const session = focus.snapshot?.session;
   return (
-    <Button
-      variant="ghost"
-      size="sm"
-      disabled={focus.busy || !focus.snapshot}
-      aria-label={`Focus on ${activity.effective.title}`}
-      onClick={async () => {
-        // A different active session requires an explicit switch on the focus page.
-        if (session || (await focus.start(activity.id)))
-          await navigate({ to: "/focus/$activityId", params: { activityId: activity.id } });
-      }}
-    >
-      <Play className="size-3" />
-      {session?.activityId === activity.id ? "Return to focus" : "Focus"}
-    </Button>
+    <>
+      <Button
+        variant="ghost"
+        size="sm"
+        disabled={focus.busy || !focus.snapshot}
+        aria-label={`Focus on ${activity.effective.title}`}
+        onClick={async () => {
+          if (session || (await focus.start(activity.id))) setOpen(true);
+        }}
+      >
+        <Play className="size-3" />
+        {session?.activityId === activity.id ? "Return to focus" : "Focus"}
+      </Button>
+      <Sheet open={open} onOpenChange={setOpen}>
+        <SheetContent className="w-full! overflow-y-auto sm:max-w-[min(720px,92vw)]!">
+          <SheetHeader>
+            <SheetTitle>Focus</SheetTitle>
+          </SheetHeader>
+          <FocusPage activityId={activity.id} embedded />
+        </SheetContent>
+      </Sheet>
+    </>
   );
 }
 

@@ -1,0 +1,1 @@
+ALTER TABLE `activities` ADD `origin` text DEFAULT 'agent' NOT NULL;

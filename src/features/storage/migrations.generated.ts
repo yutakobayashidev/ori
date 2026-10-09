@@ -111,4 +111,10 @@ export const migrations = [
     folderMillis: 1791538562333,
     hash: "fd9b9856877e12196db7044cad338e090acfb0abe277071472d7ef84ab5b65a5",
   },
+  {
+    sql: ["ALTER TABLE `activities` ADD `origin` text DEFAULT 'agent' NOT NULL;"],
+    bps: true,
+    folderMillis: 1791539550679,
+    hash: "67240f28030baff3e525cb061e5ffc7c8bbb954b91bfcbac731423dd94de9c97",
+  },
 ];

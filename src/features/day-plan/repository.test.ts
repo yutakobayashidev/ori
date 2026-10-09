@@ -172,8 +172,8 @@ it("new AI candidates cannot push ahead of the owner's chosen order", () => {
   expect(getDayPlan(day, database).selections.map((entry) => entry.activityId)).toEqual(["a", "b"]);
 });
 
-it("adds an owner-confirmed Home task to today atomically without changing inbox publication", async () => {
-  const { createUserActivity } = await import("../activities/repository.server");
+it("creates a Home task in its recommended section without a separate day selection", async () => {
+  const { createUserActivity, getAllActivities } = await import("../activities/repository.server");
   const input = {
     requestId: "home-create",
     expectedRevision: 1,
@@ -181,16 +181,15 @@ it("adds an owner-confirmed Home task to today atomically without changing inbox
     title: "Read",
     nextAction: "Read",
     section: "focus",
-    day,
   };
   const receipt = createUserActivity(input, database);
   expect(createUserActivity(input, database)).toEqual(receipt);
-  expect(getDayPlan(day, database).selections).toEqual([
+  expect(getAllActivities(database).activities).toContainEqual(
     expect.objectContaining({
-      activityId: "home",
+      id: "home",
       origin: "user",
-      section: "focus",
-      userAdjustedAt: expect.any(Number),
+      effective: expect.objectContaining({ section: "focus" }),
     }),
-  ]);
+  );
+  expect(getDayPlan(day, database).selections).toEqual([]);
 });
