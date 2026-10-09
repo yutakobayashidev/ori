@@ -239,3 +239,136 @@ it("does not substitute a group member avatar or expose another account's avatar
   });
   expect(adapter.readMedia).not.toHaveBeenCalled();
 });
+
+it("deduplicates a focused source already included in the requested history page", async () => {
+  const anchor = { ...message, sortKey: "100" };
+  vi.mocked(adapter.retrieveMessage).mockResolvedValue(anchor);
+  vi.mocked(adapter.readMessages).mockResolvedValue({
+    items: [anchor, { ...message, id: "previous", timestamp: "2026-10-08T23:00:00Z" }],
+    hasMore: true,
+    oldestCursor: "99",
+    newestCursor: "100",
+  });
+  const result = await readActivityConversation(
+    { activityId: "reply", sourceId: "source" },
+    database,
+    adapter,
+  );
+  expect(adapter.retrieveMessage).toHaveBeenCalledWith("chat", "msg");
+  expect(adapter.readMessages).toHaveBeenCalledWith("chat", undefined, "before");
+  expect(result.focusedMessageId).toBe("msg");
+  expect(result.focusedMessageOutsidePage).toBe(false);
+  expect(result.messages.map((item) => item.id)).toEqual(["previous", "msg"]);
+  expect(result.nextCursor).toBe("99");
+});
+it("keeps explicit pagination cursors when browsing a source conversation", async () => {
+  vi.mocked(adapter.retrieveMessage).mockResolvedValue({ ...message, sortKey: "100" });
+  await readActivityConversation(
+    { activityId: "reply", sourceId: "source", cursor: "50" },
+    database,
+    adapter,
+  );
+  expect(adapter.readMessages).toHaveBeenCalledWith("chat", "50", "before");
+});
+it("opens a task's message source and scopes its participant avatars to that task", async () => {
+  publishActivities(
+    {
+      requestId: "task",
+      expectedRevision: 1,
+      activities: [
+        {
+          id: "task",
+          kind: "task",
+          title: "Do the thing",
+          nextAction: "Follow up",
+          sources: [
+            {
+              id: "task-source",
+              kind: "message",
+              provider: "beeper",
+              targetId: "test",
+              accountId: "account",
+              chatId: "chat",
+              messageId: "msg",
+              observedAt: message.timestamp,
+              excerpt: "Hello",
+            },
+          ],
+        },
+      ],
+    },
+    database,
+  );
+  vi.mocked(adapter.retrieveMessage).mockResolvedValue(message);
+  const result = await readActivityConversation(
+    { activityId: "task", sourceId: "task-source" },
+    database,
+    adapter,
+  );
+  expect(result.focusedMessageId).toBe("msg");
+  expect(
+    activityHasAsset("task", result.conversation.participants[0]?.avatarId ?? "", database),
+  ).toBe(true);
+  expect(
+    activityHasAsset(
+      "unrelated-task",
+      result.conversation.participants[0]?.avatarId ?? "",
+      database,
+    ),
+  ).toBe(false);
+});
+it("rejects an unknown source before accessing Beeper", async () => {
+  await expect(
+    readActivityConversation({ activityId: "reply", sourceId: "missing" }, database, adapter),
+  ).rejects.toMatchObject({ code: "invalid-conversation" });
+  expect(adapter.retrieveMessage).not.toHaveBeenCalled();
+  expect(adapter.readMessages).not.toHaveBeenCalled();
+});
+it.each([{ chatID: "another-chat" }, { accountID: "another-account" }, { id: "another-message" }])(
+  "rejects a source message with mismatched identity %j",
+  async (identity) => {
+    vi.mocked(adapter.retrieveMessage).mockResolvedValue({ ...message, ...identity });
+    await expect(
+      readActivityConversation({ activityId: "reply", sourceId: "source" }, database, adapter),
+    ).rejects.toMatchObject({ code: "invalid-conversation" });
+    expect(adapter.readMessages).not.toHaveBeenCalled();
+    expect(database.select().from(beeperMessages).all()).toEqual([]);
+  },
+);
+it("reports unavailable source messages without substituting recent conversation history", async () => {
+  vi.mocked(adapter.retrieveMessage).mockRejectedValue(new Error("sensitive upstream details"));
+  await expect(
+    readActivityConversation({ activityId: "reply", sourceId: "source" }, database, adapter),
+  ).rejects.toMatchObject({
+    code: "beeper-unavailable",
+    message: "The conversation could not be loaded. Try again.",
+  });
+  expect(adapter.readMessages).not.toHaveBeenCalled();
+});
+it("does not expose a hidden source message", async () => {
+  vi.mocked(adapter.retrieveMessage).mockResolvedValue({ ...message, isHidden: true });
+  await expect(
+    readActivityConversation({ activityId: "reply", sourceId: "source" }, database, adapter),
+  ).rejects.toMatchObject({ code: "not-found" });
+  expect(adapter.readMessages).not.toHaveBeenCalled();
+});
+
+it("includes an old source outside the recent page without treating its sort key as a cursor", async () => {
+  vi.mocked(adapter.retrieveMessage).mockResolvedValue({ ...message, sortKey: "opaque-sort-key" });
+  vi.mocked(adapter.readMessages).mockResolvedValue({
+    items: [{ ...message, id: "recent", timestamp: "2026-10-09T10:00:00Z" }],
+    hasMore: true,
+    oldestCursor: "opaque-page-cursor",
+    newestCursor: "opaque-newest-cursor",
+  });
+  const result = await readActivityConversation(
+    { activityId: "reply", sourceId: "source" },
+    database,
+    adapter,
+  );
+  expect(adapter.readMessages).toHaveBeenCalledWith("chat", undefined, "before");
+  expect(result.messages.map((item) => item.id)).toEqual(["msg", "recent"]);
+  expect(result.focusedMessageId).toBe("msg");
+  expect(result.focusedMessageOutsidePage).toBe(true);
+  expect(result.nextCursor).toBe("opaque-page-cursor");
+});

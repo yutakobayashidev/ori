@@ -511,3 +511,19 @@ it("filters source conversations and states before pagination without reporting 
     [],
   );
 });
+
+it("reads existing Beeper source excerpts as text without changing persisted evidence", () => {
+  const richReply = structuredClone(reply);
+  const source = richReply.sources[0];
+  if (source?.kind !== "message") throw new Error("Expected message source");
+  source.excerpt = "<p>Hello <strong>Sam</strong><br>Tomorrow?</p>";
+  publish([richReply]);
+  const result = getActivityContext({}, second).activities[0];
+  if (!result) throw new Error("Expected stored activity");
+  expect(result.proposal.sources[0]).toMatchObject({ excerpt: "Hello Sam\nTomorrow?" });
+  expect(result.effective.sources[0]).toMatchObject({ excerpt: "Hello Sam\nTomorrow?" });
+  const stored = database.$client.prepare("SELECT proposal FROM activities").get() as {
+    proposal: string;
+  };
+  expect(JSON.parse(stored.proposal)).toEqual(richReply);
+});

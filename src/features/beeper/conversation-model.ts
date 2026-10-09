@@ -3,6 +3,7 @@ import type { BeeperMessage } from "./adapter.server";
 
 export const readActivityConversationInput = z.strictObject({
   activityId: z.string().min(1).max(128),
+  sourceId: z.string().min(1).max(128).optional(),
   cursor: z.string().max(4096).optional(),
 });
 export const getBeeperAssetInput = z.strictObject({ assetId: z.string().regex(/^[a-f0-9]{64}$/) });

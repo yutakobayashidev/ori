@@ -175,3 +175,25 @@ test("sends a saved reply from Messages with an explicit quoted message", async 
   await expect(page.getByText("Reply queued", { exact: true })).toBeVisible();
   await expect(send).toBeDisabled();
 });
+
+test("opens the original message from a saved source excerpt", async ({
+  page,
+  activityMcp,
+  homePage,
+  activitiesPage,
+}) => {
+  await activityMcp.publish();
+  await homePage.goTo();
+  await activitiesPage.expand("review-times");
+  await activitiesPage
+    .card("review-times")
+    .getByRole("button", { name: "Open original message" })
+    .click();
+  const sheet = page.getByRole("dialog", { name: "Original message" });
+  await expect(sheet).toBeVisible();
+  await expect(sheet.locator('[data-source-message="true"]')).toContainText(
+    "Please review the materials and suggest two times.",
+  );
+  await expect(sheet.locator('[data-source-message="true"]')).toBeInViewport();
+  await expect(sheet.getByRole("button", { name: "Send reply" })).toHaveCount(0);
+});

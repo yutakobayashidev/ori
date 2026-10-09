@@ -11,6 +11,8 @@ export type ConversationSnapshot = {
   conversation: Conversation;
   messages: ConversationMessage[];
   nextCursor: string | null;
+  focusedMessageId?: string;
+  focusedMessageOutsidePage?: boolean;
   draftHash: string;
   revision: number;
   latestSend?: MessageSendOperation | null;
@@ -20,6 +22,7 @@ export type ActivityMessagingTransport = {
   readConversation(input: {
     activityId: string;
     cursor?: string;
+    sourceId?: string;
   }): Promise<ConversationSnapshot | Failure>;
   sendReply(input: z.input<typeof sendActivityReplyInput>): Promise<MessageSendResult>;
   getSend(input: { operationId: string }): Promise<MessageSendResult>;

@@ -1,6 +1,7 @@
 import { createHash } from "node:crypto";
 import { and, asc, eq, gt, inArray, sql } from "drizzle-orm";
 import { z } from "zod";
+import { beeperMessageText } from "../beeper/message-text.server";
 import type { ActivityEventName } from "../mcp-events/activity-events";
 import { enqueueActivityEvent } from "../mcp-events/events.server";
 import { getDatabase, type AppDatabase } from "../storage/database.server";
@@ -57,7 +58,15 @@ function revision(database: AppDatabase) {
   );
 }
 function activity(row: typeof activities.$inferSelect): Activity {
-  const { proposal, userState, userOverrides } = row;
+  const { userState, userOverrides } = row;
+  const proposal = {
+    ...row.proposal,
+    sources: row.proposal.sources.map((source) =>
+      source.kind === "message"
+        ? { ...source, excerpt: beeperMessageText(source.excerpt) }
+        : source,
+    ),
+  };
   const { draft, section, ...common } = userOverrides;
   const effective = {
     ...proposal,

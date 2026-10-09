@@ -79,3 +79,15 @@ it("accepts absent chat avatars and numeric reply capabilities from Beeper", asy
     capabilities: { reply: 2 },
   });
 });
+
+it("normalizes upstream rich-text bodies before exposing message reads", async () => {
+  writeFileSync(
+    binary,
+    `#!${process.execPath}\nconsole.log(JSON.stringify({success:true,data:{id:'message',chatID:'chat',accountID:'account',timestamp:'2026-10-09T00:00:00Z',text:'<p>Hello<br>Sam &amp; team</p>'}}));\n`,
+    { mode: 0o700 },
+  );
+  const adapter = createBeeperAdapter({ binary, targetId: "test" });
+  expect(await adapter.retrieveMessage("chat", "message")).toMatchObject({
+    text: "Hello\nSam & team",
+  });
+});

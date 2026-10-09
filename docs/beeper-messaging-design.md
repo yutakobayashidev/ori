@@ -24,6 +24,11 @@ tables. Partial membership responses preserve previously observed participants.
 Unknown sender direction remains unknown. Refreshing history upserts edits and
 status changes, clears deleted message text and removes hidden messages from cache.
 Messages are returned oldest first within a page; `nextCursor` loads earlier history.
+Beeper rich-text bodies and saved source excerpts are converted to plain display
+text, preserving line breaks and safe link destinations without rendering upstream
+HTML. Source excerpts open a conversation sheet at the original message. Passing
+`sourceId` to `read_activity_conversation` resolves that exact source on reply or task
+activities, retrieves older messages directly, and returns `focusedMessageId`.
 
 The editable draft remains the Activity proposal plus the owner's override. Sending
 snapshots that effective draft; later edits do not change accepted work. The Activity's

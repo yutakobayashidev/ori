@@ -10,9 +10,22 @@ import {
   MessageScrollerItem,
   MessageScrollerProvider,
   MessageScrollerViewport,
+  useMessageScroller,
 } from "#/components/ui/message-scroller";
 import type { ConversationMessage } from "#/features/beeper/conversation-model";
 import type { ActivityMessagingTransport, ConversationSnapshot } from "./messaging-client";
+
+function FocusMessage({ messageId }: { messageId?: string }) {
+  const { scrollToMessage } = useMessageScroller();
+  useEffect(() => {
+    if (!messageId) return;
+    const frame = requestAnimationFrame(() =>
+      scrollToMessage(messageId, { align: "center", behavior: "instant" }),
+    );
+    return () => cancelAnimationFrame(frame);
+  }, [messageId, scrollToMessage]);
+  return null;
+}
 
 export function ReplyConversationHistory({
   snapshot,
@@ -20,12 +33,14 @@ export function ReplyConversationHistory({
   loading,
   onRefresh,
   onQuote,
+  focusedMessageId,
 }: {
   snapshot?: ConversationSnapshot;
   transport?: ActivityMessagingTransport;
   loading: boolean;
   onRefresh: (cursor?: string) => void;
-  onQuote: (message: ConversationMessage) => void;
+  onQuote?: (message: ConversationMessage) => void;
+  focusedMessageId?: string;
 }) {
   const [images, setImages] = useState<Record<string, string>>({});
   const ids = [
@@ -87,7 +102,8 @@ export function ReplyConversationHistory({
           Refresh
         </Button>
       </div>
-      <MessageScrollerProvider>
+      <MessageScrollerProvider autoScroll={!focusedMessageId}>
+        <FocusMessage messageId={focusedMessageId} />
         <MessageScroller className="flex-1">
           <MessageScrollerViewport>
             <MessageScrollerContent className="mx-auto w-full max-w-2xl gap-5 p-4">
@@ -121,72 +137,94 @@ export function ReplyConversationHistory({
                   (candidate) => candidate.id === message.linkedMessageId,
                 );
                 return (
-                  <MessageScrollerItem key={message.id} messageId={message.id}>
-                    <Message align={message.isSender === true ? "end" : "start"}>
-                      {message.isSender !== true && (
-                        <Avatar size="sm">
-                          {person?.avatarId && images[person.avatarId] && (
-                            <AvatarImage src={images[person.avatarId]} alt="" />
-                          )}
-                          <AvatarFallback>{name.slice(0, 1)}</AvatarFallback>
-                        </Avatar>
+                  <MessageScrollerItem
+                    key={message.id}
+                    messageId={message.id}
+                    data-source-message={message.id === focusedMessageId || undefined}
+                  >
+                    <div
+                      className={
+                        message.id === focusedMessageId
+                          ? "rounded-md bg-accent/50 ring-2 ring-primary/30"
+                          : undefined
+                      }
+                    >
+                      {message.id === focusedMessageId && (
+                        <p className="px-2 py-1 text-xs text-muted-foreground">
+                          Source message
+                          {snapshot.focusedMessageOutsidePage
+                            ? " · outside the loaded history"
+                            : ""}
+                        </p>
                       )}
-                      <MessageContent>
-                        <MessageHeader>
-                          {name}
-                          <time className="ml-2 font-normal" dateTime={message.timestamp}>
-                            {new Date(message.timestamp).toLocaleString(undefined, {
-                              month: "short",
-                              day: "numeric",
-                              hour: "2-digit",
-                              minute: "2-digit",
-                            })}
-                          </time>
-                        </MessageHeader>
-                        <Bubble
-                          align={message.isSender === true ? "end" : "start"}
-                          variant={message.isSender === true ? "muted" : "outline"}
-                        >
-                          <BubbleContent>
-                            {message.linkedMessageId && (
-                              <blockquote className="mb-2 border-l-2 pl-3 text-xs text-muted-foreground">
-                                {quoted?.text ?? "Reply to an earlier message"}
-                              </blockquote>
+                      <Message align={message.isSender === true ? "end" : "start"}>
+                        {message.isSender !== true && (
+                          <Avatar size="sm">
+                            {person?.avatarId && images[person.avatarId] && (
+                              <AvatarImage src={images[person.avatarId]} alt="" />
                             )}
-                            <p className="whitespace-pre-wrap break-words">
-                              {message.isDeleted
-                                ? "Message deleted"
-                                : message.text || "Non-text message"}
-                            </p>
-                          </BubbleContent>
-                        </Bubble>
-                        <div className="flex items-center gap-2 text-xs text-muted-foreground">
-                          {message.editedTimestamp && <span>Edited</span>}
-                          {message.isSender && message.sendStatus && (
-                            <span>
-                              {
+                            <AvatarFallback>{name.slice(0, 1)}</AvatarFallback>
+                          </Avatar>
+                        )}
+                        <MessageContent>
+                          <MessageHeader>
+                            {name}
+                            <time className="ml-2 font-normal" dateTime={message.timestamp}>
+                              {new Date(message.timestamp).toLocaleString(undefined, {
+                                month: "short",
+                                day: "numeric",
+                                hour: "2-digit",
+                                minute: "2-digit",
+                              })}
+                            </time>
+                          </MessageHeader>
+                          <Bubble
+                            align={message.isSender === true ? "end" : "start"}
+                            variant={message.isSender === true ? "muted" : "outline"}
+                          >
+                            <BubbleContent>
+                              {message.linkedMessageId && (
+                                <blockquote className="mb-2 border-l-2 pl-3 text-xs text-muted-foreground">
+                                  {quoted?.text ?? "Reply to an earlier message"}
+                                </blockquote>
+                              )}
+                              <p className="whitespace-pre-wrap break-words">
+                                {message.isDeleted
+                                  ? "Message deleted"
+                                  : message.text || "Non-text message"}
+                              </p>
+                            </BubbleContent>
+                          </Bubble>
+                          <div className="flex items-center gap-2 text-xs text-muted-foreground">
+                            {message.editedTimestamp && <span>Edited</span>}
+                            {message.isSender && message.sendStatus && (
+                              <span>
                                 {
-                                  SUCCESS: "Sent",
-                                  PENDING: "Pending",
-                                  FAIL_RETRIABLE: "Send not confirmed",
-                                  FAIL_PERMANENT: "Failed to send",
-                                }[message.sendStatus.status]
-                              }
-                            </span>
-                          )}
-                          {!message.isDeleted && (conversation?.capabilities?.reply ?? 0) > 0 && (
-                            <Button
-                              size="sm"
-                              variant="ghost"
-                              onClick={() => onQuote(message)}
-                              aria-label={`Reply to ${name}'s message`}
-                            >
-                              Reply
-                            </Button>
-                          )}
-                        </div>
-                      </MessageContent>
-                    </Message>
+                                  {
+                                    SUCCESS: "Sent",
+                                    PENDING: "Pending",
+                                    FAIL_RETRIABLE: "Send not confirmed",
+                                    FAIL_PERMANENT: "Failed to send",
+                                  }[message.sendStatus.status]
+                                }
+                              </span>
+                            )}
+                            {onQuote &&
+                              !message.isDeleted &&
+                              (conversation?.capabilities?.reply ?? 0) > 0 && (
+                                <Button
+                                  size="sm"
+                                  variant="ghost"
+                                  onClick={() => onQuote(message)}
+                                  aria-label={`Reply to ${name}'s message`}
+                                >
+                                  Reply
+                                </Button>
+                              )}
+                          </div>
+                        </MessageContent>
+                      </Message>
+                    </div>
                   </MessageScrollerItem>
                 );
               })}

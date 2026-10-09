@@ -22,27 +22,49 @@ export async function readActivityConversation(
   const parsed = readActivityConversationInput.safeParse(input);
   if (!parsed.success)
     throw new BeeperConversationError("invalid-input", "Choose an activity and a valid cursor.");
-  const { activityId, cursor } = parsed.data;
+  const { activityId, cursor, sourceId } = parsed.data;
   const context = getActivityContext({ activityIds: [activityId] }, database);
   const activity = context.activities[0]?.effective;
-  if (!activity || activity.kind !== "reply")
+  if (!activity || (!sourceId && activity.kind !== "reply"))
     throw new BeeperConversationError("not-found", "Reply activity not found.");
-  const source = activity.sources.find((item) => item.id === activity.reply.sourceId);
+  const selectedSourceId =
+    sourceId ?? (activity.kind === "reply" ? activity.reply.sourceId : undefined);
+  const source = activity.sources.find((item) => item.id === selectedSourceId);
   if (!source || source.kind !== "message" || source.targetId !== adapter.targetId)
     throw new BeeperConversationError(
       "invalid-conversation",
       "The conversation is not available on this Beeper connection.",
     );
   try {
+    const anchor = sourceId
+      ? await adapter.retrieveMessage(source.chatId, source.messageId)
+      : undefined;
+    if (
+      anchor &&
+      (anchor.id !== source.messageId ||
+        anchor.chatID !== source.chatId ||
+        anchor.accountID !== source.accountId)
+    )
+      throw new BeeperConversationError(
+        "invalid-conversation",
+        "Beeper returned a different source message.",
+      );
+    if (anchor?.isHidden)
+      throw new BeeperConversationError("not-found", "The source message is no longer available.");
     const [chat, page] = await Promise.all([
       adapter.readChat(source.chatId),
-      adapter.readMessages(source.chatId, cursor),
+      adapter.readMessages(source.chatId, cursor, "before"),
     ]);
+    const upstreamMessages = [
+      ...new Map(
+        [...page.items, ...(anchor ? [anchor] : [])].map((message) => [message.id, message]),
+      ).values(),
+    ];
     if (
       chat.id !== source.chatId ||
       chat.accountID !== source.accountId ||
       chat.merge ||
-      page.items.some(
+      upstreamMessages.some(
         (message) => message.chatID !== source.chatId || message.accountID !== source.accountId,
       )
     )
@@ -98,7 +120,7 @@ export async function readActivityConversation(
           set: { data: conversation, observedAt },
         })
         .run();
-      for (const message of page.items) {
+      for (const message of upstreamMessages) {
         const cached = cacheBeeperMessage(
           { targetId: source.targetId, accountId: source.accountId, chatId: source.chatId },
           message,
@@ -118,7 +140,13 @@ export async function readActivityConversation(
       messages,
       nextCursor: page.hasMore ? page.oldestCursor : null,
       revision: context.revision,
-      draftHash: replyDraftHash(activity.reply.draft ?? ""),
+      draftHash: replyDraftHash(activity.kind === "reply" ? (activity.reply.draft ?? "") : ""),
+      ...(anchor
+        ? {
+            focusedMessageId: anchor.id,
+            focusedMessageOutsidePage: !page.items.some((message) => message.id === anchor.id),
+          }
+        : {}),
     };
   } catch (error) {
     if (error instanceof BeeperConversationError) throw error;
@@ -132,20 +160,21 @@ export async function readActivityConversation(
 export function activityHasAsset(activityId: string, assetId: string, database = getDatabase()) {
   const activity = getActivityContext({ activityIds: [activityId] }, database).activities[0]
     ?.effective;
-  if (!activity || activity.kind !== "reply") return false;
-  const source = activity.sources.find((item) => item.id === activity.reply.sourceId);
-  if (!source || source.kind !== "message") return false;
-  const key = createHash("sha256")
-    .update(JSON.stringify([source.targetId, source.accountId, source.chatId]))
-    .digest("hex");
-  const conversation = database
-    .select()
-    .from(beeperConversations)
-    .where(eq(beeperConversations.id, key))
-    .get()?.data;
-  return Boolean(
-    conversation &&
-    (conversation.avatarId === assetId ||
-      conversation.participants.some((member) => member.avatarId === assetId)),
-  );
+  if (!activity) return false;
+  return activity.sources.some((source) => {
+    if (source.kind !== "message") return false;
+    const key = createHash("sha256")
+      .update(JSON.stringify([source.targetId, source.accountId, source.chatId]))
+      .digest("hex");
+    const conversation = database
+      .select()
+      .from(beeperConversations)
+      .where(eq(beeperConversations.id, key))
+      .get()?.data;
+    return Boolean(
+      conversation &&
+      (conversation.avatarId === assetId ||
+        conversation.participants.some((member) => member.avatarId === assetId)),
+    );
+  });
 }

@@ -1,6 +1,7 @@
 import { execFile, spawn } from "node:child_process";
 import { createInterface } from "node:readline";
 import { z } from "zod";
+import { beeperMessageText } from "./message-text.server";
 
 const id = z.string().min(1).max(1024);
 export const listBeeperChatsInput = z.object({
@@ -28,7 +29,7 @@ const messageSchema = z.object({
       deliveredToUsers: z.array(z.string()).optional(),
     })
     .optional(),
-  text: z.string().optional(),
+  text: z.string().transform(beeperMessageText).optional(),
   type: z.string().optional(),
   isSender: z.boolean().optional(),
   isDeleted: z.boolean().optional(),

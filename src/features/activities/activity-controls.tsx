@@ -1,3 +1,4 @@
+import { SourceMessageSheet } from "./source-message-sheet";
 import { useState } from "react";
 import { Button } from "#/components/ui/button";
 import { Input } from "#/components/ui/input";
@@ -217,6 +218,7 @@ export function ActivityEditor({ activity }: { activity: Activity }) {
 }
 
 export function ActivitySources({ activity }: { activity: Activity }) {
+  const [sourceId, setSourceId] = useState<string>();
   if (!activity.effective.sources.length) return null;
   return (
     <section className="mt-5 space-y-3" aria-label="Activity sources">
@@ -224,10 +226,31 @@ export function ActivitySources({ activity }: { activity: Activity }) {
       <p className="text-xs text-muted-foreground">
         Saved excerpts, not the full conversation history.
       </p>
+      {sourceId && (
+        <SourceMessageSheet
+          key={sourceId}
+          activityId={activity.id}
+          sourceId={sourceId}
+          open
+          onOpenChange={(open) => {
+            if (!open) setSourceId(undefined);
+          }}
+        />
+      )}
       {activity.effective.sources.map((source) => (
         <div className="border-l-2 border-border pl-3 text-sm" key={source.id}>
           {source.kind === "message" ? (
-            <blockquote className="whitespace-pre-wrap">{source.excerpt}</blockquote>
+            <button
+              type="button"
+              className="block cursor-pointer text-left hover:underline focus-visible:underline"
+              onClick={() => setSourceId(source.id)}
+              aria-label="Open original message"
+            >
+              <blockquote className="whitespace-pre-wrap">{source.excerpt}</blockquote>
+              <span className="mt-1 block text-xs text-muted-foreground">
+                Open original message →
+              </span>
+            </button>
           ) : (
             <p className="break-all">life / {source.path}</p>
           )}
