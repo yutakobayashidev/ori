@@ -195,8 +195,8 @@ test("opens the original message from a saved source excerpt", async ({
   const sheet = page.getByRole("dialog", { name: "Original message" });
   await expect(sheet).toBeVisible();
   const sheetWidth = (await sheet.boundingBox())?.width ?? 0;
-  expect(sheetWidth).toBeGreaterThan(Math.min(760, (page.viewportSize()?.width ?? 0) - 2));
-  expect(sheetWidth).toBeLessThanOrEqual(Math.min(840, page.viewportSize()?.width ?? 0));
+  expect(sheetWidth).toBeGreaterThan(Math.min(600, (page.viewportSize()?.width ?? 0) - 2));
+  expect(sheetWidth).toBeLessThanOrEqual(Math.min(660, page.viewportSize()?.width ?? 0));
   expect(await sheet.evaluate((element) => element.scrollWidth <= element.clientWidth)).toBe(true);
   await expect(sheet.locator('[data-source-message="true"]')).toContainText(
     "Please review the materials and suggest two times.",

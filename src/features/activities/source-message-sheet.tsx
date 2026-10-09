@@ -60,7 +60,7 @@ export function SourceMessageSheet({
   }, [activityId, sourceId, messaging, open, request]);
   return (
     <Sheet open={open} onOpenChange={onOpenChange}>
-      <SheetContent side="right" className="min-w-0 w-full! gap-0 sm:max-w-[min(820px,90vw)]!">
+      <SheetContent side="right" className="min-w-0 w-full! gap-0 sm:max-w-[min(640px,90vw)]!">
         <SheetHeader className="shrink-0 border-b">
           <SheetTitle>Original message</SheetTitle>
         </SheetHeader>
