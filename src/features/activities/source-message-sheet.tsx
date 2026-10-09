@@ -60,8 +60,8 @@ export function SourceMessageSheet({
   }, [activityId, sourceId, messaging, open, request]);
   return (
     <Sheet open={open} onOpenChange={onOpenChange}>
-      <SheetContent side="right" className="w-full! sm:max-w-[min(960px,90vw)]!">
-        <SheetHeader>
+      <SheetContent side="right" className="min-w-0 w-full! gap-0 sm:max-w-[min(820px,90vw)]!">
+        <SheetHeader className="shrink-0 border-b">
           <SheetTitle>Original message</SheetTitle>
         </SheetHeader>
         {error && (
@@ -85,6 +85,7 @@ export function SourceMessageSheet({
               </Button>
             )}
             <ReplyConversationHistory
+              className="h-auto min-h-0 flex-1"
               snapshot={snapshot}
               transport={messaging}
               loading={loading}

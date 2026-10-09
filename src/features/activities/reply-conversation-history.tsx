@@ -1,4 +1,5 @@
 import { useEffect, useState, type ReactNode } from "react";
+import { cn } from "cn";
 import { Avatar, AvatarFallback, AvatarImage } from "#/components/ui/avatar";
 import { Bubble, BubbleContent } from "#/components/ui/bubble";
 import { Button } from "#/components/ui/button";
@@ -36,9 +37,11 @@ export function ReplyConversationHistory({
   focusedMessageId,
   headerLeading,
   title,
+  className,
 }: {
   headerLeading?: ReactNode;
   title?: string;
+  className?: string;
   snapshot?: ConversationSnapshot;
   transport?: ActivityMessagingTransport;
   loading: boolean;
@@ -79,7 +82,10 @@ export function ReplyConversationHistory({
   const conversation = snapshot?.conversation;
   return (
     <section
-      className="flex h-[45dvh] min-h-[220px] flex-col @min-[780px]:h-auto @min-[780px]:min-h-0 @min-[780px]:flex-1"
+      className={cn(
+        "flex h-[45dvh] min-h-[220px] flex-col @min-[780px]:h-auto @min-[780px]:min-h-0 @min-[780px]:flex-1",
+        className,
+      )}
       aria-label="Conversation history"
     >
       <div data-testid="conversation-header" className="flex items-center gap-3 border-b px-4 py-3">
@@ -173,8 +179,8 @@ export function ReplyConversationHistory({
                             <AvatarFallback>{name.slice(0, 1)}</AvatarFallback>
                           </Avatar>
                         )}
-                        <MessageContent>
-                          <MessageHeader>
+                        <MessageContent className="w-auto min-w-0 flex-1">
+                          <MessageHeader className="flex-wrap gap-x-2">
                             {name}
                             <time className="ml-2 font-normal" dateTime={message.timestamp}>
                               {new Date(message.timestamp).toLocaleString(undefined, {
