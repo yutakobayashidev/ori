@@ -21,7 +21,7 @@ export class MessagesPage {
   constructor(page: Page) {
     this.page = page;
     this.searchInput = page.getByRole("textbox", { name: "Search messages" });
-    this.toolbarName = page.getByTestId("support-toolbar").locator("strong");
+    this.toolbarName = page.getByTestId("conversation-header").locator("p").first();
     this.workspace = page.getByTestId("support-workspace");
     this.rows = page.getByTestId("support-row");
     this.reply = page.getByRole("textbox", { name: "Reply", exact: true });

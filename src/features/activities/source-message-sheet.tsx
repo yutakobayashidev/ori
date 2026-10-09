@@ -60,7 +60,7 @@ export function SourceMessageSheet({
   }, [activityId, sourceId, messaging, open, request]);
   return (
     <Sheet open={open} onOpenChange={onOpenChange}>
-      <SheetContent side="right" className="w-full sm:max-w-2xl">
+      <SheetContent side="right" className="w-full! sm:max-w-[min(960px,90vw)]!">
         <SheetHeader>
           <SheetTitle>Original message</SheetTitle>
         </SheetHeader>

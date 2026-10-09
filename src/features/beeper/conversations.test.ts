@@ -228,12 +228,36 @@ it("loads an unopened direct chat avatar without fetching history", async () => 
   expect(adapter.readMessages).not.toHaveBeenCalled();
   expect(JSON.stringify(result)).not.toContain("mxc://");
 });
-it("does not substitute a group member avatar or expose another account's avatar", async () => {
+it("uses the exact source sender's avatar in a group instead of an arbitrary member", async () => {
+  vi.mocked(adapter.readChat).mockResolvedValueOnce({
+    ...chat,
+    type: "group",
+    participants: {
+      items: [{ id: "someone-else", imgURL: "mxc://host/wrong" }, ...chat.participants.items],
+    },
+  });
+  vi.mocked(adapter.retrieveMessage).mockResolvedValueOnce(message);
+  expect((await readActivityAvatar({ activityId: "reply" }, database, adapter)).dataUrl).toMatch(
+    /^data:image\/png;base64,/,
+  );
+  expect(adapter.retrieveMessage).toHaveBeenCalledWith("chat", "msg");
+  expect(adapter.readMedia).not.toHaveBeenCalledWith("mxc://host/wrong");
+});
+it("does not substitute an unknown sender's avatar or expose another account's avatar", async () => {
   vi.mocked(adapter.readChat).mockResolvedValueOnce({ ...chat, type: "group" });
+  vi.mocked(adapter.retrieveMessage).mockResolvedValueOnce({ ...message, senderID: "unknown" });
   expect(await readActivityAvatar({ activityId: "reply" }, database, adapter)).toEqual({
     dataUrl: null,
   });
   vi.mocked(adapter.readChat).mockResolvedValueOnce({ ...chat, accountID: "other" });
+  expect(await readActivityAvatar({ activityId: "reply" }, database, adapter)).toEqual({
+    dataUrl: null,
+  });
+  expect(adapter.readMedia).not.toHaveBeenCalled();
+});
+it("rejects a source message from another group before resolving its avatar", async () => {
+  vi.mocked(adapter.readChat).mockResolvedValueOnce({ ...chat, type: "group" });
+  vi.mocked(adapter.retrieveMessage).mockResolvedValueOnce({ ...message, chatID: "other" });
   expect(await readActivityAvatar({ activityId: "reply" }, database, adapter)).toEqual({
     dataUrl: null,
   });

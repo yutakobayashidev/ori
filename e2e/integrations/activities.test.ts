@@ -149,8 +149,11 @@ test("sends a saved reply from Messages with an explicit quoted message", async 
   await activityMcp.publish();
   await page.goto("/support");
   await expect(page.getByTestId("support-row").first().locator("img")).toBeVisible();
+
   await page.goto("/support?activity=review-times");
-  await expect(page.getByTestId("support-toolbar").locator("img")).toBeVisible();
+  await expect(page.getByTestId("conversation-header").locator("img")).toBeVisible();
+  await expect(page.getByTestId("conversation-header")).toHaveCount(1);
+  await expect(page.getByTestId("support-toolbar")).toHaveCount(0);
   const history = page.getByRole("region", { name: "Conversation history" });
   await expect(history).toContainText("Thursday afternoon would be best.");
   await expect(history.locator("img").first()).toBeVisible();
@@ -191,6 +194,8 @@ test("opens the original message from a saved source excerpt", async ({
     .click();
   const sheet = page.getByRole("dialog", { name: "Original message" });
   await expect(sheet).toBeVisible();
+  const sheetWidth = (await sheet.boundingBox())?.width ?? 0;
+  expect(sheetWidth).toBeGreaterThan(Math.min(800, (page.viewportSize()?.width ?? 0) - 2));
   await expect(sheet.locator('[data-source-message="true"]')).toContainText(
     "Please review the materials and suggest two times.",
   );

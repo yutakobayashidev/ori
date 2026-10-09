@@ -20,11 +20,21 @@ export async function readActivityAvatar(
     const chat = await adapter.readChat(source.chatId);
     if (chat.id !== source.chatId || chat.accountID !== source.accountId || chat.merge)
       return { dataUrl: null };
-    const sourceUri =
+    let sourceUri =
       chat.imgURL ||
       (chat.type === "single"
         ? chat.participants.items.find((member) => !member.isSelf && member.imgURL)?.imgURL
         : undefined);
+    if (!sourceUri && chat.type !== "single") {
+      const message = await adapter.retrieveMessage(source.chatId, source.messageId);
+      if (
+        message.id !== source.messageId ||
+        message.chatID !== source.chatId ||
+        message.accountID !== source.accountId
+      )
+        return { dataUrl: null };
+      sourceUri = chat.participants.items.find((member) => member.id === message.senderID)?.imgURL;
+    }
     const assetId = rememberBeeperAsset(source.targetId, sourceUri, database);
     if (!assetId) return { dataUrl: null };
     const { dataUrl } = await getBeeperAsset({ assetId }, database, adapter);

@@ -1,4 +1,5 @@
-import { useState } from "react";
+import { ActivityMarkdown } from "./activity-markdown";
+import { useState, type ReactNode } from "react";
 import { Button } from "#/components/ui/button";
 import {
   InputGroup,
@@ -14,7 +15,13 @@ import type { ConversationMessage } from "#/features/beeper/conversation-model";
 import { ReplyConversationHistory } from "./reply-conversation-history";
 import { useReplyConversation } from "./use-reply-conversation";
 
-export function ReplyActivityDetail({ activity }: { activity: Activity }) {
+export function ReplyActivityDetail({
+  activity,
+  headerLeading,
+}: {
+  activity: Activity;
+  headerLeading?: ReactNode;
+}) {
   const { change, busy, revision, currentRevision, messaging } = useActivityStore();
   const conversation = useReplyConversation(activity.id, revision, messaging);
   const [quotedMessage, setQuotedMessage] = useState<ConversationMessage>();
@@ -47,11 +54,13 @@ export function ReplyActivityDetail({ activity }: { activity: Activity }) {
   );
   return (
     <article
-      className="grid min-w-0 shrink-0 grid-cols-1 @min-[780px]:min-h-0 @min-[780px]:flex-1 @min-[780px]:grid-cols-[minmax(0,1fr)_250px] @min-[780px]:overflow-hidden"
+      className="grid min-w-0 shrink-0 grid-cols-1 @min-[780px]:min-h-0 @min-[780px]:flex-1 @min-[780px]:grid-cols-[minmax(0,1fr)_300px] @min-[780px]:overflow-hidden"
       aria-label={`Conversation with ${item.reply.recipientName}`}
     >
       <div className="flex min-w-0 flex-col @min-[780px]:min-h-0">
         <ReplyConversationHistory
+          headerLeading={headerLeading}
+          title={item.reply.recipientName}
           snapshot={conversation.snapshot}
           transport={messaging}
           loading={conversation.loading}
@@ -225,14 +234,8 @@ export function ReplyActivityDetail({ activity }: { activity: Activity }) {
         <h2 className="mt-3 text-ui-13 font-medium">{item.title}</h2>
         <section className="mt-5 border-t border-border pt-5">
           <h3 className="text-xs font-medium">Next action</h3>
-          <p className="mt-3 whitespace-pre-wrap text-ui-12 leading-relaxed-copy">
-            {item.nextAction}
-          </p>
-          {item.detail && (
-            <p className="mt-3 whitespace-pre-wrap text-ui-12 text-muted-foreground">
-              {item.detail}
-            </p>
-          )}
+          <ActivityMarkdown text={item.nextAction} />
+          {item.detail && <ActivityMarkdown text={item.detail} />}
         </section>
         <ActivityControls activity={activity} />
         <ActivityEditor activity={activity} />

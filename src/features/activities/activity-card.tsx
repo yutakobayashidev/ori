@@ -1,3 +1,4 @@
+import { ActivityMarkdown } from "./activity-markdown";
 import type { ReactNode } from "react";
 import { Check, ChevronDown, Circle, MessageCircle } from "lucide-react";
 import {
@@ -76,10 +77,8 @@ export function ActivityCard({
       {expanded && (
         <div className="px-px-22 pb-px-24 pl-px-55 max-md:px-px-18">
           <p className="text-xs text-muted-foreground">{stateLabels[activity.userState]}</p>
-          <p className="mt-2 whitespace-pre-wrap text-sm">{item.nextAction}</p>
-          {item.detail && (
-            <p className="mt-3 whitespace-pre-wrap text-sm text-muted-foreground">{item.detail}</p>
-          )}
+          <ActivityMarkdown text={item.nextAction} />
+          {item.detail && <ActivityMarkdown text={item.detail} />}
           {item.kind === "reply" && replyLink}
           <ActivityControls activity={activity} />
           <ActivityEditor activity={activity} />

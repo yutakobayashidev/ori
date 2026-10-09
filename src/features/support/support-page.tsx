@@ -86,9 +86,18 @@ export function SupportPage() {
     groups.set(key, group);
   }
   const selected = visible.find((activity) => activity.id === selectedId) ?? visible[0];
+  const backButton = (
+    <Button
+      variant="ghost"
+      size="icon"
+      className="hidden max-md:inline-flex"
+      aria-label="Back to messages"
+      onClick={() => updateSearch({ activity: undefined })}
+    >
+      <ArrowLeft />
+    </Button>
+  );
   const related = selected ? (groups.get(conversationKey(selected)) ?? []) : [];
-  const recipient =
-    selected?.effective.kind === "reply" ? selected.effective.reply.recipientName : "";
   return (
     <TooltipProvider>
       <SidebarProvider
@@ -183,26 +192,6 @@ export function SupportPage() {
           </Sidebar>
         </Sidebar>
         <SidebarInset className="h-full min-w-0 overflow-hidden max-md:hidden max-md:group-data-[reading=true]/support:flex">
-          <header
-            data-testid="support-toolbar"
-            className="flex min-h-[64px] items-center gap-px-10 border-b border-border px-px-20 py-px-12 max-md:px-px-12"
-          >
-            <Button
-              variant="ghost"
-              size="icon"
-              className="hidden max-md:inline-flex"
-              aria-label="Back to messages"
-              onClick={() => updateSearch({ activity: undefined })}
-            >
-              <ArrowLeft />
-            </Button>
-            {selected && (
-              <>
-                <ConversationAvatar activity={selected} name={recipient} />
-                <strong className="text-ui-13 font-book">{recipient}</strong>
-              </>
-            )}
-          </header>
           <section
             className="@container flex min-h-0 flex-1 flex-col overflow-y-auto wrap-anywhere"
             aria-label="Message details"
@@ -228,9 +217,14 @@ export function SupportPage() {
               </nav>
             )}
             {selected ? (
-              <ReplyActivityDetail key={selected.id} activity={selected} />
+              <ReplyActivityDetail
+                key={selected.id}
+                activity={selected}
+                headerLeading={backButton}
+              />
             ) : (
               <div className="grid justify-items-center gap-px-12 px-px-24 py-px-64 text-center text-ui-13 text-muted-foreground">
+                {backButton}
                 <MessageSquare aria-hidden="true" />
                 <p>Select a reply activity</p>
               </div>

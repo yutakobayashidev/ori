@@ -1,3 +1,4 @@
+import { ActivityMarkdown } from "#/features/activities/activity-markdown";
 import { useState } from "react";
 import { Link } from "@tanstack/react-router";
 import {
@@ -163,9 +164,9 @@ export function BoardPage() {
               <div className="flex min-h-0 flex-1 flex-col">
                 <div className="grid max-h-[30dvh] shrink-0 gap-3 overflow-y-auto border-b px-4 py-5 pr-12 sm:px-6 sm:pr-12">
                   <SheetTitle>{selected.effective.title}</SheetTitle>
-                  <p className="text-sm text-muted-foreground">{selected.effective.nextAction}</p>
+                  <ActivityMarkdown text={selected.effective.nextAction} />
                   {selected.effective.detail && (
-                    <p className="whitespace-pre-wrap">{selected.effective.detail}</p>
+                    <ActivityMarkdown text={selected.effective.detail} />
                   )}
                   <div className="flex flex-wrap items-center gap-x-4 gap-y-2">
                     <label className="flex items-center gap-2 text-xs text-muted-foreground">

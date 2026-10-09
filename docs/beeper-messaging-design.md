@@ -93,10 +93,15 @@ delivery receipt. Dots uses `update_activity_progress` to record its contextual 
 
 ## Avatars
 
-The Messages conversation list and selected-conversation header share a cached avatar
-query. This reads chat metadata without loading message history, so unopened
-conversations also display their icons. Direct chats without a chat image use the
-other participant's avatar; groups keep their own image or initials.
+The Messages conversation list uses a cached avatar query, so unopened conversations
+also display their icons. Direct chats without a chat image use the other participant's
+avatar. Groups without a chat image retrieve the source message and match its sender
+ID to a participant; they never guess by name or pick an arbitrary member. Missing
+images retain initials.
+Messages has one conversation header, including the mobile back button.
+Next-action details render paragraphs, line breaks and nested Markdown lists without
+changing the stored text or requiring a particular format from Dots. The original-message
+sheet uses up to 960 pixels on desktop and the full viewport width on mobile.
 
 Conversation and participant metadata register immutable source references under
 opaque IDs. Browser and embedded UI request those IDs through the shared service;
