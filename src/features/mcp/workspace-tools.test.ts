@@ -362,9 +362,10 @@ it("lets an external monitor complete a chore with evidence and retry without ov
   };
   const saved = await tools.execute("update_activity_progress", completion);
   expect(saved).toMatchObject({ ok: true, revision: 2 });
-  expect(await createWorkspaceTools().execute("update_activity_progress", completion)).toEqual(
-    saved,
-  );
+  expect(await createWorkspaceTools().execute("update_activity_progress", completion)).toEqual({
+    ...saved,
+    serverNow: expect.any(Number),
+  });
   expect(await tools.execute("get_activity_context", { activityIds: ["shopping"] })).toMatchObject({
     revision: 2,
     activities: [
@@ -403,4 +404,69 @@ it("returns a normalized column for an Apps feed when Twitter defaults are omitt
       },
     },
   });
+});
+
+it("publishes AI time estimates without selecting today and updates remaining work with evidence", async () => {
+  const tools = createWorkspaceTools();
+  expect(
+    await tools.execute("publish_activities", {
+      requestId: "time-create",
+      expectedRevision: 0,
+      activities: [
+        {
+          id: "timed",
+          kind: "task",
+          title: "Review",
+          nextAction: "Read draft",
+          sources: [],
+          timeEstimate: { estimatedMinutes: 30, reason: "Read and summarize" },
+        },
+      ],
+    }),
+  ).toMatchObject({ ok: true });
+  expect(await tools.execute("get_activity_context", {})).toMatchObject({
+    activities: [{ time: { estimatedMinutes: 30, estimateOrigin: "agent" } }],
+  });
+  const day = { date: "2026-10-09", timeZone: "Asia/Tokyo" };
+  expect(await tools.execute("get_day_plan", day)).toMatchObject({ ok: true, selections: [] });
+  expect(
+    await tools.execute("update_day_plan", {
+      ...day,
+      requestId: "select",
+      expectedRevision: 1,
+      reason: "One useful next step",
+      changes: [{ activityId: "timed", section: "focus", rank: 0 }],
+    }),
+  ).toMatchObject({ ok: true });
+  expect(
+    await tools.execute("update_activity_progress", {
+      requestId: "remaining",
+      expectedRevision: 2,
+      id: "timed",
+      remainingMinutes: 10,
+      reason: "Reading is finished",
+      evidence: [
+        {
+          kind: "external",
+          reference: "owner-note",
+          observedAt: "2026-10-09T09:00:00Z",
+          summary: "Only summary remains",
+        },
+      ],
+    }),
+  ).toMatchObject({
+    ok: true,
+    activities: [
+      {
+        userState: "available",
+        time: { remainingEstimate: { minutes: 10 }, remainingOrigin: "agent" },
+      },
+    ],
+  });
+  expect(
+    tools.definitions.find((tool) => tool.name === "update_day_plan")?.annotations.readOnlyHint,
+  ).toBe(false);
+  expect(
+    tools.definitions.find((tool) => tool.name === "get_day_plan")?.annotations.readOnlyHint,
+  ).toBe(true);
 });

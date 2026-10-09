@@ -1,7 +1,7 @@
 # 統合インボックスの Activity MCP
 
 実装契約、2026-10-09。共通の行動ストア、Activity ツール、Home / Messages の接続を実装。
-Beeper の受信・本人送信の同期と、会話の解釈に基づく状態・返信案の更新に対応。本人が明示した送信は[共通の Beeper サービス](beeper-messaging-design.md)で扱い、タスクの完了とは分離する。計測・ルーティンの永続化は後続の範囲。
+Beeper の受信・本人送信の同期と、会話の解釈に基づく状態・返信案の更新に対応。本人が明示した送信は[共通の Beeper サービス](beeper-messaging-design.md)で扱い、タスクの完了とは分離する。作業時間の計測は永続化済み。ルーティンの永続化は後続の範囲。
 
 [既存の公開設計](agent-publishing-design.md)を、返信と雑用の登録に絞って具体化する。
 既存の `/mcp` に追加し、同じポートと dotnix 管理の Secure MCP Tunnel を使う。
@@ -283,3 +283,27 @@ Dots は Beeper の受信・本人送信イベントを受け、会話を読み�
 同一リクエストの再送では revision や通知を重複させない。
 古い revision は競合になり、本人の直前の操作を黙って上書きしない。
 Dots の購読を既定の user origin に保てば、自分の更新によるイベントループを避けられる。
+
+## AIの時間見積もりと今日の候補
+
+`publish_activities` の各提案に `timeEstimate: {estimatedMinutes, reason}` を付ける。
+Dotsは通常、会話・次の行動から粗い分単位の目安を埋める。本人による推論・入力・承認は
+不要。対象は本人の能動的な作業で、相手待ちやAI実行時間を含めない。
+提案全体を置き換えるときは見積もりも保持する。作業範囲が不明な場合の未見積は許容する。
+
+`update_activity_progress` は `remainingMinutes` だけの変更も受け付ける。
+既存のreasonとevidenceを必須とし、新しい会話や進捗を根拠に再見積もりする。
+0分を保存しても自動完了にはしない。本人の時間overrideはAI再提案より優先する。
+`get_activity_context` のtimeには全体・残り見積もり、出所、実績、表示上の残り予測を返す。
+本人の集中タイマーは別の操作であり、Dots向けMCPから自律的に開始しない。
+
+`get_day_plan` は `{date, timeZone}` で指定日の候補と本人の除外を返す。
+`update_day_plan` は同じ日付情報にrequestId、expectedRevision、reasonと
+`changes: [{activityId, section, rank, excluded?}]` を指定する。
+sectionはfocus/optional。指定した行だけを変更し、未指定の候補は維持する。
+このMCP操作はagent originで、本人が調整・除外した行を上書きしない。
+タスクの登録と今日の選定を分離し、全インボックスを今日の義務に変えない。
+
+時間の変更通知は `activity.time_changed`。受け取ったら最新contextを読み、
+必要な場合だけ再判断する。自分の更新への反応を避けるため、通常の購読はuser originのままにする。
+詳細は[時間・集中の設計](activity-time-and-calendar-design.md)を参照。

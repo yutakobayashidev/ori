@@ -9,6 +9,8 @@ import {
 } from "./activity-controls";
 import { useActivityStore } from "./activity-store";
 import type { Activity } from "./model";
+import { ActivityTimeLabel, StartFocusButton } from "#/features/focus/focus-controls";
+import { ActivityTimeDetails } from "#/features/focus/time-details";
 
 export function ActivityCard({
   activity,
@@ -74,6 +76,10 @@ export function ActivityCard({
         </button>
         <ChevronDown className="size-4 text-muted-foreground group-data-[expanded=true]/flow:rotate-180" />
       </div>
+      <div className="flex flex-wrap items-center justify-between gap-2 px-px-18 pb-3 pl-px-55 max-md:px-px-14">
+        <ActivityTimeLabel activity={activity} />
+        <StartFocusButton activity={activity} />
+      </div>
       {expanded && (
         <div className="px-px-22 pb-px-24 pl-px-55 max-md:px-px-18">
           <p className="text-xs text-muted-foreground">{stateLabels[activity.userState]}</p>
@@ -83,6 +89,7 @@ export function ActivityCard({
           <ActivityControls activity={activity} />
           <ActivityEditor activity={activity} />
           <ActivitySources activity={activity} />
+          <ActivityTimeDetails activity={activity} />
         </div>
       )}
     </div>

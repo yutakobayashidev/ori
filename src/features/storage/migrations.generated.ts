@@ -98,4 +98,17 @@ export const migrations = [
     folderMillis: 1791533062737,
     hash: "f007c1ec177801f7bef87cc5807096a47586239d4808e2890d7e95642291b597",
   },
+  {
+    sql: [
+      "CREATE TABLE `activity_time` (\n\t`activity_id` text PRIMARY KEY NOT NULL,\n\t`remaining_estimate` text,\n\t`remaining_override` text,\n\t`estimate_updated_at` integer,\n\t`user_estimate_updated_at` integer,\n\t`initial_estimated_minutes` integer,\n\t`initial_captured` integer DEFAULT false NOT NULL,\n\tFOREIGN KEY (`activity_id`) REFERENCES `activities`(`id`) ON UPDATE no action ON DELETE cascade\n);\n",
+      "\nCREATE TABLE `day_selections` (\n\t`activity_id` text NOT NULL,\n\t`date` text NOT NULL,\n\t`time_zone` text NOT NULL,\n\t`section` text NOT NULL,\n\t`rank` integer NOT NULL,\n\t`origin` text NOT NULL,\n\t`reason` text,\n\t`user_adjusted_at` integer,\n\t`excluded` integer DEFAULT false NOT NULL,\n\t`updated_at` integer NOT NULL,\n\tPRIMARY KEY(`date`, `activity_id`),\n\tFOREIGN KEY (`activity_id`) REFERENCES `activities`(`id`) ON UPDATE no action ON DELETE cascade\n);\n",
+      "\nCREATE TABLE `focus_sessions` (\n\t`id` text PRIMARY KEY NOT NULL,\n\t`activity_id` text NOT NULL,\n\t`budget_seconds` integer NOT NULL,\n\t`time_zone` text NOT NULL,\n\t`state` text NOT NULL,\n\t`started_at` integer NOT NULL,\n\t`running_since` integer,\n\t`elapsed_active_seconds` integer NOT NULL,\n\t`ended_at` integer,\n\tFOREIGN KEY (`activity_id`) REFERENCES `activities`(`id`) ON UPDATE no action ON DELETE cascade\n);\n",
+      '\nCREATE UNIQUE INDEX `focus_single_unfinished` ON `focus_sessions` ((1)) WHERE "focus_sessions"."state" != \'ended\';',
+      "\nCREATE TABLE `work_logs` (\n\t`id` text PRIMARY KEY NOT NULL,\n\t`activity_id` text NOT NULL,\n\t`duration_seconds` integer NOT NULL,\n\t`occurred_on` text NOT NULL,\n\t`source` text NOT NULL,\n\t`focus_session_id` text,\n\t`started_at` integer,\n\t`ended_at` integer,\n\t`note` text,\n\t`created_at` integer NOT NULL,\n\tFOREIGN KEY (`activity_id`) REFERENCES `activities`(`id`) ON UPDATE no action ON DELETE cascade,\n\tFOREIGN KEY (`focus_session_id`) REFERENCES `focus_sessions`(`id`) ON UPDATE no action ON DELETE no action\n);\n",
+      "\nCREATE UNIQUE INDEX `work_logs_focus_session_id_unique` ON `work_logs` (`focus_session_id`);",
+    ],
+    bps: true,
+    folderMillis: 1791538562333,
+    hash: "fd9b9856877e12196db7044cad338e090acfb0abe277071472d7ef84ab5b65a5",
+  },
 ];

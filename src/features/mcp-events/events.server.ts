@@ -18,6 +18,8 @@ import {
   activityEventFilters,
   createdActivityPayload,
   changedActivityPayload,
+  timeChangedActivityPayload,
+  type ActivityTimeEventData,
   type ActivityEventName,
   type ActivityEventData,
 } from "./activity-events";
@@ -31,7 +33,7 @@ const filtersSchema = z
   .strict();
 const eventIdentity = z
   .object({
-    name: z.enum([...beeperEventName.options, "activity.created", "activity.status_changed"]),
+    name: z.enum([...beeperEventName.options, ...activityEventName.options]),
     arguments: z.record(z.string(), z.unknown()),
   })
   .superRefine((input, context) => {
@@ -135,6 +137,14 @@ export function listMcpEvents() {
         delivery: ["webhook"],
         inputSchema: z.toJSONSchema(activityEventFilters, { io: "input" }),
         payloadSchema: z.toJSONSchema(changedActivityPayload),
+      },
+      {
+        name: "activity.time_changed",
+        description:
+          "An effective task estimate or recorded work changed. Read get_activity_context for current estimates and progress. Defaults to user actions. Do not react to your own estimate updates or infer completion from elapsed time. Timer ticks do not emit events.",
+        delivery: ["webhook"],
+        inputSchema: z.toJSONSchema(activityEventFilters, { io: "input" }),
+        payloadSchema: z.toJSONSchema(timeChangedActivityPayload),
       },
     ],
   };
@@ -281,7 +291,7 @@ export function enqueueBeeperMessageEvent(
 }
 export function enqueueActivityEvent(
   name: ActivityEventName,
-  input: ActivityEventData,
+  input: ActivityEventData | ActivityTimeEventData,
   database: Pick<AppDatabase, "select" | "insert"> = getDatabase(),
   now = Date.now(),
 ) {
@@ -289,9 +299,14 @@ export function enqueueActivityEvent(
   const data =
     name === "activity.created"
       ? createdActivityPayload.parse(input)
-      : changedActivityPayload
-          .refine((value) => value.previousState !== value.state, "The activity state must change.")
-          .parse(input);
+      : name === "activity.time_changed"
+        ? timeChangedActivityPayload.parse(input)
+        : changedActivityPayload
+            .refine(
+              (value) => value.previousState !== value.state,
+              "The activity state must change.",
+            )
+            .parse(input);
   const eventId = `evt_${hash(JSON.stringify([name, data.requestId, data.activityId]))}`;
   const body = JSON.stringify({ eventId, name, timestamp: data.occurredAt, data, cursor: null });
   for (const row of database

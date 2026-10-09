@@ -3,6 +3,8 @@ import { mkdtempSync, rmSync, statSync } from "node:fs";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
 import { and, eq, sql } from "drizzle-orm";
+import Database from "better-sqlite3";
+import { getActivityContext } from "../activities/repository.server";
 import { afterEach, beforeEach, describe, expect, it } from "vitest";
 import { backupDatabase } from "./backup.server";
 import { type AppDatabase, openDatabase } from "./database.server";
@@ -52,6 +54,62 @@ afterEach(() => {
 });
 
 describe("persistent database", () => {
+  it("upgrades an existing inbox without inventing estimates, sessions or today's candidates", () => {
+    const path = join(directory, "upgrade.db");
+    const legacy = new Database(path);
+    const focusMigration = migrations.find((migration) =>
+      migration.sql.some((statement) => statement.includes("CREATE TABLE `focus_sessions`")),
+    );
+    if (!focusMigration) throw new Error("Focus migration missing");
+    try {
+      legacy.exec(
+        "CREATE TABLE __drizzle_migrations (id INTEGER PRIMARY KEY AUTOINCREMENT, hash TEXT NOT NULL, created_at NUMERIC)",
+      );
+      for (const migration of migrations.filter(
+        (item) => item.folderMillis < focusMigration.folderMillis,
+      )) {
+        for (const statement of migration.sql) legacy.exec(statement);
+        legacy
+          .prepare("INSERT INTO __drizzle_migrations (hash, created_at) VALUES (?, ?)")
+          .run(migration.hash, migration.folderMillis);
+      }
+      legacy
+        .prepare(
+          "INSERT INTO activities (id, proposal, user_state, user_overrides, created_at, updated_at) VALUES (?, ?, ?, ?, ?, ?)",
+        )
+        .run(
+          "legacy",
+          JSON.stringify({
+            id: "legacy",
+            kind: "task",
+            title: "Existing task",
+            nextAction: "Continue",
+            sources: [],
+          }),
+          "inProgress",
+          "{}",
+          1,
+          1,
+        );
+    } finally {
+      legacy.close();
+    }
+    const upgraded = open("upgrade.db");
+    expect(getActivityContext({}, upgraded)).toMatchObject({
+      focusSession: null,
+      activities: [
+        {
+          id: "legacy",
+          userState: "inProgress",
+          time: { estimatedMinutes: null, actualSeconds: null },
+        },
+      ],
+    });
+    expect(upgraded.$client.prepare("SELECT count(*) AS n FROM day_selections").get()).toEqual({
+      n: 0,
+    });
+    expect(upgraded.$client.prepare("PRAGMA foreign_key_check").all()).toEqual([]);
+  });
   it("reopens stored decks and applies migrations only once", () => {
     const first = open();
     first.insert(decks).values(deck).run();

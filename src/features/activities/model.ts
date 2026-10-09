@@ -1,4 +1,5 @@
 import { z } from "zod";
+import { getDayPlanInput } from "../day-plan/model";
 
 const id = z.string().min(1).max(128);
 const sourceId = z.string().min(1).max(256);
@@ -46,6 +47,9 @@ const base = {
   nextAction: required(2000),
   detail: z.string().max(8000).optional(),
   recommendation: z.strictObject({ section, reason: z.string().max(2000).optional() }).optional(),
+  timeEstimate: z
+    .strictObject({ estimatedMinutes: z.number().int().positive(), reason: required(2000) })
+    .optional(),
   sources: z.array(z.discriminatedUnion("kind", [messageSource, lifeSource])).max(20),
 };
 const activityProposal = z
@@ -99,6 +103,8 @@ const activityOverrides = z.strictObject({
   detail: z.string().max(8000).optional(),
   draft: z.string().max(16000).optional(),
   section: section.optional(),
+  estimatedMinutes: z.number().int().positive().optional(),
+  remainingMinutes: z.number().int().nonnegative().optional(),
 });
 export const updateActivityUserInput = z
   .strictObject({
@@ -108,8 +114,18 @@ export const updateActivityUserInput = z
     state: activityState.optional(),
     overrides: activityOverrides.optional(),
     resetOverrides: z
-      .array(z.enum(["title", "nextAction", "detail", "draft", "section"]))
-      .max(5)
+      .array(
+        z.enum([
+          "title",
+          "nextAction",
+          "detail",
+          "draft",
+          "section",
+          "estimatedMinutes",
+          "remainingMinutes",
+        ]),
+      )
+      .max(7)
       .optional(),
   })
   .refine(
@@ -147,11 +163,15 @@ export const updateActivityProgressInput = z
     reason: required(2000),
     state: activityState.optional(),
     draft: required(16000).optional(),
+    remainingMinutes: z.number().int().nonnegative().optional(),
     evidence: z.array(progressEvidence).min(1).max(20),
   })
   .refine(
-    (value) => value.state !== undefined || value.draft !== undefined,
-    "Choose a state or draft change.",
+    (value) =>
+      value.state !== undefined ||
+      value.draft !== undefined ||
+      value.remainingMinutes !== undefined,
+    "Choose a state, draft or remaining-time change.",
   );
 export type ActivityAssessment = {
   reason: string;
@@ -166,6 +186,7 @@ export type Activity = {
   userState: ActivityState;
   userOverrides: ActivityOverrides;
   assessment?: ActivityAssessment | null;
+  time?: import("../focus/model").ActivityTime;
   effective: ActivityProposal & { section: "focus" | "optional" };
 };
 export type ActivityContext = {
@@ -174,6 +195,8 @@ export type ActivityContext = {
   activities: Activity[];
   missingActivityIds: string[];
   nextCursor: string | null;
+  serverNow?: number;
+  focusSession?: import("../focus/model").FocusSession | null;
 };
 export type ActivityReceipt = {
   ok: true;
@@ -188,6 +211,7 @@ export type ActivityErrorCode =
   | "revision-conflict"
   | "idempotency-conflict"
   | "stale-cursor"
+  | "state-conflict"
   | "immutable-field"
   | "internal-error";
 export type ActivityFailure = { ok: false; error: { code: ActivityErrorCode; message: string } };
@@ -198,4 +222,5 @@ export const createHomeActivityInput = z.strictObject({
   title: required(300),
   nextAction: required(2000),
   section,
+  day: getDayPlanInput.optional(),
 });

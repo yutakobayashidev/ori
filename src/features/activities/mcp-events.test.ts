@@ -257,3 +257,50 @@ it("announces external completion once as an agent decision and rolls back faile
     },
   });
 });
+
+it("does not notify time subscribers when an unchanged owner estimate is saved or an absent override reset", async () => {
+  await subscribeMcpEvent(
+    {
+      name: "activity.time_changed",
+      arguments: {},
+      delivery: {
+        mode: "webhook",
+        url: "https://callback.invalid/time",
+        secret: `whsec_${Buffer.alloc(32, 42).toString("base64")}`,
+      },
+    },
+    database,
+    {
+      sender: async (_url, body) => ({
+        status: 200,
+        body: JSON.stringify({ challenge: JSON.parse(body).challenge }),
+      }),
+    },
+  );
+  createUserActivity(userInput, database);
+  updateActivityUser(
+    { requestId: "set-time", expectedRevision: 1, id: "task", overrides: { estimatedMinutes: 15 } },
+    database,
+  );
+  const count = events().filter((event) => event.name === "activity.time_changed").length;
+  expect(count).toBe(1);
+  updateActivityUser(
+    {
+      requestId: "same-time",
+      expectedRevision: 2,
+      id: "task",
+      overrides: { estimatedMinutes: 15 },
+    },
+    database,
+  );
+  updateActivityUser(
+    {
+      requestId: "reset-absent",
+      expectedRevision: 3,
+      id: "task",
+      resetOverrides: ["remainingMinutes"],
+    },
+    database,
+  );
+  expect(events().filter((event) => event.name === "activity.time_changed")).toHaveLength(count);
+});

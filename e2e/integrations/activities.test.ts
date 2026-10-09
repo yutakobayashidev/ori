@@ -14,6 +14,7 @@ test("shares published chores and reply activities with Home, Messages and MCP w
   await expect(activitiesPage.card("buy-detergent")).toHaveCount(0);
   expect((await activityMcp.context()).activities).toEqual([]);
   await activityMcp.publish();
+  await activityMcp.selectToday();
   await expect(activitiesPage.card("buy-detergent")).toBeVisible();
   await expect(activitiesPage.card("review-times")).toBeVisible();
   await expect(activitiesPage.card("send-documents")).toBeVisible();
@@ -78,7 +79,7 @@ test("shares published chores and reply activities with Home, Messages and MCP w
   await expect(activitiesPage.draft).toHaveValue("A newer agent suggestion");
   await messagesPage.showConversationList();
   await workspacePage.navigateTo("Home");
-  await expect(activitiesPage.card("review-times")).toContainText("Set aside");
+  await expect(activitiesPage.card("review-times")).toHaveCount(0);
   const device = await context.newPage();
   try {
     const other = new ActivitiesPage(device);
@@ -92,6 +93,13 @@ test("shares published chores and reply activities with Home, Messages and MCP w
         nextAction: "Bring the paper bag downstairs",
         sources: [],
       },
+    ]);
+    await expect(activitiesPage.card("later-chore")).toHaveCount(0);
+    await activityMcp.selectToday([
+      "buy-detergent",
+      "review-times",
+      "send-documents",
+      "later-chore",
     ]);
     await expect(activitiesPage.card("later-chore")).toBeVisible();
     await expect(other.card("later-chore")).toBeVisible();
@@ -139,7 +147,7 @@ test("retries publication without duplicates and rejects invalid batches without
       ],
     }),
   ).toMatchObject({ ok: false, error: { code: "invalid-input" } });
-  expect(await activityMcp.context()).toEqual(snapshot);
+  expect(await activityMcp.context()).toEqual({ ...snapshot, serverNow: expect.any(Number) });
 });
 
 test("sends a saved reply from Messages with an explicit quoted message", async ({
@@ -147,6 +155,7 @@ test("sends a saved reply from Messages with an explicit quoted message", async 
   activityMcp,
 }, testInfo) => {
   await activityMcp.publish();
+  await activityMcp.selectToday();
   await page.goto("/support");
   await expect(page.getByTestId("support-row").first().locator("img")).toBeVisible();
 
@@ -186,6 +195,7 @@ test("opens the original message from a saved source excerpt", async ({
   activitiesPage,
 }) => {
   await activityMcp.publish();
+  await activityMcp.selectToday();
   await homePage.goTo();
   await activitiesPage.expand("review-times");
   await activitiesPage

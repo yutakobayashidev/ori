@@ -1,4 +1,6 @@
 import { ActivityMarkdown } from "#/features/activities/activity-markdown";
+import { ActivityTimeLabel, StartFocusButton } from "#/features/focus/focus-controls";
+import { ActivityTimeDetails } from "#/features/focus/time-details";
 import { useState } from "react";
 import { Link } from "@tanstack/react-router";
 import {
@@ -125,6 +127,7 @@ export function BoardPage() {
                             <p className="mt-2 line-clamp-2 text-xs leading-5 text-muted-foreground">
                               {activity.effective.nextAction}
                             </p>
+                            <ActivityTimeLabel activity={activity} />
                           </div>
                           <div className="flex items-center gap-2 border-t border-black/5 px-4 py-3 text-xs text-muted-foreground">
                             <span className="rounded-md border px-2 py-1">
@@ -165,6 +168,11 @@ export function BoardPage() {
                 <div className="grid max-h-[30dvh] shrink-0 gap-3 overflow-y-auto border-b px-4 py-5 pr-12 sm:px-6 sm:pr-12">
                   <SheetTitle>{selected.effective.title}</SheetTitle>
                   <ActivityMarkdown text={selected.effective.nextAction} />
+                  <div className="flex items-center gap-3">
+                    <ActivityTimeLabel activity={selected} />
+                    <StartFocusButton activity={selected} />
+                  </div>
+                  <ActivityTimeDetails activity={selected} />
                   {selected.effective.detail && (
                     <ActivityMarkdown text={selected.effective.detail} />
                   )}

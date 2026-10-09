@@ -14,7 +14,7 @@ test("moves existing activities on the board and opens AI handoff", async ({
   });
   await task.click();
   await expect(page.getByRole("heading", { name: "Buy detergent", exact: true })).toBeVisible();
-  await expect(page.getByLabel("Instructions and expected outcome")).toHaveValue(
+  await expect(page.getByLabel("Work to delegate")).toHaveValue(
     "Buy one refill of the usual detergent",
   );
   await page.getByRole("combobox", { name: "Status", exact: true }).selectOption("inProgress");

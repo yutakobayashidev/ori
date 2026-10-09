@@ -1,3 +1,12 @@
+import {
+  currentFocus,
+  readActivityTime,
+  ensureActivityTime,
+  endActivityFocus,
+  setRemaining,
+  emitTimeChange,
+} from "../focus/storage.server";
+import { activityTime, daySelections } from "../storage/schema";
 import { createHash } from "node:crypto";
 import { and, asc, eq, gt, inArray, sql } from "drizzle-orm";
 import { z } from "zod";
@@ -52,12 +61,16 @@ function checkSize(input: unknown) {
   if (Buffer.byteLength(JSON.stringify(input) ?? "", "utf8") > 256 * 1024)
     fail("payload-too-large", "Activity publication exceeds 256 KiB.");
 }
-function revision(database: AppDatabase) {
+export function activityRevisionNumber(database: AppDatabase) {
   return (
     database.select().from(activityRevision).where(eq(activityRevision.id, 1)).get()?.revision ?? 0
   );
 }
-function activity(row: typeof activities.$inferSelect): Activity {
+function activity(
+  row: typeof activities.$inferSelect,
+  database: AppDatabase,
+  now = Date.now(),
+): Activity {
   const { userState, userOverrides } = row;
   const proposal = {
     ...row.proposal,
@@ -67,7 +80,12 @@ function activity(row: typeof activities.$inferSelect): Activity {
         : source,
     ),
   };
-  const { draft, section, ...common } = userOverrides;
+  const { draft, section } = userOverrides;
+  const common = { ...userOverrides };
+  delete common.draft;
+  delete common.section;
+  delete common.estimatedMinutes;
+  delete common.remainingMinutes;
   const effective = {
     ...proposal,
     ...common,
@@ -75,7 +93,15 @@ function activity(row: typeof activities.$inferSelect): Activity {
   };
   if (effective.kind === "reply" && draft !== undefined)
     effective.reply = { ...effective.reply, draft };
-  return { id: row.id, proposal, userState, userOverrides, effective, assessment: row.assessment };
+  return {
+    id: row.id,
+    proposal,
+    userState,
+    userOverrides,
+    effective,
+    assessment: row.assessment,
+    time: readActivityTime(row, database, now),
+  };
 }
 const cursorSchema = z.strictObject({
   revision: z.number().int().nonnegative(),
@@ -105,7 +131,7 @@ export function getActivityContext(input: unknown = {}, database = getDatabase()
       fail("invalid-input", "Cursor does not match the requested filter.");
   }
   return database.transaction(() => {
-    const current = revision(database);
+    const current = activityRevisionNumber(database);
     if (cursor && cursor.revision !== current)
       fail("stale-cursor", "Activities changed. Restart from the first page.");
     const rows = database
@@ -138,7 +164,9 @@ export function getActivityContext(input: unknown = {}, database = getDatabase()
     return {
       ok: true,
       revision: current,
-      activities: page.map(activity),
+      serverNow: Date.now(),
+      focusSession: currentFocus(database),
+      activities: page.map((row) => activity(row, database)),
       missingActivityIds: ids?.filter((id) => !existing?.has(id)) ?? [],
       nextCursor:
         rows.length > parsed.limit
@@ -152,8 +180,15 @@ export function getActivityContext(input: unknown = {}, database = getDatabase()
 export function getAllActivities(database = getDatabase()): ActivityContext {
   return database.transaction(() => ({
     ok: true,
-    revision: revision(database),
-    activities: database.select().from(activities).orderBy(asc(activities.id)).all().map(activity),
+    revision: activityRevisionNumber(database),
+    serverNow: Date.now(),
+    focusSession: currentFocus(database),
+    activities: database
+      .select()
+      .from(activities)
+      .orderBy(asc(activities.id))
+      .all()
+      .map((row) => activity(row, database)),
     missingActivityIds: [],
     nextCursor: null,
   }));
@@ -170,7 +205,7 @@ function anchor(proposal: ActivityProposal) {
     messageId: source.messageId,
   };
 }
-function enqueueEvent(
+export function enqueueEvent(
   name: ActivityEventName,
   row: typeof activities.$inferSelect,
   origin: "user" | "agent",
@@ -179,7 +214,7 @@ function enqueueEvent(
   now: number,
   previousState?: ActivityState,
 ) {
-  const { effective } = activity(row);
+  const { effective } = activity(row, database, now);
   enqueueActivityEvent(
     name,
     {
@@ -198,9 +233,9 @@ function enqueueEvent(
     now,
   );
 }
-function write(
+export function writeActivity<T extends { requestId: string; expectedRevision: number }>(
   operation: string,
-  input: { requestId: string; expectedRevision: number },
+  input: T,
   ids: string[],
   mutate: (receipt: ActivityReceipt, now: number) => void,
   database: AppDatabase,
@@ -219,7 +254,7 @@ function write(
           fail("idempotency-conflict", "This request ID was already used with different input.");
         return receipt.result;
       }
-      const current = revision(database);
+      const current = activityRevisionNumber(database);
       if (current !== input.expectedRevision)
         fail("revision-conflict", "Activities changed. Read the latest context before retrying.");
       const now = Date.now();
@@ -251,7 +286,7 @@ function write(
 export function publishActivities(input: unknown, database = getDatabase()): ActivityReceipt {
   checkSize(input);
   const parsed = parse(publishActivitiesInput, input);
-  return write(
+  return writeActivity(
     "publish",
     parsed,
     parsed.activities.map((proposal) => proposal.id),
@@ -283,6 +318,18 @@ export function publishActivities(input: unknown, database = getDatabase()): Act
           })
           .onConflictDoUpdate({ target: activities.id, set: { proposal, updatedAt: now } })
           .run();
+        if (
+          JSON.stringify(existing?.proposal.timeEstimate) !== JSON.stringify(proposal.timeEstimate)
+        ) {
+          ensureActivityTime(proposal.id, database);
+          database
+            .update(activityTime)
+            .set({ estimateUpdatedAt: now })
+            .where(eq(activityTime.activityId, proposal.id))
+            .run();
+          if (existing?.userOverrides.estimatedMinutes === undefined)
+            emitTimeChange(proposal.id, "agent", receipt, ["estimatedMinutes"], database, now);
+        }
         if (!existing)
           enqueueEvent(
             "activity.created",
@@ -311,7 +358,7 @@ export function updateActivityUser(
   origin: "user" | "agent" = "user",
 ): ActivityReceipt {
   const parsed = parse(updateActivityUserInput, input);
-  return write(
+  return writeActivity(
     origin === "user" ? "user" : "agent-decision",
     parsed,
     [parsed.id],
@@ -323,6 +370,13 @@ export function updateActivityUser(
         (parsed.overrides?.draft !== undefined || parsed.resetOverrides?.includes("draft"))
       )
         fail("invalid-input", "Only reply activities have drafts.");
+      if (
+        origin === "agent" &&
+        (parsed.overrides?.estimatedMinutes !== undefined ||
+          parsed.overrides?.remainingMinutes !== undefined ||
+          parsed.resetOverrides?.some((k) => k === "estimatedMinutes" || k === "remainingMinutes"))
+      )
+        fail("invalid-input", "Time overrides are owner-only. Use contextual progress updates.");
       const userOverrides = { ...existing.userOverrides, ...parsed.overrides };
       for (const key of parsed.resetOverrides ?? []) delete userOverrides[key];
       const updated = {
@@ -343,6 +397,43 @@ export function updateActivityUser(
         })
         .where(eq(activities.id, parsed.id))
         .run();
+      const timeFields: string[] = [];
+      if (
+        !["available", "inProgress"].includes(updated.userState) &&
+        endActivityFocus(parsed.id, database, now)
+      )
+        timeFields.push("actualSeconds");
+      if (parsed.overrides?.remainingMinutes !== undefined) {
+        setRemaining(existing, parsed.overrides.remainingMinutes, undefined, "user", database, now);
+        timeFields.push("remainingMinutes");
+      }
+      if (
+        parsed.resetOverrides?.includes("remainingMinutes") &&
+        existing.userOverrides.remainingMinutes !== undefined
+      ) {
+        ensureActivityTime(parsed.id, database);
+        database
+          .update(activityTime)
+          .set({ remainingOverride: null })
+          .where(eq(activityTime.activityId, parsed.id))
+          .run();
+        timeFields.push("remainingMinutes");
+      }
+      if (
+        (parsed.overrides?.estimatedMinutes !== undefined &&
+          parsed.overrides.estimatedMinutes !== existing.userOverrides.estimatedMinutes) ||
+        (parsed.resetOverrides?.includes("estimatedMinutes") &&
+          existing.userOverrides.estimatedMinutes !== undefined)
+      ) {
+        ensureActivityTime(parsed.id, database);
+        database
+          .update(activityTime)
+          .set({ userEstimateUpdatedAt: now })
+          .where(eq(activityTime.activityId, parsed.id))
+          .run();
+        timeFields.push("estimatedMinutes");
+      }
+      if (timeFields.length) emitTimeChange(parsed.id, origin, receipt, timeFields, database, now);
       if (updated.userState !== existing.userState)
         enqueueEvent(
           "activity.status_changed",
@@ -360,7 +451,7 @@ export function updateActivityUser(
 
 export function createUserActivity(input: unknown, database = getDatabase()): ActivityReceipt {
   const parsed = parse(createHomeActivityInput, input);
-  return write(
+  return writeActivity(
     "user-create",
     parsed,
     [parsed.id],
@@ -385,6 +476,26 @@ export function createUserActivity(input: unknown, database = getDatabase()): Ac
         updatedAt: now,
       };
       database.insert(activities).values(row).run();
+      if (parsed.day) {
+        const siblings = database
+          .select()
+          .from(daySelections)
+          .where(and(eq(daySelections.date, parsed.day.date), eq(daySelections.section, section)))
+          .all();
+        database
+          .insert(daySelections)
+          .values({
+            activityId: id,
+            ...parsed.day,
+            section,
+            rank: Math.max(-1, ...siblings.map((item) => item.rank)) + 1,
+            origin: "user",
+            reason: "Owner confirmed adding this task to today.",
+            userAdjustedAt: now,
+            updatedAt: now,
+          })
+          .run();
+      }
       enqueueEvent("activity.created", row, "user", receipt, database, now);
     },
     database,
@@ -394,7 +505,7 @@ export function createUserActivity(input: unknown, database = getDatabase()): Ac
 /** Save the agent's contextual assessment; evidence is reported context, not delivery proof. */
 export function updateActivityProgress(input: unknown, database = getDatabase()): ActivityReceipt {
   const parsed = parse(updateActivityProgressInput, input);
-  return write(
+  return writeActivity(
     "progress",
     parsed,
     [parsed.id],
@@ -428,6 +539,22 @@ export function updateActivityProgress(input: unknown, database = getDatabase())
         })
         .where(eq(activities.id, parsed.id))
         .run();
+      const timeFields: string[] = [];
+      if (
+        !["available", "inProgress"].includes(updated.userState) &&
+        endActivityFocus(parsed.id, database, now)
+      )
+        timeFields.push("actualSeconds");
+      if (parsed.remainingMinutes !== undefined) {
+        setRemaining(existing, parsed.remainingMinutes, parsed.reason, "agent", database, now);
+        const record = database
+          .select()
+          .from(activityTime)
+          .where(eq(activityTime.activityId, parsed.id))
+          .get();
+        if (!record?.remainingOverride) timeFields.push("remainingMinutes");
+      }
+      if (timeFields.length) emitTimeChange(parsed.id, "agent", receipt, timeFields, database, now);
       if (updated.userState !== existing.userState)
         enqueueEvent(
           "activity.status_changed",

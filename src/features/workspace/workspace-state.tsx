@@ -1,5 +1,7 @@
 import { useRouteContext } from "@tanstack/react-router";
 import { ActivityStateProvider } from "#/features/activities/activity-state";
+import { FocusProvider } from "#/features/focus/focus-state";
+import { FocusMiniTimer } from "#/features/focus/focus-controls";
 import {
   createContext,
   type Dispatch,
@@ -68,7 +70,14 @@ export function WorkspaceStateProvider({ children }: { children: ReactNode }) {
           setEntries,
         }}
       >
-        {children}
+        {auth.owner?.onboardingCompletedAt ? (
+          <FocusProvider>
+            {children}
+            <FocusMiniTimer />
+          </FocusProvider>
+        ) : (
+          children
+        )}
       </WorkspaceContext.Provider>
     </ActivityStateProvider>
   );

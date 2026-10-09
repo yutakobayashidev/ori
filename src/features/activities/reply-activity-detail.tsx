@@ -9,6 +9,8 @@ import {
   InputGroupTextarea,
 } from "#/components/ui/input-group";
 import { ActivityControls, ActivityEditor, stateLabels } from "./activity-controls";
+import { ActivityTimeLabel, StartFocusButton } from "../focus/focus-controls";
+import { ActivityTimeDetails } from "../focus/time-details";
 import { useActivityStore } from "./activity-store";
 import type { Activity } from "./model";
 import type { ConversationMessage } from "#/features/beeper/conversation-model";
@@ -135,6 +137,7 @@ export function ReplyActivityDetail({
                 type="button"
                 size="sm"
                 variant="default"
+                motion="none"
                 disabled={!canSend}
                 onClick={() => {
                   if (!canSend || !destination || !conversation.snapshot) return;
@@ -238,6 +241,11 @@ export function ReplyActivityDetail({
           {item.detail && <ActivityMarkdown text={item.detail} />}
         </section>
         <ActivityControls activity={activity} />
+        <div className="mt-3 flex flex-wrap items-center gap-3">
+          <ActivityTimeLabel activity={activity} />
+          <StartFocusButton activity={activity} />
+        </div>
+        <ActivityTimeDetails activity={activity} />
         <ActivityEditor activity={activity} />
         <section className="mt-5 border-t border-border pt-5" aria-label="Reply context">
           <h3 className="text-xs font-medium">Context</h3>

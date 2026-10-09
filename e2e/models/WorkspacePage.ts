@@ -27,6 +27,10 @@ export class WorkspacePage {
 
   async navigateTo(destination: Destination) {
     const link = this.navigationLink(destination);
+    // Mobile message navigation reveals the rail after the back transition commits.
+    await expect
+      .poll(async () => (await link.isVisible()) || (await this.toggleSidebar.isVisible()))
+      .toBe(true);
     if (!(await link.isVisible())) await this.ensureSidebarOpen();
     await link.click();
   }

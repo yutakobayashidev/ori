@@ -309,3 +309,74 @@ export const beeperMessageSends = sqliteTable(
     ),
   ],
 );
+
+export const activityTime = sqliteTable("activity_time", {
+  activityId: text("activity_id")
+    .primaryKey()
+    .references(() => activities.id, { onDelete: "cascade" }),
+  remainingEstimate: text("remaining_estimate", { mode: "json" }).$type<
+    import("../focus/model").RemainingEstimate
+  >(),
+  remainingOverride: text("remaining_override", { mode: "json" }).$type<
+    import("../focus/model").RemainingEstimate
+  >(),
+  estimateUpdatedAt: integer("estimate_updated_at"),
+  userEstimateUpdatedAt: integer("user_estimate_updated_at"),
+  initialEstimatedMinutes: integer("initial_estimated_minutes"),
+  initialCaptured: integer("initial_captured", { mode: "boolean" }).notNull().default(false),
+});
+export const focusSessions = sqliteTable(
+  "focus_sessions",
+  {
+    id: text("id").primaryKey(),
+    activityId: text("activity_id")
+      .notNull()
+      .references(() => activities.id, { onDelete: "cascade" }),
+    budgetSeconds: integer("budget_seconds").notNull(),
+    timeZone: text("time_zone").notNull(),
+    state: text("state").$type<"running" | "paused" | "ended">().notNull(),
+    startedAt: integer("started_at").notNull(),
+    runningSince: integer("running_since"),
+    elapsedActiveSeconds: integer("elapsed_active_seconds").notNull(),
+    endedAt: integer("ended_at"),
+  },
+  (table) => [
+    uniqueIndex("focus_single_unfinished")
+      .on(sql`(1)`)
+      .where(sql`${table.state} != 'ended'`),
+  ],
+);
+export const workLogs = sqliteTable("work_logs", {
+  id: text("id").primaryKey(),
+  activityId: text("activity_id")
+    .notNull()
+    .references(() => activities.id, { onDelete: "cascade" }),
+  durationSeconds: integer("duration_seconds").notNull(),
+  occurredOn: text("occurred_on").notNull(),
+  source: text("source").$type<"manual" | "timer">().notNull(),
+  focusSessionId: text("focus_session_id")
+    .unique()
+    .references(() => focusSessions.id),
+  startedAt: integer("started_at"),
+  endedAt: integer("ended_at"),
+  note: text("note"),
+  createdAt: integer("created_at").notNull(),
+});
+export const daySelections = sqliteTable(
+  "day_selections",
+  {
+    activityId: text("activity_id")
+      .notNull()
+      .references(() => activities.id, { onDelete: "cascade" }),
+    date: text("date").notNull(),
+    timeZone: text("time_zone").notNull(),
+    section: text("section").$type<"focus" | "optional">().notNull(),
+    rank: integer("rank").notNull(),
+    origin: text("origin").$type<"user" | "agent">().notNull(),
+    reason: text("reason"),
+    userAdjustedAt: integer("user_adjusted_at"),
+    excluded: integer("excluded", { mode: "boolean" }).notNull().default(false),
+    updatedAt: integer("updated_at").notNull(),
+  },
+  (table) => [primaryKey({ columns: [table.date, table.activityId] })],
+);

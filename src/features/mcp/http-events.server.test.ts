@@ -80,6 +80,7 @@ it("advertises events and verifies, persists, refreshes and removes a modern MCP
         { name: "beeper.message.sent", delivery: ["webhook"] },
         { name: "activity.created", delivery: ["webhook"] },
         { name: "activity.status_changed", delivery: ["webhook"] },
+        { name: "activity.time_changed", delivery: ["webhook"] },
       ],
     },
   });

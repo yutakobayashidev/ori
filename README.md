@@ -19,21 +19,32 @@ success does not automatically complete the task.
 The headless Beeper listener can observe messages sent in the original chat apps;
 Dots can update task progress and reply proposals through shared MCP tools.
 
+Dots supplies rough task-duration estimates with its proposals and can revise remaining
+work from conversation evidence. Home keeps a separate daily selection under Start here
+and If there's room; new inbox tasks do not automatically join today's plan. Choose from
+inbox adds candidates, and owner choices are protected from agent reselection.
+Focus opens one task with a visual timer, a separate remaining-work estimate and a
+conditional finish time. Sessions survive reloads, support pause/resume and extra time,
+and record effort without automatically completing tasks when the timer reaches zero.
+Manual estimate overrides and work-log corrections are optional. Calendar integration
+is deferred. See [time and focus design](docs/activity-time-and-calendar-design.md).
+
 Home's greeting follows the device's local time: morning from 05:00, afternoon
 from 12:00, and evening from 18:00 until 05:00. It refreshes while the page is
 open and when returning to the app.
 
 ## Workspaces and current status
 
-| Workspace | Route      | Current implementation                                                                                                 |
-| --------- | ---------- | ---------------------------------------------------------------------------------------------------------------------- |
-| Home      | `/`        | Persistent mixed task/reply inbox and action proposals; routine and measurement controls remain local prototypes.      |
-| Messages  | `/support` | Reply activities, Beeper history and avatars, persistent drafts, quoted text sending and operation status.             |
-| Journal   | `/journal` | Notes, resume points, medication and weight entries, append-only corrections, and summary previews. Local prototype.   |
-| Reader    | `/inbox`   | Searchable sample articles and a responsive article reader. Recommendation from activity history is not connected yet. |
-| Vitals    | `/vitals`  | Body and Environment dashboards with sample readings, charts, and simulated controls. No health or device connection.  |
-| Research  | `/deck`    | Twitter and Mastodon columns, connected accounts, persistent decks, and optional Codex research chat.                  |
-| Board     | `/board`   | Shared tasks and replies in Kanban columns, with AI handoff, execution chat, questions, and artifacts.                 |
+| Workspace | Route                | Current implementation                                                                                                 |
+| --------- | -------------------- | ---------------------------------------------------------------------------------------------------------------------- |
+| Home      | `/`                  | Persistent mixed task/reply inbox and action proposals; routine and measurement controls remain local prototypes.      |
+| Messages  | `/support`           | Reply activities, Beeper history and avatars, persistent drafts, quoted text sending and operation status.             |
+| Journal   | `/journal`           | Notes, resume points, medication and weight entries, append-only corrections, and summary previews. Local prototype.   |
+| Reader    | `/inbox`             | Searchable sample articles and a responsive article reader. Recommendation from activity history is not connected yet. |
+| Vitals    | `/vitals`            | Body and Environment dashboards with sample readings, charts, and simulated controls. No health or device connection.  |
+| Research  | `/deck`              | Twitter and Mastodon columns, connected accounts, persistent decks, and optional Codex research chat.                  |
+| Board     | `/board`             | Shared tasks and replies in Kanban columns, with AI handoff, execution chat, questions, and artifacts.                 |
+| Focus     | `/focus/$activityId` | One task, visual timer, reply/source access, estimates and recorded effort.                                            |
 
 Home and Messages share activity IDs, user decisions, and drafts through a common
 server service. Journal and routine prototype state resets on reload. The home
@@ -401,6 +412,11 @@ messages or external observations can support the decision; no in-app send or
 delivery receipt is required. Owner edits are preserved. Updates use revision
 checks and retry receipts and are recorded as agent actions. The result contains
 current context and the saved mutation receipt; context exposes the latest assessment.
+It also accepts `remainingMinutes` with the same reason/evidence requirements.
+`publish_activities` accepts `timeEstimate: {estimatedMinutes, reason}` on each proposal.
+`get_day_plan` and `update_day_plan` read and select a small set of activities for a date
+and time zone independently of inbox publication. Focus timers and work-log edits are
+owner-facing browser operations, not autonomous agent tools.
 See the [Activity MCP contract](docs/activity-mcp-design.md) for inputs and examples.
 An OpenAI Secure MCP Tunnel client can forward to this private endpoint.
 
@@ -431,7 +447,7 @@ original apps; it does not send anything or prove recipient delivery. Existing
 incoming subscriptions are unchanged: completion monitors subscribe separately
 to sent events for the same selected chats and judge whether each specific task
 was fulfilled before calling `update_activity_progress`.
-Clients can also subscribe to `activity.created` and `activity.status_changed`
+Clients can also subscribe to `activity.created`, `activity.status_changed`, and `activity.time_changed`
 for the shared task/reply inbox. Activity saves enqueue notifications in the same
 SQLite transaction; retries and unchanged statuses do not create duplicates.
 Activity subscriptions default to user actions, with explicit opt-in for agent

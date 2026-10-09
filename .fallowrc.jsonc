@@ -6,6 +6,8 @@
     "e2e/**/*.{test,spec}.ts",
     "e2e/mock-relay.mjs",
     "e2e/fixtures/execution-runtime.mjs",
+    // Invoked as TWITTER_LITE_BEEPER_CLI by Playwright's webServer command.
+    "e2e/fixtures/beeper-cli.mjs",
     "public/sw.js",
     "scripts/events-worker.ts",
     "src/features/mcp-app/main.tsx",
@@ -22,6 +24,11 @@
     {
       "file": "src/features/execution/app.server.ts",
       "exports": ["loadExecutionApp", "callExecutionAppTool"],
+    },
+    // Persistence operations and their TanStack server-function wrappers share domain names.
+    {
+      "file": "src/features/focus/repository.server.ts",
+      "exports": ["startFocus", "changeFocus", "saveWorkLog", "deleteWorkLog"],
     },
     // Each Playwright fixture module exports its own extended test function.
     { "file": "e2e/*fixtures.ts", "exports": ["test"] },

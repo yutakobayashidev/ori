@@ -10,6 +10,7 @@ import { WorkspaceNavigation } from "#/components/workspace-navigation";
 import { articles } from "#/features/inbox/mock-articles";
 import { useUrlState } from "#/features/navigation/use-url-state";
 import { useActivities } from "#/features/activities/activity-state";
+import { localDay } from "../day-plan/model";
 import { entryKindLabels, useWorkspaceState } from "#/features/workspace/workspace-state";
 import { DailyBrief } from "./daily-brief";
 import { ExecutionWorkbench } from "./execution-workbench";
@@ -76,6 +77,7 @@ export function HomePage() {
               title: action.title,
               nextAction: action.title,
               section: action.section,
+              day: localDay(),
             }))
           )
             return;

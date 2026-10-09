@@ -58,10 +58,11 @@ Both task and reply activities use the same event contract:
 | ------------------------- | ------------------------------------------------------------------------------------------ |
 | `activity.created`        | A new activity is saved from Home (`user`) or `publish_activities` (`agent`).              |
 | `activity.status_changed` | An existing activity's user state actually changes, for example `available` → `completed`. |
+| `activity.time_changed`   | Effective time estimates or recorded effort change. Timer ticks do not emit events.        |
 
 Editing a title, draft, detail, or section does not emit these events. Updating an
-existing proposal through `publish_activities` does not create another activity
-event. Publication preserves user state. Owners can complete replies handled in
+existing proposal through `publish_activities` does not create another creation
+event; a changed effective estimate can emit a time event. Publication preserves user state. Owners can complete replies handled in
 other apps; automated monitors use `update_activity_progress` with supporting evidence.
 
 Subscription arguments are `{}` for all user-origin activities, or an object with:
@@ -77,10 +78,14 @@ To observe agent-created tasks too, explicitly subscribe with
 for every creation event, which would cause a feedback loop. There is no
 per-ChatGPT-session attribution in the private single-owner prototype.
 
-Event data includes `activityId`, `kind`, effective `title` and `nextAction`,
+Creation and status event data includes `activityId`, `kind`, effective `title` and `nextAction`,
 `state`, `origin`, `requestId`, `revision`, and `occurredAt`. Status changes also
 include `previousState`. Full drafts, source excerpts, and activity details are
 retrieved through `get_activity_context` rather than copied into each webhook.
+Time events carry only `activityId`, `origin`, `requestId`, `revision`, `occurredAt`,
+and `changedFields`. Read the current context before re-estimating. Recorded effort
+is not proof that a task is complete. Owner-only subscriptions exclude the agent's
+own estimate updates; a new time-event subscription is separate from existing subscriptions.
 Events describe the saved transition; read current context before acting because
 delivery may be delayed or out of order.
 

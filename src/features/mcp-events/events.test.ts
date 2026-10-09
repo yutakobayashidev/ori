@@ -280,6 +280,7 @@ describe("activity events", () => {
       "beeper.message.sent",
       "activity.created",
       "activity.status_changed",
+      "activity.time_changed",
     ]);
     expect(events[2]?.inputSchema.required ?? []).not.toContain("origins");
     expect(events[3]?.payloadSchema.required).toContain("previousState");
@@ -476,4 +477,41 @@ it("requires a separate outgoing subscription and preserves incoming subscriptio
     database,
   );
   expect(getBeeperWatchChats(database, now + 11)).toEqual([]);
+});
+
+it("delivers time changes once, filters agent origins, and requires changed fields", async () => {
+  await subscribeMcpEvent({ ...input, name: "activity.time_changed", arguments: {} }, database, {
+    now,
+    sender: verify,
+  });
+  const data = {
+    activityId: "task",
+    origin: "user" as const,
+    requestId: "time-1",
+    revision: 2,
+    occurredAt: new Date(now + 1).toISOString(),
+    changedFields: ["actualSeconds"],
+  };
+  enqueueActivityEvent("activity.time_changed", data, database, now + 1);
+  enqueueActivityEvent("activity.time_changed", data, database, now + 1);
+  enqueueActivityEvent(
+    "activity.time_changed",
+    { ...data, origin: "agent", requestId: "time-2" },
+    database,
+    now + 1,
+  );
+  const rows = database.select().from(mcpEventOutbox).all();
+  expect(rows).toHaveLength(1);
+  expect(JSON.parse(rows[0]?.body ?? "null")).toMatchObject({
+    name: "activity.time_changed",
+    data,
+  });
+  expect(() =>
+    enqueueActivityEvent(
+      "activity.time_changed",
+      { ...data, changedFields: [] },
+      database,
+      now + 1,
+    ),
+  ).toThrow(/changedFields/);
 });

@@ -113,6 +113,23 @@ class ActivityMcp {
     expect(result.ok).toBe(true);
     return result;
   }
+  async selectToday(ids = activityProposals.map((activity) => activity.id)) {
+    const { revision } = await this.context();
+    const result = await this.tool<ActivityReceipt>("update_day_plan", {
+      requestId: randomUUID(),
+      expectedRevision: revision,
+      date: new Date().toISOString().slice(0, 10),
+      timeZone: "UTC",
+      reason: "Explicitly choose candidates for this test day",
+      changes: ids.map((activityId, rank) => ({
+        activityId,
+        rank,
+        section: rank === 0 ? "focus" : "optional",
+      })),
+    });
+    expect(result.ok).toBe(true);
+    return result;
+  }
 }
 function clearActivities() {
   const path = process.env.TWITTER_LITE_E2E_DB_PATH;

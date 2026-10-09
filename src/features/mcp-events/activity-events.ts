@@ -1,6 +1,10 @@
 import { z } from "zod";
 
-export const activityEventName = z.enum(["activity.created", "activity.status_changed"]);
+export const activityEventName = z.enum([
+  "activity.created",
+  "activity.status_changed",
+  "activity.time_changed",
+]);
 export type ActivityEventName = z.infer<typeof activityEventName>;
 const origin = z.enum(["user", "agent"]);
 const state = z.enum(["available", "inProgress", "waiting", "deferred", "completed", "dismissed"]);
@@ -23,3 +27,13 @@ const activityEventPayload = z.strictObject({
 export type ActivityEventData = z.infer<typeof activityEventPayload>;
 export const createdActivityPayload = activityEventPayload.omit({ previousState: true });
 export const changedActivityPayload = activityEventPayload.extend({ previousState: state });
+export const timeChangedActivityPayload = activityEventPayload
+  .pick({
+    activityId: true,
+    origin: true,
+    requestId: true,
+    revision: true,
+    occurredAt: true,
+  })
+  .extend({ changedFields: z.array(z.string().min(1).max(64)).min(1).max(10) });
+export type ActivityTimeEventData = z.infer<typeof timeChangedActivityPayload>;

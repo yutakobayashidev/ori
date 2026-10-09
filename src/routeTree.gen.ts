@@ -19,6 +19,7 @@ import { Route as InboxRouteImport } from './routes/inbox'
 import { Route as DeckRouteImport } from './routes/deck'
 import { Route as BoardRouteImport } from './routes/board'
 import { Route as IndexRouteImport } from './routes/index'
+import { Route as FocusActivityIdRouteImport } from './routes/focus.$activityId'
 import { Route as ApiAuthRouteImport } from './routes/api/auth'
 import { Route as OauthMastodonCallbackRouteImport } from './routes/oauth/mastodon/callback'
 import { Route as ApiResearchEventsRouteImport } from './routes/api/research/events'
@@ -76,6 +77,11 @@ const IndexRoute = IndexRouteImport.update({
   path: '/',
   getParentRoute: () => rootRouteImport,
 } as any)
+const FocusActivityIdRoute = FocusActivityIdRouteImport.update({
+  id: '/focus/$activityId',
+  path: '/focus/$activityId',
+  getParentRoute: () => rootRouteImport,
+} as any)
 const ApiAuthRoute = ApiAuthRouteImport.update({
   id: '/api/auth',
   path: '/api/auth',
@@ -119,6 +125,7 @@ export interface FileRoutesByFullPath {
   '/support': typeof SupportRoute
   '/vitals': typeof VitalsRoute
   '/api/auth': typeof ApiAuthRoute
+  '/focus/$activityId': typeof FocusActivityIdRoute
   '/api/activities/events': typeof ApiActivitiesEventsRoute
   '/api/execution/artifacts': typeof ApiExecutionArtifactsRoute
   '/api/execution/events': typeof ApiExecutionEventsRoute
@@ -137,6 +144,7 @@ export interface FileRoutesByTo {
   '/support': typeof SupportRoute
   '/vitals': typeof VitalsRoute
   '/api/auth': typeof ApiAuthRoute
+  '/focus/$activityId': typeof FocusActivityIdRoute
   '/api/activities/events': typeof ApiActivitiesEventsRoute
   '/api/execution/artifacts': typeof ApiExecutionArtifactsRoute
   '/api/execution/events': typeof ApiExecutionEventsRoute
@@ -156,6 +164,7 @@ export interface FileRoutesById {
   '/support': typeof SupportRoute
   '/vitals': typeof VitalsRoute
   '/api/auth': typeof ApiAuthRoute
+  '/focus/$activityId': typeof FocusActivityIdRoute
   '/api/activities/events': typeof ApiActivitiesEventsRoute
   '/api/execution/artifacts': typeof ApiExecutionArtifactsRoute
   '/api/execution/events': typeof ApiExecutionEventsRoute
@@ -176,6 +185,7 @@ export interface FileRouteTypes {
     | '/support'
     | '/vitals'
     | '/api/auth'
+    | '/focus/$activityId'
     | '/api/activities/events'
     | '/api/execution/artifacts'
     | '/api/execution/events'
@@ -194,6 +204,7 @@ export interface FileRouteTypes {
     | '/support'
     | '/vitals'
     | '/api/auth'
+    | '/focus/$activityId'
     | '/api/activities/events'
     | '/api/execution/artifacts'
     | '/api/execution/events'
@@ -212,6 +223,7 @@ export interface FileRouteTypes {
     | '/support'
     | '/vitals'
     | '/api/auth'
+    | '/focus/$activityId'
     | '/api/activities/events'
     | '/api/execution/artifacts'
     | '/api/execution/events'
@@ -231,6 +243,7 @@ export interface RootRouteChildren {
   SupportRoute: typeof SupportRoute
   VitalsRoute: typeof VitalsRoute
   ApiAuthRoute: typeof ApiAuthRoute
+  FocusActivityIdRoute: typeof FocusActivityIdRoute
   ApiActivitiesEventsRoute: typeof ApiActivitiesEventsRoute
   ApiExecutionArtifactsRoute: typeof ApiExecutionArtifactsRoute
   ApiExecutionEventsRoute: typeof ApiExecutionEventsRoute
@@ -310,6 +323,13 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof IndexRouteImport
       parentRoute: typeof rootRouteImport
     }
+    '/focus/$activityId': {
+      id: '/focus/$activityId'
+      path: '/focus/$activityId'
+      fullPath: '/focus/$activityId'
+      preLoaderRoute: typeof FocusActivityIdRouteImport
+      parentRoute: typeof rootRouteImport
+    }
     '/api/auth': {
       id: '/api/auth'
       path: '/api/auth'
@@ -367,6 +387,7 @@ const rootRouteChildren: RootRouteChildren = {
   SupportRoute: SupportRoute,
   VitalsRoute: VitalsRoute,
   ApiAuthRoute: ApiAuthRoute,
+  FocusActivityIdRoute: FocusActivityIdRoute,
   ApiActivitiesEventsRoute: ApiActivitiesEventsRoute,
   ApiExecutionArtifactsRoute: ApiExecutionArtifactsRoute,
   ApiExecutionEventsRoute: ApiExecutionEventsRoute,

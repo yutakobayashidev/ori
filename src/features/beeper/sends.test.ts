@@ -128,7 +128,7 @@ it("freezes the reviewed draft, sends once, and waits for actual upstream succes
     text: body,
     replyToMessageID: "source-message",
   });
-  expect(getActivityContext({}, database)).toEqual(before);
+  expect(getActivityContext({}, database)).toEqual({ ...before, serverNow: expect.any(Number) });
 });
 
 it("deduplicates retries before revision checks and rejects changed payloads or duplicate concurrent clicks", async () => {
