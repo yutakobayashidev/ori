@@ -1,6 +1,4 @@
-import { useQuery } from "@tanstack/react-query";
 import { ArrowLeft, MessageSquare, Search } from "lucide-react";
-import { Avatar, AvatarFallback, AvatarImage } from "#/components/ui/avatar";
 import { Button } from "#/components/ui/button";
 import { Input } from "#/components/ui/input";
 import {
@@ -12,29 +10,14 @@ import {
 } from "#/components/ui/sidebar";
 import { TooltipProvider } from "#/components/ui/tooltip";
 import { WorkspaceNavigation } from "#/components/workspace-navigation";
-import { ActivityFeedback, stateLabels } from "#/features/activities/activity-controls";
+import { ActivityFeedback } from "#/features/activities/activity-controls";
 import { useActivities } from "#/features/activities/activity-state";
 import type { Activity } from "#/features/activities/model";
 import { ReplyActivityDetail } from "#/features/activities/reply-activity-detail";
 import { useSearchInput } from "#/features/navigation/use-search-input";
 import { useUrlState } from "#/features/navigation/use-url-state";
 
-import { loadReplyAvatar } from "#/features/beeper/server-functions";
-
-function ConversationAvatar({ activity, name }: { activity: Activity; name: string }) {
-  const { data } = useQuery({
-    queryKey: ["reply-avatar", conversationKey(activity)],
-    queryFn: () => loadReplyAvatar({ data: { activityId: activity.id } }),
-    staleTime: 5 * 60_000,
-    retry: false,
-  });
-  return (
-    <Avatar aria-hidden="true">
-      {data?.dataUrl && <AvatarImage src={data.dataUrl} alt="" />}
-      <AvatarFallback>{name.slice(0, 2)}</AvatarFallback>
-    </Avatar>
-  );
-}
+import { ConversationRow } from "./conversation-row";
 
 const views = [
   { id: "now", label: "Inbox" },
@@ -152,32 +135,13 @@ export function SupportPage() {
               {[...groups.entries()].map(([key, group]) => {
                 const first = group[0];
                 if (!first || first.effective.kind !== "reply") return null;
-                const item = first.effective;
                 return (
-                  <button
-                    type="button"
-                    data-testid="support-row"
+                  <ConversationRow
                     key={key}
-                    aria-label={`${item.reply.recipientName}: ${item.title}`}
-                    aria-current={
-                      selected && conversationKey(selected) === key ? "true" : undefined
-                    }
-                    onClick={() => updateSearch({ activity: first.id, conversation: undefined })}
-                    className="mx-px-8 my-px-2 flex cursor-pointer gap-px-12 rounded-ui-10 px-px-14 py-px-12 text-left leading-normal hover:bg-sidebar-accent aria-current:bg-sidebar-accent"
-                  >
-                    <ConversationAvatar activity={first} name={item.reply.recipientName} />
-                    <span className="flex min-w-0 flex-1 flex-col gap-px-3">
-                      <strong className="text-ui-12 font-book">{item.reply.recipientName}</strong>
-                      <span className="truncate text-ui-12 text-muted-foreground">
-                        {item.title}
-                      </span>
-                      <span className="text-ui-10 text-muted-foreground">
-                        {group.length > 1
-                          ? `${group.length} actions`
-                          : stateLabels[first.userState]}
-                      </span>
-                    </span>
-                  </button>
+                    group={[first, ...group.slice(1)]}
+                    selected={!!selected && conversationKey(selected) === key}
+                    onSelect={() => updateSearch({ activity: first.id, conversation: undefined })}
+                  />
                 );
               })}
               {!visible.length && !loading && (

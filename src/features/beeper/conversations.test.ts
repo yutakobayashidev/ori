@@ -224,6 +224,7 @@ it("orders recent history oldest first and removes newly hidden messages from ca
 
 it("loads an unopened direct chat avatar without fetching history", async () => {
   const result = await readActivityAvatar({ activityId: "reply" }, database, adapter);
+  expect(result).toMatchObject({ title: "Alice", type: "single", network: "Discord" });
   expect(result.dataUrl).toMatch(/^data:image\/png;base64,/);
   expect(adapter.readMessages).not.toHaveBeenCalled();
   expect(JSON.stringify(result)).not.toContain("mxc://");
@@ -246,11 +247,11 @@ it("uses the exact source sender's avatar in a group instead of an arbitrary mem
 it("does not substitute an unknown sender's avatar or expose another account's avatar", async () => {
   vi.mocked(adapter.readChat).mockResolvedValueOnce({ ...chat, type: "group" });
   vi.mocked(adapter.retrieveMessage).mockResolvedValueOnce({ ...message, senderID: "unknown" });
-  expect(await readActivityAvatar({ activityId: "reply" }, database, adapter)).toEqual({
+  expect(await readActivityAvatar({ activityId: "reply" }, database, adapter)).toMatchObject({
     dataUrl: null,
   });
   vi.mocked(adapter.readChat).mockResolvedValueOnce({ ...chat, accountID: "other" });
-  expect(await readActivityAvatar({ activityId: "reply" }, database, adapter)).toEqual({
+  expect(await readActivityAvatar({ activityId: "reply" }, database, adapter)).toMatchObject({
     dataUrl: null,
   });
   expect(adapter.readMedia).not.toHaveBeenCalled();
@@ -258,7 +259,7 @@ it("does not substitute an unknown sender's avatar or expose another account's a
 it("rejects a source message from another group before resolving its avatar", async () => {
   vi.mocked(adapter.readChat).mockResolvedValueOnce({ ...chat, type: "group" });
   vi.mocked(adapter.retrieveMessage).mockResolvedValueOnce({ ...message, chatID: "other" });
-  expect(await readActivityAvatar({ activityId: "reply" }, database, adapter)).toEqual({
+  expect(await readActivityAvatar({ activityId: "reply" }, database, adapter)).toMatchObject({
     dataUrl: null,
   });
   expect(adapter.readMedia).not.toHaveBeenCalled();

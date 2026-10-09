@@ -94,7 +94,11 @@ delivery receipt. Dots uses `update_activity_progress` to record its contextual 
 ## Avatars
 
 The Messages conversation list uses a cached avatar query, so unopened conversations
-also display their icons. Direct chats without a chat image use the other participant's
+also display their icons. The same response includes conversation title/type. Group
+rows show the channel title with a separate reply-recipient label; direct chats show
+the recipient name. Grouping still uses target/account/chat identity, never names.
+Conversation titles remain available when image retrieval fails.
+Direct chats without a chat image use the other participant's
 avatar. Groups without a chat image retrieve the source message and match its sender
 ID to a participant; they never guess by name or pick an arbitrary member. Missing
 images retain initials.
