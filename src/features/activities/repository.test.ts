@@ -12,6 +12,7 @@ import {
   getActivityContext,
   publishActivities,
   updateActivityUser,
+  markActivityRead,
 } from "./repository.server";
 let directory: string;
 let database: AppDatabase;
@@ -78,6 +79,36 @@ it("persists a shared inbox of chores and concrete replies across reopening", ()
     ],
     nextCursor: null,
   });
+});
+it("marks new agent activities unread until opened and leaves owner-created items read", () => {
+  publish();
+  const initial = getActivityContext({}, database);
+  expect(initial.activities.map(({ id, isUnread }) => [id, isUnread])).toEqual([
+    ["detergent", true],
+    ["review", true],
+  ]);
+  expect(markActivityRead("detergent", database)).toBe(true);
+  expect(markActivityRead("detergent", database)).toBe(false);
+  expect(getActivityContext({ activityIds: ["detergent", "review"] }, database).activities).toEqual(
+    expect.arrayContaining([
+      expect.objectContaining({ id: "detergent", isUnread: false }),
+      expect.objectContaining({ id: "review", isUnread: true }),
+    ]),
+  );
+  createUserActivity(
+    {
+      requestId: "manual-task",
+      expectedRevision: 1,
+      id: "manual-task",
+      title: "Water plants",
+      nextAction: "Water the plants",
+      section: "optional",
+    },
+    database,
+  );
+  expect(
+    getActivityContext({ activityIds: ["manual-task"] }, database).activities[0]?.isUnread,
+  ).toBe(false);
 });
 it("replays the original receipt before checking a now stale revision without notifying twice", () => {
   const listener = vi.fn<() => void>();

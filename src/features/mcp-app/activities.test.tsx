@@ -5,6 +5,7 @@ import { Activities } from "./activities";
 
 const task: Activity = {
   id: "review",
+  isUnread: false,
   proposal: {
     id: "review",
     kind: "task",
@@ -170,6 +171,7 @@ it("opens the existing reply detail and saves a draft through MCP without sendin
   };
   const reply: Activity = {
     id: "reply",
+    isUnread: false,
     proposal,
     effective: { ...proposal, section: "focus" },
     userState: "available",

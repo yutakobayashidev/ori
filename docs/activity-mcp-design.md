@@ -62,6 +62,9 @@ MCP Events でも購読できる。保存と通知キューへの追加は同じ
 各行動は `proposal`、`userState`、`userOverrides`、それらを合成した `effective`
 を持つ。`userOverrides` は本人が編集したフィールドだけを保持する。
 `effective` は Home / Messages が実際に表示する内容。
+各行動の `isUnread` は、Dots / Codex が新しく登録した項目を本人がHomeまたはボードで
+まだ開いていないかを表す。本人が作成した項目と既存項目は既読のまま。Homeで項目を
+開くか、ボードで詳細を開くと既読になり、状態は SQLite に保存されて両画面で共有される。
 出典はその行動に含め、関連しない人物情報や会話履歴を丸ごと返さない。
 
 `revision` は行動領域全体の非負整数。行動の提案・本人の編集・状態・送信結果が

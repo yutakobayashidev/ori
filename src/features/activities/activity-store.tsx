@@ -18,6 +18,7 @@ export type ActivityStore = {
   error: string;
   refresh: () => Promise<boolean>;
   change: (id: string, changes: Changes, expectedRevision?: number) => Promise<boolean>;
+  markRead?: (id: string) => Promise<void>;
 };
 const Context = createContext<ActivityStore | null>(null);
 export const ActivityStoreProvider = Context.Provider;

@@ -182,6 +182,7 @@ export type ActivityOverrides = z.infer<typeof activityOverrides>;
 export type Activity = {
   id: string;
   origin?: "user" | "agent";
+  isUnread: boolean;
   proposal: ActivityProposal;
   userState: ActivityState;
   userOverrides: ActivityOverrides;

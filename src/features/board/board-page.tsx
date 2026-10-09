@@ -115,7 +115,10 @@ export function BoardPage() {
                           id={activity.id}
                           state={state}
                           disabled={store.busy}
-                          open={() => setSelectedId(activity.id)}
+                          open={() => {
+                            setSelectedId(activity.id);
+                            if (activity.isUnread) void store.markRead?.(activity.id);
+                          }}
                         >
                           <div className="p-4">
                             <div className="flex items-start gap-2">
@@ -124,6 +127,12 @@ export function BoardPage() {
                                 {activity.effective.title}
                               </h3>
                             </div>
+                            {activity.isUnread && (
+                              <span className="mt-2 inline-flex items-center gap-1.5 text-[11px] font-medium text-foreground">
+                                <span className="size-1.5 rounded-full bg-activity-lilac" />
+                                New
+                              </span>
+                            )}
                             <p className="mt-2 line-clamp-2 text-xs leading-5 text-muted-foreground">
                               {activity.effective.nextAction}
                             </p>

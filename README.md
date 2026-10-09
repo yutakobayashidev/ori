@@ -402,6 +402,7 @@ clients can list connections and SNS lists, read saved decks, create/replace/del
 saved decks, and fetch posts from a source or saved column. These operations
 share the web UI's SQLite and SNS services; no resident Codex run is required.
 `get_activity_context` reads the shared task/reply inbox and user decisions;
+it flags newly agent-created activities as unread until opened from Home or the board;
 `publish_activities` creates or updates proposals with stable IDs, retry receipts,
 and revision checks. Publication preserves user edits and never sends messages.
 `get_activity_context` accepts conversation and state filters for event reconciliation.

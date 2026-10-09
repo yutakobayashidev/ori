@@ -18,6 +18,7 @@ function activity(id: string): Activity {
   };
   return {
     id,
+    isUnread: false,
     proposal,
     effective: { ...proposal, section: "focus" },
     userState: "waiting",

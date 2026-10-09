@@ -96,6 +96,7 @@ function activity(
   return {
     id: row.id,
     origin: row.origin,
+    isUnread: row.origin === "agent" && row.readAt === null,
     proposal,
     userState,
     userOverrides,
@@ -193,6 +194,24 @@ export function getAllActivities(database = getDatabase()): ActivityContext {
     missingActivityIds: [],
     nextCursor: null,
   }));
+}
+
+export function markActivityRead(id: string, database = getDatabase()) {
+  const now = Date.now();
+  const changed =
+    database
+      .update(activities)
+      .set({ readAt: now })
+      .where(
+        and(
+          eq(activities.id, id),
+          eq(activities.origin, "agent"),
+          sql`${activities.readAt} IS NULL`,
+        ),
+      )
+      .run().changes > 0;
+  if (changed) notifyActivities();
+  return changed;
 }
 function anchor(proposal: ActivityProposal) {
   if (proposal.kind !== "reply") return undefined;
@@ -338,6 +357,7 @@ export function publishActivities(input: unknown, database = getDatabase()): Act
             {
               id: proposal.id,
               origin: "agent",
+              readAt: null,
               proposal,
               userState: "available",
               userOverrides: {},
@@ -465,6 +485,7 @@ export function createUserActivity(input: unknown, database = getDatabase()): Ac
       const row: typeof activities.$inferSelect = {
         id,
         origin: "user",
+        readAt: now,
         proposal: {
           id,
           kind: "task",

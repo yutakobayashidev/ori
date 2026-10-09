@@ -117,4 +117,12 @@ export const migrations = [
     folderMillis: 1791539550679,
     hash: "67240f28030baff3e525cb061e5ffc7c8bbb954b91bfcbac731423dd94de9c97",
   },
+  {
+    sql: [
+      "ALTER TABLE `activities` ADD `read_at` integer;\nUPDATE `activities` SET `read_at` = `created_at`;\n",
+    ],
+    bps: true,
+    folderMillis: 1791540915054,
+    hash: "29b22fce8f77c2725e672d2ee0da4e3b1e3bb34980c15af7c9792c9e8db8edd5",
+  },
 ];

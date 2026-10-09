@@ -39,3 +39,8 @@ export const createHomeActivity = createServerFn({ method: "POST" })
   .handler(({ data }): Promise<ActivityReceipt | ActivityFailure> =>
     run((repository) => repository.createUserActivity(data)),
   );
+export const markActivityRead = createServerFn({ method: "POST" })
+  .validator((id: string) => id)
+  .handler(({ data }): Promise<boolean | ActivityFailure> =>
+    run((repository) => repository.markActivityRead(data)),
+  );

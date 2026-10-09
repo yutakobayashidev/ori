@@ -9,7 +9,12 @@ import {
 } from "react";
 import type { ActivityContext } from "./model";
 import { ActivityStoreProvider, useActivityStore } from "./activity-store";
-import { changeActivity, createHomeActivity, loadActivities } from "./server-functions";
+import {
+  changeActivity,
+  createHomeActivity,
+  loadActivities,
+  markActivityRead,
+} from "./server-functions";
 import {
   loadReplyConversation,
   sendReply,
@@ -140,6 +145,11 @@ export function ActivityStateProvider({
             expectedRevision: expectedRevision ?? revision.current,
           };
           return mutate(() => changeActivity({ data }));
+        },
+        markRead: async (id) => {
+          if (!enabled) return;
+          await markActivityRead({ data: id });
+          await refresh();
         },
       }}
     >

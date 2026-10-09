@@ -23,7 +23,7 @@ export function ActivityCard({
   onToggle: () => void;
   replyLink?: ReactNode;
 }) {
-  const { busy, change } = useActivityStore();
+  const { busy, change, markRead } = useActivityStore();
   const item = activity.effective;
   return (
     <div
@@ -32,7 +32,8 @@ export function ActivityCard({
       data-kind={item.kind === "reply" ? "reply" : item.section}
       data-status={activity.userState === "completed" ? "done" : activity.userState}
       data-expanded={expanded}
-      className="group/flow overflow-hidden rounded-ui-16 border border-border bg-muted data-[kind=focus]:bg-activity-focus data-[kind=reply]:bg-activity-reply data-[kind=optional]:bg-activity-optional data-[origin=agent]:border-l-2 data-[origin=agent]:border-l-activity-lilac data-[expanded=true]:border-activity-expanded data-[status=done]:bg-background!"
+      data-unread={activity.isUnread}
+      className="group/flow overflow-hidden rounded-ui-16 border border-border bg-muted data-[kind=focus]:bg-activity-focus data-[kind=reply]:bg-activity-reply data-[kind=optional]:bg-activity-optional data-[origin=agent]:border-l-2 data-[origin=agent]:border-l-activity-lilac data-[expanded=true]:border-activity-expanded data-[status=done]:bg-background! data-[unread=true]:ring-1 data-[unread=true]:ring-activity-lilac/50"
     >
       <div className="flex items-center gap-px-13 px-px-18 py-px-16 max-md:gap-px-10 max-md:px-px-14 max-md:py-px-15">
         {item.kind === "task" ? (
@@ -42,11 +43,12 @@ export function ActivityCard({
             disabled={busy}
             aria-label={`${activity.userState === "completed" ? "Restore" : "Complete"} ${item.title}`}
             aria-pressed={activity.userState === "completed"}
-            onClick={() =>
+            onClick={() => {
+              if (activity.isUnread) void markRead?.(activity.id);
               void change(activity.id, {
                 state: activity.userState === "completed" ? "available" : "completed",
-              })
-            }
+              });
+            }}
           >
             {activity.userState === "completed" ? (
               <Check className="size-5" />
@@ -61,7 +63,10 @@ export function ActivityCard({
           type="button"
           className="flex min-w-0 flex-1 cursor-pointer flex-col gap-px-5 text-left"
           aria-expanded={expanded}
-          onClick={onToggle}
+          onClick={() => {
+            if (activity.isUnread) void markRead?.(activity.id);
+            onToggle();
+          }}
         >
           <span
             data-testid="execution-flow-title"
@@ -78,6 +83,11 @@ export function ActivityCard({
         {activity.origin === "agent" && (
           <span className="rounded-full bg-activity-lilac/20 px-2 py-0.5 text-ui-10 font-medium text-foreground">
             AI
+          </span>
+        )}
+        {activity.isUnread && (
+          <span className="rounded-full bg-activity-lilac/20 px-2 py-0.5 text-ui-10 font-medium text-foreground">
+            New
           </span>
         )}
         <ChevronDown className="size-4 text-muted-foreground group-data-[expanded=true]/flow:rotate-180" />

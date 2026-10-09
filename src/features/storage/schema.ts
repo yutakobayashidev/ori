@@ -159,6 +159,7 @@ export const activities = sqliteTable("activities", {
   origin: text("origin", { enum: ["user", "agent"] })
     .notNull()
     .default("agent"),
+  readAt: integer("read_at"),
   assessment: text("assessment", { mode: "json" }).$type<
     import("../activities/model").ActivityAssessment
   >(),
