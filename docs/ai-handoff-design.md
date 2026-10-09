@@ -23,17 +23,19 @@ can request a task status change in the conversation; reply delivery is not supp
 
 ## Conversation tools and embedded Apps
 
-Codex receives `get_current_activity`, `set_activity_status`, and `save_reply_draft`
-through experimental `thread/start.dynamicTools`, following Symphony's host-executed
-tool pattern. Elixir receives `item/tool/call` and calls the signed web callback.
-TypeScript binds the Activity ID from the run, validates arguments, and uses the
-shared Activity repository. Writes require the revision read by the agent and use
-a receipt derived from run ID and call ID; stale writes never overwrite owner edits.
-Agent status changes retain `origin: agent` for existing MCP event subscriptions.
+Codex and Dots use the same `get_activity_context` and `update_activity_progress`
+HTTP MCP tools. Codex connects through a signed, run-scoped endpoint; progress
+writes must target its delegated Activity. Dots uses the workspace endpoint and
+can find related tasks by conversation and state. Progress updates carry a stable
+request ID, current revision, reason and evidence references, and optionally a
+state or proposed draft. They preserve owner edits and emit `origin: agent`.
+Incoming replies, messages sent in original apps, and other explicit observations
+can support status changes; no delivery receipt or app-owned send is required.
+Elixir observes native `mcpToolCall` items; no dynamic tool callback is used.
 
 The runtime persists tool arguments, results, and their message position in DETS
-and streams them with conversation snapshots. UI metadata stays out of model tool
-responses. The browser renders successful Activity results with the existing MCP
+and streams them with conversation snapshots, including MCP App metadata.
+The browser renders successful Activity results with the existing MCP
 App HTML and AppBridge, in an opaque-origin sandbox with network access disabled.
 This host only serves the bundled resource and permits `get_activity_context` and
 `update_activity` for the run's Activity. Browser actions use owner session/CSRF
@@ -41,9 +43,7 @@ checks rather than the short-lived execution proof, so saved cards remain editab
 after execution finishes. Reopening reads current Activity state. The existing
 reply editor saves drafts; no sending tool or transport is added.
 
-Existing conversations created without dynamic tools start a fresh Codex thread
-on the next followup with the saved transcript included as context. Their UI history
-is retained, and subsequent turns resume the new thread.
+Followups resume the existing Codex thread with the current MCP configuration.
 
 ## Ownership and reliability
 
@@ -72,5 +72,5 @@ still streams and resumes with scoped MCP. Build the runtime and web packages,
 then check the deployed services and one real Codex run. Inspect desktop/mobile
 board screenshots and keyboard alternatives to drag-and-drop.
 Also verify scoped status/draft changes, stale revision rejection, idempotent tool
-callbacks, agent/user event origins, restored tool cards, and real sandboxed
+calls, agent/user event origins, restored tool cards, and real sandboxed
 AppBridge draft edits reflected in the board after reload.

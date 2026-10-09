@@ -349,32 +349,37 @@ it("lets an external monitor complete a chore with evidence and retry without ov
     requestId: "chore-done",
     expectedRevision: 1,
     id: "shopping",
+    state: "completed",
     reason: "The owner confirmed purchasing the refill.",
-    evidence: {
-      kind: "external",
-      reference: "owner-conversation:shopping-confirmation",
-      observedAt: "2026-10-09T01:00:00Z",
-      summary: "The owner said they bought the detergent refill today.",
-    },
+    evidence: [
+      {
+        kind: "external",
+        reference: "owner-conversation:shopping-confirmation",
+        observedAt: "2026-10-09T01:00:00Z",
+        summary: "The owner said they bought the detergent refill today.",
+      },
+    ],
   };
-  const saved = await tools.execute("complete_activity", completion);
+  const saved = await tools.execute("update_activity_progress", completion);
   expect(saved).toMatchObject({ ok: true, revision: 2 });
-  expect(await createWorkspaceTools().execute("complete_activity", completion)).toEqual(saved);
+  expect(await createWorkspaceTools().execute("update_activity_progress", completion)).toEqual(
+    saved,
+  );
   expect(await tools.execute("get_activity_context", { activityIds: ["shopping"] })).toMatchObject({
     revision: 2,
     activities: [
       {
         id: "shopping",
         userState: "completed",
-        completion: { reason: completion.reason, evidence: completion.evidence },
+        assessment: { reason: completion.reason, evidence: completion.evidence },
       },
     ],
   });
   expect(
-    await tools.execute("complete_activity", { ...completion, reason: "Another reason" }),
+    await tools.execute("update_activity_progress", { ...completion, reason: "Another reason" }),
   ).toMatchObject({ ok: false, error: { code: "idempotency-conflict" } });
   expect(
-    tools.definitions.find(({ name }) => name === "complete_activity")?.annotations,
+    tools.definitions.find(({ name }) => name === "update_activity_progress")?.annotations,
   ).toMatchObject({ readOnlyHint: false, destructiveHint: true, openWorldHint: false });
 });
 

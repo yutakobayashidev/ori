@@ -1,7 +1,7 @@
 # 統合インボックスの Activity MCP
 
 実装契約、2026-10-09。共通の行動ストア、Activity ツール、Home / Messages の接続を実装。
-Beeper の受信・本人送信の同期と、外部で済ませた行動の完了記録に対応。送信、計測・ルーティンの永続化は後続の範囲。
+Beeper の受信・本人送信の同期と、会話の解釈に基づく状態・返信案の更新に対応。送信、計測・ルーティンの永続化は後続の範囲。
 
 [既存の公開設計](agent-publishing-design.md)を、返信と雑用の登録に絞って具体化する。
 既存の `/mcp` に追加し、同じポートと dotnix 管理の Secure MCP Tunnel を使う。
@@ -9,18 +9,18 @@ Beeper の受信・本人送信の同期と、外部で済ませた行動の完�
 
 ## 目的と責任
 
-外部 Codex が依頼や生活上の用事を具体的な行動にし、MCP 経由で共通の
+Dots / Codex が依頼や生活上の用事を具体的な行動にし、MCP 経由で共通の
 インボックスへ登録する。Home と Messages は同じ行動 ID と実行状態を参照する。
 例として「資料を確認して、青木さんに打ち合わせ候補日時を返信する」と
 「洗剤を買う」を同じ一覧に置く。前者からは根拠となる会話と返信案を開ける。
 
-外部 Codex が文脈の解釈・行動の具体化・life の読み書きを担当し、アプリは
+Dots / Codex が文脈の解釈・行動の具体化・life の読み書きを担当し、アプリは
 保存・表示・本人の操作を担当する。MCP の呼び出しでアプリ内の推論を起動しない。
 life は人物・関係の正本、元メッセージは会話サービス、実行状態はこのアプリが持つ。
 
 ```mermaid
 flowchart LR
-  S[Beeper / life / 本人の依頼] --> C[外部 Codex]
+  S[Beeper / life / 本人の依頼] --> C[Dots / Codex]
   C -->|publish_activities| A[共通 Activity サービス]
   A --> D[(SQLite)]
   H[Home] <--> A
@@ -33,11 +33,11 @@ flowchart LR
 
 ## Activity ツール
 
-| ツール                 | 用途                                               | 入力                                                        |
-| ---------------------- | -------------------------------------------------- | ----------------------------------------------------------- |
-| `get_activity_context` | 登録済みの行動、本人の判断・編集、出典を読む       | 任意の `activityIds`、`cursor`、`limit`                     |
-| `complete_activity`    | 根拠を記録して既存行動を完了にする                 | `requestId`、`expectedRevision`、`id`、`reason`、`evidence` |
-| `publish_activities`   | 行動を新規登録、または既存行動の提案内容を更新する | `requestId`、`expectedRevision`、`activities`               |
+| ツール                     | 用途                                               | 入力                                                                                  |
+| -------------------------- | -------------------------------------------------- | ------------------------------------------------------------------------------------- |
+| `get_activity_context`     | 登録済みの行動、本人の判断・編集、出典を読む       | 任意の `activityIds`、`conversation`、`states`、`cursor`、`limit`                     |
+| `update_activity_progress` | 判断理由・根拠を記録し、状態や返信案を部分更新する | `requestId`、`expectedRevision`、`id`、任意の `state` / `draft`、`reason`、`evidence` |
+| `publish_activities`       | 行動を新規登録、または既存行動の提案内容を更新する | `requestId`、`expectedRevision`、`activities`                                         |
 
 単件のタスク作成も `activities` が1件の公開として扱う。最初から単件 CRUD と
 一括公開の両方を用意せず、返信・雑用とも同じ検証と保存処理を通す。
@@ -54,6 +54,9 @@ MCP Events でも購読できる。保存と通知キューへの追加は同じ
 入力は省略可能。`activityIds` は最大50件。指定時は対象を絞り、存在しない ID は
 `missingActivityIds` に返す。`limit` は既定50・最大100。結果には完了・延期・
 対応不要も含め、公開側がそれらを再提案しないための情報を取得できるようにする。
+`conversation: {targetId, accountId, chatId}` はメッセージ出典の3識別子がすべて一致する行動に絞る。
+`states` は状態の配列。ID・会話・状態は AND 条件でページ分割前に適用する。
+フィルターで除外した既存 ID を `missingActivityIds` に含めない。
 
 返却形は `{ok: true, revision, activities, missingActivityIds, nextCursor}`。
 各行動は `proposal`、`userState`、`userOverrides`、それらを合成した `effective`
@@ -170,7 +173,7 @@ MCP Events でも購読できる。保存と通知キューへの追加は同じ
 
 会話 ID と行動 ID は別物。同じ会話に「候補日時を返す」と「完成資料を送る」が
 あれば別 ID とする。同じ約束を別チャネルで確認した場合は、既存行動に出典を追加する。
-意味上の同一性は外部 Codex が文脈から判断し、アプリはタイトル一致で自動統合しない。
+意味上の同一性はDots / Codex が文脈から判断し、アプリはタイトル一致で自動統合しない。
 
 ## 本人の判断と完了
 
@@ -187,17 +190,17 @@ MCP Events でも購読できる。保存と通知キューへの追加は同じ
   出典の更新でも、返信先を構成する識別子の変更は禁止する。
 - `task` と `reply` は、本人の画面操作や会話で委任した状態変更から完了にできる。
   Discord など元アプリで済ませた返信も扱うため、通常の状態変更に送信確認や証拠は要求しない。
-- イベントから自動判断する `complete_activity` は完了根拠を記録する専用操作。返信では観測済みの本人送信を検証する。
+- 自動判断には `update_activity_progress` を使い、完了に限らず相手待ち・進行中・返信案の更新を理由と根拠付きで記録する。
   下書き生成やレビューだけで自動的に完了とは判断しない。
 - Beeper 同期で観測した本人の送信は配送確認ではない。Dots が会話と具体的な約束を読み、実際に満たされた場合だけ完了を記録する。
   画面では下書きの確認・編集・完了・延期・対応不要を扱う。
 - 返信が完了しても、同じ会話の他の行動は完了にしない。返信後に相手の対応を
-  待つ約束が残れば、別の行動として関連会話に結び付ける。
+  待つ必要があるなら `waiting` にする。別の約束は別の行動として関連会話に結び付ける。
 
 Home と Messages はこの状態と実効値を共有する。Home の完了項目は元の位置に
 結果を残す。画面ごとに別の完了フラグや下書きを持たせない。
 
-MCP は提案の登録・更新、状態の読み取り、根拠を伴う完了記録を扱う。会話内の状態変更も共有サービスを使う。
+MCP は提案の登録・更新、状態の読み取り、根拠を伴う状態・返信案更新を扱う。アプリ内 Codex と Dots は同じ MCP 契約を使う。
 削除、メッセージ送信、CRM 更新、自然言語依頼キューは今回追加しない。
 権限別のクライアント識別がない現段階では、これはツールが提供する操作範囲の区別であり、
 呼び出し元を認証したという意味ではない。
@@ -247,23 +250,36 @@ code は `invalid-input`、`payload-too-large`、`revision-conflict`、
 HTTP/CLI の別の公開 API、定期ジョブ、全体 brief、人物プロジェクション、
 計測・ルーティンの永続化は、Activity ツールに必要になった時点で拡張する。
 
-## 外部で済ませた行動の完了
+## 会話に基づく状態と返信案の更新
 
-`complete_activity` は送信を行わず、Dots など外部エージェントの判断と根拠を保存する。
-入力は `{requestId, expectedRevision, id, reason, evidence}`。`reason` は空白のみを許さない最大2000文字。
+Dots は Beeper の受信・本人送信イベントを受け、会話を読み、関連する行動を
+`get_activity_context` の `conversation` で取得する。新しい行動は `publish_activities`、
+既存行動の状態や返信案は `update_activity_progress` で更新する。
 
-- `evidence.kind: "beeper_message"`: `targetId`、`accountId`、`chatId`、`messageId`。
-  listener が本人の送信として永続保存した観測のみを受け付ける。返信では変更不能の宛先と一致し、元の受信メッセージとは別 ID であることも検証する。
-- `evidence.kind: "external"`: `reference`、ISO日時の `observedAt`、`summary`。雑用タスクに限り受け付ける。
-  これはエージェントが申告した外部根拠であり、アプリが外部URLやファイルを検証した証明ではない。
+入力は `{requestId, expectedRevision, id, state?, draft?, reason, evidence}`。
+`state` または `draft` が必須。理由は空白のみ不可・最大2000文字。
+下書きは空白のみ不可・最大16000文字で、reply の提案部分だけを変更する。
+本人の編集は上書きせず、実効値では本人の下書きを優先する。task に下書きは設定できない。
+省略した状態・提案フィールドは変更しない。
 
-`get_activity_context` は各行動の `completion` に `{reason, evidence, completedAt}` を返す。
-画面操作や委任された状態変更など、完了根拠がない場合は null。再公開は根拠を保持し、完了以外の状態に戻す操作は根拠を消す。
-完了済み・対応不要には新たな完了記録を上書きしない。延期中の行動は外部で済ませられる。
-同一リクエストの再送は元の receipt を返し、改訂番号・状態変更イベントを重複させない。
-状態変更と根拠と `activity.status_changed` の追加を同じトランザクションで保存し、origin は agent。
+根拠は1〜20件の配列で、次の2種類を混在できる。
 
-現時点では新しい listener が観測・保存した本人送信だけが検証可能。過去の seen ID や
-会話取得ツールで読むだけのメッセージは検証済み根拠にはならない。観測記録は購読解除で消える
-配信 outbox に依存しない。メッセージ時刻とタスク作成時刻だけでは履行の前後関係を断定しない。
-単なる発言・相づち・別件の返信では完了させず、複数タスクはそれぞれ満たされたか判断する。
+- `kind: "beeper_message"`: `targetId`、`accountId`、`chatId`、`messageId`。
+- `kind: "external"`: `reference`、ISO日時の `observedAt`、`summary`。
+
+いずれもエージェントが申告した参照であり、アプリによる配信確認や外部内容の検証結果ではない。
+受信・本人送信・別の会話・アプリ外の文脈を判断材料にでき、listener の観測済み送信や
+同じ返信先に限定しない。「相手が対応済みと知らせたので完了」「候補日を送ったので相手待ち」
+などを Dots が具体的な約束に照らして判断する。単なる下書き生成や別件への返信は完了を意味しない。
+
+`get_activity_context` は最新の判断を `assessment: {reason, evidence, updatedAt}` として返す。
+再公開は判断を保持する。本人が状態を変えた場合は古い判断を null に戻す。
+最新 revision を読んだ明示的な更新なら、完了・対応不要からの再開もできる。
+同じ会話の別タスクをまとめて完了にする副作用はない。
+
+状態・下書き・判断・receipt は同じトランザクションで保存する。
+状態が変わったときだけ `activity.status_changed` を origin: agent で追加する。
+下書きだけの更新も UI の共有購読には通知するが、状態変更イベントは生成しない。
+同一リクエストの再送では revision や通知を重複させない。
+古い revision は競合になり、本人の直前の操作を黙って上書きしない。
+Dots の購読を既定の user origin に保てば、自分の更新によるイベントループを避けられる。

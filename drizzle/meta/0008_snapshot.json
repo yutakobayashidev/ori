@@ -14,13 +14,6 @@
           "notNull": true,
           "autoincrement": false
         },
-        "completion": {
-          "name": "completion",
-          "type": "text",
-          "primaryKey": false,
-          "notNull": false,
-          "autoincrement": false
-        },
         "proposal": {
           "name": "proposal",
           "type": "text",
@@ -54,6 +47,13 @@
           "type": "integer",
           "primaryKey": false,
           "notNull": true,
+          "autoincrement": false
+        },
+        "assessment": {
+          "name": "assessment",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": false,
           "autoincrement": false
         }
       },
@@ -290,13 +290,6 @@
           "type": "text",
           "primaryKey": false,
           "notNull": true,
-          "autoincrement": false
-        },
-        "outgoing_evidence": {
-          "name": "outgoing_evidence",
-          "type": "text",
-          "primaryKey": false,
-          "notNull": false,
           "autoincrement": false
         }
       },

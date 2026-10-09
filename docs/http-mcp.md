@@ -11,22 +11,22 @@ For the shared inbox tools, see
 [Activity MCP design](activity-mcp-design.md). Replies and chores share one
 activity model across Home, Messages, and MCP.
 
-| Tool                   | Input and effect                                                                                                  |
-| ---------------------- | ----------------------------------------------------------------------------------------------------------------- |
-| `list_beeper_chats`    | Optional `cursor`, `limit`; discover chats on the configured Beeper target                                        |
-| `read_beeper_chat`     | `chatId`, optional `cursor`; recent messages and pagination for context                                           |
-| `get_activity_context` | Optional `activityIds`, `cursor`, `limit`; proposals, effective content, user decisions and revision              |
-| `publish_activities`   | `requestId`, `expectedRevision`, `activities`; atomically persist task/reply proposals, preserving user decisions |
-| `complete_activity`    | `requestId`, `expectedRevision`, `id`, `reason`, `evidence`; record a specific task fulfilled outside the app     |
-| `list_connections`     | `{}`; discover account IDs and status, without credentials                                                        |
-| `list_lists`           | `connectionId`; discover Twitter or Mastodon lists                                                                |
-| `list_decks`           | `{}`; saved deck IDs, titles, revisions and column counts                                                         |
-| `get_deck`             | `deckId`; saved definition including column IDs and revision                                                      |
-| `create_deck`          | `title`, `columns`, optional new `deckId`; immediately persist                                                    |
-| `replace_deck`         | `deckId`, `expectedRevision`, `title`, complete `columns`; reject stale revisions                                 |
-| `delete_deck`          | `deckId`, `expectedRevision`; permanently delete                                                                  |
-| `fetch_posts`          | `connectionId`, `source`, optional `cursor`; read without saving a deck                                           |
-| `fetch_column_posts`   | `deckId`, `columnId`, optional `cursor`; read a saved column                                                      |
+| Tool                       | Input and effect                                                                                                                         |
+| -------------------------- | ---------------------------------------------------------------------------------------------------------------------------------------- |
+| `list_beeper_chats`        | Optional `cursor`, `limit`; discover chats on the configured Beeper target                                                               |
+| `read_beeper_chat`         | `chatId`, optional `cursor`; recent messages and pagination for context                                                                  |
+| `get_activity_context`     | Optional `activityIds`, `conversation`, `states`, `cursor`, `limit`; effective content, owner decisions, assessment and revision         |
+| `publish_activities`       | `requestId`, `expectedRevision`, `activities`; atomically persist task/reply proposals, preserving user decisions                        |
+| `update_activity_progress` | `requestId`, `expectedRevision`, `id`, `reason`, `evidence`, and `state` and/or `draft`; partial agent update with owner edits preserved |
+| `list_connections`         | `{}`; discover account IDs and status, without credentials                                                                               |
+| `list_lists`               | `connectionId`; discover Twitter or Mastodon lists                                                                                       |
+| `list_decks`               | `{}`; saved deck IDs, titles, revisions and column counts                                                                                |
+| `get_deck`                 | `deckId`; saved definition including column IDs and revision                                                                             |
+| `create_deck`              | `title`, `columns`, optional new `deckId`; immediately persist                                                                           |
+| `replace_deck`             | `deckId`, `expectedRevision`, `title`, complete `columns`; reject stale revisions                                                        |
+| `delete_deck`              | `deckId`, `expectedRevision`; permanently delete                                                                                         |
+| `fetch_posts`              | `connectionId`, `source`, optional `cursor`; read without saving a deck                                                                  |
+| `fetch_column_posts`       | `deckId`, `columnId`, optional `cursor`; read a saved column                                                                             |
 
 Columns follow the [deck source contracts](webmcp-prototype.md). A deck has at
 most six columns. Preserve column IDs on edits. Stable deck and column IDs allow
@@ -81,7 +81,7 @@ with `ui.visibility: ["app"]` for component use, and applies the same repository
 rules as the web UI. Exact retries are idempotent and stale edits are rejected.
 The owner can complete tasks and replies already handled in other apps without
 an in-app send or a delivery receipt. Automated reconciliation uses the separate
-evidence-backed `complete_activity` tool. App
+evidence-backed `update_activity_progress` tool. App
 visibility is a host discovery hint, not an authentication boundary; the private
 network/tunnel access boundary remains essential. Draft saves never send messages.
 

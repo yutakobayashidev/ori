@@ -1,19 +1,14 @@
 import { createHash } from "node:crypto";
-import { and, asc, eq, gt, inArray } from "drizzle-orm";
+import { and, asc, eq, gt, inArray, sql } from "drizzle-orm";
 import { z } from "zod";
 import type { ActivityEventName } from "../mcp-events/activity-events";
 import { enqueueActivityEvent } from "../mcp-events/events.server";
 import { getDatabase, type AppDatabase } from "../storage/database.server";
-import {
-  activities,
-  activityReceipts,
-  activityRevision,
-  beeperSeenMessages,
-} from "../storage/schema";
+import { activities, activityReceipts, activityRevision } from "../storage/schema";
 import { notifyActivities } from "./events.server";
 import {
   createHomeActivityInput,
-  completeActivityInput,
+  updateActivityProgressInput,
   getActivityContextInput,
   publishActivitiesInput,
   updateActivityUserInput,
@@ -71,7 +66,7 @@ function activity(row: typeof activities.$inferSelect): Activity {
   };
   if (effective.kind === "reply" && draft !== undefined)
     effective.reply = { ...effective.reply, draft };
-  return { id: row.id, proposal, userState, userOverrides, effective, completion: row.completion };
+  return { id: row.id, proposal, userState, userOverrides, effective, assessment: row.assessment };
 }
 const cursorSchema = z.strictObject({
   revision: z.number().int().nonnegative(),
@@ -81,7 +76,13 @@ const cursorSchema = z.strictObject({
 export function getActivityContext(input: unknown = {}, database = getDatabase()): ActivityContext {
   const parsed = parse(getActivityContextInput, input);
   const ids = parsed.activityIds ? [...new Set(parsed.activityIds)].sort() : undefined;
-  const filter = hash({ activityIds: ids, limit: parsed.limit });
+  const states = parsed.states ? [...new Set(parsed.states)].sort() : undefined;
+  const filter = hash({
+    activityIds: ids,
+    states,
+    conversation: parsed.conversation,
+    limit: parsed.limit,
+  });
   let cursor: z.infer<typeof cursorSchema> | undefined;
   if (parsed.cursor) {
     try {
@@ -104,6 +105,10 @@ export function getActivityContext(input: unknown = {}, database = getDatabase()
       .where(
         and(
           ids ? inArray(activities.id, ids) : undefined,
+          states ? inArray(activities.userState, states) : undefined,
+          parsed.conversation
+            ? sql`exists (select 1 from json_each(${activities.proposal}, '$.sources') as source where json_extract(source.value, '$.kind') = 'message' and json_extract(source.value, '$.targetId') = ${parsed.conversation.targetId} and json_extract(source.value, '$.accountId') = ${parsed.conversation.accountId} and json_extract(source.value, '$.chatId') = ${parsed.conversation.chatId})`
+            : undefined,
           cursor ? gt(activities.id, cursor.after) : undefined,
         ),
       )
@@ -277,7 +282,7 @@ export function publishActivities(input: unknown, database = getDatabase()): Act
               proposal,
               userState: "available",
               userOverrides: {},
-              completion: null,
+              assessment: null,
               createdAt: now,
               updatedAt: now,
             },
@@ -315,7 +320,8 @@ export function updateActivityUser(
         ...existing,
         userState: parsed.state ?? existing.userState,
         userOverrides,
-        completion: parsed.state && parsed.state !== "completed" ? null : existing.completion,
+        assessment:
+          parsed.state && parsed.state !== existing.userState ? null : existing.assessment,
         updatedAt: now,
       };
       database
@@ -323,7 +329,7 @@ export function updateActivityUser(
         .set({
           userState: updated.userState,
           userOverrides,
-          completion: updated.completion,
+          assessment: updated.assessment,
           updatedAt: now,
         })
         .where(eq(activities.id, parsed.id))
@@ -365,7 +371,7 @@ export function createUserActivity(input: unknown, database = getDatabase()): Ac
         },
         userState: "available",
         userOverrides: { title, nextAction, section },
-        completion: null,
+        assessment: null,
         createdAt: now,
         updatedAt: now,
       };
@@ -376,75 +382,53 @@ export function createUserActivity(input: unknown, database = getDatabase()): Ac
   );
 }
 
-/** Record a contextual completion decision, never send a message. */
-export function completeActivity(input: unknown, database = getDatabase()): ActivityReceipt {
-  const parsed = parse(completeActivityInput, input);
+/** Save the agent's contextual assessment; evidence is reported context, not delivery proof. */
+export function updateActivityProgress(input: unknown, database = getDatabase()): ActivityReceipt {
+  const parsed = parse(updateActivityProgressInput, input);
   return write(
-    "complete",
+    "progress",
     parsed,
     [parsed.id],
     (receipt, now) => {
       const existing = database.select().from(activities).where(eq(activities.id, parsed.id)).get();
       if (!existing) fail("invalid-input", "This activity does not exist.");
-      if (existing.userState === "completed" || existing.userState === "dismissed")
-        fail("invalid-input", "This activity is already closed.");
-      const evidence = parsed.evidence;
-      const destination = anchor(existing.proposal);
-      if (destination && evidence.kind !== "beeper_message")
-        fail("invalid-input", "Reply completion requires an observed outgoing Beeper message.");
-      if (evidence.kind === "beeper_message") {
-        if (
-          destination &&
-          (destination.targetId !== evidence.targetId ||
-            destination.accountId !== evidence.accountId ||
-            destination.chatId !== evidence.chatId ||
-            destination.messageId === evidence.messageId)
-        )
-          fail(
-            "invalid-input",
-            "Completion evidence must be another message in the reply destination.",
-          );
-        const observed = database
-          .select()
-          .from(beeperSeenMessages)
-          .where(
-            and(
-              eq(beeperSeenMessages.targetId, evidence.targetId),
-              eq(beeperSeenMessages.chatId, evidence.chatId),
-              eq(beeperSeenMessages.messageId, evidence.messageId),
-            ),
-          )
-          .get();
-        if (
-          !observed?.outgoingEvidence ||
-          observed.outgoingEvidence.accountId !== evidence.accountId
-        )
-          fail("invalid-input", "This message has not been observed as an outgoing owner message.");
-      }
+      if (parsed.draft !== undefined && existing.proposal.kind !== "reply")
+        fail("invalid-input", "Only reply activities have drafts.");
+      const proposal =
+        existing.proposal.kind === "reply" && parsed.draft !== undefined
+          ? { ...existing.proposal, reply: { ...existing.proposal.reply, draft: parsed.draft } }
+          : existing.proposal;
       const updated = {
         ...existing,
-        userState: "completed" as const,
-        completion: { reason: parsed.reason, evidence, completedAt: receipt.receivedAt },
+        proposal,
+        userState: parsed.state ?? existing.userState,
+        assessment: {
+          reason: parsed.reason,
+          evidence: parsed.evidence,
+          updatedAt: receipt.receivedAt,
+        },
         updatedAt: now,
       };
       database
         .update(activities)
         .set({
+          proposal,
           userState: updated.userState,
-          completion: updated.completion,
+          assessment: updated.assessment,
           updatedAt: now,
         })
         .where(eq(activities.id, parsed.id))
         .run();
-      enqueueEvent(
-        "activity.status_changed",
-        updated,
-        "agent",
-        receipt,
-        database,
-        now,
-        existing.userState,
-      );
+      if (updated.userState !== existing.userState)
+        enqueueEvent(
+          "activity.status_changed",
+          updated,
+          "agent",
+          receipt,
+          database,
+          now,
+          existing.userState,
+        );
     },
     database,
   );

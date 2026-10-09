@@ -31,16 +31,16 @@ Snapshot artifacts have {path,size}; messages have stable {id,role,text}.
 Questions use pendingInput {requestId,questions}; answer values are keyed by
 question ID as {answers: string[]}. Requests must match the live pending request.
 
-### Board dynamic tools
+### Workspace MCP tools
 
-Board runs register the explicitly scoped tools through Codex `thread/start.dynamicTools`.
-Codex tool requests call the signed `config.toolEndpoint`; their full MCP result
-(including UI metadata) is persisted in `toolCalls`, with `afterMessageId` for
-conversation ordering. UI metadata is not sent back to the model. Failed callbacks
-produce tool errors. Cancellation or restart marks unfinished tool records failed;
-completed results survive restart and duplicate call IDs do not replay mutations.
+Board and Research runs connect Codex to the signed HTTP workspace MCP endpoint.
+Board runs use the same get_activity_context and update_activity_progress tools as
+external agents. The server restricts progress writes to the delegated activity.
+No dynamic tool callbacks are registered. Follow-ups resume the saved Codex thread
+with fresh MCP configuration.
 
-Codex does not accept new dynamic tool definitions on `thread/resume`. The first
-follow-up on a legacy run that gains dynamic tools starts a new Codex thread, with
-the previous transcript supplied as context. The visible transcript remains intact;
-later follow-ups resume the new thread normally.
+Codex item/started and item/completed MCP notifications persist full tool results
+(including UI metadata) in toolCalls, with afterMessageId for conversation ordering.
+Descriptor mcpAppUi presentation is retained for the embedded workspace app. MCP
+execution and model-facing output are handled by Codex itself. Cancellation or
+restart marks unfinished records failed; completed results survive restart.

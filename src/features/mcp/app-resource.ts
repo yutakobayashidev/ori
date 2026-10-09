@@ -11,6 +11,7 @@ export const workspaceAppResource = {
 
 const appTools = new Set([
   "get_activity_context",
+  "update_activity_progress",
   "get_deck",
   "create_deck",
   "replace_deck",
@@ -30,5 +31,12 @@ export function workspaceAppToolMeta(name: string) {
 }
 
 export function workspaceAppResultMeta(name: string, args: Record<string, unknown>) {
-  return appTools.has(name) ? { workspace: { toolName: name, toolArguments: args } } : undefined;
+  if (!appTools.has(name)) return undefined;
+  const ui = { resourceUri: workspaceAppResource.uri };
+  if (name === "update_activity_progress")
+    return {
+      ui,
+      workspace: { toolName: "get_activity_context", toolArguments: { activityIds: [args.id] } },
+    };
+  return { ui, workspace: { toolName: name, toolArguments: args } };
 }

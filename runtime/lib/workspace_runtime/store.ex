@@ -125,24 +125,9 @@ defmodule WorkspaceRuntime.Store do
         {:reply, {:error, "Run is active"}, s}
 
       true ->
-        upgrade =
-          get_in(p, ["config", "dynamicTools"]) && is_nil(get_in(r, ["config", "dynamicTools"]))
-
-        prompt =
-          if upgrade do
-            history = Enum.map_join(r["messages"], "\n\n", &(&1["role"] <> ": " <> &1["text"]))
-
-            "Previous conversation (context only; do not repeat completed actions):\n" <>
-              history <> "\n\nCurrent request:\n" <> p["text"]
-          else
-            p["text"]
-          end
-
-        r = if upgrade, do: Map.put(r, "threadId", nil), else: r
-
         r =
           r
-          |> Map.put("prompt", prompt)
+          |> Map.put("prompt", p["text"])
           |> Map.put("status", "queued")
           |> Map.put("error", nil)
           |> Map.put("pendingInput", nil)

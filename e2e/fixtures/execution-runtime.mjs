@@ -15,8 +15,23 @@ const run = {
   toolCalls: [
     {
       id: "draft-card",
-      name: "save_reply_draft",
-      arguments: { draft: "Could we meet on Tuesday or Thursday?" },
+      name: "update_activity_progress",
+      arguments: {
+        id: "review-times",
+        requestId: "draft-write",
+        expectedRevision: 1,
+        draft: "Could we meet on Tuesday or Thursday?",
+        reason: "Prepared a reply from the conversation.",
+        evidence: [
+          {
+            kind: "beeper_message",
+            targetId: "um790",
+            accountId: "work",
+            chatId: "chat",
+            messageId: "message",
+          },
+        ],
+      },
       afterMessageId: "assistant",
       status: "completed",
       result: {

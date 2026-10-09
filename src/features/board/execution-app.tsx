@@ -8,9 +8,8 @@ import { executionAppToolInput } from "#/features/execution/app-model";
 import { workspaceAppResource } from "#/features/mcp/app-resource";
 
 const labels: Record<string, string> = {
-  get_current_activity: "Task and reply draft",
-  set_activity_status: "Task status updated",
-  save_reply_draft: "Reply draft saved",
+  get_activity_context: "Task and reply draft",
+  update_activity_progress: "Task progress updated",
 };
 
 export function ExecutionToolResult({ runId, call }: { runId: string; call: ExecutionToolCall }) {

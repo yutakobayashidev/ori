@@ -40,16 +40,25 @@ export function registerResearchTools(tools: Tools) {
   return { id, dispose: () => research.delete(id) };
 }
 
-function serverFor(tools: Tools, workspace: boolean) {
-  const capabilities = { tools: {}, ...(workspace ? { events: {}, resources: {} } : {}) };
+function serverFor(tools: Tools, workspace: boolean, execution: boolean) {
+  const hasApps = workspace || execution;
+  const hasAppResult = (name: string) =>
+    workspace || (execution && ["get_activity_context", "update_activity_progress"].includes(name));
+  const capabilities = {
+    tools: {},
+    ...(workspace ? { events: {} } : {}),
+    ...(hasApps ? { resources: {} } : {}),
+  };
   const server = new Server({ name: "personal-workspace", version: "1.0.0" }, { capabilities });
-  if (workspace) {
+  if (hasApps) {
     server.setRequestHandler("resources/list", () => ({ resources: [workspaceAppResource] }));
     server.setRequestHandler("resources/read", ({ params }) => {
       if (params.uri !== workspaceAppResource.uri)
         throw new ProtocolError(-32002, "Resource not found.");
       return { contents: [{ ...workspaceAppResource, text: appHtml }] };
     });
+  }
+  if (workspace) {
     server.setRequestHandler(
       "events/list",
       { params: z.object({ cursor: z.null().optional() }).default({}) },
@@ -75,7 +84,7 @@ function serverFor(tools: Tools, workspace: boolean) {
   server.setRequestHandler("tools/list", () => ({
     tools: tools.definitions.map((tool) => ({
       ...tool,
-      ...(workspace ? { _meta: workspaceAppToolMeta(tool.name) } : {}),
+      ...(hasAppResult(tool.name) ? { _meta: workspaceAppToolMeta(tool.name) } : {}),
       inputSchema: { ...tool.inputSchema, type: "object" as const },
     })),
   }));
@@ -83,7 +92,7 @@ function serverFor(tools: Tools, workspace: boolean) {
     const result = await tools.execute(params.name, params.arguments ?? {});
     return {
       content: [{ type: "text" as const, text: JSON.stringify(result) }],
-      ...(workspace && result && typeof result === "object"
+      ...(hasAppResult(params.name) && result && typeof result === "object"
         ? {
             structuredContent: result as Record<string, unknown>,
             _meta: workspaceAppResultMeta(params.name, params.arguments ?? {}),
@@ -110,7 +119,9 @@ export async function handleMcpRequest(request: Request): Promise<Response> {
     }
   } else tools = id === null ? createWorkspaceTools() : research.get(id);
   if (!tools) return new Response("Research turn is no longer available.", { status: 404 });
-  const handler = createMcpHandler(() => serverFor(tools, id === null && execution === null));
+  const handler = createMcpHandler(() =>
+    serverFor(tools, id === null && execution === null, execution !== null),
+  );
   const response = await handler.fetch(request);
   response.headers.set("Cache-Control", "no-store");
   return response;

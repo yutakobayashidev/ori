@@ -73,7 +73,6 @@ it("persists deduplication with the outbox and checkpoint across listener recrea
   const restarted = createBeeperListenerStore(database);
   restarted.commitPage(input);
   expect(restarted.getCheckpoint("um790", "chat-one")).toMatchObject(input.checkpoint);
-  expect(database.select().from(beeperSeenMessages).get()?.outgoingEvidence).toBeNull();
   expect(database.select().from(beeperSeenMessages).all()).toHaveLength(1);
   expect(database.select().from(mcpEventOutbox).all()).toHaveLength(1);
 });
@@ -130,10 +129,6 @@ it("deduplicates outgoing observations across listener recreation", async () => 
   createBeeperListenerStore(database).commitPage(outgoing);
   createBeeperListenerStore(database).commitPage(outgoing);
   expect(database.select().from(beeperSeenMessages).all()).toHaveLength(1);
-  expect(database.select().from(beeperSeenMessages).get()?.outgoingEvidence).toEqual({
-    accountId: "account-one",
-    occurredAt: now,
-  });
   const rows = database.select().from(mcpEventOutbox).all();
   expect(rows).toHaveLength(1);
   expect(JSON.parse(rows[0]?.body ?? "{}")).toMatchObject({

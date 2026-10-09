@@ -30,10 +30,6 @@ export function createBeeperListenerStore(
               chatId,
               messageId: message.messageId,
               observedAt: message.observedAt,
-              outgoingEvidence:
-                message.eventName === "beeper.message.sent"
-                  ? { accountId: message.accountId, occurredAt: message.occurredAt }
-                  : null,
             })
             .onConflictDoNothing()
             .run();

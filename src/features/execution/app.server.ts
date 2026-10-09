@@ -1,11 +1,15 @@
 import { z } from "zod";
 import appHtml from "virtual:workspace-mcp-app";
 import { getActivityContextInput, updateActivityUserInput } from "../activities/model";
-import { ActivityPersistenceError, updateActivityUser } from "../activities/repository.server";
+import {
+  ActivityPersistenceError,
+  getActivityContext,
+  updateActivityUser,
+} from "../activities/repository.server";
 import { workspaceAppResource } from "../mcp/app-resource";
-import { activityAppResult, activityToolFailure } from "./activity-tools.server";
 import { getExecutionRun } from "./service.server";
 import { ExecutionError } from "./runtime-client.server";
+import type { AppDatabase } from "../storage/database.server";
 import type { executionAppInput, executionAppToolInput } from "./app-model";
 
 async function appActivity(input: z.infer<typeof executionAppInput>) {
@@ -61,4 +65,29 @@ export async function callExecutionAppTool(input: z.infer<typeof executionAppToo
       return activityToolFailure("invalid-input", "Check the workspace card fields.");
     throw error;
   }
+}
+
+function activityAppResult(activityId: string, database?: AppDatabase) {
+  const context = getActivityContext({ activityIds: [activityId] }, database);
+  return {
+    content: [{ type: "text" as const, text: JSON.stringify(context) }],
+    structuredContent: context,
+    _meta: {
+      ui: { resourceUri: workspaceAppResource.uri },
+      workspace: {
+        toolName: "get_activity_context",
+        toolArguments: { activityIds: [activityId] },
+      },
+    },
+    isError: false,
+  };
+}
+
+function activityToolFailure(code: string, message: string) {
+  const result = { ok: false, error: { code, message } };
+  return {
+    content: [{ type: "text" as const, text: JSON.stringify(result) }],
+    structuredContent: result,
+    isError: true,
+  };
 }

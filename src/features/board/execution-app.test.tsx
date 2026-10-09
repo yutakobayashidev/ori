@@ -46,8 +46,23 @@ const toolResult = {
 };
 const call = {
   id: "call-one",
-  name: "save_reply_draft",
-  arguments: { draft: "Hello" },
+  name: "update_activity_progress",
+  arguments: {
+    id: "reply",
+    requestId: "draft-write",
+    expectedRevision: 1,
+    draft: "Hello",
+    reason: "Prepared a reply from the conversation.",
+    evidence: [
+      {
+        kind: "beeper_message",
+        targetId: "um790",
+        accountId: "work",
+        chatId: "chat",
+        messageId: "message",
+      },
+    ],
+  },
   status: "completed" as const,
   result: toolResult,
 };

@@ -30,8 +30,6 @@ type Submission = {
   prompt: string;
   handoff: { instructions: string; completionCriteria: string };
   config: {
-    dynamicTools: { name: string }[];
-    toolEndpoint: string;
     mcpServers: { workspace_task: { url: string; tools: string[] } };
   };
 };
@@ -110,12 +108,9 @@ it("hands off effective content and keeps accepted context stable across retries
   expect(posts[0]?.prompt).toContain("Edited title");
   expect(posts[0]?.config.mcpServers.workspace_task.tools).toContain("read_beeper_chat");
   expect(posts[0]?.config.mcpServers.workspace_task.tools).not.toContain("update_activity");
-  expect(posts[0]?.config.dynamicTools.map(({ name }) => name)).toEqual([
-    "get_current_activity",
-    "set_activity_status",
-    "save_reply_draft",
-  ]);
-  expect(new URL(posts[0]?.config.toolEndpoint || "").pathname).toBe("/api/execution/tool");
+  expect(posts[0]?.config.mcpServers.workspace_task.tools).toContain("update_activity_progress");
+  expect(posts[0]?.config).not.toHaveProperty("dynamicTools");
+  expect(posts[0]?.config).not.toHaveProperty("toolEndpoint");
   expect(first).not.toHaveProperty("config");
 });
 it("rejects a reused handoff ID with different instructions", async () => {
@@ -139,6 +134,10 @@ it("revokes task MCP access after completion and rejects forged scopes", async (
   expect(await executionScopeIsValid(id, "0".repeat(64))).toBe(false);
   const tools = await createExecutionTools(id, proof);
   expect(tools?.definitions.some((tool) => tool.name === "read_beeper_chat")).toBe(true);
+  expect(await tools?.execute("update_activity_progress", { id: "other-task" })).toMatchObject({
+    ok: false,
+    error: { code: "activity-out-of-scope" },
+  });
   accepted = { ...base, ...accepted, status: "review" };
   expect(await tools?.execute("read_beeper_chat", {})).toMatchObject({ ok: false });
   expect(await executionScopeIsValid(id, proof)).toBe(false);
@@ -164,4 +163,48 @@ it("requires a session for streams and downloads, and forces downloads to attach
   expect(response.headers.get("content-disposition")).toContain("attachment");
   expect(response.headers.get("content-type")).toBe("application/octet-stream");
   expect(await response.text()).toBe("# Result");
+});
+
+it("serves app metadata and results through the signed execution MCP endpoint", async () => {
+  const { handleMcpRequest } = await import("../mcp/http.server");
+  await startActivityExecution(input);
+  const rpc = async (method: string, params = {}) => {
+    const response = await handleMcpRequest(
+      new Request(scopeUrl, {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+          Accept: "application/json, text/event-stream",
+        },
+        body: JSON.stringify({ jsonrpc: "2.0", id: 1, method, params }),
+      }),
+    );
+    expect(response.status).toBe(200);
+    const text = await response.text();
+    return JSON.parse(
+      text.startsWith("event:")
+        ? (text
+            .split("\n")
+            .find((line) => line.startsWith("data: "))
+            ?.slice(6) ?? "null")
+        : text,
+    );
+  };
+  const catalog = await rpc("tools/list");
+  expect(
+    catalog.result.tools.find((tool: { name: string }) => tool.name === "get_activity_context")
+      ._meta.ui.resourceUri,
+  ).toBe("ui://personal-workspace/app-v1.html");
+  const result = await rpc("tools/call", {
+    name: "get_activity_context",
+    arguments: { activityIds: ["task-one"] },
+  });
+  expect(result.result.structuredContent.activities[0].id).toBe("task-one");
+  expect(result.result._meta.ui.resourceUri).toBe("ui://personal-workspace/app-v1.html");
+  expect(result.result._meta.workspace).toEqual({
+    toolName: "get_activity_context",
+    toolArguments: { activityIds: ["task-one"] },
+  });
+  const resources = await rpc("resources/list");
+  expect(resources.result.resources[0].uri).toBe("ui://personal-workspace/app-v1.html");
 });

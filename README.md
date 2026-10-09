@@ -16,7 +16,7 @@ SQLite records across Home, Messages, and MCP. User edits and decisions survive
 agent updates and reloads. Routines and Journal remain session-only prototypes;
 Beeper history in the Messages screen and actual message sending remain unconnected.
 The headless Beeper listener can observe messages sent in the original chat apps;
-Dots can reconcile fulfilled tasks through evidence-backed MCP completion.
+Dots can update task progress and reply proposals through shared MCP tools.
 
 Home's greeting follows the device's local time: morning from 05:00, afternoon
 from 12:00, and evening from 18:00 until 05:00. It refreshes while the page is
@@ -192,26 +192,26 @@ exceptions tied to verified consumers rather than disabling checks globally.
 Board, Home, and Messages share the same Activity IDs and user decisions. In Board,
 open a task in the right-hand Sheet, describe the requested outcome, and choose
 **Hand off to AI**. The execution conversation supports followups, questions,
-stopping, and downloading artifacts. Codex dynamic tools can read the current
-task, change its status when requested, and save reply drafts. Their results
+stopping, and downloading artifacts. Codex uses the same Activity MCP tools as Dots
+to read tasks, update their progress, and propose reply drafts. Their results
 embed the existing MCP App so drafts can be edited and saved inside the conversation.
 Tool results survive reload; reopened cards read the latest shared Activity state.
 AI completion enters review; it does not automatically complete the task.
-Replies remain drafts and cannot be marked delivered.
+Drafts do not send messages. Replies handled in other apps can be marked complete.
 
 The Elixir/OTP service in `runtime/` owns Codex subprocesses for both Board and
 Research. It persists accepted work and thread IDs, limits concurrency, and marks
 unfinished work interrupted on restart. Explicit followups resume the saved thread.
-The TypeScript web backend owns Activities, sessions, scoped MCP/dynamic tools, and SSE
+The TypeScript web backend owns Activities, sessions, scoped MCP tools, and SSE
 presentation. Browser disconnection does not stop a job.
 
-Task dynamic tools use a signed, run-scoped `/api/execution/tool` callback.
+Task runs use a signed, run-scoped HTTP MCP connection. Activity progress writes
+are restricted to the delegated Activity; Dots uses the shared workspace endpoint.
 The browser's MCP App host uses AppBridge with the bundled UI in an opaque-origin
 sandbox. Its session-authenticated actions can only read/edit the selected Activity,
 including after execution ends. Agent mutations emit Activity events with `origin: agent`;
 edits made in the card emit `origin: user`. Both use the same revision checks and
-retry receipts. Pre-existing conversations gain tools on their next followup by
-starting a new Codex thread with their saved transcript; later turns resume normally.
+retry receipts. Followups resume their existing Codex thread with the current MCP configuration.
 
 Run `codex login` as the runtime host user. Use Codex CLI 0.156.0 or
 newer; set `WORKSPACE_CODEX_PATH` if it is not on PATH.
@@ -391,11 +391,13 @@ share the web UI's SQLite and SNS services; no resident Codex run is required.
 `get_activity_context` reads the shared task/reply inbox and user decisions;
 `publish_activities` creates or updates proposals with stable IDs, retry receipts,
 and revision checks. Publication preserves user edits and never sends messages.
-`complete_activity` records tasks fulfilled outside the app with a reason and
-evidence. Reply completion requires a matching owner-authored Beeper message
-observed by the listener; chores can also cite an external observation. Completion
-uses the same revision checks and retry receipts, preserves edits, and is marked
-as an agent action. `get_activity_context` returns the recorded completion basis.
+`get_activity_context` accepts conversation and state filters for event reconciliation.
+`update_activity_progress` changes state and/or a proposed reply draft with a reason
+and evidence references, without replacing the whole task. Incoming and outgoing
+messages or external observations can support the decision; no in-app send or
+delivery receipt is required. Owner edits are preserved. Updates use revision
+checks and retry receipts and are recorded as agent actions. The result contains
+current context and the saved mutation receipt; context exposes the latest assessment.
 See the [Activity MCP contract](docs/activity-mcp-design.md) for inputs and examples.
 An OpenAI Secure MCP Tunnel client can forward to this private endpoint.
 
@@ -417,7 +419,7 @@ The sent event observes owner-authored messages synced from Discord or other
 original apps; it does not send anything or prove recipient delivery. Existing
 incoming subscriptions are unchanged: completion monitors subscribe separately
 to sent events for the same selected chats and judge whether each specific task
-was fulfilled before calling `complete_activity`.
+was fulfilled before calling `update_activity_progress`.
 Clients can also subscribe to `activity.created` and `activity.status_changed`
 for the shared task/reply inbox. Activity saves enqueue notifications in the same
 SQLite transaction; retries and unchanged statuses do not create duplicates.

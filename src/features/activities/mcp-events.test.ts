@@ -9,7 +9,7 @@ import { openDatabase, type AppDatabase } from "../storage/database.server";
 import { mcpEventOutbox } from "../storage/schema";
 import {
   createUserActivity,
-  completeActivity,
+  updateActivityProgress,
   getActivityContext,
   publishActivities,
   updateActivityUser,
@@ -222,31 +222,28 @@ it("announces external completion once as an agent decision and rolls back faile
     expectedRevision: 1,
     id: task.id,
     reason: "The owner finished reading the proposal.",
-    evidence: {
-      kind: "external",
-      reference: "life/review.md",
-      observedAt: "2026-10-09T01:00:00Z",
-      summary: "Review recorded as finished.",
-    },
+    state: "completed",
+    evidence: [
+      {
+        kind: "external",
+        reference: "life/review.md",
+        observedAt: "2026-10-09T01:00:00Z",
+        summary: "Review recorded as finished.",
+      },
+    ],
   };
   expect(() =>
-    completeActivity(
+    updateActivityProgress(
       {
         ...input,
-        evidence: {
-          kind: "beeper_message",
-          targetId: "personal",
-          accountId: "work",
-          chatId: "review",
-          messageId: "unknown",
-        },
+        evidence: [],
       },
       database,
     ),
   ).toThrow(expect.objectContaining({ code: "invalid-input" }));
   expect(events()).toHaveLength(1);
-  const receipt = completeActivity(input, database);
-  expect(completeActivity(input, database)).toEqual(receipt);
+  const receipt = updateActivityProgress(input, database);
+  expect(updateActivityProgress(input, database)).toEqual(receipt);
   expect(events()).toHaveLength(2);
   expect(events()[1]).toMatchObject({
     name: "activity.status_changed",

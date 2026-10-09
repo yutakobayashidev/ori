@@ -9,7 +9,7 @@ const required = (max: number) =>
     .max(max)
     .refine((value) => value.trim().length > 0);
 const section = z.enum(["focus", "optional"]);
-export const activityState = z.enum([
+const activityState = z.enum([
   "available",
   "inProgress",
   "waiting",
@@ -75,6 +75,10 @@ const activityProposal = z
   });
 export const getActivityContextInput = z.strictObject({
   activityIds: z.array(id).max(50).optional(),
+  conversation: z
+    .strictObject({ targetId: sourceId, accountId: sourceId, chatId: sourceId })
+    .optional(),
+  states: z.array(activityState).max(6).optional(),
   cursor: z.string().max(4096).optional(),
   limit: z.number().int().min(1).max(100).default(50),
 });
@@ -120,7 +124,7 @@ export const updateActivityUserInput = z
     "Do not set and reset the same field.",
   );
 export type ActivityProposal = z.infer<typeof activityProposal>;
-const completionEvidence = z.discriminatedUnion("kind", [
+const progressEvidence = z.discriminatedUnion("kind", [
   z.strictObject({
     kind: z.literal("beeper_message"),
     targetId: sourceId,
@@ -135,17 +139,24 @@ const completionEvidence = z.discriminatedUnion("kind", [
     summary: required(4000),
   }),
 ]);
-export const completeActivityInput = z.strictObject({
-  requestId: id,
-  expectedRevision: z.number().int().nonnegative(),
-  id,
-  reason: required(2000),
-  evidence: completionEvidence,
-});
-export type ActivityCompletion = {
+export const updateActivityProgressInput = z
+  .strictObject({
+    requestId: id,
+    expectedRevision: z.number().int().nonnegative(),
+    id,
+    reason: required(2000),
+    state: activityState.optional(),
+    draft: required(16000).optional(),
+    evidence: z.array(progressEvidence).min(1).max(20),
+  })
+  .refine(
+    (value) => value.state !== undefined || value.draft !== undefined,
+    "Choose a state or draft change.",
+  );
+export type ActivityAssessment = {
   reason: string;
-  evidence: z.infer<typeof completionEvidence>;
-  completedAt: string;
+  evidence: z.infer<typeof progressEvidence>[];
+  updatedAt: string;
 };
 export type ActivityState = z.infer<typeof activityState>;
 export type ActivityOverrides = z.infer<typeof activityOverrides>;
@@ -154,7 +165,7 @@ export type Activity = {
   proposal: ActivityProposal;
   userState: ActivityState;
   userOverrides: ActivityOverrides;
-  completion?: ActivityCompletion | null;
+  assessment?: ActivityAssessment | null;
   effective: ActivityProposal & { section: "focus" | "optional" };
 };
 export type ActivityContext = {

@@ -80,12 +80,9 @@ export const migrations = [
     hash: "747f8f6758ed08c8d3963117ec1eb93778b13cee7bd2317cabb5c4804eb59665",
   },
   {
-    sql: [
-      "ALTER TABLE `activities` ADD `completion` text;",
-      "\nALTER TABLE `beeper_seen_messages` ADD `outgoing_evidence` text;",
-    ],
+    sql: ["ALTER TABLE `activities` ADD `assessment` text;"],
     bps: true,
     folderMillis: 1791529683384,
-    hash: "341fe8b04da693c7cdd9fccdccdd1c119c8a556e221e18e05b6a7c87b24b88b2",
+    hash: "b5b6f27f029ee82c729cf2fb11edb23892cc0e1c5f0365d39bd3368e2fe363b7",
   },
 ];

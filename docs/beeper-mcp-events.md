@@ -11,7 +11,12 @@ through the existing headless Beeper Server/CLI. It persists new incoming and ou
 identities and matching webhook deliveries before advancing its checkpoint.
 ChatGPT receives the event, reads conversation context and existing activities,
 and uses `publish_activities` to create or update concrete task/reply proposals.
-The listener never sends messages or completes tasks by itself. Dots can inspect outgoing evidence and call the activity completion tool under the owner's instructions.
+The listener never sends messages or changes tasks by itself. Dots reads incoming
+and outgoing conversation context, finds related tasks with `get_activity_context`
+using the event's conversation identifiers, and calls `update_activity_progress`
+to update state and/or a proposed draft with its reason and evidence references.
+The app stores the assessment; it does not require proof of a send or decide
+whether the commitment was fulfilled. Owner-edited drafts remain effective.
 
 The monitored conversations are explicit subscription filters. Merely connecting
 the plugin does not start monitoring all chats. Initial history supplies context,
@@ -52,7 +57,7 @@ Both task and reply activities use the same event contract:
 Editing a title, draft, detail, or section does not emit these events. Updating an
 existing proposal through `publish_activities` does not create another activity
 event. Publication preserves user state. Owners can complete replies handled in
-other apps; automated monitors use `complete_activity` with supporting evidence.
+other apps; automated monitors use `update_activity_progress` with supporting evidence.
 
 Subscription arguments are `{}` for all user-origin activities, or an object with:
 

@@ -14,7 +14,7 @@ defmodule WorkspaceRuntime.RestartTest do
         %{
           "id" => "unfinished",
           "status" => "running",
-          "name" => "save_reply_draft",
+          "name" => "update_activity_progress",
           "arguments" => %{}
         }
       ],

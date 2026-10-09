@@ -4,12 +4,11 @@ import { tmpdir } from "node:os";
 import { join } from "node:path";
 import { afterEach, beforeEach, expect, it, vi } from "vitest";
 import { openDatabase, type AppDatabase } from "../storage/database.server";
-import { beeperSeenMessages } from "../storage/schema";
 import { subscribeActivities } from "./events.server";
 import type { ActivityProposal } from "./model";
 import {
   createUserActivity,
-  completeActivity,
+  updateActivityProgress,
   getActivityContext,
   publishActivities,
   updateActivityUser,
@@ -208,7 +207,7 @@ it.each(["user", "agent"] as const)(
       origin,
     );
     expect(
-      getActivityContext({ activityIds: ["review"] }, database).activities[0]?.completion,
+      getActivityContext({ activityIds: ["review"] }, database).activities[0]?.assessment,
     ).toBeNull();
     expect(
       getActivityContext({}, database).activities.map(({ id, userState }) => ({ id, userState })),
@@ -352,38 +351,28 @@ it("does not announce a failed transaction", () => {
   unsubscribe();
 });
 
-const completion = {
-  requestId: "complete",
+const progress = {
+  requestId: "progress",
   expectedRevision: 1,
   id: "review",
-  reason: "The owner supplied the requested meeting times in Discord.",
-  evidence: {
-    kind: "beeper_message" as const,
-    targetId: "personal",
-    accountId: "work",
-    chatId: "aoki",
-    messageId: "owner-reply",
-  },
-};
-function observeOwnerMessage() {
-  database
-    .insert(beeperSeenMessages)
-    .values({
+  state: "completed" as const,
+  reason: "The other participant confirmed the request was resolved.",
+  evidence: [
+    {
+      kind: "beeper_message" as const,
       targetId: "personal",
+      accountId: "work",
       chatId: "aoki",
-      messageId: "owner-reply",
-      observedAt: "2026-10-09T01:00:01Z",
-      outgoingEvidence: { accountId: "work", occurredAt: "2026-10-09T01:00:00Z" },
-    })
-    .run();
-}
-it("persists evidence for an external reply and replays completion without a second notification", () => {
+      messageId: "incoming-confirmation",
+    },
+  ],
+};
+it("persists reported incoming evidence and replays once across connections", () => {
   publish();
-  observeOwnerMessage();
   const listener = vi.fn<() => void>();
   const unsubscribe = subscribeActivities(listener);
-  const receipt = completeActivity(completion, database);
-  expect(completeActivity(completion, second)).toEqual(receipt);
+  const receipt = updateActivityProgress(progress, database);
+  expect(updateActivityProgress(progress, second)).toEqual(receipt);
   expect(listener).toHaveBeenCalledTimes(1);
   unsubscribe();
   expect(getActivityContext({ activityIds: ["review"] }, second)).toMatchObject({
@@ -391,111 +380,134 @@ it("persists evidence for an external reply and replays completion without a sec
     activities: [
       {
         userState: "completed",
-        completion: {
-          reason: completion.reason,
-          evidence: completion.evidence,
-          completedAt: receipt.receivedAt,
+        assessment: {
+          reason: progress.reason,
+          evidence: progress.evidence,
+          updatedAt: receipt.receivedAt,
         },
       },
     ],
   });
-  expect(getActivityContext({ activityIds: ["detergent"] }, second).activities[0]?.userState).toBe(
-    "available",
-  );
 });
-it.each([
-  { ...completion.evidence, targetId: "other" },
-  { ...completion.evidence, accountId: "other" },
-  { ...completion.evidence, chatId: "other" },
-  { ...completion.evidence, messageId: "message-one" },
-  { ...completion.evidence, messageId: "unknown" },
-  {
-    kind: "external",
-    reference: "Discord",
-    observedAt: "2026-10-09T01:00:00Z",
-    summary: "Replied",
-  },
-])("rejects unverified or unrelated reply completion %# without advancing revision", (evidence) => {
-  publish();
-  observeOwnerMessage();
-  expect(() => completeActivity({ ...completion, evidence }, database)).toThrow(
-    expect.objectContaining({ code: "invalid-input" }),
-  );
-  expect(getActivityContext({}, database).revision).toBe(1);
-});
-it("does not accept a seen incoming message as outgoing evidence", () => {
-  publish();
-  database
-    .insert(beeperSeenMessages)
-    .values({
-      targetId: "personal",
-      chatId: "aoki",
-      messageId: "owner-reply",
-      observedAt: "2026-10-09T01:00:00Z",
-    })
-    .run();
-  expect(() => completeActivity(completion, database)).toThrow(
-    expect.objectContaining({ code: "invalid-input" }),
-  );
-});
-it("preserves completion evidence on republication and clears it on reopening", () => {
-  publish();
-  observeOwnerMessage();
-  completeActivity(completion, database);
-  publish([reply], 2, "refresh");
-  expect(
-    getActivityContext({ activityIds: ["review"] }, database).activities[0]?.completion?.reason,
-  ).toBe(completion.reason);
-  updateActivityUser(
-    { requestId: "reopen", expectedRevision: 3, id: "review", state: "available" },
-    database,
-  );
-  expect(
-    getActivityContext({ activityIds: ["review"] }, database).activities[0]?.completion,
-  ).toBeNull();
-});
-it("completes a deferred chore using agent-reported external evidence but never overrides dismissal", () => {
+it("partially updates the proposed draft while preserving owner text and state", () => {
   publish();
   updateActivityUser(
-    { requestId: "defer", expectedRevision: 1, id: task.id, state: "deferred" },
-    database,
-  );
-  const input = {
-    ...completion,
-    id: task.id,
-    expectedRevision: 2,
-    evidence: {
-      kind: "external",
-      reference: "life/2026-10-09.md",
-      observedAt: "2026-10-09T01:00:00Z",
-      summary: "Owner recorded buying detergent.",
+    {
+      requestId: "owner",
+      expectedRevision: 1,
+      id: "review",
+      state: "waiting",
+      overrides: { draft: "My wording", title: "My title" },
     },
-  };
-  completeActivity(input, database);
-  expect(getActivityContext({ activityIds: [task.id] }, database).activities[0]).toMatchObject({
-    userState: "completed",
-    completion: { evidence: input.evidence },
-  });
-  updateActivityUser(
-    { requestId: "dismiss", expectedRevision: 3, id: "review", state: "dismissed" },
     database,
   );
-  observeOwnerMessage();
-  expect(() =>
-    completeActivity({ ...completion, requestId: "another", expectedRevision: 4 }, database),
-  ).toThrow(expect.objectContaining({ code: "invalid-input" }));
-  expect(() =>
-    completeActivity({ ...input, requestId: "closed", expectedRevision: 4 }, database),
-  ).toThrow(expect.objectContaining({ code: "invalid-input" }));
+  updateActivityProgress(
+    { ...progress, state: undefined, expectedRevision: 2, draft: "Suggested wording" },
+    database,
+  );
+  expect(getActivityContext({ activityIds: ["review"] }, database).activities[0]).toMatchObject({
+    userState: "waiting",
+    proposal: { reply: { draft: "Suggested wording" } },
+    effective: { title: "My title", reply: { draft: "My wording" } },
+  });
 });
-it("checks completion revision and request identity before making changes", () => {
+it("accepts reported external context for replies and can reopen with the latest revision", () => {
   publish();
-  observeOwnerMessage();
-  expect(() => completeActivity({ ...completion, expectedRevision: 0 }, database)).toThrow(
+  updateActivityProgress(
+    {
+      ...progress,
+      evidence: [
+        {
+          kind: "external",
+          reference: "Discord conversation",
+          observedAt: "2026-10-09T01:00:00Z",
+          summary: "Owner confirmed resolution",
+        },
+      ],
+    },
+    database,
+  );
+  updateActivityProgress(
+    {
+      ...progress,
+      requestId: "reopen",
+      expectedRevision: 2,
+      state: "inProgress",
+      evidence: [{ ...progress.evidence[0], chatId: "another-conversation" }],
+    },
+    database,
+  );
+  expect(getActivityContext({ activityIds: ["review"] }, database).activities[0]?.userState).toBe(
+    "inProgress",
+  );
+});
+it("rejects stale decisions, changed reruns, task drafts and empty changes atomically", () => {
+  publish();
+  expect(() => updateActivityProgress({ ...progress, expectedRevision: 0 }, database)).toThrow(
     expect.objectContaining({ code: "revision-conflict" }),
   );
-  completeActivity(completion, database);
-  expect(() => completeActivity({ ...completion, reason: "Changed decision" }, database)).toThrow(
+  expect(() =>
+    updateActivityProgress({ ...progress, id: task.id, draft: "Invalid" }, database),
+  ).toThrow(expect.objectContaining({ code: "invalid-input" }));
+  expect(() => updateActivityProgress({ ...progress, state: undefined }, database)).toThrow(
+    expect.objectContaining({ code: "invalid-input" }),
+  );
+  expect(() => updateActivityProgress({ ...progress, evidence: [] }, database)).toThrow(
+    expect.objectContaining({ code: "invalid-input" }),
+  );
+  updateActivityProgress(progress, database);
+  expect(() => updateActivityProgress({ ...progress, reason: "Changed" }, database)).toThrow(
     expect.objectContaining({ code: "idempotency-conflict" }),
+  );
+  expect(getActivityContext({}, database).revision).toBe(2);
+});
+it("preserves the assessment on republication and clears it when the owner changes state", () => {
+  publish();
+  updateActivityProgress(progress, database);
+  publish([reply], 2, "refresh");
+  expect(
+    getActivityContext({ activityIds: ["review"] }, database).activities[0]?.assessment?.reason,
+  ).toBe(progress.reason);
+  updateActivityUser(
+    { requestId: "owner", expectedRevision: 3, id: "review", state: "available" },
+    database,
+  );
+  expect(
+    getActivityContext({ activityIds: ["review"] }, database).activities[0]?.assessment,
+  ).toBeNull();
+});
+it("filters source conversations and states before pagination without reporting filtered IDs missing", () => {
+  publish([
+    task,
+    reply,
+    { ...reply, id: "reply-two" },
+    {
+      ...reply,
+      id: "other-account",
+      sources: reply.sources.map((s) => (s.kind === "message" ? { ...s, accountId: "other" } : s)),
+    },
+  ]);
+  const conversation = { targetId: "personal", accountId: "work", chatId: "aoki" };
+  const input = {
+    conversation,
+    states: ["available"],
+    activityIds: ["review", "reply-two", "other-account", "detergent", "absent"],
+    limit: 1,
+  };
+  const first = getActivityContext(input, database);
+  expect(first.activities.map((x) => x.id)).toEqual(["reply-two"]);
+  expect(first.missingActivityIds).toEqual(["absent"]);
+  expect(first.nextCursor).not.toBeNull();
+  expect(
+    getActivityContext(
+      { ...input, states: ["available", "available"], cursor: first.nextCursor },
+      database,
+    ).activities.map((x) => x.id),
+  ).toEqual(["review"]);
+  expect(() =>
+    getActivityContext({ ...input, states: ["waiting"], cursor: first.nextCursor }, database),
+  ).toThrow(expect.objectContaining({ code: "invalid-input" }));
+  expect(getActivityContext({ conversation, states: ["waiting"] }, database).activities).toEqual(
+    [],
   );
 });

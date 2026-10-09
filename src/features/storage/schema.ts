@@ -156,8 +156,8 @@ export const authThrottle = sqliteTable(
 
 export const activities = sqliteTable("activities", {
   id: text("id").primaryKey(),
-  completion: text("completion", { mode: "json" }).$type<
-    import("../activities/model").ActivityCompletion
+  assessment: text("assessment", { mode: "json" }).$type<
+    import("../activities/model").ActivityAssessment
   >(),
   proposal: text("proposal", { mode: "json" })
     .$type<import("../activities/model").ActivityProposal>()
@@ -243,10 +243,6 @@ export const beeperSeenMessages = sqliteTable(
     chatId: text("chat_id").notNull(),
     messageId: text("message_id").notNull(),
     observedAt: text("observed_at").notNull(),
-    outgoingEvidence: text("outgoing_evidence", { mode: "json" }).$type<{
-      accountId: string;
-      occurredAt: string;
-    }>(),
   },
   (table) => [primaryKey({ columns: [table.targetId, table.chatId, table.messageId] })],
 );

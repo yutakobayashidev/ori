@@ -1,0 +1,24 @@
+#!/bin/sh
+if [ "$1" = mcp ]; then
+  echo '[]'
+  exit 0
+fi
+while IFS= read -r line; do
+echo "$line" >> protocol.jsonl
+case "$line" in
+  *'"method":"initialize"'*) echo '{"id":1,"result":{}}';;
+  *'"method":"thread/start"'*|*'"method":"thread/resume"'*) echo '{"id":2,"result":{"thread":{"id":"mcp-thread"}}}';;
+  *'"method":"turn/start"'*)
+    echo '{"method":"item/agentMessage/delta","params":{"delta":"Before"}}'
+    echo '{"method":"item/started","params":{"item":{"type":"mcpToolCall","id":"call-draft","server":"workspace_task","tool":"update_activity_progress","arguments":{"draft":"draft"},"status":"inProgress"}}}'
+    if [ -f hold ]; then sleep 2; fi
+    if [ -f failure ]; then
+      echo '{"method":"item/completed","params":{"item":{"type":"mcpToolCall","id":"call-draft","server":"workspace_task","tool":"update_activity_progress","arguments":{},"status":"failed","error":{"message":"Revision conflict"}}}}'
+    else
+      echo '{"method":"item/completed","params":{"item":{"type":"mcpToolCall","id":"call-draft","server":"workspace_task","tool":"update_activity_progress","arguments":{},"status":"completed","mcpAppUi":{"resourceUri":"ui://draft"},"result":{"content":[{"type":"text","text":"Saved"}],"structuredContent":{"draft":"draft"},"_meta":{"workspace":{"toolName":"get_activity_context"}}}}}}'
+    fi
+    echo '{"method":"item/agentMessage/delta","params":{"delta":"After"}}'
+    echo '{"method":"turn/completed","params":{"turn":{"status":"completed"}}}'
+    ;;
+esac
+done
