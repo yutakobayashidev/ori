@@ -173,6 +173,87 @@ screenpipeでは画面・複数モニター・マイク・システム音声を�
 - [L6 MPRIS仕様](https://specifications.freedesktop.org/mpris/latest/)、[playerctl](https://github.com/altdesktop/playerctl)、[Aurbodaのロガー連携](https://github.com/fiddur/aurboda/blob/257fa0a5d68fc5012fdec5dce76744b5a2149bcd/docs/media.md)
 - [L7 ActivityWatch Running on GNOME](https://docs.activitywatch.net/en/latest/running-on-gnome.html)
 
+## PC記録で取得できる情報と参考アプリの実利用
+
+確認日: 2026-10-11。PC記録ツールについて、収集能力・取り込み・利用先を分ける。
+「ツールに取得機能がある」「連携先へ送られる」「解釈に使われる」は別であり、APIに項目があるだけでLinux上の取得を保証しない。
+Aurbodaは冒頭の固定コミットのコード、他の製品・研究は下記の公式資料で確認した範囲を記す。
+
+### ツールごとの取得情報
+
+| ツール・収集経路                             | 取得・記録できる情報                                                                                                                                                  | その情報だけでは分からないこと                                                                                               |
+| -------------------------------------------- | --------------------------------------------------------------------------------------------------------------------------------------------------------------------- | ---------------------------------------------------------------------------------------------------------------------------- |
+| ActivityWatchのwindow watcher                | 時刻、継続時間、アプリ名、アクティブウィンドウのタイトル。URL取得はOS・ブラウザ・watcherに依存                                                                        | 画面本文、実際の成果、本人の目的、集中度。LinuxでURLが必ず取れるとは扱わない [D1]                                            |
+| ActivityWatchのAFK watcher                   | キーボード・マウスの活動を使った `afk` / `not-afk` の区間                                                                                                             | 入力した文章や作業内容。読書・動画視聴など入力が少ない活動と、実際の離席は同一ではない [D1, D2]                              |
+| awatcher / aw-watcher-window-wayland         | 対応環境でのアクティブウィンドウ情報とidle状態。ActivityWatchへ送る収集部分の代替                                                                                     | OCR・スクリーンショット・音声を追加するものではない。Linux対応表の環境条件が適用される [L2, L3]                              |
+| ActivityWatchのブラウザ拡張 `aw-watcher-web` | アクティブタブのタイトル、URL、音声再生状態、シークレット状態など。実際の記録範囲は拡張の権限・設定に依存                                                             | ページ本文や、そのページを熟読したかどうか。標準のwindow watcherとは別の収集経路 [D1, D3]                                    |
+| ActivityWatchのエディタ拡張                  | 編集対象ファイル、パス、言語、プロジェクト名など。項目は拡張ごとに異なる                                                                                              | ソースコード本文やdiffを自動的にすべて保存するという意味ではない。別途拡張の導入が必要 [D1]                                  |
+| RescueTime                                   | アクティブなアプリ・Webサイトの利用時間とカテゴリなど                                                                                                                 | 常時画面録画や入力本文の記録として扱わない。現在Linuxの公式サポートは確認できない [D4, L4]                                   |
+| screenpipe                                   | 画面フレーム、アクセシビリティ由来の文字・UI要素、OCR、音声と文字起こし。検索APIには時刻、アプリ名、ウィンドウ名、端末名、URL、フォーカス状態、フレーム参照などがある | すべての項目が全OSで埋まるわけではない。特にLinuxの取得可否はデスクトップ環境・権限に依存。文字認識・転写は誤りうる [D5, L5] |
+| MPRIS＋Aurboda用ロガー                       | プレーヤー、端末、タイトル、artist、album、URL、開始・終了、実再生秒数、全長、最遠再生位置、シーク回数                                                                | メディアの映像・音声本文、本人が見聞きしたか。公開されないメタデータや不明な全長は不明のまま [D6]                            |
+| Last.fm                                      | 再生履歴の時刻、曲名、アーティスト、アルバムなど                                                                                                                      | MPRISロガーのような実再生秒数・シーク・一時停止の詳細とは異なる [D7]                                                         |
+
+### Aurbodaが実際に取り込むPCデータ
+
+| 入力          | 受信・保存する情報                                                                                                                                               | 実際の利用                                                                                                | この経路では取り込まない情報                                                           |
+| ------------- | ---------------------------------------------------------------------------------------------------------------------------------------------------------------- | --------------------------------------------------------------------------------------------------------- | -------------------------------------------------------------------------------------- |
+| ActivityWatch | イベントの `timestamp`, `duration`, `app`, `title` と、バッチの `device_name`, `is_mobile`。開始・終了時刻、秒数、アプリ、タイトル、端末を `productivity` に保存 | アプリ・タイトルのルール分類、カテゴリ別の活動区間、Timeline・チャート・行動推定                          | ブラウザ拡張のURL・audibleなど、エディタ拡張のファイル情報、AFK生区間、画像、音声 [D8] |
+| RescueTime    | APIから活動名、カテゴリ、利用秒数、開始・終了、モバイル判定、生産性スコア                                                                                        | 共通の `productivity`、独自カテゴリへの分類、活動区間、チャート・分析                                     | この同期処理はウィンドウタイトル、画面画像、音声を取り込まない [D9]                    |
+| MPRIS         | 上記のplay情報を `raw_records` に保存。安定したplay IDで再送を重複排除                                                                                           | 時間帯検索、詳細画面、再生率などの条件でDeduction Rulesへ入力。動画タイトルを重なる運動の属性へコピー可能 | 取り込みだけでは活動を自動生成しない。ルールによる意味づけは別工程 [D6]                |
+| Last.fm       | 曲名、artist、album、MusicBrainz ID、時刻を原データとして保存し、終了時刻なしの `music_scrobble` 活動も作る                                                      | 音楽のTimeline表示、設定ルールによる活動生成、メディア照合                                                | 実再生秒数、曲全長、終了時刻、再生端末、プレーヤー、URLはこの経路では取らない [D7]     |
+
+ActivityWatchのAFKは、ドキュメント内のPC送信スクリプトで送信前の除外に使われる。
+その例はAFK区間に完全に含まれるwindowイベントを除外する処理であり、部分的な重なりを秒単位で差し引く処理ではない。
+AFK情報自体はAurbodaの受信スキーマにない。したがって、Aurboda側で未記録の時間を「離席」と確定できるわけではない [D8]。
+
+RescueTimeのクライアントは分単位のデータを要求し、行の時刻と利用秒数から終了を組み立てる。
+これは利用時間を集約したデータであり、その分の中の厳密な操作順序や連続作業区間が復元されたとは扱わない [D9]。
+
+ActivityWatch連携の説明にはタイトルを保存しない旨などの古い記述が残るが、確認したAPIスキーマと取り込みコードは `title` を受け取り保存し、カテゴリ分類にも渡している。
+この表は説明文より当該コードを優先した。
+
+MPRISの再生率は実再生秒数と全長から計算し、全長などが不明ならnullになる。
+確認したルール実装では再生率が不明でも `min_played_ratio` 条件を通過するため、この条件だけで完走を保証しない。
+Last.fmの終了不明の再生を区間照合で1分として扱う処理もあるが、これは測定した聴取時間ではない。
+出典: [メディアの変換・照合処理](https://github.com/fiddur/aurboda/blob/257fa0a5d68fc5012fdec5dce76744b5a2149bcd/apps/backend/src/services/media-plays.ts)。
+
+### 参考アプリや研究は何を使って何を作るか
+
+| 参考対象                   | 確認した実際の入力                                                                                    | 入力を使う処理・出力                                                                            | 証拠の範囲                                                                                          |
+| -------------------------- | ----------------------------------------------------------------------------------------------------- | ----------------------------------------------------------------------------------------------- | --------------------------------------------------------------------------------------------------- |
+| Aurboda                    | 上表のPC利用・メディアに加え、健康データ、活動、位置、予定、食事など                                  | 同じ時間帯の表示、カテゴリ分類、活動区間の生成、統計分析、MCPへの公開                           | 固定コミットのコード。screenpipeの画面・転写やActivityWatchの全bucketを取り込む構成ではない         |
+| screenpipe                 | 画面の文字・UI要素、画面フレーム、音声転写とアプリ・時刻などの文脈                                    | 時間・アプリ・ウィンドウ等で検索し、該当フレームや会話の記録を参照。API/MCPでエージェントへ提供 | 公式READMEと検索API。Linuxで全収集項目の実動作を確認したわけではない [D5]                           |
+| PALのPC研究                | Chrome拡張で検出する特定のWeb活動・サイトへのアクセス。比較群には一定間隔やランダムなタイミング       | 文脈に合わせた介入を提示し、自己報告の習慣形成・自動性指標と参加者の評価で比較                  | 2024年博士論文の要旨。PC全体の画面・音声をLLMへ渡す研究としては説明しない [D10]                     |
+| PALの物理世界研究          | 本人視点の視覚文脈。比較対象は時刻・位置・身体活動などの粗い文脈                                      | 状況を認識して支援を提示し、習慣形成と介入終了後の維持を評価                                    | 同博士論文の要旨。PALプラットフォームが持つ全センサーを当該実験ですべて使ったとは断定しない [D10]   |
+| Home Assistant＋LLM Vision | 画像、動画、カメラ映像、Frigateイベント。通知用Blueprintはカメラやbinary sensorの状態変化を契機にする | VLMによる説明・抽出、センサー更新、通知、任意の画像と要約のTimeline保存                         | 公式機能説明。収納配置の長期最適化や改善効果の評価は、ここから追加する応用案 [D11]                  |
+| 現在のPersonal Workspace   | 本人が操作したFocusの開始・休止・終了、タスクとの対応、手入力・タイマー由来のWorkLog                  | 作業時間、見積もりとの差、再開できる実行状態                                                    | [現在のDBスキーマ](../src/features/storage/schema.ts)。PC操作・画面・音声を自動観測した記録ではない |
+
+PALのカメラ・心拍・IMU・マイク等のハードウェア構成は公式プロジェクト説明にある。
+研究用に入力可能なセンサーの一覧と、特定実験の介入条件・評価に使ったデータは別に読む [D12]。
+
+### Personal Workspaceへの取り込みに必要な判断
+
+- アプリ利用時間だけ欲しいなら、ActivityWatchのwindow/AFKで足りるかを先に確認する。
+- 読んでいたページや編集対象を再開に使うなら、ブラウザ・エディタの記録を専用の入力として扱う。Aurbodaの現行ActivityWatch受信形式をそのまま採用すると、それらは入らない。
+- 画面上の文章・会話内容の再検索が必要なら、screenpipeなどの内容記録を検討する。利用時間だけの収集とは保存量・開示する情報が違う。
+- 動画の内容名と取り組んだ時間を結びつけたいだけなら、MPRISのメタデータで足りる可能性がある。動画や音声本体の収集を必須にしない。
+- 記録にはソース・時刻・取得できた項目を残し、本人の意図と照合する。「取れるはずだったが欠けた」と「そもそも収集しない」を区別する。
+
+出典:
+
+- [D1 ActivityWatch Watchers](https://docs.activitywatch.net/en/latest/watchers.html)
+- [D2 aw-watcher-afk](https://github.com/ActivityWatch/aw-watcher-afk)
+- [D3 aw-watcher-web](https://github.com/ActivityWatch/aw-watcher-web)
+- [D4 How RescueTime Works](https://help.rescuetime.com/article/245-how-rescuetime-works)
+- [D5 screenpipe検索API](https://docs.screenpipe.com/api-reference/search/search-screen-and-audio-content)、[公式README](https://github.com/screenpipe/screenpipe)
+- [D6 Aurboda Media](https://github.com/fiddur/aurboda/blob/257fa0a5d68fc5012fdec5dce76744b5a2149bcd/docs/media.md)
+- [D7 Aurboda Last.fm](https://github.com/fiddur/aurboda/blob/257fa0a5d68fc5012fdec5dce76744b5a2149bcd/docs/lastfm.md)、[取り込み実装](https://github.com/fiddur/aurboda/blob/257fa0a5d68fc5012fdec5dce76744b5a2149bcd/apps/backend/src/integrations/lastfm/sync.ts)
+- [D8 ActivityWatch受信スキーマ](https://github.com/fiddur/aurboda/blob/257fa0a5d68fc5012fdec5dce76744b5a2149bcd/packages/api-spec/src/schemas/sync.ts#L477)、[取り込みコード](https://github.com/fiddur/aurboda/blob/257fa0a5d68fc5012fdec5dce76744b5a2149bcd/apps/backend/src/integrations/activitywatch/sync.ts)、[送信スクリプト例](https://github.com/fiddur/aurboda/blob/257fa0a5d68fc5012fdec5dce76744b5a2149bcd/docs/activitywatch.md)
+- [D9 RescueTime取り込み](https://github.com/fiddur/aurboda/blob/257fa0a5d68fc5012fdec5dce76744b5a2149bcd/apps/backend/src/integrations/rescuetime/sync.ts)、[APIクライアント](https://github.com/fiddur/aurboda/blob/257fa0a5d68fc5012fdec5dce76744b5a2149bcd/apps/backend/src/integrations/rescuetime/client.ts)
+- [D10 MIT博士論文 2024](https://dspace.mit.edu/entities/publication/7eb81430-5d75-4fd8-b2af-23b7493fbd5e)
+- [D11 LLM Vision公式説明](https://llmvision.gitbook.io/getting-started)、[README](https://github.com/valentinfrlch/ha-llmvision)
+- [D12 PAL公式説明](https://www.media.mit.edu/projects/pal/overview/)
+
 ## Home Assistantと生活データを組み合わせる案
 
 以下はPersonal Workspaceへの応用案。取得できる信号は機器・アプリ・権限に依存し、連携の実装は未決定。
