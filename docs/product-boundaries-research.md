@@ -4,6 +4,10 @@
 
 The product goal is to trace life across the person, their environment, and AI:
 observations, conversations, intentions, actions, and subsequent outcomes.
+External-AI message replies and executive-function support are equally central:
+understand requests, prepare editable replies, propose next actions, support
+starting and resuming work, and keep progress current through shared MCP tools
+and events. These functions do not depend on completing the life-trace archive.
 Recollection, exploration, and context handoff matter even without an improvement
 or task. See the [overall architecture and vision](architecture.md).
 The foundation combines Aurboda-style
@@ -22,7 +26,8 @@ The proposed ownership is:
 - **gbrain:** an optional shared memory/retrieval implementation and a reference
   for transcript ingestion. Its current adapters intentionally discard some
   content; they are not a lossless archive of Codex or ChatGPT histories.
-- **External agents:** interpretation, proposals, and context compilation.
+- **External agents:** interpretation, reply and next-action proposals,
+  evidence-backed progress updates, authorized execution, and context compilation.
 
 OpenBrief's current implementation still includes attention handoff, while its
 documented future direction narrows it to screen capture as a data source. That

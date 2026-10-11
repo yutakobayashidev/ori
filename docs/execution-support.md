@@ -1,5 +1,10 @@
 # Execution support
 
+External-AI message replies and executive-function support are core functions
+alongside life tracing. They help the user understand requests, choose a next
+action, start or resume work, delegate, and follow up. See the
+[overall architecture](architecture.md) for their place in the product.
+
 ## Persistent task and reply inbox
 
 Home and Messages now share SQLite-backed activities. External Codex publishes
@@ -15,9 +20,12 @@ deferral, dismissal, and ordinary-task completion persist across reloads and
 refresh other open views after a committed write. Republishing cannot replace
 user overrides or reopen completed/deferred/dismissed activities.
 
-These reply surfaces use published excerpts, not fictional contacts or a full
-Beeper history sync. Real sending is not connected, and they do not simulate
-successful sending or allow a reply to be marked complete without delivery.
+Messages now includes real Beeper history and durable reply sending. External
+agents can update reply proposals and task progress through shared MCP tools and
+events; the headless listener can also observe replies sent in the original apps.
+User edits and decisions remain authoritative. Sending success does not prove
+that the underlying commitment is complete, and manual completion does not
+require in-app sending or delivery verification. See the [current status](../README.md).
 
 ## Earlier prototype and remaining local features
 

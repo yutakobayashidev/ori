@@ -1,8 +1,11 @@
 # Personal Workspace
 
-A personal workspace whose long-term goal is to trace life across the person,
-their environment, and the AI they interact with: what happened, what they
-intended, what they did, and what followed. See the proposed
+A personal workspace with two main functions: supporting message replies and
+daily execution through external AI agents, and tracing life across the person,
+their environment, and the AI they interact with. External AI helps turn incoming
+requests into editable replies and concrete next actions, keep progress current,
+and support starting and resuming work. Life traces retain what happened, what
+the person intended, what they did, and what followed. See the proposed
 [architecture and vision](docs/architecture.md) for scope and implementation stages.
 
 The current app supports understanding the day, choosing the next action,
@@ -80,6 +83,13 @@ contents remain outside the URL. Unsaved mock records and manual temporary
 decks still disappear on reload; a URL does not persist their contents.
 
 ## Direction: life traces, context and execution
+
+External-AI reply assistance and executive-function support are core product
+functions alongside life tracing. Messages, Home, Board, and Focus provide the
+places to review drafts, choose a next action, delegate, start, resume, and follow
+up. External agents use shared MCP tools and events to update proposals and
+progress while preserving user edits and decisions. This support should remain
+useful before comprehensive life-data collection is available.
 
 The planned foundation connects physical and digital observations, conversations
 with people and AI, source archives, intentions, execution, and outcomes through
