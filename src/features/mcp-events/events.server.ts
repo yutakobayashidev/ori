@@ -1,6 +1,7 @@
 import { createHash, randomBytes, timingSafeEqual } from "node:crypto";
 import { and, eq, gt, inArray, isNull, lte } from "drizzle-orm";
 import { z } from "zod";
+import { logEventDelivery } from "../activities/communication.server";
 import { decryptCredential, encryptCredential } from "../connections/credentials.server";
 import { getDatabase, type AppDatabase } from "../storage/database.server";
 import { mcpEventOutbox, mcpEventSubscriptions } from "../storage/schema";
@@ -169,20 +170,34 @@ export async function subscribeMcpEvent(
     const body = JSON.stringify({ type: "verification", challenge });
     const verificationId = `verify_${randomBytes(16).toString("hex")}`;
     try {
-      const response = await (options.sender ?? sendWebhook)(
-        url,
-        body,
-        webhookHeaders(verificationId, id, body, [params.delivery.secret], now),
+      await logEventDelivery(
+        {
+          name: "verification",
+          eventId: verificationId,
+          subscriptionId: id,
+          attempt: 1,
+          body,
+          secrets: [params.delivery.secret, challenge],
+        },
+        () =>
+          (options.sender ?? sendWebhook)(
+            url,
+            body,
+            webhookHeaders(verificationId, id, body, [params.delivery.secret], now),
+          ),
+        database,
+        (response) => {
+          const returned = JSON.parse(response.body).challenge;
+          if (
+            response.status < 200 ||
+            response.status >= 300 ||
+            typeof returned !== "string" ||
+            Buffer.byteLength(returned) !== Buffer.byteLength(challenge) ||
+            !timingSafeEqual(Buffer.from(returned), Buffer.from(challenge))
+          )
+            throw new Error("Challenge mismatch");
+        },
       );
-      const returned = JSON.parse(response.body).challenge;
-      if (
-        response.status < 200 ||
-        response.status >= 300 ||
-        typeof returned !== "string" ||
-        Buffer.byteLength(returned) !== Buffer.byteLength(challenge) ||
-        !timingSafeEqual(Buffer.from(returned), Buffer.from(challenge))
-      )
-        throw new Error("Challenge mismatch");
     } catch (error) {
       if (error instanceof CallbackEndpointError) throw error;
       throw new CallbackEndpointError(
@@ -388,10 +403,22 @@ export async function deliverMcpEvents(
       const secrets = [decryptCredential(subscription.secretCiphertext, context)];
       if (subscription.previousSecretCiphertext && (subscription.rotationExpiresAt ?? 0) > now)
         secrets.push(decryptCredential(subscription.previousSecretCiphertext, context));
-      const response = await (options.sender ?? sendWebhook)(
-        subscription.callbackUrl,
-        event.body,
-        webhookHeaders(event.eventId, subscription.id, event.body, secrets, Date.now()),
+      const response = await logEventDelivery(
+        {
+          name: subscription.name,
+          eventId: event.eventId,
+          subscriptionId: subscription.id,
+          attempt: event.attempts + 1,
+          body: event.body,
+          secrets,
+        },
+        () =>
+          (options.sender ?? sendWebhook)(
+            subscription.callbackUrl,
+            event.body,
+            webhookHeaders(event.eventId, subscription.id, event.body, secrets, Date.now()),
+          ),
+        database,
       );
       status = response.status;
     } catch {

@@ -156,6 +156,7 @@ export const authThrottle = sqliteTable(
 
 export const activities = sqliteTable("activities", {
   id: text("id").primaryKey(),
+  number: integer("number").notNull().default(0).unique(),
   origin: text("origin", { enum: ["user", "agent"] })
     .notNull()
     .default("agent"),
@@ -171,6 +172,10 @@ export const activities = sqliteTable("activities", {
     .$type<import("../activities/model").ActivityOverrides>()
     .notNull(),
   ...timestamps,
+});
+export const activityNumberSequence = sqliteTable("activity_number_sequence", {
+  id: integer("id").primaryKey(),
+  lastNumber: integer("last_number").notNull(),
 });
 export const activityRevision = sqliteTable(
   "activity_revision",
@@ -190,6 +195,32 @@ export const activityReceipts = sqliteTable("activity_receipts", {
     .$type<import("../activities/model").ActivityReceipt>()
     .notNull(),
 });
+
+export const communicationLogs = sqliteTable(
+  "communication_logs",
+  {
+    id: integer("id").primaryKey({ autoIncrement: true }),
+    kind: text("kind").$type<"mcp-write" | "mcp-event">().notNull(),
+    direction: text("direction").$type<"incoming" | "outgoing">().notNull(),
+    name: text("name").notNull(),
+    occurredAt: integer("occurred_at").notNull(),
+    durationMs: integer("duration_ms").notNull(),
+    outcome: text("outcome").$type<"success" | "error">().notNull(),
+    status: integer("status"),
+    requestId: text("request_id"),
+    eventId: text("event_id"),
+    subscriptionId: text("subscription_id"),
+    attempt: integer("attempt"),
+    activityIds: text("activity_ids", { mode: "json" }).$type<string[]>().notNull(),
+    request: text("request", { mode: "json" }).$type<
+      import("../activities/communication-model").CommunicationValue
+    >(),
+    response: text("response", { mode: "json" }).$type<
+      import("../activities/communication-model").CommunicationValue
+    >(),
+  },
+  (table) => [index("communication_logs_time").on(table.occurredAt)],
+);
 
 export const mcpEventSubscriptions = sqliteTable("mcp_event_subscriptions", {
   id: text("id").primaryKey(),
@@ -383,4 +414,32 @@ export const daySelections = sqliteTable(
     updatedAt: integer("updated_at").notNull(),
   },
   (table) => [primaryKey({ columns: [table.date, table.activityId] })],
+);
+
+export const activityAudit = sqliteTable(
+  "activity_audit",
+  {
+    id: integer("id").primaryKey({ autoIncrement: true }),
+    activityId: text("activity_id").notNull(),
+    operation: text("operation").notNull(),
+    actor: text("actor")
+      .$type<import("../activities/audit-model").ActivityAuditContext["actor"]>()
+      .notNull(),
+    channel: text("channel")
+      .$type<import("../activities/audit-model").ActivityAuditContext["channel"]>()
+      .notNull(),
+    requestId: text("request_id").notNull(),
+    revision: integer("revision").notNull(),
+    occurredAt: integer("occurred_at").notNull(),
+    before: text("before", { mode: "json" }).$type<
+      import("../activities/audit-model").ActivityAuditSnapshot
+    >(),
+    after: text("after", { mode: "json" }).$type<
+      import("../activities/audit-model").ActivityAuditSnapshot
+    >(),
+  },
+  (table) => [
+    uniqueIndex("activity_audit_request_activity").on(table.requestId, table.activityId),
+    index("activity_audit_activity_id").on(table.activityId, table.id),
+  ],
 );

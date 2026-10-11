@@ -51,6 +51,7 @@ export function ConversationRow({
         )}
         <span className="truncate text-ui-12 text-muted-foreground">{item.title}</span>
         <span className="text-ui-10 text-muted-foreground">
+          {group.map((activity) => `#${activity.number}`).join(", ")} ·{" "}
           {group.length > 1 ? `${group.length} actions` : stateLabels[first.userState]}
         </span>
       </span>

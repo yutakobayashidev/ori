@@ -5,6 +5,7 @@ import { Activities } from "./activities";
 
 const task: Activity = {
   id: "review",
+  number: 123,
   isUnread: false,
   proposal: {
     id: "review",
@@ -28,9 +29,31 @@ const initial: ActivityContext = {
   ok: true,
   revision: 7,
   activities: [task],
+  missingActivityNumbers: [],
   missingActivityIds: [],
   nextCursor: null,
 };
+
+it("preserves the number filter when refreshing after an update", async () => {
+  const callTool = vi
+    .fn<(name: string, args: Record<string, unknown>) => Promise<Record<string, unknown>>>()
+    .mockResolvedValueOnce({ ok: true, revision: 8 })
+    .mockResolvedValueOnce({
+      ...initial,
+      revision: 8,
+    });
+  render(
+    <Activities initial={initial} callTool={callTool} toolArguments={{ activityNumbers: [123] }} />,
+  );
+  expect(screen.getByText("#123")).toBeVisible();
+  fireEvent.click(screen.getByRole("button", { name: "Complete Review proposal" }));
+  await waitFor(() =>
+    expect(callTool).toHaveBeenCalledWith("get_activity_context", {
+      limit: 50,
+      activityNumbers: [123],
+    }),
+  );
+});
 
 it("updates the shared activity using its revision and displays the saved state", async () => {
   const callTool = vi
@@ -171,6 +194,7 @@ it("opens the existing reply detail and saves a draft through MCP without sendin
   };
   const reply: Activity = {
     id: "reply",
+    number: 123,
     isUnread: false,
     proposal,
     effective: { ...proposal, section: "focus" },

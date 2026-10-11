@@ -5,6 +5,7 @@ import { mcpEventOutbox, mcpEventSubscriptions } from "../storage/schema";
 import { createUserActivity, updateActivityUser } from "../activities/repository.server";
 import { deliverMcpEvents } from "../mcp-events/events.server";
 import { handleMcpRequest, registerResearchTools } from "./http.server";
+import { getCommunicationLogs } from "../activities/communication.server";
 
 const mocks = vi.hoisted(() => ({
   database: vi.fn<() => AppDatabase>(),
@@ -42,6 +43,9 @@ async function rpc(method: string, params: Record<string, unknown> = {}, query =
         "Content-Type": "application/json",
         Accept: "application/json",
         "Mcp-Method": method,
+        ...(method === "tools/call" && typeof params.name === "string"
+          ? { "Mcp-Name": params.name }
+          : {}),
       },
       body: JSON.stringify({
         jsonrpc: "2.0",
@@ -215,4 +219,65 @@ it("subscribes to outgoing observations independently through MCP HTTP", async (
   expect(database.select().from(mcpEventSubscriptions).all()).toHaveLength(2);
   expect(await rpc("events/unsubscribe", outgoing)).toMatchObject({ result: {} });
   expect(database.select().from(mcpEventSubscriptions).get()?.name).toBe("beeper.message.received");
+});
+
+it("logs writes and failed writes while omitting read tools", async () => {
+  const proposal = {
+    id: "logged-task",
+    kind: "task",
+    title: "Visible title",
+    nextAction: "Start",
+    sources: [],
+  };
+  const args = { requestId: "logged-request", expectedRevision: 0, activities: [proposal] };
+  await rpc("tools/call", { name: "get_activity_context", arguments: {} });
+  expect(getCommunicationLogs({}, database).entries).toHaveLength(0);
+  expect(await rpc("tools/call", { name: "publish_activities", arguments: args })).toMatchObject({
+    result: { isError: false },
+  });
+  await rpc("tools/call", { name: "publish_activities", arguments: args });
+  await rpc("tools/call", {
+    name: "publish_activities",
+    arguments: { ...args, requestId: "stale" },
+  });
+  await rpc("tools/call", { name: "get_activity_context", arguments: {} });
+  expect(getCommunicationLogs({ activityId: "logged-task" }, database).entries).toMatchObject([
+    { name: "publish_activities", outcome: "error", requestId: "stale" },
+    { name: "publish_activities", outcome: "success", requestId: "logged-request" },
+    {
+      name: "publish_activities",
+      outcome: "success",
+      requestId: "logged-request",
+      request: { activities: [{ title: "Visible title" }] },
+    },
+  ]);
+  expect(getCommunicationLogs({}, database).entries).toHaveLength(3);
+});
+
+it("logs subscriptions, verification, and unsubscribe without retaining secrets", async () => {
+  const created = await rpc("events/subscribe", subscription);
+  await rpc("events/unsubscribe", subscription);
+  const logs = getCommunicationLogs({}, database).entries;
+  expect(logs).toMatchObject([
+    { name: "events/unsubscribe", outcome: "success" },
+    { name: "events/subscribe", outcome: "success", subscriptionId: created.result.id },
+    {
+      name: "verification",
+      outcome: "success",
+      status: 200,
+      request: { challenge: "[redacted]" },
+      response: { challenge: "[redacted]" },
+    },
+  ]);
+  expect(JSON.stringify(logs)).not.toContain(subscription.delivery.secret);
+});
+
+it("logs a rejected verification as failure even when the callback responds HTTP 200", async () => {
+  mocks.sender.mockResolvedValue({ status: 200, body: JSON.stringify({ challenge: "wrong" }) });
+  const result = await rpc("events/subscribe", subscription);
+  expect(result.error).toBeDefined();
+  expect(getCommunicationLogs({}, database).entries).toMatchObject([
+    { name: "events/subscribe", outcome: "error" },
+    { name: "verification", outcome: "error", status: 200, response: { challenge: "[redacted]" } },
+  ]);
 });

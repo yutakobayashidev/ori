@@ -180,7 +180,7 @@ export function ReplyConversationHistory({
                           </Avatar>
                         )}
                         <MessageContent className="w-auto min-w-0 flex-1">
-                          <MessageHeader className="flex-wrap gap-x-2">
+                          <MessageHeader className="flex-wrap">
                             {name}
                             <time className="ml-2 font-normal" dateTime={message.timestamp}>
                               {new Date(message.timestamp).toLocaleString(undefined, {

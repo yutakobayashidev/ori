@@ -35,6 +35,7 @@ const proposal = {
 };
 const activity: Activity = {
   id: proposal.id,
+  number: 123,
   isUnread: false,
   proposal,
   effective: { ...proposal, section: "focus" },

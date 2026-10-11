@@ -35,7 +35,9 @@ flowchart LR
 
 | ツール                     | 用途                                               | 入力                                                                                  |
 | -------------------------- | -------------------------------------------------- | ------------------------------------------------------------------------------------- |
-| `get_activity_context`     | 登録済みの行動、本人の判断・編集、出典を読む       | 任意の `activityIds`、`conversation`、`states`、`cursor`、`limit`                     |
+| `get_activity_context`     | 登録済みの行動、本人の判断・編集、出典を読む       | 任意の `activityIds`、`activityNumbers`、`conversation`、`states`、`cursor`、`limit`  |
+| `get_activity_audit`       | 行動の変更前後・操作主体・経路・日時を読む         | 任意の `activityId`、`beforeId`、`limit`                                              |
+| `get_communication_logs`   | MCP書き込み・MCP Eventsの通信履歴を読む            | 任意の `activityId`、`beforeId`、`limit`                                              |
 | `update_activity_progress` | 判断理由・根拠を記録し、状態や返信案を部分更新する | `requestId`、`expectedRevision`、`id`、任意の `state` / `draft`、`reason`、`evidence` |
 | `publish_activities`       | 行動を新規登録、または既存行動の提案内容を更新する | `requestId`、`expectedRevision`、`activities`                                         |
 
@@ -58,7 +60,10 @@ MCP Events でも購読できる。保存と通知キューへの追加は同じ
 `states` は状態の配列。ID・会話・状態は AND 条件でページ分割前に適用する。
 フィルターで除外した既存 ID を `missingActivityIds` に含めない。
 
-返却形は `{ok: true, revision, activities, missingActivityIds, nextCursor}`。
+返却形は `{ok: true, revision, activities, missingActivityIds, missingActivityNumbers, nextCursor}`。
+各行動の `number` は返信も含む共通連番。既存行動にも付与し、内部の `id` は変更しない。
+`activityNumbers` は最大50件で、他のフィルターと AND 条件。存在しない番号を
+`missingActivityNumbers` に返す。番号で対象を取得してから、書き込みには内部 `id` を使う。
 各行動は `proposal`、`userState`、`userOverrides`、それらを合成した `effective`
 を持つ。`userOverrides` は本人が編集したフィールドだけを保持する。
 `effective` は Home / Messages が実際に表示する内容。
@@ -73,6 +78,16 @@ MCP Events でも購読できる。保存と通知キューへの追加は同じ
 各ページの revision と内容は同じ読み取りトランザクションで取得する。
 途中で revision が変わった場合は `stale-cursor` として最初から再取得する。
 `nextCursor: null` で読み取り完了。ID で絞っても、書き込みには領域全体の revision を使う。
+
+### 履歴の読み取り
+
+`get_activity_audit` と `get_communication_logs` は `{ok: true, entries, nextBeforeId}`
+を返す。`limit` は既定50・最大100。次ページには `nextBeforeId` を `beforeId` として渡す。
+新しい記録から取得し、途中の追加で既読ページの位置はずれない。
+監査履歴は変更と同じトランザクションで保存し、成功済み要求の再送では増えない。
+通信履歴は書き込みの試行ごとに記録する。MCPの読み取り要求は対象外。
+本文の保存範囲・認証情報の除外・閲覧方法は
+[activity numbers and audit history](activity-audit-and-numbers.md) を参照。
 
 ### `publish_activities`
 

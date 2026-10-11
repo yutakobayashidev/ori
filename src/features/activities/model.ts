@@ -78,6 +78,7 @@ const activityProposal = z
   });
 export const getActivityContextInput = z.strictObject({
   activityIds: z.array(id).max(50).optional(),
+  activityNumbers: z.array(z.number().int().positive()).max(50).optional(),
   conversation: z
     .strictObject({ targetId: sourceId, accountId: sourceId, chatId: sourceId })
     .optional(),
@@ -181,6 +182,7 @@ export type ActivityState = z.infer<typeof activityState>;
 export type ActivityOverrides = z.infer<typeof activityOverrides>;
 export type Activity = {
   id: string;
+  number: number;
   origin?: "user" | "agent";
   isUnread: boolean;
   proposal: ActivityProposal;
@@ -195,6 +197,7 @@ export type ActivityContext = {
   revision: number;
   activities: Activity[];
   missingActivityIds: string[];
+  missingActivityNumbers: number[];
   nextCursor: string | null;
   serverNow?: number;
   focusSession?: import("../focus/model").FocusSession | null;

@@ -1,3 +1,4 @@
+import { auditActivityIds, activityAuditSnapshots, recordActivityAudit } from "./audit.server";
 import {
   currentFocus,
   readActivityTime,
@@ -14,7 +15,12 @@ import { beeperMessageText } from "../beeper/message-text.server";
 import type { ActivityEventName } from "../mcp-events/activity-events";
 import { enqueueActivityEvent } from "../mcp-events/events.server";
 import { getDatabase, type AppDatabase } from "../storage/database.server";
-import { activities, activityReceipts, activityRevision } from "../storage/schema";
+import {
+  activities,
+  activityReceipts,
+  activityRevision,
+  activityNumberSequence,
+} from "../storage/schema";
 import { notifyActivities } from "./events.server";
 import {
   createHomeActivityInput,
@@ -95,6 +101,7 @@ function activity(
     effective.reply = { ...effective.reply, draft };
   return {
     id: row.id,
+    number: row.number,
     origin: row.origin,
     isUnread: row.origin === "agent" && row.readAt === null,
     proposal,
@@ -113,9 +120,13 @@ const cursorSchema = z.strictObject({
 export function getActivityContext(input: unknown = {}, database = getDatabase()): ActivityContext {
   const parsed = parse(getActivityContextInput, input);
   const ids = parsed.activityIds ? [...new Set(parsed.activityIds)].sort() : undefined;
+  const numbers = parsed.activityNumbers
+    ? [...new Set(parsed.activityNumbers)].sort((a, b) => a - b)
+    : undefined;
   const states = parsed.states ? [...new Set(parsed.states)].sort() : undefined;
   const filter = hash({
     activityIds: ids,
+    activityNumbers: numbers,
     states,
     conversation: parsed.conversation,
     limit: parsed.limit,
@@ -142,6 +153,7 @@ export function getActivityContext(input: unknown = {}, database = getDatabase()
       .where(
         and(
           ids ? inArray(activities.id, ids) : undefined,
+          numbers ? inArray(activities.number, numbers) : undefined,
           states ? inArray(activities.userState, states) : undefined,
           parsed.conversation
             ? sql`exists (select 1 from json_each(${activities.proposal}, '$.sources') as source where json_extract(source.value, '$.kind') = 'message' and json_extract(source.value, '$.targetId') = ${parsed.conversation.targetId} and json_extract(source.value, '$.accountId') = ${parsed.conversation.accountId} and json_extract(source.value, '$.chatId') = ${parsed.conversation.chatId})`
@@ -163,6 +175,16 @@ export function getActivityContext(input: unknown = {}, database = getDatabase()
             .map((row) => row.id),
         )
       : undefined;
+    const existingNumbers = numbers
+      ? new Set(
+          database
+            .select({ number: activities.number })
+            .from(activities)
+            .where(inArray(activities.number, numbers))
+            .all()
+            .map((row) => row.number),
+        )
+      : undefined;
     return {
       ok: true,
       revision: current,
@@ -170,6 +192,7 @@ export function getActivityContext(input: unknown = {}, database = getDatabase()
       focusSession: currentFocus(database),
       activities: page.map((row) => activity(row, database)),
       missingActivityIds: ids?.filter((id) => !existing?.has(id)) ?? [],
+      missingActivityNumbers: numbers?.filter((number) => !existingNumbers?.has(number)) ?? [],
       nextCursor:
         rows.length > parsed.limit
           ? Buffer.from(
@@ -192,6 +215,7 @@ export function getAllActivities(database = getDatabase()): ActivityContext {
       .all()
       .map((row) => activity(row, database)),
     missingActivityIds: [],
+    missingActivityNumbers: [],
     nextCursor: null,
   }));
 }
@@ -285,7 +309,14 @@ export function writeActivity<T extends { requestId: string; expectedRevision: n
         activityIds: ids,
         receivedAt: new Date(now).toISOString(),
       };
+      const auditIds = auditActivityIds(operation, input, ids, database);
+      const before = activityAuditSnapshots(auditIds, database);
       mutate(result, now);
+      const after = activityAuditSnapshots(
+        [...new Set([...auditIds, ...result.activityIds])],
+        database,
+      );
+      recordActivityAudit(operation, result, before, after, database, now);
       database
         .insert(activityRevision)
         .values({ id: 1, revision: result.revision })
@@ -302,6 +333,19 @@ export function writeActivity<T extends { requestId: string; expectedRevision: n
   );
   if (changed) notifyActivities();
   return result;
+}
+function allocateActivityNumber(database: AppDatabase): number {
+  const allocated = database
+    .insert(activityNumberSequence)
+    .values({ id: 1, lastNumber: 1 })
+    .onConflictDoUpdate({
+      target: activityNumberSequence.id,
+      set: { lastNumber: sql`${activityNumberSequence.lastNumber} + 1` },
+    })
+    .returning({ number: activityNumberSequence.lastNumber })
+    .get();
+  if (!allocated) fail("internal-error", "Unable to allocate activity number.");
+  return allocated.number;
 }
 export function publishActivities(input: unknown, database = getDatabase()): ActivityReceipt {
   checkSize(input);
@@ -326,10 +370,12 @@ export function publishActivities(input: unknown, database = getDatabase()): Act
             "immutable-field",
             "An existing activity cannot change kind or reply destination and message anchor.",
           );
+        const number = existing?.number ?? allocateActivityNumber(database);
         database
           .insert(activities)
           .values({
             id: proposal.id,
+            number,
             origin: existing?.origin ?? "agent",
             proposal,
             userState: "available",
@@ -356,6 +402,7 @@ export function publishActivities(input: unknown, database = getDatabase()): Act
             "activity.created",
             {
               id: proposal.id,
+              number,
               origin: "agent",
               readAt: null,
               proposal,
@@ -484,6 +531,7 @@ export function createUserActivity(input: unknown, database = getDatabase()): Ac
       const { id, title, nextAction, section } = parsed;
       const row: typeof activities.$inferSelect = {
         id,
+        number: allocateActivityNumber(database),
         origin: "user",
         readAt: now,
         proposal: {

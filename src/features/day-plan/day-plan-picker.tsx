@@ -23,7 +23,9 @@ export function DayPlanPicker({
   const candidates = activities.filter(
     (activity) =>
       !["completed", "dismissed", "deferred"].includes(activity.userState) &&
-      activity.effective.title.toLocaleLowerCase().includes(search.toLocaleLowerCase()),
+      `#${activity.number} ${activity.effective.title}`
+        .toLocaleLowerCase()
+        .includes(search.toLocaleLowerCase()),
   );
   function select(activityId: string, section: "focus" | "optional") {
     const siblings = selections.filter((entry) => !entry.excluded && entry.section === section);
@@ -57,7 +59,10 @@ export function DayPlanPicker({
               return (
                 <li key={activity.id} className="flex flex-wrap items-center gap-2 py-3">
                   <span className="min-w-0 flex-1 text-sm">
-                    <span className="block">{activity.effective.title}</span>
+                    <span className="block">
+                      <span className="mr-2 text-muted-foreground">#{activity.number}</span>
+                      {activity.effective.title}
+                    </span>
                     <ActivityTimeLabel activity={activity} />
                   </span>
                   <Button

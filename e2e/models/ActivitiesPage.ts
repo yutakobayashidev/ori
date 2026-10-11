@@ -44,7 +44,7 @@ export class ActivitiesPage {
   action(title: string) {
     return this.page
       .getByRole("navigation", { name: "Conversation actions" })
-      .getByRole("button", { name: title, exact: true });
+      .getByRole("button", { name: title });
   }
   async saveReply(text: string) {
     await this.draft.fill(text);

@@ -4,6 +4,7 @@ import { tmpdir } from "node:os";
 import { join } from "node:path";
 import { beforeEach, afterEach, describe, expect, it, vi } from "vitest";
 import { openDatabase, type AppDatabase } from "../storage/database.server";
+import { getCommunicationLogs } from "../activities/communication.server";
 import { mcpEventOutbox, mcpEventSubscriptions } from "../storage/schema";
 import {
   subscribeMcpEvent,
@@ -514,4 +515,29 @@ it("delivers time changes once, filters agent origins, and requires changed fiel
       now + 1,
     ),
   ).toThrow(/changedFields/);
+});
+
+it("keeps a redacted communication record for every webhook retry", async () => {
+  await subscribeMcpEvent(input, database, { now, sender: verify });
+  enqueueBeeperMessageEvent("beeper.message.received", message, database, now);
+  const sender = vi
+    .fn<WebhookSender>()
+    .mockResolvedValueOnce({ status: 503, body: `Retry ${secret}` })
+    .mockResolvedValueOnce({ status: 204, body: "" });
+  await deliverMcpEvents(database, { now, sender });
+  await deliverMcpEvents(database, { now: now + 10_000, sender });
+  const logs = getCommunicationLogs({}, database).entries;
+  expect(logs).toMatchObject([
+    { name: "beeper.message.received", attempt: 2, status: 204, outcome: "success" },
+    {
+      name: "beeper.message.received",
+      attempt: 1,
+      status: 503,
+      outcome: "error",
+      response: "Retry [redacted]",
+    },
+    { name: "verification", outcome: "success" },
+  ]);
+  expect(logs[0]?.eventId).toBe(logs[1]?.eventId);
+  expect(JSON.stringify(logs)).not.toContain(secret);
 });

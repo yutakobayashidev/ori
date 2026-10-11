@@ -108,7 +108,10 @@ export function createResearchTools(
     },
   ];
   return {
-    definitions,
+    definitions: definitions.map((tool) => ({
+      ...tool,
+      annotations: { readOnlyHint: tool.name !== "open_temporary_deck" },
+    })),
     get evidenceCount() {
       return evidence.size;
     },

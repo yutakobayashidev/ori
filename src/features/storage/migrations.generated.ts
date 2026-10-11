@@ -125,4 +125,21 @@ export const migrations = [
     folderMillis: 1791540915054,
     hash: "29b22fce8f77c2725e672d2ee0da4e3b1e3bb34980c15af7c9792c9e8db8edd5",
   },
+  {
+    sql: [
+      "CREATE TABLE `activity_audit` (\n\t`id` integer PRIMARY KEY AUTOINCREMENT NOT NULL,\n\t`activity_id` text NOT NULL,\n\t`operation` text NOT NULL,\n\t`actor` text NOT NULL,\n\t`channel` text NOT NULL,\n\t`request_id` text NOT NULL,\n\t`revision` integer NOT NULL,\n\t`occurred_at` integer NOT NULL,\n\t`before` text,\n\t`after` text\n);\n",
+      "\nCREATE UNIQUE INDEX `activity_audit_request_activity` ON `activity_audit` (`request_id`,`activity_id`);",
+      "\nCREATE INDEX `activity_audit_activity_id` ON `activity_audit` (`activity_id`,`id`);",
+      "\nCREATE TABLE `activity_number_sequence` (\n\t`id` integer PRIMARY KEY NOT NULL,\n\t`last_number` integer NOT NULL\n);\n",
+      "\nCREATE TABLE `communication_logs` (\n\t`id` integer PRIMARY KEY AUTOINCREMENT NOT NULL,\n\t`kind` text NOT NULL,\n\t`direction` text NOT NULL,\n\t`name` text NOT NULL,\n\t`occurred_at` integer NOT NULL,\n\t`duration_ms` integer NOT NULL,\n\t`outcome` text NOT NULL,\n\t`status` integer,\n\t`request_id` text,\n\t`event_id` text,\n\t`subscription_id` text,\n\t`attempt` integer,\n\t`activity_ids` text NOT NULL,\n\t`request` text,\n\t`response` text\n);\n",
+      "\nCREATE INDEX `communication_logs_time` ON `communication_logs` (`occurred_at`);",
+      "\nALTER TABLE `activities` ADD `number` integer NOT NULL DEFAULT 0;\n",
+      "\nWITH numbered AS (SELECT id, ROW_NUMBER() OVER (ORDER BY created_at, id) AS number FROM activities)\nUPDATE activities SET number = (SELECT number FROM numbered WHERE numbered.id = activities.id);\n",
+      "\nINSERT INTO activity_number_sequence (id, last_number) SELECT 1, COALESCE(MAX(number), 0) FROM activities;",
+      "\nCREATE UNIQUE INDEX `activities_number_unique` ON `activities` (`number`);",
+    ],
+    bps: true,
+    folderMillis: 1791693599326,
+    hash: "73793f3928f03cc69f16d1895f040592ba57b5a37fa6dc44aaf095f5b97a0cea",
+  },
 ];

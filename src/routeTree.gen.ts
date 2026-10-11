@@ -16,6 +16,7 @@ import { Route as OnboardingRouteImport } from './routes/onboarding'
 import { Route as LoginRouteImport } from './routes/login'
 import { Route as JournalRouteImport } from './routes/journal'
 import { Route as InboxRouteImport } from './routes/inbox'
+import { Route as HistoryRouteImport } from './routes/history'
 import { Route as DeckRouteImport } from './routes/deck'
 import { Route as BoardRouteImport } from './routes/board'
 import { Route as IndexRouteImport } from './routes/index'
@@ -60,6 +61,11 @@ const JournalRoute = JournalRouteImport.update({
 const InboxRoute = InboxRouteImport.update({
   id: '/inbox',
   path: '/inbox',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const HistoryRoute = HistoryRouteImport.update({
+  id: '/history',
+  path: '/history',
   getParentRoute: () => rootRouteImport,
 } as any)
 const DeckRoute = DeckRouteImport.update({
@@ -117,6 +123,7 @@ export interface FileRoutesByFullPath {
   '/': typeof IndexRoute
   '/board': typeof BoardRoute
   '/deck': typeof DeckRoute
+  '/history': typeof HistoryRoute
   '/inbox': typeof InboxRoute
   '/journal': typeof JournalRoute
   '/login': typeof LoginRoute
@@ -136,6 +143,7 @@ export interface FileRoutesByTo {
   '/': typeof IndexRoute
   '/board': typeof BoardRoute
   '/deck': typeof DeckRoute
+  '/history': typeof HistoryRoute
   '/inbox': typeof InboxRoute
   '/journal': typeof JournalRoute
   '/login': typeof LoginRoute
@@ -156,6 +164,7 @@ export interface FileRoutesById {
   '/': typeof IndexRoute
   '/board': typeof BoardRoute
   '/deck': typeof DeckRoute
+  '/history': typeof HistoryRoute
   '/inbox': typeof InboxRoute
   '/journal': typeof JournalRoute
   '/login': typeof LoginRoute
@@ -177,6 +186,7 @@ export interface FileRouteTypes {
     | '/'
     | '/board'
     | '/deck'
+    | '/history'
     | '/inbox'
     | '/journal'
     | '/login'
@@ -196,6 +206,7 @@ export interface FileRouteTypes {
     | '/'
     | '/board'
     | '/deck'
+    | '/history'
     | '/inbox'
     | '/journal'
     | '/login'
@@ -215,6 +226,7 @@ export interface FileRouteTypes {
     | '/'
     | '/board'
     | '/deck'
+    | '/history'
     | '/inbox'
     | '/journal'
     | '/login'
@@ -235,6 +247,7 @@ export interface RootRouteChildren {
   IndexRoute: typeof IndexRoute
   BoardRoute: typeof BoardRoute
   DeckRoute: typeof DeckRoute
+  HistoryRoute: typeof HistoryRoute
   InboxRoute: typeof InboxRoute
   JournalRoute: typeof JournalRoute
   LoginRoute: typeof LoginRoute
@@ -300,6 +313,13 @@ declare module '@tanstack/react-router' {
       path: '/inbox'
       fullPath: '/inbox'
       preLoaderRoute: typeof InboxRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/history': {
+      id: '/history'
+      path: '/history'
+      fullPath: '/history'
+      preLoaderRoute: typeof HistoryRouteImport
       parentRoute: typeof rootRouteImport
     }
     '/deck': {
@@ -379,6 +399,7 @@ const rootRouteChildren: RootRouteChildren = {
   IndexRoute: IndexRoute,
   BoardRoute: BoardRoute,
   DeckRoute: DeckRoute,
+  HistoryRoute: HistoryRoute,
   InboxRoute: InboxRoute,
   JournalRoute: JournalRoute,
   LoginRoute: LoginRoute,

@@ -558,3 +558,83 @@ it("reads existing Beeper source excerpts as text without changing persisted evi
   };
   expect(JSON.parse(stored.proposal)).toEqual(richReply);
 });
+
+it("shares stable numbers across tasks, replies, agent updates, and user creations", () => {
+  publish();
+  publish([{ ...task, title: "Updated task" }], 1, "refresh");
+  createUserActivity(
+    {
+      requestId: "user-task",
+      expectedRevision: 2,
+      id: "manual",
+      title: "Manual task",
+      nextAction: "Start",
+      section: "optional",
+    },
+    database,
+  );
+  expect(
+    getActivityContext({}, second).activities.map(({ id, number }) => ({ id, number })),
+  ).toEqual([
+    { id: "detergent", number: 1 },
+    { id: "manual", number: 3 },
+    { id: "review", number: 2 },
+  ]);
+});
+
+it("resolves numbers to IDs and reports missing numbers independently of state filters", () => {
+  publish();
+  const context = getActivityContext(
+    { activityNumbers: [2, 99, 2], states: ["available"] },
+    database,
+  );
+  expect(context.activities.map(({ id, number }) => ({ id, number }))).toEqual([
+    { id: "review", number: 2 },
+  ]);
+  expect(context.missingActivityNumbers).toEqual([99]);
+  expect(
+    getActivityContext({ activityNumbers: [1], states: ["completed"] }, database),
+  ).toMatchObject({
+    activities: [],
+    missingActivityNumbers: [],
+  });
+});
+
+it("does not consume numbers for retries or rolled-back publications", () => {
+  const first = publish();
+  expect(publish()).toEqual(first);
+  expect(() =>
+    publish(
+      [
+        { ...task, id: "new-before-failure" },
+        { ...task, id: reply.id },
+      ],
+      1,
+      "failed-publication",
+    ),
+  ).toThrow(expect.objectContaining({ code: "immutable-field" }));
+  publish([{ ...task, id: "next" }], 1, "next-publication");
+  expect(getActivityContext({ activityNumbers: [3] }, database).activities[0]?.id).toBe("next");
+});
+
+it("never reuses a deleted activity's number", () => {
+  publish();
+  database.$client.prepare("DELETE FROM activities WHERE id = ?").run("review");
+  publish([{ ...task, id: "next" }], 1, "next-publication");
+  expect(getActivityContext({ activityNumbers: [3] }, database).activities[0]?.id).toBe("next");
+  expect(getActivityContext({ activityNumbers: [2] }, database).missingActivityNumbers).toEqual([
+    2,
+  ]);
+});
+
+it("binds number filters into pagination cursors", () => {
+  publish();
+  const first = getActivityContext({ activityNumbers: [2, 1], limit: 1 }, database);
+  expect(
+    getActivityContext({ activityNumbers: [1, 2, 2], limit: 1, cursor: first.nextCursor }, database)
+      .activities[0]?.number,
+  ).toBe(2);
+  expect(() =>
+    getActivityContext({ activityNumbers: [1], limit: 1, cursor: first.nextCursor }, database),
+  ).toThrow(expect.objectContaining({ code: "invalid-input" }));
+});

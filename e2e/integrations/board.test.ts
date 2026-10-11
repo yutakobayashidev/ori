@@ -14,6 +14,10 @@ test("moves existing activities on the board and opens AI handoff", async ({
   });
   await task.click();
   await expect(page.getByRole("heading", { name: "Buy detergent", exact: true })).toBeVisible();
+  await expect(page.getByRole("dialog").getByText(/^#\d+$/)).toBeVisible();
+  await page.getByRole("dialog").getByText("History", { exact: true }).click();
+  await expect(page.getByRole("region", { name: "Activity history" })).toContainText("AI agent");
+  await page.getByRole("dialog").getByText("History", { exact: true }).click();
   await expect(page.getByLabel("Work to delegate")).toHaveValue(
     "Buy one refill of the usual detergent",
   );

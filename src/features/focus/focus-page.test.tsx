@@ -40,6 +40,7 @@ beforeEach(() => {
   };
   state.activity = {
     id: "task",
+    number: 123,
     isUnread: false,
     proposal,
     effective: { ...proposal, section: "focus" },

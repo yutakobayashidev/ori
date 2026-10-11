@@ -1,3 +1,4 @@
+import { withActivityAuditContext } from "../activities/audit.server";
 import { z } from "zod";
 import appHtml from "virtual:workspace-mcp-app";
 import { getActivityContextInput, updateActivityUserInput } from "../activities/model";
@@ -83,7 +84,9 @@ export async function callExecutionAppTool(input: z.infer<typeof executionAppToo
     const args = updateActivityUserInput.parse(input.arguments);
     if (args.id !== activityId)
       return activityToolFailure("invalid-input", "This card can only edit its own task.");
-    const receipt = updateActivityUser(args);
+    const receipt = withActivityAuditContext({ actor: "user", channel: "browser" }, () =>
+      updateActivityUser(args),
+    );
     return {
       content: [{ type: "text" as const, text: JSON.stringify(receipt) }],
       structuredContent: receipt,

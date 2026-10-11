@@ -1,4 +1,6 @@
 import { createServerFn } from "@tanstack/react-start";
+import { getActivityAuditInput } from "./audit-model";
+import { getCommunicationLogsInput } from "./communication-model";
 import {
   createHomeActivityInput,
   updateActivityUserInput,
@@ -12,7 +14,10 @@ async function run<T>(
 ): Promise<T | ActivityFailure> {
   const repository = await import("./repository.server");
   try {
-    return operation(repository);
+    const { withActivityAuditContext } = await import("./audit.server");
+    return withActivityAuditContext({ actor: "user", channel: "browser" }, () =>
+      operation(repository),
+    );
   } catch (error) {
     if (error instanceof repository.ActivityPersistenceError)
       return { ok: false, error: { code: error.code, message: error.message } };
@@ -44,3 +49,17 @@ export const markActivityRead = createServerFn({ method: "POST" })
   .handler(({ data }): Promise<boolean | ActivityFailure> =>
     run((repository) => repository.markActivityRead(data)),
   );
+
+export const loadActivityAudit = createServerFn({ method: "GET" })
+  .validator(getActivityAuditInput)
+  .handler(async ({ data }) => {
+    const { getActivityAudit } = await import("./audit.server");
+    return run(() => getActivityAudit(data));
+  });
+
+export const loadCommunicationLogs = createServerFn({ method: "GET" })
+  .validator(getCommunicationLogsInput)
+  .handler(async ({ data }) => {
+    const { getCommunicationLogs } = await import("./communication.server");
+    return run(() => getCommunicationLogs(data));
+  });

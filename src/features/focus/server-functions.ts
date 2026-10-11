@@ -13,7 +13,10 @@ async function run<T>(
   const repository = await import("./repository.server");
   const { ActivityPersistenceError } = await import("../activities/repository.server");
   try {
-    return operation(repository);
+    const { withActivityAuditContext } = await import("../activities/audit.server");
+    return withActivityAuditContext({ actor: "user", channel: "browser" }, () =>
+      operation(repository),
+    );
   } catch (error) {
     if (error instanceof ActivityPersistenceError)
       return { ok: false, error: { code: error.code, message: error.message } };

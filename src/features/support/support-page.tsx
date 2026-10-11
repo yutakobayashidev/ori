@@ -56,7 +56,7 @@ export function SupportPage() {
             : state === "completed" || state === "dismissed");
     return (
       matchesView &&
-      `${item.reply.recipientName} ${item.title} ${item.nextAction} ${item.reply.context}`
+      `#${activity.number} ${item.reply.recipientName} ${item.title} ${item.nextAction} ${item.reply.context}`
         .toLowerCase()
         .includes(query)
     );
@@ -175,7 +175,7 @@ export function SupportPage() {
                     size="sm"
                     onClick={() => updateSearch({ activity: activity.id })}
                   >
-                    {activity.effective.title}
+                    #{activity.number} {activity.effective.title}
                   </Button>
                 ))}
               </nav>

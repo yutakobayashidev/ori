@@ -1,3 +1,4 @@
+import { ActivityHistory } from "#/features/activities/activity-history";
 import { ActivityMarkdown } from "#/features/activities/activity-markdown";
 import { ActivityTimeLabel, StartFocusButton } from "#/features/focus/focus-controls";
 import { ActivityTimeDetails } from "#/features/focus/time-details";
@@ -48,9 +49,11 @@ export function BoardPage() {
   const [title, setTitle] = useState("");
   const selected = store.activities.find((activity) => activity.id === selectedId);
   const visible = store.activities.filter(
-    ({ effective }) =>
+    ({ effective, number }) =>
       (!focus || effective.section === "focus") &&
-      `${effective.title} ${effective.nextAction}`.toLowerCase().includes(query.toLowerCase()),
+      `#${number} ${effective.title} ${effective.nextAction}`
+        .toLowerCase()
+        .includes(query.toLowerCase()),
   );
   return (
     <TooltipProvider>
@@ -121,6 +124,7 @@ export function BoardPage() {
                           }}
                         >
                           <div className="p-4">
+                            <p className="mb-2 text-xs text-muted-foreground">#{activity.number}</p>
                             <div className="flex items-start gap-2">
                               <Icon className={`mt-0.5 size-3.5 shrink-0 ${color}`} />
                               <h3 className="line-clamp-2 text-sm font-medium leading-5">
@@ -128,7 +132,7 @@ export function BoardPage() {
                               </h3>
                             </div>
                             {activity.isUnread && (
-                              <span className="mt-2 inline-flex items-center gap-1.5 text-[11px] font-medium text-foreground">
+                              <span className="mt-2 inline-flex items-center gap-1.5 text-ui-11 font-medium text-foreground">
                                 <span className="size-1.5 rounded-full bg-activity-lilac" />
                                 New
                               </span>
@@ -175,6 +179,7 @@ export function BoardPage() {
             {selected && (
               <div className="flex min-h-0 flex-1 flex-col">
                 <div className="grid max-h-[30dvh] shrink-0 gap-3 overflow-y-auto border-b px-4 py-5 pr-12 sm:px-6 sm:pr-12">
+                  <p className="text-xs text-muted-foreground">#{selected.number}</p>
                   <SheetTitle>{selected.effective.title}</SheetTitle>
                   <ActivityMarkdown text={selected.effective.nextAction} />
                   <div className="flex items-center gap-3">
@@ -182,6 +187,7 @@ export function BoardPage() {
                     <StartFocusButton activity={selected} />
                   </div>
                   <ActivityTimeDetails activity={selected} />
+                  <ActivityHistory key={selected.id} activityId={selected.id} />
                   {selected.effective.detail && (
                     <ActivityMarkdown text={selected.effective.detail} />
                   )}

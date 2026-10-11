@@ -8,6 +8,7 @@ import {
   NotebookPen,
   Search,
   Columns3,
+  History,
 } from "lucide-react";
 import type { ReactNode } from "react";
 import { Avatar, AvatarFallback } from "#/components/ui/avatar";
@@ -46,6 +47,7 @@ export function WorkspaceNavigation({
   const navigation = [
     { title: "Home", to: "/", icon: House, active: pathname === "/" },
     { title: "Board", to: "/board", icon: Columns3, active: pathname === "/board" },
+    { title: "History", to: "/history", icon: History, active: pathname === "/history" },
     {
       title: "Vitals",
       to: "/vitals",

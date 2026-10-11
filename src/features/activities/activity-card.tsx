@@ -1,3 +1,4 @@
+import { ActivityHistory } from "#/features/activities/activity-history";
 import { ActivityMarkdown } from "./activity-markdown";
 import type { ReactNode } from "react";
 import { Check, ChevronDown, Circle, MessageCircle } from "lucide-react";
@@ -68,6 +69,7 @@ export function ActivityCard({
             onToggle();
           }}
         >
+          <span className="text-ui-11 text-muted-foreground">#{activity.number}</span>
           <span
             data-testid="execution-flow-title"
             className="text-ui-14 font-medium group-data-[status=done]/flow:text-muted-foreground"
@@ -106,6 +108,7 @@ export function ActivityCard({
           <ActivityEditor activity={activity} />
           <ActivitySources activity={activity} />
           <ActivityTimeDetails activity={activity} />
+          <ActivityHistory activityId={activity.id} />
         </div>
       )}
     </div>

@@ -32,6 +32,7 @@ beforeEach(() => {
     ok: true,
     revision: 0,
     activities: [],
+    missingActivityNumbers: [],
     missingActivityIds: [],
     nextCursor: null,
   });

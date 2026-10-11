@@ -1,5 +1,6 @@
 // @vitest-environment node
 import { mkdtempSync, rmSync, statSync } from "node:fs";
+import { ok as assert } from "node:assert";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
 import { and, eq, sql } from "drizzle-orm";
@@ -192,4 +193,59 @@ describe("persistent database", () => {
     );
     expect(open("backup.db").select().from(decks).get()?.title).toBe("Research");
   });
+});
+
+it("backfills activity numbers by creation date and preserves referenced records on upgrade", () => {
+  const path = join(directory, "number-upgrade.db");
+  const legacy = new Database(path);
+  const numberingMigration = migrations.find((migration) =>
+    migration.sql.some((statement) => statement.includes("activity_number_sequence")),
+  );
+  expect(numberingMigration).toBeDefined();
+  assert(numberingMigration);
+  legacy.exec(
+    "CREATE TABLE __drizzle_migrations (id INTEGER PRIMARY KEY AUTOINCREMENT, hash TEXT NOT NULL, created_at NUMERIC)",
+  );
+  for (const migration of migrations.filter(
+    (item) => item.folderMillis < numberingMigration.folderMillis,
+  )) {
+    for (const statement of migration.sql) legacy.exec(statement);
+    legacy
+      .prepare("INSERT INTO __drizzle_migrations (hash, created_at) VALUES (?, ?)")
+      .run(migration.hash, migration.folderMillis);
+  }
+  const insert = legacy.prepare(
+    "INSERT INTO activities (id, proposal, user_state, user_overrides, created_at, updated_at) VALUES (?, ?, 'available', '{}', ?, ?)",
+  );
+  for (const [id, createdAt] of [
+    ["later", 20],
+    ["z-first", 10],
+    ["a-first", 10],
+  ] as const) {
+    insert.run(
+      id,
+      JSON.stringify({ id, kind: "task", title: id, nextAction: "Start", sources: [] }),
+      createdAt,
+      createdAt,
+    );
+  }
+  legacy
+    .prepare("INSERT INTO activity_time (activity_id, initial_captured) VALUES (?, 0)")
+    .run("a-first");
+  legacy.close();
+  const upgraded = open("number-upgrade.db");
+  expect(
+    getActivityContext({}, upgraded).activities.map(({ id, number }) => ({ id, number })),
+  ).toEqual([
+    { id: "a-first", number: 1 },
+    { id: "later", number: 3 },
+    { id: "z-first", number: 2 },
+  ]);
+  expect(upgraded.$client.prepare("SELECT activity_id FROM activity_time").all()).toEqual([
+    { activity_id: "a-first" },
+  ]);
+  expect(upgraded.$client.prepare("PRAGMA foreign_key_check").all()).toEqual([]);
+  expect(
+    upgraded.$client.prepare("SELECT last_number FROM activity_number_sequence WHERE id = 1").get(),
+  ).toEqual({ last_number: 3 });
 });

@@ -41,9 +41,10 @@ it("uses the configured gateway and maps Reddit search results to research posts
     request,
   );
   const [url, init] = request.mock.calls[0] ?? [];
-  expect(new URL(String(url)).origin).toBe("https://rdt.home.yutakobayashi.com");
-  expect(new URL(String(url)).pathname).toBe("/search.json");
-  expect(new URL(String(url)).searchParams).toEqual(
+  expect.assert(typeof url === "string" || url instanceof URL);
+  expect(new URL(url).origin).toBe("https://rdt.home.yutakobayashi.com");
+  expect(new URL(url).pathname).toBe("/search.json");
+  expect(new URL(url).searchParams).toEqual(
     new URLSearchParams({
       q: "nix flakes",
       sort: "top",
@@ -84,7 +85,7 @@ it("validates Reddit pagination cursors and canonical post URLs", async () => {
       },
       request,
     ),
-  ).rejects.toThrow();
+  ).rejects.toThrow(/cursor/i);
   await expect(
     fetchRedditPage(
       {

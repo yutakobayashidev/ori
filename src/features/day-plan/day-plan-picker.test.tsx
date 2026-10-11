@@ -12,6 +12,7 @@ const proposal = {
 };
 const activity = {
   id: "a",
+  number: 123,
   isUnread: false,
   proposal,
   effective: { ...proposal, section: "optional" },

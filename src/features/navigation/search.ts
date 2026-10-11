@@ -6,6 +6,7 @@ const workspaceSearch = z.object({
   q: text,
   article: text,
   activity: text,
+  auditTab: z.enum(["changes", "communications"]).optional().catch(undefined),
   conversation: text,
   view: z.enum(["now", "later", "waiting", "done", "all"]).optional().catch(undefined),
   accounts: flag,

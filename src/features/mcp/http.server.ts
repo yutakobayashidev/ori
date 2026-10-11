@@ -17,6 +17,7 @@ import {
 } from "../mcp-events/events.server";
 import { CallbackEndpointError } from "../mcp-events/webhook.server";
 import { createWorkspaceTools } from "./workspace-tools.server";
+import { logMcpExchange } from "../activities/communication.server";
 
 type Tools = {
   definitions: {
@@ -66,7 +67,12 @@ function serverFor(tools: Tools, workspace: boolean, execution: boolean) {
     );
     server.setRequestHandler("events/subscribe", { params: subscriptionSchema }, async (params) => {
       try {
-        return await subscribeMcpEvent(params);
+        return await logMcpExchange(
+          "events/subscribe",
+          params,
+          () => subscribeMcpEvent(params),
+          "mcp-event",
+        );
       } catch (error) {
         if (error instanceof CallbackEndpointError)
           throw new ProtocolError(-32015, "Callback verification failed.", {
@@ -78,7 +84,7 @@ function serverFor(tools: Tools, workspace: boolean, execution: boolean) {
       }
     });
     server.setRequestHandler("events/unsubscribe", { params: identitySchema }, (params) =>
-      unsubscribeMcpEvent(params),
+      logMcpExchange("events/unsubscribe", params, () => unsubscribeMcpEvent(params), "mcp-event"),
     );
   }
   server.setRequestHandler("tools/list", () => ({
@@ -89,7 +95,12 @@ function serverFor(tools: Tools, workspace: boolean, execution: boolean) {
     })),
   }));
   server.setRequestHandler("tools/call", async ({ params }) => {
-    const result = await tools.execute(params.name, params.arguments ?? {});
+    const definition = tools.definitions.find((tool) => tool.name === params.name);
+    const execute = () => tools.execute(params.name, params.arguments ?? {});
+    const result =
+      definition?.annotations?.readOnlyHint === false
+        ? await logMcpExchange(params.name, params.arguments ?? {}, execute)
+        : await execute();
     return {
       content: [{ type: "text" as const, text: JSON.stringify(result) }],
       ...(hasAppResult(params.name) && result && typeof result === "object"

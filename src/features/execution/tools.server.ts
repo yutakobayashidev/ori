@@ -5,7 +5,7 @@ import { getMessageSend } from "../beeper/sends.server";
 
 export async function createExecutionTools(id: string, proof: string) {
   if (!(await executionScopeIsValid(id, proof))) return undefined;
-  const workspace = createWorkspaceTools();
+  const workspace = createWorkspaceTools({ actor: "agent", channel: "execution" });
   const definitions = executionToolDefinitions();
   return {
     definitions,

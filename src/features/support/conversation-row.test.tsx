@@ -18,6 +18,7 @@ function activity(id: string): Activity {
   };
   return {
     id,
+    number: 123,
     isUnread: false,
     proposal,
     effective: { ...proposal, section: "focus" },

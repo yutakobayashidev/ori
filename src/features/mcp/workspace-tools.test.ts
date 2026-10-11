@@ -5,6 +5,7 @@ import { loadDeck } from "../decks/repository.server";
 import { openDatabase, type AppDatabase } from "../storage/database.server";
 import { connections } from "../storage/schema";
 import { createWorkspaceTools } from "./workspace-tools.server";
+import { getActivityAudit } from "../activities/audit.server";
 
 const mocks = vi.hoisted(() => ({
   database: vi.fn<typeof import("../storage/database.server").getDatabase>(),
@@ -297,6 +298,11 @@ it("persists widget activity decisions with the same revision and retry rules as
   };
   const saved = await tools.execute("update_activity", change);
   expect(saved).toMatchObject({ ok: true, revision: 2 });
+  expect(getActivityAudit({}, database).entries[0]).toMatchObject({
+    actor: "agent",
+    channel: "mcp",
+    requestId: "widget-complete",
+  });
   expect(await tools.execute("update_activity", change)).toEqual(saved);
   expect(await tools.execute("get_activity_context", {})).toMatchObject({
     revision: 2,
@@ -460,4 +466,18 @@ it("publishes automatically classified AI activities and updates remaining work 
       },
     ],
   });
+});
+
+it("attributes embedded execution mutations separately from external MCP", async () => {
+  const tools = createWorkspaceTools({ actor: "agent", channel: "execution" });
+  await tools.execute("publish_activities", {
+    requestId: "execution-publish",
+    expectedRevision: 0,
+    activities: [
+      { id: "execution-task", kind: "task", title: "Task", nextAction: "Start", sources: [] },
+    ],
+  });
+  expect(getActivityAudit({}, database).entries).toMatchObject([
+    { actor: "agent", channel: "execution" },
+  ]);
 });

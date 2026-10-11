@@ -1,3 +1,4 @@
+import { ActivityHistory } from "#/features/activities/activity-history";
 import { ActivityMarkdown } from "./activity-markdown";
 import { useState, type ReactNode } from "react";
 import { Button } from "#/components/ui/button";
@@ -233,7 +234,9 @@ export function ReplyActivityDetail({
         className="min-w-0 border-t border-border bg-sidebar p-px-22 @min-[780px]:overflow-y-auto @min-[780px]:border-t-0 @min-[780px]:border-l"
         aria-label="Person and conversation context"
       >
-        <p className="text-xs text-muted-foreground">{stateLabels[activity.userState]}</p>
+        <p className="text-xs text-muted-foreground">
+          #{activity.number} · {stateLabels[activity.userState]}
+        </p>
         <h2 className="mt-3 text-ui-13 font-medium">{item.title}</h2>
         <section className="mt-5 border-t border-border pt-5">
           <h3 className="text-xs font-medium">Next action</h3>
@@ -246,6 +249,7 @@ export function ReplyActivityDetail({
           <StartFocusButton activity={activity} />
         </div>
         <ActivityTimeDetails activity={activity} />
+        <ActivityHistory activityId={activity.id} />
         <ActivityEditor activity={activity} />
         <section className="mt-5 border-t border-border pt-5" aria-label="Reply context">
           <h3 className="text-xs font-medium">Context</h3>

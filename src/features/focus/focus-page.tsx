@@ -1,3 +1,4 @@
+import { ActivityHistory } from "#/features/activities/activity-history";
 import { useState } from "react";
 import { Link } from "@tanstack/react-router";
 import { ArrowLeft, Check, Pause, Play, Plus } from "lucide-react";
@@ -76,6 +77,7 @@ export function FocusPage({
         ) : (
           <>
             <h1 className="text-2xl leading-snug font-medium tracking-tight sm:text-3xl">
+              <span className="mr-2 text-muted-foreground">#{activity.number}</span>
               {activity.effective.title}
             </h1>
             <div className="mx-auto mt-4 max-w-md text-left text-muted-foreground">
@@ -236,6 +238,7 @@ export function FocusPage({
               )}
             </div>
             <ActivityTimeDetails activity={activity} />
+            <ActivityHistory activityId={activity.id} />
             <Sheet
               open={details !== null}
               onOpenChange={(open) => {

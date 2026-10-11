@@ -12,6 +12,7 @@ const store = vi.hoisted(() => ({
 vi.mock("./activity-store", () => ({ useActivityStore: () => store }));
 const activity: Activity = {
   id: "review-materials",
+  number: 123,
   isUnread: false,
   proposal: {
     id: "review-materials",

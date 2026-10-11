@@ -20,6 +20,8 @@ const appTools = new Set([
 ]);
 
 export function workspaceAppToolMeta(name: string) {
+  if (name === "get_activity_audit" || name === "get_communication_logs")
+    return { ui: { visibility: ["model", "app"] }, "openai/widgetAccessible": true };
   if (name === "update_activity" || name === "get_beeper_asset")
     return { ui: { visibility: ["app"] }, "openai/widgetAccessible": true };
   if (!appTools.has(name)) return undefined;

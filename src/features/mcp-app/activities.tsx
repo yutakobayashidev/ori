@@ -6,6 +6,7 @@ import { ActivityStoreProvider, type ActivityStore } from "#/features/activities
 import type { ActivityContext } from "#/features/activities/model";
 import { ReplyActivityDetail } from "#/features/activities/reply-activity-detail";
 import type { ActivityMessagingTransport } from "#/features/activities/messaging-client";
+import type { ActivityHistoryTransport } from "#/features/activities/history-client";
 
 type CallTool = (name: string, args: Record<string, unknown>) => Promise<Record<string, unknown>>;
 
@@ -47,10 +48,24 @@ export function Activities({
     }),
     [callTool],
   );
+  const history = useMemo<ActivityHistoryTransport>(
+    () => ({
+      changes: async (input) =>
+        (await callTool("get_activity_audit", input)) as unknown as Awaited<
+          ReturnType<ActivityHistoryTransport["changes"]>
+        >,
+      communications: async (input) =>
+        (await callTool("get_communication_logs", input)) as unknown as Awaited<
+          ReturnType<ActivityHistoryTransport["communications"]>
+        >,
+    }),
+    [callTool],
+  );
   const filters = useMemo(
     () => ({
       limit: toolArguments?.limit ?? 50,
       ...(toolArguments?.activityIds ? { activityIds: toolArguments.activityIds } : {}),
+      ...(toolArguments?.activityNumbers ? { activityNumbers: toolArguments.activityNumbers } : {}),
       ...(toolArguments?.conversation ? { conversation: toolArguments.conversation } : {}),
       ...(toolArguments?.states ? { states: toolArguments.states } : {}),
     }),
@@ -181,6 +196,7 @@ export function Activities({
     <ActivityStoreProvider
       value={{
         messaging,
+        history,
         revision: snapshot.revision,
         currentRevision: () => current.current.revision,
         activities: snapshot.activities,

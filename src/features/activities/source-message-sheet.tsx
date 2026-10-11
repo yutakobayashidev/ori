@@ -60,10 +60,12 @@ export function SourceMessageSheet({
   }, [activityId, sourceId, messaging, open, request]);
   return (
     <Sheet open={open} onOpenChange={onOpenChange}>
-      <SheetContent side="right" className="min-w-0 w-full! gap-0 sm:max-w-[min(640px,90vw)]!">
-        <SheetHeader className="shrink-0 border-b">
-          <SheetTitle>Original message</SheetTitle>
-        </SheetHeader>
+      <SheetContent side="right" className="min-w-0 w-full! sm:max-w-[min(640px,90vw)]!">
+        <div className="shrink-0 border-b">
+          <SheetHeader>
+            <SheetTitle>Original message</SheetTitle>
+          </SheetHeader>
+        </div>
         {error && (
           <p role="alert" className="px-4 text-sm text-destructive">
             {error}
