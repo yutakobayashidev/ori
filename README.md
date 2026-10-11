@@ -1,6 +1,11 @@
 # Personal Workspace
 
-A personal workspace for understanding the day, choosing the next action,
+A personal workspace whose long-term goal is to trace life across the person,
+their environment, and the AI they interact with: what happened, what they
+intended, what they did, and what followed. See the proposed
+[architecture and vision](docs/architecture.md) for scope and implementation stages.
+
+The current app supports understanding the day, choosing the next action,
 keeping context, and exploring information. Home brings together a short brief,
 flexible tasks and routines, messages, notes, and reading. A shared sidebar opens
 each dedicated workspace; its bottom avatar manages connected accounts.
@@ -74,7 +79,14 @@ sends messages, or repeats device actions. Drafts, secrets, results, and task
 contents remain outside the URL. Unsaved mock records and manual temporary
 decks still disappear on reload; a URL does not persist their contents.
 
-## Direction: personal context and execution
+## Direction: life traces, context and execution
+
+The planned foundation connects physical and digital observations, conversations
+with people and AI, source archives, intentions, execution, and outcomes through
+time and evidence. Search, recollection, context handoff, and reflection are
+valuable uses in their own right; not every record needs to become a task or an
+improvement proposal. Explicit links and inferred relationships remain distinct.
+OpenTelemetry is a metaphor for this vision, not a required technology.
 
 The intended connection with the separate private `life` / Rensheng repository
 is a loop: read relevant personal context, suggest useful next actions, record
@@ -83,8 +95,10 @@ This integration is planned; the app does not currently read or update life.
 
 Rensheng would retain personal context, preferences, and the background of
 ongoing matters. This workspace would own its execution state and interaction
-history, with original conversations and appointments remaining in their source
-systems. Context should carry source references and verification dates.
+history, and would archive available source records with provenance and collection
+coverage. Original conversations and appointments can remain in their source
+systems while retained copies support later inspection and reprocessing.
+Context should carry source references and verification dates.
 
 Interests are queries over activity history, not settings the user must maintain.
 Routines provide optional guidance rather than a daily completion quota. Home

@@ -1,5 +1,10 @@
 # gbrain open loops and personal execution support
 
+2026-10-11 follow-up: [AI conversation ingestion and product boundaries](ai-conversation-ingestion-design.md)
+inspects a newer gbrain revision for Codex hooks, ChatGPT exports/live connectors,
+raw retention limits, and selective reuse. This document retains its original
+open-loop research scope and revision.
+
 Research, 2026-09-28. Source inspection at gbrain revision
 `e78f1c38b947b053f3a46881340f74f316be855a`; upstream tests were read, not executed.
 Application behavior below is proposed, not implemented. This supplements

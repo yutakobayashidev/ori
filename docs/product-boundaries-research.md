@@ -1,5 +1,40 @@
 # Rensheng, gbrain and the personal workspace
 
+## Current direction — 2026-10-11
+
+The product goal is to trace life across the person, their environment, and AI:
+observations, conversations, intentions, actions, and subsequent outcomes.
+Recollection, exploration, and context handoff matter even without an improvement
+or task. See the [overall architecture and vision](architecture.md).
+The foundation combines Aurboda-style
+measurement and interval analysis, Timelinize-style archival exploration, and
+the workspace's persistent intent, execution, and audit history. Tasks/replies,
+Beeper sending, and audit history are implemented; routines and Vitals remain
+prototypes. The September assessment below is historical, not current status.
+
+The proposed ownership is:
+
+- **Personal Workspace:** execution state and audit; a proposed private source
+  archive and projections for measurements, conversations, and observed episodes.
+- **Rensheng / life:** curated personal context, accepted goals, preferences,
+  relationship context, and procedures, linked to source evidence. Its planned
+  raw store is not an implemented conversation ingestion service.
+- **gbrain:** an optional shared memory/retrieval implementation and a reference
+  for transcript ingestion. Its current adapters intentionally discard some
+  content; they are not a lossless archive of Codex or ChatGPT histories.
+- **External agents:** interpretation, proposals, and context compilation.
+
+OpenBrief's current implementation still includes attention handoff, while its
+documented future direction narrows it to screen capture as a data source. That
+migration is not complete. Do not introduce a second owner for execution state.
+
+See [personal observability design](personal-observability-design.md) and
+[AI conversation ingestion, source inspection, and licensing](ai-conversation-ingestion-design.md)
+for current proposals, exact source revisions, collection limits, and the phased
+implementation. No new ingestion was installed as part of this research.
+
+## Historical assessment — 2026-09-28
+
 Research and recommendation, 2026-09-28. No integration was installed or tested.
 gbrain inspection: `e78f1c38b947b053f3a46881340f74f316be855a`.
 Rensheng inspection: `c06c4e3f290800752a0c252c84fbca0eed61e45d`.
