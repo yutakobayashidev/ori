@@ -1,5 +1,9 @@
 # Activity numbers and audit history
 
+Proposed extension: [personal observability design](personal-observability-design.md)
+describes deriving a life timeline from this audit history. It is not implemented
+and does not change the contract below.
+
 Implemented contract, agreed with the owner on 2026-10-11:
 
 - Assign one persistent sequence of human-readable numbers (`#1`, `#2`, …)

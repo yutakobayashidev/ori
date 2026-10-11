@@ -6,6 +6,8 @@ Aurbodaの確認対象は [257fa0a5d68fc5012fdec5dce76744b5a2149bcd](https://git
 
 追加調査: [Timelinizeのソースコードと統合案](timelinize-research.md)（2026-10-11）。ファイル取り込み、人物・出来事の共通モデル、時刻の不確実性、意味検索を確認。Aurbodaの継続計測と対比し、Personal Workspaceの生活アーカイブ設計への応用を整理した。
 
+実装方針: [生活観測・履歴・実行の統合設計案](personal-observability-design.md)。既存auditを原本にした生活タイムライン、外部ソースとの共通化、二重計上防止、段階的な実装と評価条件を整理した（検討中）。
+
 Gravl・OwnTracks・MPRIS・Livsmedelsverketの知名度、利用者レビュー、競合・大手のAPI、AurbodaのMPRIS実装は、[生活データソースの利用者評価と連携比較](personal-data-source-comparison.md)に整理した。身体計測・服薬とルーティンの統合案、所有機器、Quantified SelfのガジェットWiki構想も同メモに追記した。
 
 Personal Workspaceを、身体・生活空間・デジタル活動を観測し、理解・実行・振り返りまで扱える場所へ育てるための参考資料。

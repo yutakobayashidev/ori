@@ -4,6 +4,8 @@
 
 関連: [Aurbodaと生活データソース](aurboda-data-sources-research.md)、[生活データソースの比較](personal-data-source-comparison.md)。
 
+両プロジェクトと既存auditを組み合わせる具体案は、[生活観測・履歴・実行の統合設計案](personal-observability-design.md)に整理した（検討中）。
+
 ## 位置づけ
 
 [Timelinize](https://timelinize.com/)は、写真・メッセージ・位置履歴などを自分のコンピューターへ取り込み、一つの時間軸で閲覧する個人・家族向けアーカイブ。既存アプリからのエクスポートを繰り返し取り込む使い方が中心。タイムライン、地図、会話、ギャラリーという異なる画面で同じ記録を探索する。
