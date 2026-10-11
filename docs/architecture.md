@@ -167,6 +167,7 @@ hookは収集のきっかけであり、唯一の配送保証にしない。起�
 
 ## 詳細設計・調査
 
+- [Personal Data Vault：AW＋タスクの日次レポートとRedditの利用例](personal-data-vault-research.md)
 - [生活観測とauditの統合設計](personal-observability-design.md)
 - [Codex・ChatGPT会話収集設計](ai-conversation-ingestion-design.md)
 - [Aurbodaのデータソース調査](aurboda-data-sources-research.md)

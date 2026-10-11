@@ -11,6 +11,8 @@ Aurboda: `257fa0a5d68fc5012fdec5dce76744b5a2149bcd`、Timelinize: `11ecc5af75a5b
 
 ## 提案の要点
 
+追加参考: [Personal Data VaultとRedditの振り返り事例](personal-data-vault-research.md)。AW＋タスクをSQLiteで集計する小規模実装。収集と日次の利用場面を一緒に作る発想を参考にし、同期更新・重複時間・原本保持の制約を区別する。
+
 全体方針は[ビジョンとアーキテクチャ](architecture.md)を参照。生活全体のトレースを中核に置き、改善・実行に加えて記憶の検索、経緯の理解、文脈の引き継ぎも目的に含める。本書はそのうち観測・audit・分析の詳細設計を扱う。
 
 Personal Workspaceに、Aurbodaの計測・区間分析とTimelinizeのアーカイブ・人物関係・探索を組み合わせる。既存のタスク・返信・Focus・audit logを、本人の意図と実行についてのデータソースとして接続する。
