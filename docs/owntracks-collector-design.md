@@ -1,6 +1,6 @@
 # OwnTracksコレクター：まず原記録を貯める
 
-2026-10-12。日別JSONLへ保存するHTTPコレクターを実装。位置の正規化・地図・滞在推定は行わない。実機への配備とAndroidからの送信確認は別途必要。
+2026-10-12。日別JSONLへ保存するHTTPコレクターを実装。位置の正規化・地図・滞在推定は行わない。Androidからの実測送信確認は別途必要。
 
 関連: [全体アーキテクチャ](architecture.md)、[生活観測設計](personal-observability-design.md)、[生活データソース比較](personal-data-source-comparison.md)。
 
@@ -40,7 +40,7 @@ credentialファイルの形式:
 }
 ```
 
-passwordは例文を使わず、`openssl rand -hex 32`等で生成した値に置き換える。ファイル権限は0600にする。credentialファイルの作成・配布や実機設定は自動では行わない。初版は1端末分の設定で、設定ファイルはリクエストごとに再読込する。
+passwordは例文を使わず、`openssl rand -hex 32`等で生成した値に置き換える。ファイル権限は0600にする。汎用アプリ単体ではcredentialファイルの作成・配布や実機設定は行わない。初版は1端末分の設定で、設定ファイルはリクエストごとに再読込する。
 
 ```sh
 WORKSPACE_OWNTRACKS_ARCHIVE_DIR=/absolute/private/path/owntracks
@@ -52,6 +52,22 @@ WORKSPACE_OWNTRACKS_CREDENTIAL_FILE=/absolute/private/path/owntracks-credentials
 OwnTracks側ではHTTPモードを選び、HTTPS URLを`https://<workspace-host>/api/collect/owntracks`へ設定する。Identificationのusername/passwordへ上記の値を入力する。URLのqueryへsecretを入れず、Workspaceのログインpasswordを流用しない。payloadの`tid`や`X-Limit-D`は保存先端末IDの決定に使わず、認証設定の`deviceId`を使う。
 
 現在のdotnix構成ではWorkspaceのHTTPS経路がtailnet制限下にある。AndroidのTailscale接続とACLを含む到達確認が必要。MCP専用トンネルは流用しない。
+
+## UM790-ProとAndroidの設定
+
+dotnixの`homes/nixos/UM790-Pro/twitter-lite.nix`で保存先と資格情報を設定する。サービス起動時に`~/.local/state/twitter-lite/owntracks/`と`owntracks-credentials.json`を作成し、passwordをランダム生成する。既存の資格情報は再配備でも保持する。
+
+1. AndroidでTailscaleを接続する。
+2. OwnTracksの接続モードをHTTPにする。
+3. URLに`https://home.yutakobayashi.com/api/collect/owntracks`を設定する。
+4. usernameは`owntracks-phone`、passwordはUM790-Proで次のコマンドから確認する。Device IDは`android-main`にする。
+5. Androidの位置情報権限を常時許可し、バックグラウンド動作を許可する。まず手動publishで送信を試す。
+
+```sh
+jq -r .password ~/.local/state/twitter-lite/owntracks-credentials.json
+```
+
+credentialファイルやpasswordをGit・スクリーンショット・公開チャットに貼らない。Tailscale未接続時はこの受信先へ到達できない。送信確認はサーバーの`owntracks/*.jsonl`の件数・type・受信時刻で行い、位置の本文を公開ログに出さない。
 
 ## 保存形式
 
