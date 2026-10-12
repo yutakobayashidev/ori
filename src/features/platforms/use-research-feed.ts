@@ -19,13 +19,17 @@ export function flattenResearchPages(pages: ResearchPage[]): ResearchPost[] {
   );
 }
 
-export function useResearchFeed(column: DeckColumn) {
+export function useResearchFeed(
+  column: DeckColumn,
+  cache: { staleTime?: number; gcTime?: number } = {},
+) {
   const mastodon = useServerFn(loadMastodonPosts);
   const reddit = useServerFn(loadRedditPosts);
   const loadUser = useServerFn(loadUserPosts);
   const loadList = useServerFn(loadListPosts);
   const search = useServerFn(searchPosts);
   return useInfiniteQuery({
+    ...cache,
     queryKey: ["research-posts", column.connectionId, column.source],
     initialPageParam: undefined as string | undefined,
     retry: false,

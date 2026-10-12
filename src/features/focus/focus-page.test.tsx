@@ -12,15 +12,15 @@ const state = vi.hoisted(() => ({
     busy: false,
     error: "",
     retry: null,
-    refresh: vi.fn<NonNullable<ReturnType<typeof import("./focus-state").useFocus>>["refresh"]>(),
-    start: vi.fn<NonNullable<ReturnType<typeof import("./focus-state").useFocus>>["start"]>(),
-    change: vi.fn<NonNullable<ReturnType<typeof import("./focus-state").useFocus>>["change"]>(),
+    refresh: vi.fn<NonNullable<ReturnType<typeof import("./focus-store").useFocus>>["refresh"]>(),
+    start: vi.fn<NonNullable<ReturnType<typeof import("./focus-store").useFocus>>["start"]>(),
+    change: vi.fn<NonNullable<ReturnType<typeof import("./focus-store").useFocus>>["change"]>(),
   },
 }));
 vi.mock("@tanstack/react-router", () => ({
   Link: ({ children }: { children: ReactNode }) => <a href="/">{children}</a>,
 }));
-vi.mock("./focus-state", () => ({ useFocus: () => state.focus }));
+vi.mock("./focus-store", () => ({ useFocus: () => state.focus }));
 vi.mock("#/features/activities/activity-store", () => ({
   useActivityStore: () => ({
     activities: state.activity ? [state.activity] : [],

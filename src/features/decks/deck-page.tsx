@@ -27,7 +27,7 @@ import { ColumnEditor } from "./column-editor";
 import { type ColumnRegistry, useColumnTools } from "./column-tools";
 import { ResearchColumn } from "./deck-column";
 import { DeckSwitcher } from "./deck-switcher";
-import { type DeckColumn, MAX_COLUMNS, moveColumn } from "./model";
+import { type DeckColumn, moveColumn } from "./model";
 import { ResearchDeckSkeleton } from "./research-deck-skeleton";
 import { useDeck } from "./use-deck";
 import { useDeckTools } from "./webmcp-tools";
@@ -193,7 +193,7 @@ export function DeckPage() {
                 aria-label="Add column"
                 title="Add column"
                 type="button"
-                disabled={!ready || saving || deck.columns.length >= MAX_COLUMNS}
+                disabled={!ready || saving}
                 onClick={() => setEditing("new")}
               >
                 <Icon name="plus" />
@@ -218,7 +218,7 @@ export function DeckPage() {
                     {deck.title}
                   </h1>
                   <span data-testid="deck-count" className="text-xs text-muted-foreground">
-                    {deck.columns.length} / {MAX_COLUMNS} columns
+                    {deck.columns.length} columns
                   </span>
                 </>
               ) : (
@@ -390,7 +390,7 @@ export function DeckPage() {
               <Button
                 variant="outline"
                 type="button"
-                disabled={deck.columns.length >= MAX_COLUMNS || editing === "new"}
+                disabled={editing === "new"}
                 onClick={async () => {
                   const columns = [...deck.columns];
                   columns.splice(removed.index, 0, removed.column);

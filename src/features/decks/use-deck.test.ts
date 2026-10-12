@@ -1,8 +1,42 @@
-import { act, renderHook, waitFor } from "@testing-library/react";
+import { act, renderHook as renderTestingHook, waitFor } from "@testing-library/react";
+import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
+import { createElement, type ReactNode } from "react";
 import { beforeEach, expect, it, vi } from "vitest";
 import { LEGACY_STORAGE_KEY } from "./legacy-import";
 import type { SavedDeck } from "./persistence-model";
 import { useDeck } from "./use-deck";
+
+function renderHook<Props>(
+  callback: (props: Props) => ReturnType<typeof useDeck>,
+  options?: { initialProps: Props },
+  client = new QueryClient(),
+) {
+  return renderTestingHook(callback, {
+    ...options,
+    wrapper: ({ children }: { children: ReactNode }) =>
+      createElement(QueryClientProvider, { client }, children),
+  });
+}
+
+it("retains unsaved decks when leaving and returning to the workspace", async () => {
+  const client = new QueryClient();
+  const first = renderHook(() => useDeck(), undefined, client);
+  await waitFor(() => expect(first.result.current.ready).toBe(true));
+  act(() => {
+    first.result.current.createTemporary("Keep while browsing");
+  });
+  const id = first.result.current.deck.id;
+  navigation.search = { deck: id };
+  first.unmount();
+  const returned = renderHook(() => useDeck(), undefined, client);
+  await waitFor(() => expect(returned.result.current.ready).toBe(true));
+  expect(returned.result.current.deck).toMatchObject({
+    id,
+    title: "Keep while browsing",
+    persisted: false,
+  });
+  expect(server.create).not.toHaveBeenCalled();
+});
 
 const navigation = vi.hoisted(() => ({
   search: {} as { deck?: string; citation?: string },

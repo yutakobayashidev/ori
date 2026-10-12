@@ -30,7 +30,7 @@ the definition being edited. A stale revision fails without overwriting the
 server. Use the UI's reload action after a conflict when a fresh definition
 is needed.
 
-`set_deck` accepts at most six columns, each with a title, `connectionId` from
+`set_deck` accepts columns without a count limit, each with a title, `connectionId` from
 discovery, and a source. Connections must be connected and match the source
 platform. Optional column IDs preserve identity; omitted IDs are generated.
 Include every retained column: omitted columns are removed, and an empty array

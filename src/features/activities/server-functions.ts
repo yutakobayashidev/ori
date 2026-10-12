@@ -47,7 +47,7 @@ export const createHomeActivity = createServerFn({ method: "POST" })
 export const markActivityRead = createServerFn({ method: "POST" })
   .validator((id: string) => id)
   .handler(({ data }): Promise<boolean | ActivityFailure> =>
-    run((repository) => repository.markActivityRead(data)),
+    run((repository) => repository.recordActivityRead(data)),
   );
 
 export const loadActivityAudit = createServerFn({ method: "GET" })

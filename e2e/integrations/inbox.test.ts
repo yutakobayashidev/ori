@@ -38,8 +38,8 @@ test("recovers from empty search and shares navigation with Research", async ({
   expect((await a11y().analyze()).violations).toEqual([]);
   await expect(readerPage.editInterestsButton).toHaveCount(0);
   await workspacePage.navigateTo("Research");
-  await expect(page).toHaveURL(/\/deck$/);
-  await expect(workspacePage.researchReady).toBeEnabled();
+  await expect(page).toHaveURL(/\/browse$/);
+  await expect(page.getByRole("textbox", { name: "Search posts", exact: true })).toBeVisible();
   await workspacePage.navigateTo("Reader");
   await expect(page).toHaveURL(/\/inbox$/);
   await expect(readerPage.rows).toHaveCount(9);

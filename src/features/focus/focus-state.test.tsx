@@ -1,7 +1,8 @@
 import { fireEvent, render, screen, waitFor } from "@testing-library/react";
 import { useState } from "react";
 import { beforeEach, expect, it, vi } from "vitest";
-import { FocusProvider, useRequiredFocus } from "./focus-state";
+import { FocusProvider } from "./focus-state";
+import { useRequiredFocus } from "./focus-store";
 
 const api = vi.hoisted(() => ({
   loadFocus: vi.fn<typeof import("./server-functions").loadFocus>(),

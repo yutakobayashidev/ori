@@ -3,16 +3,21 @@ import { useState } from "react";
 import { afterEach, beforeEach, expect, it, vi } from "vitest";
 import { ActivityFeedback } from "./activity-controls";
 import { ActivityStateProvider, useActivities } from "./activity-state";
+import { HistoryPanel } from "./activity-history";
 
 const actions = vi.hoisted(() => ({
   load: vi.fn<typeof import("./server-functions").loadActivities>(),
   change: vi.fn<typeof import("./server-functions").changeActivity>(),
   create: vi.fn<typeof import("./server-functions").createHomeActivity>(),
+  history: vi.fn<typeof import("./server-functions").loadActivityAudit>(),
+  communications: vi.fn<typeof import("./server-functions").loadCommunicationLogs>(),
 }));
 vi.mock("./server-functions", () => ({
   loadActivities: actions.load,
   changeActivity: actions.change,
   createHomeActivity: actions.create,
+  loadActivityAudit: actions.history,
+  loadCommunicationLogs: actions.communications,
 }));
 const streams: EventTarget[] = [];
 beforeEach(() => {
@@ -38,6 +43,20 @@ beforeEach(() => {
   });
 });
 afterEach(() => vi.unstubAllGlobals());
+it("provides browser history transport to shared activity history", async () => {
+  actions.history.mockResolvedValue({ ok: true, entries: [], nextBeforeId: null });
+  actions.communications.mockResolvedValue({ ok: true, entries: [], nextBeforeId: null });
+  render(
+    <ActivityStateProvider enabled>
+      <HistoryPanel activityId="task" />
+    </ActivityStateProvider>,
+  );
+  expect(await screen.findByText(/No changes recorded yet/)).toBeVisible();
+  expect(actions.history).toHaveBeenCalledWith({ data: { activityId: "task", limit: 25 } });
+  fireEvent.click(screen.getByRole("button", { name: "MCP & events" }));
+  expect(await screen.findByText(/No MCP writes or event deliveries/)).toBeVisible();
+  expect(actions.communications).toHaveBeenCalledWith({ data: { activityId: "task", limit: 25 } });
+});
 function Composer() {
   const { create, busy, loading } = useActivities();
   const [saved, setSaved] = useState(false);

@@ -1,39 +1,11 @@
-import {
-  createContext,
-  useCallback,
-  useContext,
-  useEffect,
-  useRef,
-  useState,
-  type ReactNode,
-} from "react";
+import { useCallback, useEffect, useRef, useState, type ReactNode } from "react";
 import { useActivityStore } from "#/features/activities/activity-store";
 import type { ActivityFailure, ActivityReceipt } from "#/features/activities/model";
 import type { FocusContext } from "./model";
+import { FocusStoreProvider } from "./focus-store";
 import { loadFocus, startFocus, changeFocus, saveWorkLog, deleteWorkLog } from "./server-functions";
 
-type Changes = Omit<Parameters<typeof changeFocus>[0]["data"], "requestId" | "expectedRevision">;
-type Log = Omit<Parameters<typeof saveWorkLog>[0]["data"], "requestId" | "expectedRevision">;
-type FocusStore = {
-  snapshot: FocusContext | null;
-  busy: boolean;
-  error: string;
-  retry: (() => Promise<void>) | null;
-  refresh: () => Promise<boolean>;
-  start: (activityId: string, budgetSeconds?: number, switchCurrent?: boolean) => Promise<boolean>;
-  change: (change: Changes) => Promise<boolean>;
-  saveLog: (log: Log, expectedRevision?: number) => Promise<boolean>;
-  deleteLog: (id: string, expectedRevision?: number) => Promise<boolean>;
-};
-const Context = createContext<FocusStore | null>(null);
-export function useFocus() {
-  return useContext(Context);
-}
-export function useRequiredFocus() {
-  const focus = useFocus();
-  if (!focus) throw new Error("FocusProvider is required");
-  return focus;
-}
+const loadWorkHistory = (activityId: string) => loadFocus({ data: { activityId } });
 
 export function FocusProvider({ children }: { children: ReactNode }) {
   const activities = useActivityStore();
@@ -110,9 +82,10 @@ export function FocusProvider({ children }: { children: ReactNode }) {
     });
   }
   return (
-    <Context.Provider
+    <FocusStoreProvider
       value={{
         snapshot,
+        loadWorkHistory,
         busy: busy || activities.busy,
         error,
         retry,
@@ -144,6 +117,6 @@ export function FocusProvider({ children }: { children: ReactNode }) {
       }}
     >
       {children}
-    </Context.Provider>
+    </FocusStoreProvider>
   );
 }

@@ -16,6 +16,17 @@ const column = {
   source: { kind: "search", query: "AI" },
 };
 describe("deck tool input", () => {
+  it("preserves more than six ordered columns through tool validation", () => {
+    const columns = Array.from({ length: 12 }, (_, index) => ({
+      ...column,
+      id: `column-${index}`,
+      title: `Search ${index}`,
+    }));
+    const deck = prepareDeck({ title: "Research", columns }, [account("main")]);
+    expect(deck.columns.map(({ id, title }) => ({ id, title }))).toEqual(
+      columns.map(({ id, title }) => ({ id, title })),
+    );
+  });
   it("fills Twitter defaults and assigns independent deck and column IDs", () => {
     const deck = prepareDeck({ title: "調査", columns: [column, column] }, [account("main")]);
     expect(deck.columns[0]?.source).toEqual({
@@ -59,7 +70,7 @@ describe("deck tool input", () => {
     expect(deck.columns.map((column) => column.connectionId)).toEqual(["main", "work"]);
     expect(deck.columns.map((column) => column.source.kind)).toEqual(["user", "list"]);
   });
-  it("rejects unsupported platforms, overlong queries and more than six columns", () => {
+  it("rejects unsupported platforms and overlong queries", () => {
     expect(() =>
       prepareDeck(
         {
@@ -92,11 +103,6 @@ describe("deck tool input", () => {
         [account("main")],
       ),
     ).toThrow("512 characters");
-    expect(() =>
-      prepareDeck({ title: "調査", columns: Array.from({ length: 7 }, () => column) }, [
-        account("main"),
-      ]),
-    ).toThrow("Too big");
   });
 });
 

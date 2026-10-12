@@ -132,7 +132,7 @@ const specs = [
   {
     name: "create_deck",
     description:
-      "Persist a new deck with up to six columns. Omit deckId to generate an ID; supply stable deck and column IDs for idempotent retries. Columns use connection IDs from list_connections. Does not change browser selection.",
+      "Persist a new deck. Omit deckId to generate an ID; supply stable deck and column IDs for idempotent retries. Columns use connection IDs from list_connections. Does not change browser selection.",
     schema: createInput,
   },
   {

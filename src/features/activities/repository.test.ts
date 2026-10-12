@@ -12,7 +12,7 @@ import {
   getActivityContext,
   publishActivities,
   updateActivityUser,
-  markActivityRead,
+  recordActivityRead,
 } from "./repository.server";
 let directory: string;
 let database: AppDatabase;
@@ -87,8 +87,8 @@ it("marks new agent activities unread until opened and leaves owner-created item
     ["detergent", true],
     ["review", true],
   ]);
-  expect(markActivityRead("detergent", database)).toBe(true);
-  expect(markActivityRead("detergent", database)).toBe(false);
+  expect(recordActivityRead("detergent", database)).toBe(true);
+  expect(recordActivityRead("detergent", database)).toBe(false);
   expect(getActivityContext({ activityIds: ["detergent", "review"] }, database).activities).toEqual(
     expect.arrayContaining([
       expect.objectContaining({ id: "detergent", isUnread: false }),

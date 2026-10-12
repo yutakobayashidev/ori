@@ -1,5 +1,5 @@
 import { z } from "zod";
-import { columnSchema, deckSchema, MAX_COLUMNS } from "./model";
+import { columnSchema, deckSchema } from "./model";
 
 export const LEGACY_STORAGE_KEY = "twitter-lite-research-deck";
 const legacyColumn = columnSchema
@@ -9,7 +9,7 @@ const legacyDeck = z
   .object({
     id: deckSchema.shape.id,
     title: deckSchema.shape.title,
-    columns: z.array(legacyColumn).max(MAX_COLUMNS),
+    columns: z.array(legacyColumn),
   })
   .strict()
   .refine(

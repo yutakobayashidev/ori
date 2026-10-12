@@ -96,7 +96,7 @@ export function createResearchTools(
       type: "function" as const,
       name: "open_temporary_deck",
       description:
-        "Open or update the same temporary research deck with up to six columns bound to selected accounts. Reuse the returned column IDs for columns you keep when updating the view. Replaces its contents and resets paging. Never saves a deck. Existing saved deck IDs or revisions are not accepted.",
+        "Open or update the same temporary research deck with columns bound to selected accounts. Reuse the returned column IDs for columns you keep when updating the view. Replaces its contents and resets paging. Never saves a deck. Existing saved deck IDs or revisions are not accepted.",
       inputSchema: z.toJSONSchema(openInput, { io: "input" }),
     },
     {

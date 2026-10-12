@@ -7,8 +7,6 @@ import {
   normalizeUserTarget,
 } from "#/features/posts/inputs";
 
-export const MAX_COLUMNS = 6;
-
 const searchSourceSchema = z
   .object({
     platform: z.literal("twitter"),
@@ -80,7 +78,7 @@ export const deckSchema = z
   .object({
     id: z.string().min(1).max(128),
     title: z.string().trim().min(1).max(120),
-    columns: z.array(columnSchema).max(MAX_COLUMNS),
+    columns: z.array(columnSchema),
   })
   .strict()
   .refine(

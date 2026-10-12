@@ -220,7 +220,7 @@ export function getAllActivities(database = getDatabase()): ActivityContext {
   }));
 }
 
-export function markActivityRead(id: string, database = getDatabase()) {
+export function recordActivityRead(id: string, database = getDatabase()) {
   const now = Date.now();
   const changed =
     database

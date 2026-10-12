@@ -11,7 +11,7 @@ import { ReplyActivityDetail } from "#/features/activities/reply-activity-detail
 import { useActivityStore } from "#/features/activities/activity-store";
 import { FocusClock, useFocusClock } from "./focus-clock";
 import { FocusFeedback } from "./focus-controls";
-import { useFocus } from "./focus-state";
+import { useFocus } from "./focus-store";
 import { defaultFocusBudget, projectedRemainingSeconds, sessionActiveSeconds } from "./time";
 import { ActivityTimeDetails } from "./time-details";
 

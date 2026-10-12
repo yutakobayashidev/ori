@@ -10,7 +10,7 @@ import {
   InputGroupTextarea,
 } from "#/components/ui/input-group";
 import { ActivityControls, ActivityEditor, stateLabels } from "./activity-controls";
-import { ActivityTimeLabel, StartFocusButton } from "../focus/focus-controls";
+import { ActivityTimeLabel } from "../focus/focus-controls";
 import { ActivityTimeDetails } from "../focus/time-details";
 import { useActivityStore } from "./activity-store";
 import type { Activity } from "./model";
@@ -21,9 +21,11 @@ import { useReplyConversation } from "./use-reply-conversation";
 export function ReplyActivityDetail({
   activity,
   headerLeading,
+  focusAction,
 }: {
   activity: Activity;
   headerLeading?: ReactNode;
+  focusAction?: ReactNode;
 }) {
   const { change, busy, revision, currentRevision, messaging } = useActivityStore();
   const conversation = useReplyConversation(activity.id, revision, messaging);
@@ -246,7 +248,7 @@ export function ReplyActivityDetail({
         <ActivityControls activity={activity} />
         <div className="mt-3 flex flex-wrap items-center gap-3">
           <ActivityTimeLabel activity={activity} />
-          <StartFocusButton activity={activity} />
+          {focusAction}
         </div>
         <ActivityTimeDetails activity={activity} />
         <ActivityHistory activityId={activity.id} />

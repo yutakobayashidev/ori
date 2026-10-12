@@ -27,3 +27,49 @@ it("preserves closed chat tabs when restoring a workspace URL", () => {
     closedRuns: [id],
   });
 });
+
+it.each([
+  { platform: "twitter", kind: "search", query: "京都", product: "Top", following: true },
+  { platform: "twitter", kind: "user", target: "alice" },
+  { platform: "twitter", kind: "list", target: "123" },
+  { platform: "mastodon", kind: "search", query: "京都" },
+  { platform: "mastodon", kind: "user", target: "alice@social.invalid" },
+  { platform: "mastodon", kind: "list", target: "123" },
+  { platform: "mastodon", kind: "hashtag", target: "京都" },
+  { platform: "reddit", kind: "search", query: "京都", sort: "new", time: "week" },
+])("restores $platform $kind sources from a Browse URL", (browseSource) => {
+  expect(validateWorkspaceSearch({ browseSource, browseConnection: "account-1" })).toMatchObject({
+    browseSource,
+    browseConnection: "account-1",
+  });
+});
+
+it("normalizes a pasted Twitter profile URL when restoring Browse", () => {
+  expect(
+    validateWorkspaceSearch({
+      browseSource: { platform: "twitter", kind: "user", target: "https://x.com/alice" },
+    }).browseSource,
+  ).toEqual({ platform: "twitter", kind: "user", target: "alice" });
+});
+
+it.each([
+  null,
+  "query",
+  { platform: "twitter", kind: "search", query: "" },
+  { platform: "reddit", kind: "user", target: "alice" },
+])("ignores malformed Browse sources without discarding other navigation", (browseSource) => {
+  const result = validateWorkspaceSearch({ browseSource, deck: "saved-deck" });
+  expect(result.browseSource).toBeUndefined();
+  expect(result.deck).toBe("saved-deck");
+});
+
+it("preserves the complete supported 512-character search in a Browse URL", () => {
+  const browseSource = {
+    platform: "twitter",
+    kind: "search",
+    query: "a".repeat(512),
+    product: "Latest",
+    following: false,
+  };
+  expect(validateWorkspaceSearch({ browseSource }).browseSource).toEqual(browseSource);
+});

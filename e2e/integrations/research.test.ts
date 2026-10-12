@@ -22,6 +22,7 @@ test("loads a Reddit search column through the configured public gateway", async
   await editor.getByRole("combobox", { name: "Sort", exact: true }).selectOption("top");
   await editor.getByRole("combobox", { name: "Time range", exact: true }).selectOption("week");
   await editor.getByRole("button", { name: "Add and search" }).click();
+  await workspacePage.closeMobileSidebar();
   const post = deckPage
     .column("Reddit research")
     .getByTestId("research-post")
@@ -390,6 +391,8 @@ test("keeps browser conversation selection independent and restores it on reload
     await expect(firstTab).toHaveCSS("translate", "none");
     await page.mouse.up();
     await workspacePage.showDeckManagement();
+    await expect(history).toBeHidden();
+    await workspacePage.showResearch();
     await secondTab.click();
     await expect(page).toHaveURL(new RegExp(`run=${second}`));
     await expect(secondTab).toHaveAttribute("aria-current", "page");

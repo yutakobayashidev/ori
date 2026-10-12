@@ -18,6 +18,7 @@ import { Route as JournalRouteImport } from './routes/journal'
 import { Route as InboxRouteImport } from './routes/inbox'
 import { Route as HistoryRouteImport } from './routes/history'
 import { Route as DeckRouteImport } from './routes/deck'
+import { Route as BrowseRouteImport } from './routes/browse'
 import { Route as BoardRouteImport } from './routes/board'
 import { Route as IndexRouteImport } from './routes/index'
 import { Route as FocusActivityIdRouteImport } from './routes/focus.$activityId'
@@ -73,6 +74,11 @@ const DeckRoute = DeckRouteImport.update({
   path: '/deck',
   getParentRoute: () => rootRouteImport,
 } as any)
+const BrowseRoute = BrowseRouteImport.update({
+  id: '/browse',
+  path: '/browse',
+  getParentRoute: () => rootRouteImport,
+} as any)
 const BoardRoute = BoardRouteImport.update({
   id: '/board',
   path: '/board',
@@ -122,6 +128,7 @@ const ApiActivitiesEventsRoute = ApiActivitiesEventsRouteImport.update({
 export interface FileRoutesByFullPath {
   '/': typeof IndexRoute
   '/board': typeof BoardRoute
+  '/browse': typeof BrowseRoute
   '/deck': typeof DeckRoute
   '/history': typeof HistoryRoute
   '/inbox': typeof InboxRoute
@@ -142,6 +149,7 @@ export interface FileRoutesByFullPath {
 export interface FileRoutesByTo {
   '/': typeof IndexRoute
   '/board': typeof BoardRoute
+  '/browse': typeof BrowseRoute
   '/deck': typeof DeckRoute
   '/history': typeof HistoryRoute
   '/inbox': typeof InboxRoute
@@ -163,6 +171,7 @@ export interface FileRoutesById {
   __root__: typeof rootRouteImport
   '/': typeof IndexRoute
   '/board': typeof BoardRoute
+  '/browse': typeof BrowseRoute
   '/deck': typeof DeckRoute
   '/history': typeof HistoryRoute
   '/inbox': typeof InboxRoute
@@ -185,6 +194,7 @@ export interface FileRouteTypes {
   fullPaths:
     | '/'
     | '/board'
+    | '/browse'
     | '/deck'
     | '/history'
     | '/inbox'
@@ -205,6 +215,7 @@ export interface FileRouteTypes {
   to:
     | '/'
     | '/board'
+    | '/browse'
     | '/deck'
     | '/history'
     | '/inbox'
@@ -225,6 +236,7 @@ export interface FileRouteTypes {
     | '__root__'
     | '/'
     | '/board'
+    | '/browse'
     | '/deck'
     | '/history'
     | '/inbox'
@@ -246,6 +258,7 @@ export interface FileRouteTypes {
 export interface RootRouteChildren {
   IndexRoute: typeof IndexRoute
   BoardRoute: typeof BoardRoute
+  BrowseRoute: typeof BrowseRoute
   DeckRoute: typeof DeckRoute
   HistoryRoute: typeof HistoryRoute
   InboxRoute: typeof InboxRoute
@@ -329,6 +342,13 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof DeckRouteImport
       parentRoute: typeof rootRouteImport
     }
+    '/browse': {
+      id: '/browse'
+      path: '/browse'
+      fullPath: '/browse'
+      preLoaderRoute: typeof BrowseRouteImport
+      parentRoute: typeof rootRouteImport
+    }
     '/board': {
       id: '/board'
       path: '/board'
@@ -398,6 +418,7 @@ declare module '@tanstack/react-router' {
 const rootRouteChildren: RootRouteChildren = {
   IndexRoute: IndexRoute,
   BoardRoute: BoardRoute,
+  BrowseRoute: BrowseRoute,
   DeckRoute: DeckRoute,
   HistoryRoute: HistoryRoute,
   InboxRoute: InboxRoute,

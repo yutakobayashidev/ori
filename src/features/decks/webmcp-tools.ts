@@ -96,7 +96,7 @@ export function useDeckTools({
   useWebMCP({
     name: "set_deck",
     description:
-      "Create a TEMPORARY view when deckId is omitted. It exists only in this tab until save_deck is explicitly called. To replace an existing view supply its deckId; saved decks additionally require expectedRevision from get_deck. Complete ordered columns replace all previous columns, at most six, bound to connection IDs from list_connections. Activates the view and closes unsaved forms only on success; posts load asynchronously.",
+      "Create a TEMPORARY view when deckId is omitted. It exists only in this tab until save_deck is explicitly called. To replace an existing view supply its deckId; saved decks additionally require expectedRevision from get_deck. Complete ordered columns replace all previous columns, bound to connection IDs from list_connections. Activates the view and closes unsaved forms only on success; posts load asynchronously.",
     inputSchema: setDeckInput,
     enabled,
     annotations: { readOnlyHint: false, untrustedContentHint: true },

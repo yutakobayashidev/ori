@@ -9,6 +9,8 @@ export function getRouter() {
       queries: { retry: false, staleTime: 0, gcTime: 0 },
     },
   });
+  // Temporary decks belong to this browser session, including visits to Browse.
+  queryClient.setQueryDefaults(["deck-workspace"], { gcTime: Infinity });
   const router = createRouter({
     routeTree,
     context: { queryClient },

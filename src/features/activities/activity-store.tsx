@@ -9,7 +9,7 @@ type Changes = Omit<
   "requestId" | "expectedRevision" | "id"
 >;
 export type ActivityStore = {
-  history?: ActivityHistoryTransport;
+  history: ActivityHistoryTransport;
   messaging?: ActivityMessagingTransport;
   revision: number;
   currentRevision: () => number;

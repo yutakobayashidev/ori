@@ -79,8 +79,15 @@ test.beforeEach(async ({ page, deckPage }) => {
       "set_deck",
     ]);
   await expect
-    .poll(async () => decoded(await executeTool(page, "list_connections")).connections?.length)
-    .toBe(2);
+    .poll(async () =>
+      decoded(await executeTool(page, "list_connections"))
+        .connections?.filter(
+          (connection: { platform: string }) => connection.platform === "twitter",
+        )
+        .map((connection: { displayName: string }) => connection.displayName)
+        .sort(),
+    )
+    .toEqual(["alternate", "e2e"]);
   accounts = Object.fromEntries(
     decoded(await executeTool(page, "list_connections")).connections.map(
       (connection: { displayName: string; id: string }) => [connection.displayName, connection.id],

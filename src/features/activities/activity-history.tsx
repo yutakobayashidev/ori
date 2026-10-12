@@ -2,16 +2,10 @@ import { useEffect, useRef, useState } from "react";
 import { Button } from "#/components/ui/button";
 import { useActivityStore } from "./activity-store";
 import { stateLabels } from "./activity-controls";
-import { loadActivityAudit, loadCommunicationLogs } from "./server-functions";
 import type { ActivityAuditEntry, ActivityAuditSnapshot } from "./audit-model";
 import type { CommunicationLog } from "./communication-model";
-import type { ActivityHistoryTransport } from "./history-client";
 
 export type HistoryTab = "changes" | "communications";
-const browserHistory: ActivityHistoryTransport = {
-  changes: (data) => loadActivityAudit({ data }),
-  communications: (data) => loadCommunicationLogs({ data }),
-};
 
 export function ActivityHistory({ activityId }: { activityId: string }) {
   const [open, setOpen] = useState(false);
@@ -37,7 +31,7 @@ export function HistoryPanel({
   onTabChange?: (tab: HistoryTab) => void;
 }) {
   const store = useActivityStore();
-  const transport = store.history ?? browserHistory;
+  const transport = store.history;
   const [localTab, setLocalTab] = useState<HistoryTab>("changes");
   const tab = controlledTab ?? localTab;
   const [entries, setEntries] = useState<(ActivityAuditEntry | CommunicationLog)[]>([]);

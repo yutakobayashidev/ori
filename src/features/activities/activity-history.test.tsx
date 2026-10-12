@@ -12,10 +12,6 @@ const state = vi.hoisted(() => ({
   },
 }));
 vi.mock("./activity-store", () => ({ useActivityStore: () => state }));
-vi.mock("./server-functions", () => ({
-  loadActivityAudit: vi.fn<() => void>(),
-  loadCommunicationLogs: vi.fn<() => void>(),
-}));
 const snapshot: ActivityAuditSnapshot = {
   number: 123,
   proposal: { id: "task", kind: "task", title: "Review", nextAction: "Read it", sources: [] },

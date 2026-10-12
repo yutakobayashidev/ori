@@ -18,10 +18,12 @@ export function ResearchPostCard({
   post,
   citationRequest,
   citationSnapshot,
+  onOpenAuthor,
 }: {
   post: ResearchPost;
   citationRequest?: number;
   citationSnapshot?: boolean;
+  onOpenAuthor?: () => void;
 }) {
   const [revealed, setRevealed] = useState(false);
   const [expiredHighlight, setExpiredHighlight] = useState<string>();
@@ -61,7 +63,18 @@ export function ResearchPostCard({
           <AvatarFallback>{post.author.name.slice(0, 1)}</AvatarFallback>
         </Avatar>
         <div className="min-w-0 flex-1">
-          <strong className="text-sm">{post.author.name}</strong>
+          {onOpenAuthor ? (
+            <button
+              type="button"
+              onClick={onOpenAuthor}
+              className="text-left text-sm font-bold hover:underline focus-visible:outline-2 focus-visible:outline-ring"
+              aria-label={`View posts by ${post.author.name}`}
+            >
+              {post.author.name}
+            </button>
+          ) : (
+            <strong className="text-sm">{post.author.name}</strong>
+          )}
           <span className="block text-xs text-muted-foreground">
             @{post.author.handle.replace(/^@/, "")}
           </span>

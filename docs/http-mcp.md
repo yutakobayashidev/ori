@@ -32,8 +32,8 @@ activity model across Home, Messages, and MCP.
 | `fetch_posts`                | `connectionId`, `source`, optional `cursor`; read without saving a deck                                                                                                          |
 | `fetch_column_posts`         | `deckId`, `columnId`, optional `cursor`; read a saved column                                                                                                                     |
 
-Columns follow the [deck source contracts](webmcp-prototype.md). A deck has at
-most six columns. Preserve column IDs on edits. Stable deck and column IDs allow
+Columns follow the [deck source contracts](webmcp-prototype.md), without a column-count
+limit. Preserve column IDs on edits. Stable deck and column IDs allow
 identical creation retries without duplicates. Updates replace the entire
 definition. Creation and deletion do not change another browser's selection;
 saved definitions refresh through the existing UI mechanism.
@@ -81,6 +81,8 @@ The UI imports the same `ResearchColumnView`, `ResearchPostCard`, `ActivityCard`
 `ActivityControls`, `ActivityEditor`, and `ReplyActivityDetail` used by the web
 app, including shared UI primitives and `src/styles.css`. Web query hooks,
 TanStack server functions, router navigation and SSE stay outside the iframe.
+Shared activity history and Focus controls receive data loaders through their
+stores; server-backed providers belong to the web app, outside the shared UI.
 Apps use the Chapplin React bridge to call MCP tools. Theme tokens adapt to the
 host's light/dark mode. The current post contract remains text-only, with source
 links and content warnings; SNS avatars, remote media and HTML are not added to post

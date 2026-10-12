@@ -55,7 +55,7 @@ open and when returning to the app.
 | Journal   | `/journal`           | Notes, resume points, medication and weight entries, append-only corrections, and summary previews. Local prototype.   |
 | Reader    | `/inbox`             | Searchable sample articles and a responsive article reader. Recommendation from activity history is not connected yet. |
 | Vitals    | `/vitals`            | Body and Environment dashboards with sample readings, charts, and simulated controls. No health or device connection.  |
-| Research  | `/deck`              | Twitter, Mastodon, and Reddit columns, persistent decks, and optional Codex research chat.                             |
+| Research  | `/browse`, `/deck`   | Intentional search and user/list reading, Twitter/Mastodon/Reddit decks, and optional Codex research chat.             |
 | Board     | `/board`             | Shared tasks and replies in Kanban columns, with AI handoff, execution chat, questions, and artifacts.                 |
 | Focus     | `/focus/$activityId` | One task, visual timer, reply/source access, estimates and recorded effort.                                            |
 
@@ -72,10 +72,12 @@ See [execution support](docs/execution-support.md) and the
 
 Reader search and article selection, Messages views and conversations, Home
 previews, account management, Journal review/correction views, and Vitals
-navigation are represented in search parameters. Research uses deck, run, citation IDs, and closed-tab IDs. Reloading or browser Back/Forward restores the view while its
+navigation are represented in search parameters. Research uses submitted Browse
+source/account conditions, deck, run, citation IDs, and closed-tab IDs. Browse
+updates its URL on submission; typing alone does not load posts. Reloading or browser Back/Forward restores the view while its
 underlying data remains available. Login preserves the requested workspace URL.
 
-Explicit selections add browser history; search input replaces it after a
+Explicit selections and Browse submissions add browser history; other workspace search input replaces it after a
 300 ms debounce using TanStack Pacer. Navigation cancels pending search updates,
 and IME composition waits until confirmed. URL navigation never submits prompts,
 sends messages, or repeats device actions. Drafts, secrets, results, and task
@@ -117,7 +119,9 @@ or change direction.
 
 ## Research capabilities
 
-- Multiple named decks with up to six columns each
+- Multiple named decks with no column-count limit
+- Browse with a large search entry, single-column reading, and direct user/list access
+- Browse/Decks switching, explicit Add to deck, and Open in Browse column actions
 - Twitter search, user timelines, and lists with independent relay accounts
 - Mastodon OAuth, multiple accounts, search, user, list, and hashtag columns
 - Public Reddit search through the configured read-only rdt-gateway
@@ -298,7 +302,8 @@ assistant message is live; completed history is immediate and reduced-motion
 preferences are respected. `@shadcn/helpers/ai-sdk` supplies deterministic
 streaming fixtures for renderer tests.
 
-Use the chat on the left while browsing horizontally scrollable deck columns on
+Research chat and its history are hidden by default. Open **Research chat** to
+use the chat on the left while browsing horizontally scrollable deck columns on
 the right. Messages continue the same Codex thread and include the currently
 open deck as context. The source selector controls which connections and public
 gateways Codex can use. It can inspect saved deck definitions and reuse them as temporary views,
@@ -318,7 +323,7 @@ A running turn continues in the background when you open another chat.
 Selection belongs to the current URL; another browser does not change it. **Chat history** appears as a horizontally scrollable tab strip above the chat and deck, to the right of the workspace navigation. Use **+** for a new chat or **×** to close a tab. Closing a tab keeps its conversation and running research; the history menu reopens it. Tab clicks have no animation. Tabs reopen saved conversations with their account
 selection, deck and citations; the next message resumes the same Codex thread.
 SQLite stores conversation snapshots. Active selection is not stored globally.
-Each turn is limited to 6 columns, 12 upstream requests shared between list
+Each turn is limited to 12 upstream requests shared between list
 discovery and post retrieval (at most 20 posts per fetch), and 15 minutes.
 The prototype accepts up to 100 messages per backend process.
 SSE pushes messages, tool activity and deck updates for the requested conversation

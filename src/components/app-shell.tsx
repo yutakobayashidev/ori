@@ -11,6 +11,7 @@ import {
 } from "#/components/ui/sidebar";
 import { TooltipProvider } from "#/components/ui/tooltip";
 import { WorkspaceNavigation } from "#/components/workspace-navigation";
+import { ResearchViewSwitcher } from "#/features/browse/research-view-switcher";
 
 type ShellProps = {
   hasTemporaryDecks: boolean;
@@ -23,7 +24,10 @@ type ShellProps = {
 export function AppShell(props: ShellProps) {
   return (
     <TooltipProvider delay={800}>
-      <SidebarProvider className="relative h-dvh min-h-0 overflow-hidden [--sidebar-width:25rem] [--sidebar-width-icon:4rem]">
+      <SidebarProvider
+        defaultOpen={false}
+        className="relative h-dvh min-h-0 overflow-hidden [--sidebar-width:25rem] [--sidebar-width-icon:4rem]"
+      >
         <Workspace {...props} />
       </SidebarProvider>
     </TooltipProvider>
@@ -38,7 +42,8 @@ function Workspace({
   hasTemporaryDecks,
 }: ShellProps) {
   const [panel, setPanel] = useState<"chat" | "decks">("chat");
-  const { setOpen, setOpenMobile, isMobile, openMobile } = useSidebar();
+  const { open, setOpen, setOpenMobile, isMobile, openMobile } = useSidebar();
+  const showHistory = panel === "chat" && (isMobile ? openMobile : open);
   const history = researchHistory(() => {
     setPanel("chat");
     if (isMobile) setOpenMobile(true);
@@ -51,7 +56,7 @@ function Workspace({
 
   return (
     <>
-      {(!isMobile || !openMobile) && (
+      {showHistory && !isMobile && (
         <div className="absolute inset-x-0 top-0 z-20 md:left-16">{history}</div>
       )}
       <Sidebar collapsible="icon" className="overflow-hidden transition-none">
@@ -76,7 +81,7 @@ function Workspace({
                 <SidebarMenuButton
                   aria-label={item.title}
                   tooltip={{ children: item.title, hidden: false }}
-                  isActive={panel === item.id}
+                  isActive={panel === item.id && (isMobile ? openMobile : open)}
                   onClick={() => {
                     setPanel(item.id);
                     if (isMobile) setOpenMobile(true);
@@ -94,8 +99,8 @@ function Workspace({
             collapsible="none"
             className="min-w-0 flex-1 group-data-[collapsible=icon]:hidden"
           >
-            <div aria-hidden="true" className="hidden h-12 shrink-0 md:block" />
-            {isMobile && openMobile && history}
+            {showHistory && <div aria-hidden="true" className="hidden h-12 shrink-0 md:block" />}
+            {showHistory && isMobile && history}
             <div className={panel === "chat" ? "flex min-h-0 flex-1 flex-col" : "hidden"}>
               {researchChat(() => setOpenMobile(false))}
             </div>
@@ -112,11 +117,13 @@ function Workspace({
         </div>
       </Sidebar>
       <SidebarInset className="min-w-0 overflow-hidden">
-        <div aria-hidden="true" className="h-12 shrink-0" />
+        {showHistory && !isMobile && <div aria-hidden="true" className="h-12 shrink-0" />}
         <header className="flex h-12 shrink-0 items-center gap-2 border-b px-3">
           <SidebarTrigger aria-label="Toggle sidebar" />
           <span className="text-sm font-medium">Research</span>
-          <span className="ml-auto text-xs text-muted-foreground">Research workspace</span>
+          <div className="ml-auto">
+            <ResearchViewSwitcher />
+          </div>
         </header>
         <section
           className="overflow-hidden flex min-h-0 min-w-0 flex-1 flex-col"

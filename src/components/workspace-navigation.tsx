@@ -74,9 +74,9 @@ export function WorkspaceNavigation({
     },
     {
       title: "Research",
-      to: "/deck",
+      to: "/browse",
       icon: Search,
-      active: pathname === "/deck",
+      active: pathname === "/deck" || pathname === "/browse",
     },
   ] as const;
 

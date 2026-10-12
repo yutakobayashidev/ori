@@ -69,6 +69,22 @@ it("shares deck order and per-column account bindings with a separate database c
   expect(listDecks(second)).toEqual([saved]);
 });
 
+it("persists and appends columns beyond six without losing their order", () => {
+  const columns = Array.from({ length: 8 }, (_, index) => ({
+    id: `column-${index}`,
+    title: `Search ${index}`,
+    connectionId: "twitter-one",
+    source: { platform: "twitter" as const, kind: "user" as const, target: "alice" },
+  }));
+  const saved = createDeck({ ...deck, columns: columns.slice(0, 7) }, database);
+  const updated = replaceDeck(
+    { deck: { ...deck, columns }, expectedRevision: saved.revision },
+    database,
+  );
+  expect(loadDeck(deck.id, second)?.columns).toEqual(columns);
+  expect(updated.revision).toBe(2);
+});
+
 it("makes retried creation idempotent but rejects different content using the same ID", () => {
   const saved = createDeck(deck, database);
   expect(createDeck(deck, second)).toEqual(saved);

@@ -13,6 +13,8 @@ import {
   changeActivity,
   createHomeActivity,
   loadActivities,
+  loadActivityAudit,
+  loadCommunicationLogs,
   markActivityRead,
 } from "./server-functions";
 import {
@@ -22,6 +24,12 @@ import {
   loadBeeperAsset,
 } from "../beeper/server-functions";
 import type { ActivityMessagingTransport } from "./messaging-client";
+import type { ActivityHistoryTransport } from "./history-client";
+
+const history: ActivityHistoryTransport = {
+  changes: (data) => loadActivityAudit({ data }),
+  communications: (data) => loadCommunicationLogs({ data }),
+};
 
 const messaging: ActivityMessagingTransport = {
   readConversation: (data) => loadReplyConversation({ data }),
@@ -128,6 +136,7 @@ export function ActivityStateProvider({
   return (
     <ActivityStoreProvider
       value={{
+        history,
         messaging,
         revision: snapshot?.revision ?? 0,
         currentRevision: () => revision.current,

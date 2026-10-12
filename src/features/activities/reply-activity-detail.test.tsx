@@ -91,6 +91,10 @@ beforeEach(() => {
   messaging.sendReply.mockResolvedValue({ ok: true, operation });
   messaging.getSend.mockResolvedValue({ ok: true, operation });
   store = {
+    history: {
+      changes: vi.fn<ActivityStore["history"]["changes"]>(),
+      communications: vi.fn<ActivityStore["history"]["communications"]>(),
+    },
     revision: 7,
     currentRevision: () => 7,
     retryPending: null,
@@ -181,3 +185,27 @@ it.each([{ isReadOnly: true }, { isMerged: true }])(
     expect(screen.getByRole("button", { name: "Send reply" })).toBeDisabled();
   },
 );
+
+it("allows the host to offer focus while an embedded reply omits the nested focus action", async () => {
+  const openFocus = vi.fn<() => void>();
+  const view = render(
+    <ActivityStoreProvider value={store}>
+      <ReplyActivityDetail
+        activity={activity}
+        focusAction={<button onClick={openFocus}>Focus on reply</button>}
+      />
+    </ActivityStoreProvider>,
+  );
+  await waitFor(() => expect(screen.getByRole("button", { name: "Send reply" })).toBeEnabled());
+  fireEvent.click(screen.getByRole("button", { name: "Focus on reply" }));
+  expect(openFocus).toHaveBeenCalledOnce();
+
+  view.rerender(
+    <ActivityStoreProvider value={store}>
+      <ReplyActivityDetail activity={activity} />
+    </ActivityStoreProvider>,
+  );
+  expect(screen.queryByRole("button", { name: "Focus on reply" })).not.toBeInTheDocument();
+  expect(screen.getByRole("textbox", { name: "Reply draft" })).toHaveValue("Tuesday works.");
+  expect(screen.getByRole("button", { name: "Send reply" })).toBeEnabled();
+});

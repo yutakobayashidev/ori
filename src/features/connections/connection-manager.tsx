@@ -105,8 +105,8 @@ export function ConnectionManager({
                     ? "Twitter"
                     : connection.platform === "reddit"
                       ? "Reddit gateway"
-                      : "Mastodon"} ·{" "}
-                  {new URL(connection.origin).hostname}
+                      : "Mastodon"}{" "}
+                  · {new URL(connection.origin).hostname}
                 </span>
                 <Badge variant={connection.status === "connected" ? "secondary" : "outline"}>
                   {statusNames[connection.status]}

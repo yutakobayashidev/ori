@@ -1,6 +1,7 @@
 import { ActivityHistory } from "#/features/activities/activity-history";
 import { ActivityMarkdown } from "#/features/activities/activity-markdown";
-import { ActivityTimeLabel, StartFocusButton } from "#/features/focus/focus-controls";
+import { ActivityTimeLabel } from "#/features/focus/focus-controls";
+import { StartFocusButton } from "#/features/focus/start-focus-button";
 import { ActivityTimeDetails } from "#/features/focus/time-details";
 import { useState } from "react";
 import { Link } from "@tanstack/react-router";

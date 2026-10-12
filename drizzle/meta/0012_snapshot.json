@@ -202,12 +202,8 @@
           "name": "activity_time_activity_id_activities_id_fk",
           "tableFrom": "activity_time",
           "tableTo": "activities",
-          "columnsFrom": [
-            "activity_id"
-          ],
-          "columnsTo": [
-            "id"
-          ],
+          "columnsFrom": ["activity_id"],
+          "columnsTo": ["id"],
           "onDelete": "cascade",
           "onUpdate": "no action"
         }
@@ -247,12 +243,8 @@
           "name": "auth_sessions_owner_id_workspace_owner_id_fk",
           "tableFrom": "auth_sessions",
           "tableTo": "workspace_owner",
-          "columnsFrom": [
-            "owner_id"
-          ],
-          "columnsTo": [
-            "id"
-          ],
+          "columnsFrom": ["owner_id"],
+          "columnsTo": ["id"],
           "onDelete": "cascade",
           "onUpdate": "no action"
         }
@@ -347,10 +339,7 @@
       "foreignKeys": {},
       "compositePrimaryKeys": {
         "beeper_chat_checkpoints_target_id_chat_id_pk": {
-          "columns": [
-            "target_id",
-            "chat_id"
-          ],
+          "columns": ["target_id", "chat_id"],
           "name": "beeper_chat_checkpoints_target_id_chat_id_pk"
         }
       },
@@ -587,18 +576,12 @@
       "indexes": {
         "beeper_message_sends_request_id_unique": {
           "name": "beeper_message_sends_request_id_unique",
-          "columns": [
-            "request_id"
-          ],
+          "columns": ["request_id"],
           "isUnique": true
         },
         "beeper_send_draft_claim": {
           "name": "beeper_send_draft_claim",
-          "columns": [
-            "activity_id",
-            "expected_revision",
-            "draft_hash"
-          ],
+          "columns": ["activity_id", "expected_revision", "draft_hash"],
           "isUnique": true
         }
       },
@@ -702,11 +685,7 @@
       "foreignKeys": {},
       "compositePrimaryKeys": {
         "beeper_seen_messages_target_id_chat_id_message_id_pk": {
-          "columns": [
-            "target_id",
-            "chat_id",
-            "message_id"
-          ],
+          "columns": ["target_id", "chat_id", "message_id"],
           "name": "beeper_seen_messages_target_id_chat_id_message_id_pk"
         }
       },
@@ -751,12 +730,8 @@
           "name": "connection_credentials_connection_id_connections_id_fk",
           "tableFrom": "connection_credentials",
           "tableTo": "connections",
-          "columnsFrom": [
-            "connection_id"
-          ],
-          "columnsTo": [
-            "id"
-          ],
+          "columnsFrom": ["connection_id"],
+          "columnsTo": ["id"],
           "onDelete": "cascade",
           "onUpdate": "no action"
         },
@@ -764,12 +739,8 @@
           "name": "connection_credentials_app_id_oauth_apps_id_fk",
           "tableFrom": "connection_credentials",
           "tableTo": "oauth_apps",
-          "columnsFrom": [
-            "app_id"
-          ],
-          "columnsTo": [
-            "id"
-          ],
+          "columnsFrom": ["app_id"],
+          "columnsTo": ["id"],
           "onDelete": "restrict",
           "onUpdate": "no action"
         }
@@ -848,19 +819,12 @@
       "indexes": {
         "connections_account": {
           "name": "connections_account",
-          "columns": [
-            "platform",
-            "origin",
-            "account_id"
-          ],
+          "columns": ["platform", "origin", "account_id"],
           "isUnique": true
         },
         "connections_relay_profile": {
           "name": "connections_relay_profile",
-          "columns": [
-            "origin",
-            "relay_profile"
-          ],
+          "columns": ["origin", "relay_profile"],
           "isUnique": true
         }
       },
@@ -950,22 +914,15 @@
           "name": "day_selections_activity_id_activities_id_fk",
           "tableFrom": "day_selections",
           "tableTo": "activities",
-          "columnsFrom": [
-            "activity_id"
-          ],
-          "columnsTo": [
-            "id"
-          ],
+          "columnsFrom": ["activity_id"],
+          "columnsTo": ["id"],
           "onDelete": "cascade",
           "onUpdate": "no action"
         }
       },
       "compositePrimaryKeys": {
         "day_selections_date_activity_id_pk": {
-          "columns": [
-            "date",
-            "activity_id"
-          ],
+          "columns": ["date", "activity_id"],
           "name": "day_selections_date_activity_id_pk"
         }
       },
@@ -1021,10 +978,7 @@
       "indexes": {
         "deck_columns_position": {
           "name": "deck_columns_position",
-          "columns": [
-            "deck_id",
-            "position"
-          ],
+          "columns": ["deck_id", "position"],
           "isUnique": true
         }
       },
@@ -1033,12 +987,8 @@
           "name": "deck_columns_deck_id_decks_id_fk",
           "tableFrom": "deck_columns",
           "tableTo": "decks",
-          "columnsFrom": [
-            "deck_id"
-          ],
-          "columnsTo": [
-            "id"
-          ],
+          "columnsFrom": ["deck_id"],
+          "columnsTo": ["id"],
           "onDelete": "cascade",
           "onUpdate": "no action"
         },
@@ -1046,22 +996,15 @@
           "name": "deck_columns_connection_id_connections_id_fk",
           "tableFrom": "deck_columns",
           "tableTo": "connections",
-          "columnsFrom": [
-            "connection_id"
-          ],
-          "columnsTo": [
-            "id"
-          ],
+          "columnsFrom": ["connection_id"],
+          "columnsTo": ["id"],
           "onDelete": "restrict",
           "onUpdate": "no action"
         }
       },
       "compositePrimaryKeys": {
         "deck_columns_deck_id_id_pk": {
-          "columns": [
-            "deck_id",
-            "id"
-          ],
+          "columns": ["deck_id", "id"],
           "name": "deck_columns_deck_id_id_pk"
         }
       },
@@ -1194,9 +1137,7 @@
       "indexes": {
         "focus_single_unfinished": {
           "name": "focus_single_unfinished",
-          "columns": [
-            "(1)"
-          ],
+          "columns": ["(1)"],
           "isUnique": true,
           "where": "\"focus_sessions\".\"state\" != 'ended'"
         }
@@ -1206,12 +1147,8 @@
           "name": "focus_sessions_activity_id_activities_id_fk",
           "tableFrom": "focus_sessions",
           "tableTo": "activities",
-          "columnsFrom": [
-            "activity_id"
-          ],
-          "columnsTo": [
-            "id"
-          ],
+          "columnsFrom": ["activity_id"],
+          "columnsTo": ["id"],
           "onDelete": "cascade",
           "onUpdate": "no action"
         }
@@ -1336,17 +1273,12 @@
       "indexes": {
         "mcp_event_outbox_identity": {
           "name": "mcp_event_outbox_identity",
-          "columns": [
-            "subscription_id",
-            "event_id"
-          ],
+          "columns": ["subscription_id", "event_id"],
           "isUnique": true
         },
         "mcp_event_outbox_due": {
           "name": "mcp_event_outbox_due",
-          "columns": [
-            "next_attempt_at"
-          ],
+          "columns": ["next_attempt_at"],
           "isUnique": false
         }
       },
@@ -1355,12 +1287,8 @@
           "name": "mcp_event_outbox_subscription_id_mcp_event_subscriptions_id_fk",
           "tableFrom": "mcp_event_outbox",
           "tableTo": "mcp_event_subscriptions",
-          "columnsFrom": [
-            "subscription_id"
-          ],
-          "columnsTo": [
-            "id"
-          ],
+          "columnsFrom": ["subscription_id"],
+          "columnsTo": ["id"],
           "onDelete": "cascade",
           "onUpdate": "no action"
         }
@@ -1519,11 +1447,7 @@
       "indexes": {
         "oauth_apps_configuration": {
           "name": "oauth_apps_configuration",
-          "columns": [
-            "origin",
-            "redirect_uri",
-            "scopes"
-          ],
+          "columns": ["origin", "redirect_uri", "scopes"],
           "isUnique": true
         }
       },
@@ -1591,12 +1515,8 @@
           "name": "oauth_attempts_app_id_oauth_apps_id_fk",
           "tableFrom": "oauth_attempts",
           "tableTo": "oauth_apps",
-          "columnsFrom": [
-            "app_id"
-          ],
-          "columnsTo": [
-            "id"
-          ],
+          "columnsFrom": ["app_id"],
+          "columnsTo": ["id"],
           "onDelete": "cascade",
           "onUpdate": "no action"
         },
@@ -1604,12 +1524,8 @@
           "name": "oauth_attempts_connection_id_connections_id_fk",
           "tableFrom": "oauth_attempts",
           "tableTo": "connections",
-          "columnsFrom": [
-            "connection_id"
-          ],
-          "columnsTo": [
-            "id"
-          ],
+          "columnsFrom": ["connection_id"],
+          "columnsTo": ["id"],
           "onDelete": "cascade",
           "onUpdate": "no action"
         }
@@ -1740,9 +1656,7 @@
       "indexes": {
         "work_logs_focus_session_id_unique": {
           "name": "work_logs_focus_session_id_unique",
-          "columns": [
-            "focus_session_id"
-          ],
+          "columns": ["focus_session_id"],
           "isUnique": true
         }
       },
@@ -1751,12 +1665,8 @@
           "name": "work_logs_activity_id_activities_id_fk",
           "tableFrom": "work_logs",
           "tableTo": "activities",
-          "columnsFrom": [
-            "activity_id"
-          ],
-          "columnsTo": [
-            "id"
-          ],
+          "columnsFrom": ["activity_id"],
+          "columnsTo": ["id"],
           "onDelete": "cascade",
           "onUpdate": "no action"
         },
@@ -1764,12 +1674,8 @@
           "name": "work_logs_focus_session_id_focus_sessions_id_fk",
           "tableFrom": "work_logs",
           "tableTo": "focus_sessions",
-          "columnsFrom": [
-            "focus_session_id"
-          ],
-          "columnsTo": [
-            "id"
-          ],
+          "columnsFrom": ["focus_session_id"],
+          "columnsTo": ["id"],
           "onDelete": "no action",
           "onUpdate": "no action"
         }

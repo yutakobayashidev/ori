@@ -2,12 +2,16 @@
 
 ## Workspace
 
-`/deck` renders the research workspace; `/` is the integrated daily home. A collapsible shadcn/ui
+Research has two views: `/browse` for intentional single-feed reading and `/deck`
+for multi-column research. The shared navigation opens Browse; `/` remains the
+integrated daily home. A collapsible shadcn/ui
 sidebar based on `sidebar-09` shares its navigation rail with the article reader
 at `/inbox`. Within Research, it switches between research chat and deck management.
+The chat panel and chat-history strip are hidden initially; selecting Research
+chat opens them. Closing the panel restores the full deck reading area.
 Deck management switches decks and adds columns. The avatar at the bottom of the
 shared sidebar opens connected-account management in a dialog from either workspace.
-Up to six ordered columns scroll independently; only the active deck
+Ordered columns have no count limit and scroll independently; only the active deck
 mounts and fetches its columns. On mobile, the sidebar opens as a sheet.
 shadcn Base UI dialogs handle creation and editing, with Escape and focus
 restoration. Column menus offer editing, ordering, and deletion; refresh and
@@ -15,8 +19,31 @@ pagination are manual. The adjacent chat uses MessageScroller, Message, Bubble,
 Marker and InputGroup with the existing research backend.
 
 Twitter, Mastodon, and Reddit can appear together, with a source binding in each
-column. Original-post links open their source site. Separate reader, search,
-list, user-profile, and conversation pages are not provided.
+column. Original-post links open their source site; conversation threads are not
+rendered in the app.
+
+## Browse
+
+Browse opens with a large centered search field and no posts. Twitter offers
+Search, User, and Lists controls, with account selection, Top/Latest and following
+filters, native search operators, and account-specific list discovery. Mastodon
+and Reddit use the same source definitions and connections as deck columns.
+Submitting a condition opens a wider single reading column. Author names on
+Twitter and Mastodon posts open that author's posts in Browse.
+
+The `browseSource` and `browseConnection` URL parameters store the submitted
+source and account binding. Typing does not fetch posts or change the URL.
+Reload and browser history restore the submitted condition. In-memory feed
+caching allows short visits to an author or Decks without discarding loaded
+pages; it does not archive posts. A new search scrolls to the top, while browser
+Back restores the previous reading position.
+
+The Browse/Decks switch preserves URL selections and does not create columns.
+`Add to deck` explicitly copies the current condition into a saved deck or a new
+named deck, using revision checks for existing decks. `Open in Browse` in a
+column menu copies its condition into Browse; later browsing does not edit that
+deck. Unsaved decks survive navigation within the app but still disappear on a
+full reload.
 
 ## Definitions and connections
 
@@ -93,8 +120,9 @@ WebMCP-created views are temporary by default. Temporary copies of saved decks
 also remain in this tab's memory. Editing them does not write to SQLite. The
 explicit save action replaces a temporary view with a shared saved deck,
 preserving its ID for idempotent retries. Failed saves retain temporary
-content. Temporary views disappear on reload or navigation, including OAuth
-redirects. Only definitions are saved: posts, cursors, and scroll positions
+content. Temporary views remain in the browser's in-memory workspace across
+internal navigation, but disappear on reload, including OAuth redirects.
+Only definitions are saved: posts, cursors, and scroll positions
 are not archived.
 
 Research chats separately retain the agent-generated deck and last supplied

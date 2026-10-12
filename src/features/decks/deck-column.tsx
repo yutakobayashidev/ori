@@ -1,3 +1,4 @@
+import { Link } from "@tanstack/react-router";
 import { Icon } from "#/components/icon";
 import { Button } from "#/components/ui/button";
 import {
@@ -81,6 +82,20 @@ export function ResearchColumn({
             <Icon name="more" />
           </DropdownMenuTrigger>
           <DropdownMenuContent align="end">
+            <DropdownMenuItem
+              render={
+                <Link
+                  to="/browse"
+                  search={(previous) => ({
+                    ...previous,
+                    browseSource: column.source,
+                    browseConnection: column.connectionId,
+                  })}
+                />
+              }
+            >
+              Open in Browse
+            </DropdownMenuItem>
             <DropdownMenuItem onClick={onEdit}>Edit</DropdownMenuItem>
             <DropdownMenuItem
               onClick={() => onMove(-1)}

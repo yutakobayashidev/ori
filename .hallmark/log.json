@@ -1,5 +1,13 @@
 [
   {
+    "date": "2026-10-12",
+    "macrostructure": "centered search landing and single reading column",
+    "theme": "shadcn base-nova neutral",
+    "scope": "research browse",
+    "enrichment": "none",
+    "brief": "Large intentional search entry, Browse/Decks switching, and opt-in research chat"
+  },
+  {
     "date": "2026-09-28",
     "macrostructure": "daily home with natural-language composer and flexible plan",
     "theme": "shadcn base-nova neutral",

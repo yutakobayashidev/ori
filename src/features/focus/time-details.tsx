@@ -4,8 +4,7 @@ import { Input } from "#/components/ui/input";
 import { useActivityStore } from "#/features/activities/activity-store";
 import type { Activity } from "#/features/activities/model";
 import type { WorkLog } from "./model";
-import { useFocus, useRequiredFocus } from "./focus-state";
-import { loadFocus } from "./server-functions";
+import { useFocus, useRequiredFocus } from "./focus-store";
 
 function localDate() {
   const date = new Date();
@@ -33,6 +32,7 @@ function TimeEditor({ activity }: { activity: Activity }) {
   const store = useActivityStore();
   const inputId = useId();
   const focus = useRequiredFocus();
+  const { loadWorkHistory } = focus;
   const [estimate, setEstimate] = useState(String(activity.time?.estimatedMinutes ?? ""));
   const [remaining, setRemaining] = useState(
     activity.time?.projectedRemainingSeconds == null
@@ -52,7 +52,7 @@ function TimeEditor({ activity }: { activity: Activity }) {
   const busy = store.busy || focus.busy;
   useEffect(() => {
     let live = true;
-    void loadFocus({ data: { activityId: activity.id } })
+    void loadWorkHistory(activity.id)
       .then((result) => {
         if (!live) return;
         if (result.ok) {
@@ -67,7 +67,7 @@ function TimeEditor({ activity }: { activity: Activity }) {
     return () => {
       live = false;
     };
-  }, [activity.id, store.revision, focus.snapshot?.revision, reload]);
+  }, [activity.id, store.revision, focus.snapshot?.revision, loadWorkHistory, reload]);
   return (
     <div className="mt-4 space-y-6">
       <div className="space-y-1 text-xs text-muted-foreground">

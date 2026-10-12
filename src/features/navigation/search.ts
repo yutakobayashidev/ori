@@ -1,9 +1,12 @@
 import { z } from "zod";
+import { columnSchema } from "#/features/decks/model";
 
 const text = z.string().max(500).optional().catch(undefined);
 const flag = z.literal(true).optional().catch(undefined);
 const workspaceSearch = z.object({
   q: text,
+  browseSource: columnSchema.shape.source.optional().catch(undefined),
+  browseConnection: text,
   article: text,
   activity: text,
   auditTab: z.enum(["changes", "communications"]).optional().catch(undefined),

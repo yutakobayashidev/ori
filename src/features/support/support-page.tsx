@@ -1,3 +1,4 @@
+import { StartFocusButton } from "#/features/focus/start-focus-button";
 import { ArrowLeft, MessageSquare, Search } from "lucide-react";
 import { Button } from "#/components/ui/button";
 import { Input } from "#/components/ui/input";
@@ -185,6 +186,7 @@ export function SupportPage() {
                 key={selected.id}
                 activity={selected}
                 headerLeading={backButton}
+                focusAction={<StartFocusButton activity={selected} />}
               />
             ) : (
               <div className="grid justify-items-center gap-px-12 px-px-24 py-px-64 text-center text-ui-13 text-muted-foreground">

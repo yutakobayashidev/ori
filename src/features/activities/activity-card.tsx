@@ -10,7 +10,8 @@ import {
 } from "./activity-controls";
 import { useActivityStore } from "./activity-store";
 import type { Activity } from "./model";
-import { ActivityTimeLabel, StartFocusButton } from "#/features/focus/focus-controls";
+import { ActivityTimeLabel } from "#/features/focus/focus-controls";
+import { StartFocusButton } from "#/features/focus/start-focus-button";
 import { ActivityTimeDetails } from "#/features/focus/time-details";
 
 export function ActivityCard({

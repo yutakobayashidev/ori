@@ -15,10 +15,9 @@ test("saves an edited reply without recording a simulated send", async ({
   const edited = "I reviewed the materials. Let’s discuss the first-time experience.";
   await activitiesPage.saveReply(edited);
   await expect(page.getByRole("status").filter({ hasText: "Draft saved" })).toBeVisible();
-  await expect(activitiesPage.details).toContainText("Sending messages is not connected yet.");
   await expect(
-    activitiesPage.details.getByRole("button", { name: "Mark complete", exact: true }),
-  ).toHaveCount(0);
+    activitiesPage.details.getByRole("button", { name: "Send reply", exact: true }),
+  ).toBeEnabled();
   await page.reload();
   await expect(activitiesPage.draft).toHaveValue(edited);
   const activity = (await activityMcp.context()).activities.find(

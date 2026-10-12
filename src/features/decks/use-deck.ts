@@ -1,4 +1,5 @@
 import { useServerFn } from "@tanstack/react-start";
+import { useQueryClient } from "@tanstack/react-query";
 import { useCallback, useEffect, useRef, useState, useSyncExternalStore } from "react";
 import { useUrlState } from "../navigation/use-url-state";
 import { LEGACY_STORAGE_KEY, legacyWorkspaceSchema } from "./legacy-import";
@@ -54,6 +55,7 @@ function definition(deck: Deck): Deck {
 }
 
 export function useDeck(editing = false) {
+  const queryClient = useQueryClient();
   const [search, setSearch] = useUrlState();
   const url = useRef({ search, setSearch });
   useEffect(() => {
@@ -74,10 +76,12 @@ export function useDeck(editing = false) {
   useEffect(() => {
     editingRef.current = editing;
   }, [editing]);
-  const [workspace, setWorkspace] = useState<Workspace>(EMPTY_WORKSPACE);
+  const [workspace, setWorkspace] = useState<Workspace>(
+    () => queryClient.getQueryData<Workspace>(["deck-workspace"]) ?? EMPTY_WORKSPACE,
+  );
   const current = useRef(workspace);
   const [ready, setReady] = useState(false);
-  const initialized = useRef(false);
+  const initialized = useRef(workspace !== EMPTY_WORKSPACE);
   const [storageError, setStorageError] = useState<string>();
   const [saving, setSaving] = useState(false);
   const busy = useRef(false);
@@ -91,10 +95,14 @@ export function useDeck(editing = false) {
   const [legacyImported, setLegacyImported] = useState(false);
   const legacyAvailable = !legacyImported && legacyStatus === "available";
 
-  const apply = useCallback((next: Workspace) => {
-    current.current = next;
-    setWorkspace(next);
-  }, []);
+  const apply = useCallback(
+    (next: Workspace) => {
+      current.current = next;
+      setWorkspace(next);
+      queryClient.setQueryData(["deck-workspace"], next);
+    },
+    [queryClient],
+  );
   const reconcile = useCallback(
     (saved: SavedDeck[]) => {
       let preferred = url.current.search.deck ?? current.current.activeDeckId;
