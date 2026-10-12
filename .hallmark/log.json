@@ -1,6 +1,14 @@
 [
   {
     "date": "2026-10-12",
+    "macrostructure": "reading column with persistent right controls",
+    "theme": "shadcn base-nova neutral",
+    "scope": "research browse",
+    "enrichment": "none",
+    "brief": "Search and timeline on the left; account, filters, and lists on the right, with a compact mobile disclosure"
+  },
+  {
+    "date": "2026-10-12",
     "macrostructure": "centered search landing and single reading column",
     "theme": "shadcn base-nova neutral",
     "scope": "research browse",

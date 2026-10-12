@@ -24,11 +24,15 @@ rendered in the app.
 
 ## Browse
 
-Browse opens with a large centered search field and no posts. Twitter offers
-Search, User, and Lists controls, with account selection, Top/Latest and following
-filters, native search operators, and account-specific list discovery. Mastodon
-and Reddit use the same source definitions and connections as deck columns.
-Submitting a condition opens a wider single reading column. Author names on
+Browse opens with a large search field and no posts. Search and the timeline
+occupy the left column; the right column keeps account selection, Top/Latest,
+following filters, and account-specific Twitter lists visible. Lists can be opened
+directly while searching, without switching the search type first. Filters apply
+on submission, including the explicit Apply filters action. On narrow screens,
+Filters & lists expands above the results. Twitter offers Search, User, and Lists
+controls and native search operators. Mastodon and Reddit use the same source
+editors and connections as deck columns.
+Submitting a condition opens a single reading feed. Author names on
 Twitter and Mastodon posts open that author's posts in Browse.
 
 The `browseSource` and `browseConnection` URL parameters store the submitted

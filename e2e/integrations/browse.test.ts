@@ -1,5 +1,18 @@
+import type { Page } from "@playwright/test";
 import { expect, test } from "../fixtures";
 import { navigateHydrated, waitForWorkspaceHydration } from "../models/ready";
+
+async function openOptions(page: Page) {
+  const account = page.getByRole("combobox", { name: "Account", exact: true });
+  const toggle = page.getByRole("button", { name: "Filters & lists", exact: true });
+  await expect
+    .poll(async () => (await account.isVisible()) || (await toggle.isVisible()))
+    .toBe(true);
+  if ((await toggle.isVisible()) && (await toggle.getAttribute("aria-expanded")) === "false") {
+    await toggle.click();
+  }
+  await expect(account).toBeVisible();
+}
 
 test("preserves a submitted Browse deep link through login", async ({
   page,
@@ -7,12 +20,12 @@ test("preserves a submitted Browse deep link through login", async ({
   authPage,
 }) => {
   await navigateHydrated(page, "/browse");
+  await openOptions(page);
   await page
     .getByRole("combobox", { name: "Account", exact: true })
     .selectOption({ label: "alternate · X" });
   const input = page.getByRole("textbox", { name: "Search posts", exact: true });
   await input.fill("京都 lang:ja");
-  await page.getByRole("button", { name: "Filters", exact: true }).click();
   await page.getByRole("combobox", { name: "Sort posts", exact: true }).selectOption("Top");
   await page.getByRole("checkbox", { name: "Following only", exact: true }).check();
   await input.press("Enter");
@@ -25,6 +38,88 @@ test("preserves a submitted Browse deep link through login", async ({
   await expect(page).toHaveURL(deepLink);
   await expect(input).toHaveValue("京都 lang:ja");
   await expect(page.getByText("alternate · Top · follows page 1", { exact: true })).toBeVisible();
+});
+
+test("places persistent filters and list choices beside the search and results", async ({
+  page,
+  a11y,
+}, testInfo) => {
+  await page.setViewportSize({ width: 1280, height: 900 });
+  await navigateHydrated(page, "/browse");
+  const options = page.getByRole("complementary", { name: "Browse options", exact: true });
+  await expect(options).toBeVisible();
+  await expect(page.getByRole("button", { name: "Filters", exact: true })).toHaveCount(0);
+  await expect(page.getByRole("button", { name: "Filters & lists", exact: true })).toBeHidden();
+  await options
+    .getByRole("combobox", { name: "Account", exact: true })
+    .selectOption({ label: "e2e · X" });
+  await expect(options.getByRole("combobox", { name: "Sort posts", exact: true })).toBeVisible();
+  await expect(
+    options.getByRole("checkbox", { name: "Following only", exact: true }),
+  ).toBeVisible();
+  await expect(options.getByRole("button", { name: "My E2E List", exact: true })).toBeVisible();
+  const input = page.getByRole("textbox", { name: "Search posts", exact: true });
+  const inputBounds = await input.boundingBox();
+  const optionsBounds = await options.boundingBox();
+  if (!inputBounds || !optionsBounds)
+    throw new Error("Search and options must have visible bounds");
+  expect(inputBounds.x + inputBounds.width).toBeLessThan(optionsBounds.x);
+  await page.screenshot({
+    path: testInfo.outputPath("browse-two-columns-landing.png"),
+    fullPage: true,
+  });
+  await input.fill("two-columns");
+  await input.press("Enter");
+  await expect(page.getByText("Latest · all page 1", { exact: true })).toBeVisible();
+  const resultsBounds = await page
+    .getByRole("region", { name: "Browse results", exact: true })
+    .boundingBox();
+  const persistentOptionsBounds = await options.boundingBox();
+  if (!resultsBounds || !persistentOptionsBounds)
+    throw new Error("Results and options must have visible bounds");
+  expect(resultsBounds.x + resultsBounds.width).toBeLessThan(persistentOptionsBounds.x);
+  await expect(options.getByRole("button", { name: "My E2E List", exact: true })).toBeVisible();
+  const submittedUrl = page.url();
+  await options.getByRole("combobox", { name: "Sort posts", exact: true }).selectOption("Top");
+  await options.getByRole("checkbox", { name: "Following only", exact: true }).check();
+  expect(page.url()).toBe(submittedUrl);
+  await expect(page.getByText("Latest · all page 1", { exact: true })).toBeVisible();
+  await options.getByRole("button", { name: "Apply filters", exact: true }).click();
+  await expect(page).not.toHaveURL(submittedUrl);
+  await expect(input).toHaveValue("two-columns");
+  await expect(page.getByText("Top · follows page 1", { exact: true })).toBeVisible();
+  expect((await a11y().analyze()).violations).toEqual([]);
+  await page.screenshot({
+    path: testInfo.outputPath("browse-two-columns-results.png"),
+    fullPage: true,
+  });
+});
+
+test("collapses mobile options while keeping filters and lists reachable", async ({
+  page,
+  a11y,
+}, testInfo) => {
+  await page.setViewportSize({ width: 375, height: 900 });
+  await navigateHydrated(page, "/browse");
+  const toggle = page.getByRole("button", { name: "Filters & lists", exact: true });
+  const account = page.getByRole("combobox", { name: "Account", exact: true });
+  await expect(toggle).toHaveAttribute("aria-expanded", "false");
+  await expect(account).toBeHidden();
+  await toggle.click();
+  await expect(toggle).toHaveAttribute("aria-expanded", "true");
+  await account.selectOption({ label: "e2e · X" });
+  await expect(page.getByRole("button", { name: "My E2E List", exact: true })).toBeVisible();
+  for (const width of [320, 375, 414, 768]) {
+    await page.setViewportSize({ width, height: 900 });
+    expect(await page.evaluate(() => document.documentElement.scrollWidth > innerWidth)).toBe(
+      false,
+    );
+  }
+  await page.setViewportSize({ width: 375, height: 900 });
+  expect((await a11y().analyze()).violations).toEqual([]);
+  await page.screenshot({ path: testInfo.outputPath("browse-mobile-options.png"), fullPage: true });
+  await toggle.click();
+  await expect(account).toBeHidden();
 });
 
 test("keeps Research chat closed until requested", async ({
@@ -55,6 +150,7 @@ test("searches only on submission and restores searches through history and relo
   page,
 }) => {
   await navigateHydrated(page, "/browse");
+  await openOptions(page);
   await page
     .getByRole("combobox", { name: "Account", exact: true })
     .selectOption({ label: "e2e · X" });
@@ -113,9 +209,11 @@ test("saves more than six columns in a deck", async ({ page, deckPage }) => {
 
 test("reads account-bound user and list timelines without creating a deck", async ({ page }) => {
   await navigateHydrated(page, "/browse");
+  await openOptions(page);
   await page
     .getByRole("combobox", { name: "Account", exact: true })
     .selectOption({ label: "e2e · X" });
+  await expect(page.getByRole("button", { name: "My E2E List", exact: true })).toBeVisible();
   await page
     .getByRole("combobox", { name: "Account", exact: true })
     .selectOption({ label: "alternate · X" });
@@ -127,7 +225,12 @@ test("reads account-bound user and list timelines without creating a deck", asyn
     .getByRole("textbox", { name: "User handle or profile URL", exact: true })
     .press("Enter");
   await expect(page.getByText("alternate profile page 1", { exact: true })).toBeVisible();
-  await page.getByRole("button", { name: "Lists", exact: true }).click();
+  await page
+    .getByRole("group", { name: "Browse type" })
+    .getByRole("button", { name: "Search", exact: true })
+    .click();
+  await openOptions(page);
+  await expect(page.getByRole("textbox", { name: "Search posts", exact: true })).toBeVisible();
   await expect(page.getByRole("button", { name: "My E2E List", exact: true })).toHaveCount(0);
   await page.getByRole("button", { name: /^Alternate List/ }).click();
   await expect(page.getByText("list page 1", { exact: true })).toBeVisible();
@@ -140,6 +243,7 @@ test("copies a search into a saved deck and opens it independently in Browse", a
   deckPage,
 }) => {
   await navigateHydrated(page, "/browse");
+  await openOptions(page);
   await page
     .getByRole("combobox", { name: "Account", exact: true })
     .selectOption({ label: "e2e · X" });
@@ -172,6 +276,7 @@ test("keeps the landing page and results readable at narrow widths", async ({
   a11y,
 }, testInfo) => {
   await navigateHydrated(page, "/browse");
+  await openOptions(page);
   await page
     .getByRole("combobox", { name: "Account", exact: true })
     .selectOption({ label: "e2e · X" });

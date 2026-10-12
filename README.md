@@ -120,7 +120,7 @@ or change direction.
 ## Research capabilities
 
 - Multiple named decks with no column-count limit
-- Browse with a large search entry, single-column reading, and direct user/list access
+- Browse with a large search entry and timeline on the left, filters and lists on the right
 - Browse/Decks switching, explicit Add to deck, and Open in Browse column actions
 - Twitter search, user timelines, and lists with independent relay accounts
 - Mastodon OAuth, multiple accounts, search, user, list, and hashtag columns
