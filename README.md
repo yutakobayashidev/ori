@@ -127,7 +127,7 @@ or change direction.
 - Public Reddit search through the configured read-only rdt-gateway
 - Native X search syntax, Top/Latest ranking, and optional `filter:follows`
 - List discovery for the account selected in the column editor
-- Column editing, ordering, deletion/undo, refresh, and cursor pagination
+- Column editing, ordering, deletion/undo, manual refresh, and infinite scrolling
 - SQLite-backed shared decks, revision conflicts, and URL-based selection
 - Temporary views for exploration, with explicit saving
 - Server-only encrypted Mastodon credentials and configurable Tailscale owner access
@@ -581,3 +581,7 @@ The package can also be built directly with `nix build`.
 
 Bird uses X's internal GraphQL operations through the configured relay. Query
 IDs and response shapes can change without notice.
+The pinned Bird patch in `patches/@yuta__bird@0.10.1.patch` preserves bottom
+cursors returned as `TimelineReplaceEntry.entry` on subsequent pages. Without
+it, searches can incorrectly stop after the second page. Regression tests cover
+multiple pages through the actual Bird search, user, and list clients.

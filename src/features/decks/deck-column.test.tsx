@@ -82,7 +82,7 @@ it("temporarily renders missing evidence without inserting it into feed pages or
   expect(screen.getByRole("article")).toHaveTextContent("SnapshotPost saved during research");
   expect(page.posts).toHaveLength(0);
   expect(page.nextCursor).toBe("original-cursor");
-  fireEvent.click(screen.getByRole("button", { name: "Load more" }));
+  fireEvent.click(screen.getByRole("button", { name: "Reveal next page" }));
   expect(feed.next).toHaveBeenCalledWith({ cancelRefetch: false });
 });
 
@@ -118,3 +118,11 @@ it("keeps the live post instead of a duplicate snapshot with a Twitter URL alias
   expect(screen.getByRole("article")).toHaveTextContent("Live");
   expect(screen.queryByText(/Snapshot|Post saved during research/)).not.toBeInTheDocument();
 });
+
+vi.mock("#/components/feed-pagination", () => ({
+  FeedPagination: ({ enabled, onLoadMore }: { enabled: boolean; onLoadMore: () => void }) => (
+    <button disabled={!enabled} onClick={onLoadMore}>
+      Reveal next page
+    </button>
+  ),
+}));

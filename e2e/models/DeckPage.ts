@@ -93,7 +93,9 @@ export class DeckPage {
     return this.column(title).getByRole("alert");
   }
   async loadMore(title: string) {
-    await this.column(title).getByRole("button", { name: "Load more" }).click();
+    const results = this.column(title).getByTestId("deck-column-results");
+    await results.scrollIntoViewIfNeeded();
+    await results.evaluate((element) => element.scrollTo(0, element.scrollHeight));
   }
   async retryColumn(title: string) {
     await this.column(title).getByRole("button", { name: "Retry" }).click();

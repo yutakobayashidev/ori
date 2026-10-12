@@ -274,22 +274,23 @@ test("reads and pages bound accounts without mixing sibling columns", async ({
   const deck = decoded(
     await executeTool(page, "set_deck", {
       title: "接続を比較",
-      columns: [column("通常", accounts.e2e ?? ""), column("別の接続", accounts.alternate ?? "")],
+      columns: [
+        column("通常", accounts.e2e ?? ""),
+        column("別の接続", accounts.alternate ?? ""),
+      ].map((entry) => ({ ...entry, source: { kind: "search", query: "pages-WebMCP" } })),
     }),
   ).deck;
   await expect(deckPage.postText("alternate · Latest · all page 1")).toBeVisible();
   const id = deck.columns[1].id;
   const loaded = decoded(await executeTool(page, "get_column_posts", { columnId: id }));
   expect(loaded.column.connectionId).toBe(accounts.alternate);
-  expect(loaded.posts.map((post: { text: string }) => post.text)).toEqual([
-    "alternate · Latest · all page 1",
-  ]);
+  expect(loaded.posts).toHaveLength(10);
+  expect(loaded.posts[0].text).toBe("alternate · Latest · all page 1");
   const more = decoded(await executeTool(page, "load_more_column", { columnId: id }));
-  expect(more).toMatchObject({ loadedCount: 2, offset: 1, hasMore: false });
-  expect(more.posts.map((post: { text: string }) => post.text)).toEqual([
-    "alternate · Latest · all page 2",
-  ]);
-  await expect(deckPage.columnPosts("通常")).toHaveCount(1);
+  expect(more).toMatchObject({ loadedCount: 20, offset: 10, hasMore: true });
+  expect(more.posts).toHaveLength(10);
+  expect(more.posts[0].text).toBe("alternate · Latest · all page 2");
+  await expect(deckPage.columnPosts("通常")).toHaveCount(10);
   await executeTool(page, "set_deck", { title: "別の一時ビュー", columns: [] });
   expect((await executeTool(page, "get_column_posts", { columnId: id })).isError).toBe(true);
 });

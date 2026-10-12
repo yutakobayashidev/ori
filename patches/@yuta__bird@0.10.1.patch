@@ -1,0 +1,28 @@
+diff --git a/dist/lib/twitter-client-utils.d.ts b/dist/lib/twitter-client-utils.d.ts
+index c41d2f6fc7d22a547897c562973200f5f7d8cfb6..6465b1a5aad84d0d80b25d6b88443a0b75240ad1 100644
+--- a/dist/lib/twitter-client-utils.d.ts
++++ b/dist/lib/twitter-client-utils.d.ts
+@@ -161,6 +161,9 @@ export declare function parseTweetsFromInstructions(instructions: Array<{
+     }>;
+ }> | undefined, quoteDepthOrOptions: number | ParseTweetsOptions): TweetData[];
+ export declare function extractCursorFromInstructions(instructions: Array<{
++    entry?: {
++        content?: unknown;
++    };
+     entries?: Array<{
+         content?: unknown;
+     }>;
+diff --git a/dist/lib/twitter-client-utils.js b/dist/lib/twitter-client-utils.js
+index 7e7b1700d17b7019a38d4d10acdfe0fbc358f6c6..211f360c9aea7cefa2bd117778a9a836659830ff 100644
+--- a/dist/lib/twitter-client-utils.js
++++ b/dist/lib/twitter-client-utils.js
+@@ -461,7 +461,8 @@ export function parseTweetsFromInstructions(instructions, quoteDepthOrOptions) {
+ }
+ export function extractCursorFromInstructions(instructions, cursorType = 'Bottom') {
+     for (const instruction of instructions ?? []) {
+-        for (const entry of instruction.entries ?? []) {
++        const entries = instruction.entry ? [instruction.entry] : instruction.entries ?? [];
++        for (const entry of entries) {
+             const content = entry.content;
+             if (content?.cursorType === cursorType && typeof content.value === 'string' && content.value.length > 0) {
+                 return content.value;

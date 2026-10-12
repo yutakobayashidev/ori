@@ -5,6 +5,9 @@ const text = z.string().max(500).optional().catch(undefined);
 const flag = z.literal(true).optional().catch(undefined);
 const workspaceSearch = z.object({
   q: text,
+  browseQuery: z.string().max(512).optional().catch(undefined),
+  product: z.enum(["Latest", "Top"]).optional().catch(undefined),
+  following: z.boolean().optional().catch(undefined),
   browseSource: columnSchema.shape.source.optional().catch(undefined),
   browseConnection: text,
   article: text,

@@ -430,8 +430,17 @@ const server = createServer(async (request, response) => {
   }
 
   const rawQuery = variables.rawQuery;
+  const multiPage = typeof rawQuery === "string" && rawQuery.startsWith("pages-");
+  const pageNumber =
+    variables.cursor === undefined ? 1 : multiPage ? Number(variables.cursor.split(":")[1]) : 2;
   const expectedCursor =
-    variables.cursor === undefined || variables.cursor === `search-next:${rawQuery}`;
+    variables.cursor === undefined ||
+    (multiPage
+      ? Number.isInteger(pageNumber) &&
+        pageNumber >= 2 &&
+        pageNumber <= 5 &&
+        variables.cursor === `search-page:${pageNumber}:${rawQuery}`
+      : variables.cursor === `search-next:${rawQuery}`);
   if (
     typeof rawQuery !== "string" ||
     rawQuery.length === 0 ||
@@ -461,14 +470,37 @@ const server = createServer(async (request, response) => {
   const follows = rawQuery.includes("filter:follows") ? "follows" : "all";
   const label = `${profileName === "alternate" ? "alternate · " : ""}${variables.product} · ${follows}`;
   const id = encodeURIComponent(rawQuery);
-  const entries = secondPage
-    ? [tweet(`s-${id}-2`, `${label} page 2`)]
-    : [tweet(`s-${id}-1`, `${label} page 1`), cursor(`search-next:${rawQuery}`)];
+  const entries = multiPage
+    ? [
+        ...Array.from({ length: 10 }, (_, index) =>
+          tweet(
+            `s-${id}-${pageNumber}-${index}`,
+            `${label} page ${pageNumber}${index === 0 ? "" : ` post ${index + 1}`}`,
+          ),
+        ),
+        ...(pageNumber < 5 ? [cursor(`search-page:${pageNumber + 1}:${rawQuery}`)] : []),
+      ]
+    : secondPage
+      ? [tweet(`s-${id}-2`, `${label} page 2`)]
+      : [tweet(`s-${id}-1`, `${label} page 1`), cursor(`search-next:${rawQuery}`)];
+  const searchTimeline =
+    multiPage && pageNumber > 1 && pageNumber < 5
+      ? {
+          instructions: [
+            { type: "TimelineAddEntries", entries: entries.slice(0, -1) },
+            {
+              type: "TimelineReplaceEntry",
+              entryIdToReplace: "cursor-bottom",
+              entry: entries.at(-1),
+            },
+          ],
+        }
+      : timeline(entries);
 
   send(response, {
     data: {
       search_by_raw_query: {
-        search_timeline: { timeline: timeline(entries) },
+        search_timeline: { timeline: searchTimeline },
       },
     },
   });

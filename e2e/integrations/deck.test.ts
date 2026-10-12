@@ -14,18 +14,18 @@ test("binds identical searches to independent profiles through paging, editing a
   page,
   deckPage,
 }) => {
-  await deckPage.addColumn("通常の接続", "same-query");
-  await deckPage.addColumn("別の接続", "same-query", "alternate");
+  await deckPage.addColumn("通常の接続", "pages-independent");
+  await deckPage.addColumn("別の接続", "pages-independent", "alternate");
   await expect(deckPage.columnPostText("通常の接続", "Latest · all page 1", true)).toBeVisible();
   await expect(
     deckPage.columnPostText("別の接続", "alternate · Latest · all page 1", true),
   ).toBeVisible();
   await deckPage.loadMore("通常の接続");
-  await expect(deckPage.columnPosts("通常の接続")).toHaveCount(2);
-  await expect(deckPage.columnPosts("別の接続")).toHaveCount(1);
+  await expect(deckPage.columnPosts("通常の接続")).toHaveCount(20);
+  await expect(deckPage.columnPosts("別の接続")).toHaveCount(10);
   await deckPage.loadMore("別の接続");
   await expect(
-    deckPage.columnPostText("別の接続", "alternate · Latest · all page 2"),
+    deckPage.columnPostText("別の接続", "alternate · Latest · all page 2", true),
   ).toBeVisible();
   await deckPage.openColumnActions("別の接続");
   await deckPage.editColumn.click();
@@ -37,7 +37,7 @@ test("binds identical searches to independent profiles through paging, editing a
   );
   await page.reload();
   await expect(deckPage.columnPostText("別の接続", "Latest · all page 1", true)).toBeVisible();
-  await expect(deckPage.columnPosts("通常の接続")).toHaveCount(1);
+  await expect(deckPage.columnPosts("通常の接続")).toHaveCount(10);
 });
 
 test("creates, switches, renames and deletes persisted deck profiles", async ({
@@ -104,10 +104,30 @@ test("keeps other columns usable when pagination fails and retries that column",
   await deckPage.loadMore("失敗する検索");
   await expect(deckPage.columnError("失敗する検索")).toBeVisible();
   await expect(deckPage.columnPosts("失敗する検索")).toHaveCount(1);
+  await expect(deckPage.column("失敗する検索").getByTestId("feed-pagination")).toHaveCount(0);
   await deckPage.loadMore("別の検索");
   await expect(deckPage.columnPosts("別の検索")).toHaveCount(2);
   await deckPage.retryColumn("失敗する検索");
   await expect(deckPage.columnPosts("失敗する検索")).toHaveCount(2);
+});
+
+test("scrolls through five pages using replacement cursors", async ({ deckPage }) => {
+  await deckPage.addColumn("Long timeline", "pages-deck");
+  await expect(deckPage.columnPosts("Long timeline")).toHaveCount(10);
+  for (const [pageNumber, count] of [
+    [2, 20],
+    [3, 30],
+    [4, 40],
+    [5, 50],
+  ] as const) {
+    await deckPage.loadMore("Long timeline");
+    await expect(deckPage.columnPosts("Long timeline")).toHaveCount(count);
+    await expect(
+      deckPage.columnPostText("Long timeline", `Latest · all page ${pageNumber}`, true),
+    ).toBeVisible();
+  }
+  await expect(deckPage.column("Long timeline").getByTestId("feed-pagination")).toHaveCount(0);
+  await expect(deckPage.columnPostText("Long timeline", "No more posts.", true)).toBeVisible();
 });
 
 test("keeps the deck and editor accessible within narrow viewports", async ({

@@ -96,7 +96,7 @@ it("appends subsequent pages without duplicates and refreshes from the first pag
       toolArguments={args}
     />,
   );
-  fireEvent.click(screen.getByRole("button", { name: "Load more" }));
+  fireEvent.click(screen.getByRole("button", { name: "Reveal next page" }));
   expect(await screen.findByText("Post 2")).toBeInTheDocument();
   expect(screen.getAllByTestId("research-post")).toHaveLength(2);
   expect(callTool).toHaveBeenNthCalledWith(1, "fetch_posts", { ...args, cursor: "next" });
@@ -137,7 +137,7 @@ it("retries failed pagination with the same cursor and preserves loaded posts", 
       toolArguments={args}
     />,
   );
-  fireEvent.click(screen.getByRole("button", { name: "Load more" }));
+  fireEvent.click(screen.getByRole("button", { name: "Reveal next page" }));
   expect(await screen.findByRole("alert")).toHaveTextContent("Connection unavailable");
   expect(screen.getByText("Post 1")).toBeInTheDocument();
   fireEvent.click(screen.getByRole("button", { name: "Retry" }));
@@ -197,3 +197,11 @@ it("uses normalized result metadata when source arguments omit schema defaults",
   expect(screen.getByText("Post 1")).toBeInTheDocument();
   expect(callTool).not.toHaveBeenCalled();
 });
+
+vi.mock("#/components/feed-pagination", () => ({
+  FeedPagination: ({ enabled, onLoadMore }: { enabled: boolean; onLoadMore: () => void }) => (
+    <button disabled={!enabled} onClick={onLoadMore}>
+      Reveal next page
+    </button>
+  ),
+}));

@@ -4,9 +4,10 @@
 import { useQuery } from "@tanstack/react-query";
 import { useNavigate, useSearch } from "@tanstack/react-router";
 import { useServerFn } from "@tanstack/react-start";
-import { useState, type ReactNode } from "react";
+import { useEffect, useMemo, useState, type ReactNode } from "react";
 import { Search, ArrowRight, SlidersHorizontal, RefreshCw } from "lucide-react";
 import { Button } from "#/components/ui/button";
+import { FeedPagination } from "#/components/feed-pagination";
 import { Checkbox } from "#/components/ui/checkbox";
 import { Label } from "#/components/ui/label";
 import { NativeSelect, NativeSelectOption } from "#/components/ui/native-select";
@@ -35,13 +36,49 @@ type Source = DeckColumn["source"];
 
 export function BrowsePage() {
   const search = useSearch({ from: "__root__" });
+  const externalQuery = search.browseQuery;
+  const navigate = useNavigate();
   const load = useServerFn(loadConnections);
   const connections = useQuery({ queryKey: ["connections"], queryFn: () => load(), retry: false });
-  const source = search.browseSource;
-  const connectionId = search.browseConnection;
+  const externalSource = useMemo(() => {
+    if (search.browseSource || !externalQuery?.trim()) return undefined;
+    const parsed = columnSchema.shape.source.safeParse({
+      platform: "twitter",
+      kind: "search",
+      query: externalQuery,
+      product: search.product ?? "Latest",
+      following: search.following ?? false,
+    });
+    return parsed.success ? parsed.data : undefined;
+  }, [search.browseSource, externalQuery, search.product, search.following]);
+  const twitterConnection = connections.data?.connections.find(
+    (connection) =>
+      connection.platform === "twitter" &&
+      connection.status === "connected" &&
+      (!search.browseConnection || connection.id === search.browseConnection),
+  );
+  const source = search.browseSource ?? externalSource;
+  const connectionId =
+    search.browseConnection ?? (externalSource ? (twitterConnection?.id ?? "") : undefined);
+  useEffect(() => {
+    if (!externalSource || !twitterConnection) return;
+    void navigate({
+      to: "/browse",
+      replace: true,
+      search: (previous) => ({
+        ...previous,
+        browseSource: externalSource,
+        browseConnection: twitterConnection.id,
+        q: undefined,
+        browseQuery: undefined,
+        product: undefined,
+        following: undefined,
+      }),
+    });
+  }, [externalSource, twitterConnection, navigate]);
   const feedIdentity = encodeURIComponent(JSON.stringify([source, connectionId]));
   const column =
-    source && connectionId
+    search.browseSource && source && connectionId
       ? { id: "browse", title: describeSource(source).query.slice(0, 80), source, connectionId }
       : undefined;
   return (
@@ -145,6 +182,10 @@ function BrowseForm({
         ...previous,
         browseSource: parsed.data,
         browseConnection: connectionId,
+        q: undefined,
+        browseQuery: undefined,
+        product: undefined,
+        following: undefined,
       }),
       resetScroll: true,
     });
@@ -268,26 +309,6 @@ function BrowseForm({
             <SlidersHorizontal />
             Filters &amp; lists
           </Button>
-          {initialSource && (
-            <Button
-              type="button"
-              variant="ghost"
-              size="sm"
-              onClick={() =>
-                void navigate({
-                  to: "/browse",
-                  search: (previous) => ({
-                    ...previous,
-                    browseSource: undefined,
-                    browseConnection: undefined,
-                  }),
-                  resetScroll: true,
-                })
-              }
-            >
-              New search
-            </Button>
-          )}
         </div>
       </div>
       <aside
@@ -473,6 +494,10 @@ function BrowseFeed({ column }: { column: DeckColumn }) {
                       ...previous,
                       browseSource: { platform, kind: "user", target: post.author.handle },
                       browseConnection: column.connectionId,
+                      q: undefined,
+                      browseQuery: undefined,
+                      product: undefined,
+                      following: undefined,
                     }),
                     resetScroll: true,
                   });
@@ -509,16 +534,14 @@ function BrowseFeed({ column }: { column: DeckColumn }) {
           No posts found. Try another search.
         </p>
       )}
-      {feed.hasNextPage && !feed.isFetchNextPageError && (
-        <div className="py-6 text-center">
-          <Button
-            variant="outline"
-            disabled={feed.isFetching}
-            onClick={() => void feed.fetchNextPage()}
-          >
-            Load more
-          </Button>
-        </div>
+      {feed.hasNextPage && !feed.isError && (
+        <FeedPagination
+          enabled={!feed.isFetching}
+          onLoadMore={() => void feed.fetchNextPage({ cancelRefetch: false })}
+        />
+      )}
+      {!feed.isPending && !feed.isError && posts.length > 0 && !feed.hasNextPage && (
+        <p className="py-6 text-center text-sm text-muted-foreground">No more posts.</p>
       )}
       {adding && <AddToDeckDialog column={column} onClose={() => setAdding(false)} />}
     </section>

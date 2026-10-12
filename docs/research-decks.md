@@ -14,8 +14,10 @@ shared sidebar opens connected-account management in a dialog from either worksp
 Ordered columns have no count limit and scroll independently; only the active deck
 mounts and fetches its columns. On mobile, the sidebar opens as a sheet.
 shadcn Base UI dialogs handle creation and editing, with Escape and focus
-restoration. Column menus offer editing, ordering, and deletion; refresh and
-pagination are manual. The adjacent chat uses MessageScroller, Message, Bubble,
+restoration. Column menus offer editing, ordering, and deletion. Infinite scrolling
+loads the next page near the end of a feed; refresh remains manual. Failed page
+requests keep the loaded posts and require Retry.
+The adjacent chat uses MessageScroller, Message, Bubble,
 Marker and InputGroup with the existing research backend.
 
 Twitter, Mastodon, and Reddit can appear together, with a source binding in each
@@ -34,9 +36,14 @@ controls and native search operators. Mastodon and Reddit use the same source
 editors and connections as deck columns.
 Submitting a condition opens a single reading feed. Author names on
 Twitter and Mastodon posts open that author's posts in Browse.
+Browse also loads subsequent pages automatically while scrolling. Edit the
+existing search field to start another search.
 
 The `browseSource` and `browseConnection` URL parameters store the submitted
 source and account binding. Typing does not fetch posts or change the URL.
+Browser search engines can open `/browse?browseQuery=...&product=Latest&following=true`.
+Browse resolves a connected Twitter account and replaces this entry URL with the
+same canonical source/account parameters, preserving quoted and non-ASCII queries.
 Reload and browser history restore the submitted condition. In-memory feed
 caching allows short visits to an author or Decks without discarding loaded
 pages; it does not archive posts. A new search scrolls to the top, while browser

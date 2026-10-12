@@ -73,3 +73,24 @@ it("preserves the complete supported 512-character search in a Browse URL", () =
   };
   expect(validateWorkspaceSearch({ browseSource }).browseSource).toEqual(browseSource);
 });
+
+it("accepts Firefox keyword search preferences without changing the query", () => {
+  expect(
+    validateWorkspaceSearch({ browseQuery: "京都 lang:ja", product: "Latest", following: true }),
+  ).toMatchObject({
+    browseQuery: "京都 lang:ja",
+    product: "Latest",
+    following: true,
+  });
+});
+
+it("ignores malformed external search preferences while retaining the query", () => {
+  const state = validateWorkspaceSearch({
+    browseQuery: "京都",
+    product: "popular",
+    following: "yes",
+  });
+  expect(state.browseQuery).toBe("京都");
+  expect(state.product).toBeUndefined();
+  expect(state.following).toBeUndefined();
+});

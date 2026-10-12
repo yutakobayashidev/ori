@@ -39,7 +39,7 @@ test("MCP Apps standard bridge renders shared research columns, paginates and re
         id: "webmcp",
         title: "WebMCP",
         connectionId: connection.id,
-        source: { kind: "search", query: "WebMCP", product: "Latest", following: false },
+        source: { kind: "search", query: "pages-WebMCP", product: "Latest", following: false },
       },
     ],
   });
@@ -122,21 +122,22 @@ test("MCP Apps standard bridge renders shared research columns, paginates and re
   const app = page.frameLocator('iframe[title="Research app"]');
   await expect(app.getByRole("heading", { name: "MCP research" })).toBeVisible();
   await expect(app.getByRole("heading", { name: "WebMCP" })).toBeVisible();
-  await expect(app.getByTestId("research-post")).toHaveCount(1);
-  await expect(app.getByTestId("research-post-text")).toContainText("Latest · all page 1");
-  await app.getByRole("button", { name: "Load more" }).click();
-  await expect(app.getByTestId("research-post")).toHaveCount(2);
+  await expect(app.getByTestId("research-post")).toHaveCount(10);
+  await expect(app.getByTestId("research-post-text").first()).toContainText("Latest · all page 1");
+  await app.getByTestId("feed-pagination").scrollIntoViewIfNeeded();
+  await expect(app.getByTestId("research-post")).toHaveCount(20);
   await expect(app.getByText("Latest · all page 2", { exact: true })).toBeVisible();
   await expect(app.getByRole("button", { name: "Load more" })).toHaveCount(0);
   expect(
     calls.filter((call) => call.name === "fetch_column_posts").map((call) => call.arguments),
   ).toEqual([
     { deckId: args.deckId, columnId: "webmcp" },
-    { deckId: args.deckId, columnId: "webmcp", cursor: "search-next:WebMCP" },
+    { deckId: args.deckId, columnId: "webmcp", cursor: "search-page:2:pages-WebMCP" },
   ]);
+  await app.getByTestId("deck-column-results").evaluate((element) => element.scrollTo(0, 0));
   await app.getByRole("button", { name: "Refresh" }).click();
-  await expect(app.getByTestId("research-post")).toHaveCount(1);
-  await expect(app.getByRole("button", { name: "Load more" })).toBeVisible();
+  await expect(app.getByTestId("research-post")).toHaveCount(10);
+  await expect(app.getByTestId("feed-pagination")).toHaveCount(1);
   expect(calls.filter((call) => call.name === "fetch_column_posts").at(-1)?.arguments).toEqual({
     deckId: args.deckId,
     columnId: "webmcp",
@@ -166,7 +167,10 @@ test("MCP Apps standard bridge renders shared research columns, paginates and re
   });
   // A later tool result can omit schema defaults; the server's normalized column
   // must render without guessing platform/product from the original arguments.
-  const sourceArgs = { connectionId: connection.id, source: { kind: "search", query: "WebMCP" } };
+  const sourceArgs = {
+    connectionId: connection.id,
+    source: { kind: "search", query: "pages-WebMCP" },
+  };
   const sourceResult = await tool("fetch_posts", sourceArgs);
   await page.evaluate(
     ({ sourceResult, sourceArgs }) => {
@@ -188,8 +192,8 @@ test("MCP Apps standard bridge renders shared research columns, paginates and re
   );
   await expect(app.getByRole("heading", { name: "Source", exact: true })).toBeVisible();
   await expect(app.getByRole("img", { name: "Twitter", exact: true })).toBeVisible();
-  await expect(app.getByTestId("research-post")).toHaveCount(1);
-  await app.getByRole("button", { name: "Load more" }).click();
-  await expect(app.getByTestId("research-post")).toHaveCount(2);
+  await expect(app.getByTestId("research-post")).toHaveCount(10);
+  await app.getByTestId("feed-pagination").scrollIntoViewIfNeeded();
+  await expect(app.getByTestId("research-post")).toHaveCount(20);
   expect(errors).toEqual([]);
 });

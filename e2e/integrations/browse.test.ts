@@ -14,6 +14,43 @@ async function openOptions(page: Page) {
   await expect(account).toBeVisible();
 }
 
+test("opens a Firefox search URL through login with quoted Japanese terms", async ({
+  page,
+  context,
+  authPage,
+}) => {
+  const query = '"京都 & コーヒー" lang:ja';
+  const parameters = new URLSearchParams({
+    browseQuery: query,
+    product: "Latest",
+    following: "true",
+  });
+  await context.clearCookies();
+  await page.goto(`/browse?${parameters}`);
+  await expect(page).toHaveURL(/\/login\?returnTo=/);
+  await authPage.signIn("owner@workspace.invalid", "E2E-only-passphrase-2026");
+  await expect(page.getByRole("textbox", { name: "Search posts", exact: true })).toHaveValue(query);
+  await expect(page.getByText(/^(?:alternate · )?Latest · follows page 1$/)).toBeVisible();
+  const canonical = new URL(page.url()).searchParams;
+  expect(canonical.has("browseQuery")).toBe(false);
+  expect(JSON.parse(canonical.get("browseSource") ?? "null")).toEqual({
+    platform: "twitter",
+    kind: "search",
+    query,
+    product: "Latest",
+    following: true,
+  });
+  await openOptions(page);
+  const account = page.getByRole("combobox", { name: "Account", exact: true });
+  expect(canonical.get("browseConnection")).toBe(await account.inputValue());
+  expect(canonical.get("browseConnection")).toBeTruthy();
+  const canonicalUrl = page.url();
+  await page.reload();
+  await expect(page).toHaveURL(canonicalUrl);
+  await expect(page.getByRole("textbox", { name: "Search posts", exact: true })).toHaveValue(query);
+  await expect(page.getByText(/^(?:alternate · )?Latest · follows page 1$/)).toBeVisible();
+});
+
 test("preserves a submitted Browse deep link through login", async ({
   page,
   context,
@@ -38,6 +75,19 @@ test("preserves a submitted Browse deep link through login", async ({
   await expect(page).toHaveURL(deepLink);
   await expect(input).toHaveValue("京都 lang:ja");
   await expect(page.getByText("alternate · Top · follows page 1", { exact: true })).toBeVisible();
+});
+
+test("preserves numeric, boolean and quoted Firefox search text", async ({ page }) => {
+  for (const query of ["123", "true", "null", '"京都"', '"123"']) {
+    await page.goto(`/browse?${new URLSearchParams({ browseQuery: query })}`);
+    await expect(page.getByRole("textbox", { name: "Search posts", exact: true })).toHaveValue(
+      query,
+    );
+    await expect(page.getByText(/^(?:alternate · )?Latest · all page 1$/)).toBeVisible();
+    const parameters = new URL(page.url()).searchParams;
+    expect(parameters.has("browseQuery")).toBe(false);
+    expect(JSON.parse(parameters.get("browseSource") ?? "null").query).toBe(query);
+  }
 });
 
 test("places persistent filters and list choices beside the search and results", async ({
@@ -169,6 +219,7 @@ test("searches only on submission and restores searches through history and relo
   expect(page.url()).toBe(firstSearch);
   await input.press("Enter");
   await expect(page).not.toHaveURL(firstSearch);
+  await expect(page.getByRole("heading", { name: "second-query", exact: true })).toBeVisible();
   const secondSearch = page.url();
   await page.goBack();
   await expect(page).toHaveURL(firstSearch);
@@ -179,7 +230,6 @@ test("searches only on submission and restores searches through history and relo
   await Promise.all([waitForWorkspaceHydration(page), page.reload()]);
   await expect(input).toHaveValue("second-query");
   await expect(page.getByText("Latest · all page 1", { exact: true })).toBeVisible();
-  await page.getByRole("button", { name: "Load more", exact: true }).click();
   await expect(page.getByText("Latest · all page 2", { exact: true })).toBeVisible();
   await page.setViewportSize({ width: 375, height: 500 });
   const scroll = page.locator("#browse-scroll");
@@ -193,6 +243,64 @@ test("searches only on submission and restores searches through history and relo
   await expect(page).toHaveURL(secondSearch);
   await expect(page.getByText("Latest · all page 2", { exact: true })).toBeVisible();
   await expect.poll(() => scroll.evaluate((element) => element.scrollTop)).toBe(scrollTop);
+});
+
+test("scrolls through replacement cursors beyond two pages and stops at the end", async ({
+  page,
+}, testInfo) => {
+  await navigateHydrated(page, "/browse");
+  await openOptions(page);
+  await page
+    .getByRole("combobox", { name: "Account", exact: true })
+    .selectOption({ label: "e2e · X" });
+  const input = page.getByRole("textbox", { name: "Search posts", exact: true });
+  await input.fill(`pages-browse-${testInfo.project.name}`);
+  await input.press("Enter");
+  const posts = page.getByRole("region", { name: "Browse results" }).locator("article");
+  await expect(posts).toHaveCount(10);
+  await expect(page.getByRole("button", { name: "Load more", exact: true })).toHaveCount(0);
+  await expect(page.getByRole("button", { name: "New search", exact: true })).toHaveCount(0);
+  for (const [pageNumber, count] of [
+    [2, 20],
+    [3, 30],
+    [4, 40],
+    [5, 50],
+  ] as const) {
+    await page.getByTestId("feed-pagination").scrollIntoViewIfNeeded();
+    await expect(posts).toHaveCount(count);
+    await expect(page.getByText(`Latest · all page ${pageNumber}`, { exact: true })).toBeVisible();
+  }
+  await expect(page.getByTestId("feed-pagination")).toHaveCount(0);
+  await expect(page.getByText("No more posts.", { exact: true })).toBeVisible();
+  await page
+    .locator("#browse-scroll")
+    .evaluate((element) => element.scrollTo(0, element.scrollHeight));
+  await expect(posts).toHaveCount(50);
+});
+
+test("keeps pagination errors until an explicit retry", async ({ page }, testInfo) => {
+  await navigateHydrated(page, "/browse");
+  await openOptions(page);
+  await page
+    .getByRole("combobox", { name: "Account", exact: true })
+    .selectOption({ label: "e2e · X" });
+  const input = page.getByRole("textbox", { name: "Search posts", exact: true });
+  await input.fill(`retry-browse-${testInfo.project.name}`);
+  await input.press("Enter");
+  const results = page.getByRole("region", { name: "Browse results" });
+  await expect(results.getByRole("alert")).toBeVisible();
+  await expect(results.locator("article")).toHaveCount(1);
+  await expect(results.getByTestId("feed-pagination")).toHaveCount(0);
+  await page.locator("#browse-scroll").evaluate(async (element) => {
+    element.scrollTo(0, element.scrollHeight);
+    await new Promise<void>((resolve) =>
+      requestAnimationFrame(() => requestAnimationFrame(() => resolve())),
+    );
+  });
+  await expect(results.getByRole("alert")).toBeVisible();
+  await results.getByRole("button", { name: "Retry", exact: true }).click();
+  await expect(results.locator("article")).toHaveCount(2);
+  await expect(results.getByRole("alert")).toHaveCount(0);
 });
 
 test("saves more than six columns in a deck", async ({ page, deckPage }) => {

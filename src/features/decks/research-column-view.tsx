@@ -2,6 +2,7 @@ import type { ReactNode } from "react";
 import { Icon } from "#/components/icon";
 import { Badge } from "#/components/ui/badge";
 import { Button } from "#/components/ui/button";
+import { FeedPagination } from "#/components/feed-pagination";
 import { Skeleton } from "#/components/ui/skeleton";
 import type { ResearchPost } from "#/features/platforms/types";
 import { citationUrlKey } from "#/features/research/citation-url";
@@ -158,16 +159,9 @@ export function ResearchColumnView({
             No posts match your filters.
           </p>
         ) : null}
-        {hasMore && !loadMoreError ? (
-          <div
-            data-testid="deck-message"
-            className="p-4 text-sm leading-body text-muted-foreground"
-          >
-            <Button variant="outline" type="button" disabled={fetching} onClick={onLoadMore}>
-              Load more
-            </Button>
-          </div>
-        ) : null}
+        {hasMore && !error && !loadMoreError && (
+          <FeedPagination enabled={!fetching && !pending && !loadingMore} onLoadMore={onLoadMore} />
+        )}
         {!pending && !error && posts.length > 0 && !hasMore ? (
           <p data-testid="deck-message" className="p-4 text-sm leading-body text-muted-foreground">
             No more posts.

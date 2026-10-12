@@ -5,6 +5,7 @@ settings:
   excludeLinksFromLockfile: false
 
 patchedDependencies:
+  '@yuta/bird@0.10.1': bcc8440e45a97fb58ba37b30f58946e44e67b05354fa813474c97bff3ada4111
   chapplin@1.3.1: 27bd7fe4c60ca402e57f2abaf4655cd234d462afab77e00b0564650b5caecf10
 
 importers:
@@ -46,7 +47,7 @@ importers:
         version: 1.168.27(crossws@0.4.10(srvx@0.11.22))(esbuild@0.28.2)(react-dom@19.2.7(react@19.2.7))(react@19.2.7)(rolldown@1.1.5)(vite@8.1.4(@types/node@26.1.1)(esbuild@0.28.2)(jiti@2.7.0)(tsx@4.23.12)(yaml@2.9.0))
       '@yuta/bird':
         specifier: 0.10.1
-        version: 0.10.1
+        version: 0.10.1(patch_hash=bcc8440e45a97fb58ba37b30f58946e44e67b05354fa813474c97bff3ada4111)
       ai:
         specifier: 7.0.118
         version: 7.0.118(zod@4.4.3)
@@ -6629,7 +6630,7 @@ snapshots:
 
   '@workflow/serde@4.1.0': {}
 
-  '@yuta/bird@0.10.1':
+  '@yuta/bird@0.10.1(patch_hash=bcc8440e45a97fb58ba37b30f58946e44e67b05354fa813474c97bff3ada4111)':
     dependencies:
       commander: 14.0.3
       json5: 2.2.3
