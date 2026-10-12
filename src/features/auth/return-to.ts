@@ -1,4 +1,13 @@
-const paths = new Set(["/", "/board", "/deck", "/support", "/journal", "/inbox", "/vitals"]);
+const paths = new Set([
+  "/",
+  "/board",
+  "/browse",
+  "/deck",
+  "/support",
+  "/journal",
+  "/inbox",
+  "/vitals",
+]);
 
 export function safeReturnTo(value: unknown): string {
   if (

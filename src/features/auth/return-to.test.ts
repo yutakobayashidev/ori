@@ -6,6 +6,9 @@ it("keeps the selected view through login", () => {
     "/inbox?q=agents&article=browser#read",
   );
   expect(safeReturnTo("/board?activity=reply-one")).toBe("/board?activity=reply-one");
+  expect(safeReturnTo("/browse?browseConnection=primary&browseSource=%7B%7D")).toBe(
+    "/browse?browseConnection=primary&browseSource=%7B%7D",
+  );
 });
 it.each([
   "https://outside.invalid",

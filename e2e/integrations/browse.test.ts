@@ -1,6 +1,32 @@
 import { expect, test } from "../fixtures";
 import { navigateHydrated, waitForWorkspaceHydration } from "../models/ready";
 
+test("preserves a submitted Browse deep link through login", async ({
+  page,
+  context,
+  authPage,
+}) => {
+  await navigateHydrated(page, "/browse");
+  await page
+    .getByRole("combobox", { name: "Account", exact: true })
+    .selectOption({ label: "alternate · X" });
+  const input = page.getByRole("textbox", { name: "Search posts", exact: true });
+  await input.fill("京都 lang:ja");
+  await page.getByRole("button", { name: "Filters", exact: true }).click();
+  await page.getByRole("combobox", { name: "Sort posts", exact: true }).selectOption("Top");
+  await page.getByRole("checkbox", { name: "Following only", exact: true }).check();
+  await input.press("Enter");
+  await expect(page.getByText("alternate · Top · follows page 1", { exact: true })).toBeVisible();
+  const deepLink = page.url();
+  await context.clearCookies();
+  await page.goto(deepLink);
+  await expect(page).toHaveURL(/\/login\?returnTo=/);
+  await authPage.signIn("owner@workspace.invalid", "E2E-only-passphrase-2026");
+  await expect(page).toHaveURL(deepLink);
+  await expect(input).toHaveValue("京都 lang:ja");
+  await expect(page.getByText("alternate · Top · follows page 1", { exact: true })).toBeVisible();
+});
+
 test("keeps Research chat closed until requested", async ({
   page,
   workspacePage,
