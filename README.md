@@ -117,6 +117,16 @@ Routines provide optional guidance rather than a daily completion quota. Home
 should help the user choose a manageable next step, with room to defer, dismiss,
 or change direction.
 
+## OwnTracks collector
+
+OwnTracks can POST to `/api/collect/owntracks` using dedicated device Basic
+credentials over HTTPS. The optional collector appends raw request bodies and
+receipt metadata to UTC daily JSONL files, synchronizes them before acknowledging,
+and preserves incomplete tails separately on recovery. It performs no location
+normalization or analysis. Configure a private archive directory and credential
+file to enable it; no browser session is required for this exact endpoint.
+See [OwnTracks collector setup and limits](docs/owntracks-collector-design.md).
+
 ## Research capabilities
 
 - Multiple named decks with no column-count limit

@@ -28,6 +28,14 @@ const ownerAccess = createMiddleware().server(async ({ request, next }) => {
   return checkAccess(request, readAccessConfig()) ?? next();
 });
 
+// A native tracker has no browser Origin/session. Only this exact endpoint uses
+// its own device credentials; all other paths retain the browser access gates.
+const ownTracks = createMiddleware().server(async ({ request, next }) => {
+  if (new URL(request.url).pathname !== "/api/collect/owntracks") return next();
+  const { handleOwnTracksRequest } = await import("./features/telemetry/owntracks/http.server");
+  return handleOwnTracksRequest(request);
+});
+
 const csrf = createCsrfMiddleware({
   filter: (context) => context.handlerType === "serverFn",
 });
@@ -46,5 +54,5 @@ const storage = createMiddleware().server(async ({ next }) => {
 });
 
 export const startInstance = createStart(() => ({
-  requestMiddleware: [health, mcp, ownerAccess, csrf, storage, appSession],
+  requestMiddleware: [health, mcp, ownTracks, ownerAccess, csrf, storage, appSession],
 }));

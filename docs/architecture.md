@@ -148,6 +148,8 @@ hookは収集のきっかけであり、唯一の配送保証にしない。起�
 
 ## 現状と実装順
 
+OwnTracksは[日別JSONLへ原本文を保存するHTTPコレクター](owntracks-collector-design.md)を実装済み。専用credentialと保存先の設定が必要で、実機配備・送信確認は別途行う。正規化とTimeline連携は未実装。
+
 返信・実行支援は継続して開発する主機能であり、以下の生活トレース導入が完了するまで後回しにしない。既存の外部AI連携・返信・着手支援を維持しながら、そこで生まれる意図と結果を新しい観測ソースに結び付ける。
 
 | 状態                | 範囲                                                                                              |
@@ -167,6 +169,7 @@ hookは収集のきっかけであり、唯一の配送保証にしない。起�
 
 ## 詳細設計・調査
 
+- [OwnTracksコレクター：JSONL原記録の保存と設定](owntracks-collector-design.md)
 - [Personal Data Vault：AW＋タスクの日次レポートとRedditの利用例](personal-data-vault-research.md)
 - [生活観測とauditの統合設計](personal-observability-design.md)
 - [Codex・ChatGPT会話収集設計](ai-conversation-ingestion-design.md)
