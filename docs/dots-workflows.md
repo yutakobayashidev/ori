@@ -6,9 +6,13 @@ Ori（Personal Workspace）をタスクと返信案の置き場にし、dots か
 
 ## 読む順番
 
-1. [接続と運用のセットアップ](dots/setup.md): Docker、owner ログイン、Secure MCP Tunnel、ChatGPT の MCP プラグイン登録、イベント worker。
-2. [ワークフローテンプレート](dots/workflow-templates.md): 対象・時刻・通知先を設定し、実際に登録した内容を確認するための依頼文。
-3. [動作確認](dots/setup.md#6-接続から動作までを分けて確認する): 接続、購読、イベント配送、dots の実行、Ori への反映を個別に確認。
+1. [README のセットアップ](../README.md#セットアップ): 導入からイベント動作確認までの全体順序。AIに渡せる依頼文もあります。
+2. [Linux / Nix の完全導入経路](dots/native-event-setup.md): 新規環境でOri、Beeper、web / workerの常駐化を準備。
+3. [接続と運用の詳細](dots/setup.md#3-secure-mcp-tunnel-を用意しchatgpt-に登録する): Secure MCP Tunnel、ChatGPTの登録・Install・Refresh、購読。
+4. [ワークフローテンプレート](dots/workflow-templates.md): 対象・時刻・通知先と許可範囲を決めて登録。
+5. [動作確認](dots/setup.md#6-接続から動作までを分けて確認する): イベント配送、dotsの実行、期待した結果を確認。
+
+画面と手動MCPだけを試す場合は、[Dockerの基本導入](dots/setup.md#2-基本の-ori-を起動する)も使えます。これは標準Composeだけでイベント自動化まで配備する手順ではありません。
 
 ## 構成
 

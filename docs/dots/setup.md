@@ -1,4 +1,4 @@
-# Ori / Personal Workspace と dots のセットアップ
+# Ori / dots の接続と運用の詳細
 
 確認日: 2026-10-13。対象は公開リポジトリ [yutakobayashidev/ori](https://github.com/yutakobayashidev/ori)、確認したコミットは [`bf9587b7c25518209da8d26057bc0905cc304c58`](https://github.com/yutakobayashidev/ori/commit/bf9587b7c25518209da8d26057bc0905cc304c58) です。旧称に由来する `TWITTER_LITE_*`、`twitter-lite-*` は現在も実際の設定名・コマンド名として使われます。
 
@@ -17,6 +17,8 @@
 - [トラブルシューティング](#7-よくある問題)
 - [任意のCodex実行](#8-任意-ori-内の-codex-実行)
 - [バックアップ](#9-バックアップと更新)
+
+初回導入は [READMEの番号順](../../README.md#セットアップ)に進めます。Linux / Nix でイベントまで用意する場合は [native導入](native-event-setup.md)を先に完了し、この文書の第3節で合流してください。第2節はDockerで基本機能を試す別経路です。
 
 ## 1. 構成と前提条件
 
@@ -134,6 +136,36 @@ curl -fsS http://127.0.0.1:8080/readyz
 
 ローカルの `http://127.0.0.1:8080/ui` でも状態を確認できます。管理 UI は公開しません。常用時は公式 deployment guide に従い systemd 等で監督し、再起動後の readiness も確認します。`doctor` の設定検証、プロセスの生存、readiness、実 MCP 呼び出しは別々に確認します。[起動・検証手順](https://github.com/openai/tunnel-client/blob/master/docs/onboarding.md)
 
+Linux / Nix の導入経路では、初回確認に使った前景の `run` を Ctrl+C で停止し、同じユーザーで以下の常駐サービスを作れます。`init` した同じユーザーのプロファイルと、そこから参照する秘密ファイルを使います。既存の同名unitは上書きせず確認してください。
+
+```sh
+TUNNEL_BIN="$(command -v tunnel-client)"
+test -n "$TUNNEL_BIN" && test -x "$TUNNEL_BIN" || exit 1
+install -d -m 700 "$HOME/.config/systemd/user"
+(set -C; cat > "$HOME/.config/systemd/user/ori-tunnel.service" <<UNIT
+[Unit]
+Description=Ori Secure MCP Tunnel
+After=ori-web.service
+
+[Service]
+ExecStart=$TUNNEL_BIN run --profile personal-workspace --health.listen-addr 127.0.0.1:8080
+Restart=on-failure
+RestartSec=5
+UMask=0077
+
+[Install]
+WantedBy=default.target
+UNIT
+)
+systemctl --user daemon-reload
+systemctl --user enable --now ori-tunnel.service
+systemctl --user status ori-tunnel.service
+journalctl --user -u ori-tunnel.service --since '5 minutes ago'
+curl -fsS http://127.0.0.1:8080/readyz
+```
+
+接続完了前はreadyzが失敗することがあるため、ログを確認して待ってから再確認します。ログアウト後・再起動後も動かす場合は、[native手順のlinger設定](native-event-setup.md#3-web-と-worker-を別サービスで動かす)も確認します。このunit例も構文・設定の静的確認のみで、実ホストでの起動は未検証です。
+
 ネットワークは、tunnel-client から `api.openai.com:443` への外向き HTTPS と Ori への内部到達性が必要です。control-plane mTLS を使う構成では公式案内の `mtls.api.openai.com:443` を確認します。MCP Events の callback 配信はこのトンネルとは別の外向き HTTPS 通信です。[ネットワーク要件](https://developers.openai.com/api/docs/guides/secure-mcp-tunnels#network-requirements)
 
 ### E. ChatGPT web に MCP プラグインを登録する
@@ -166,6 +198,8 @@ curl -fsS http://127.0.0.1:8080/readyz
 
 ## 4. イベント配信側を準備する
 
+[Linux / Nixのnative手順](native-event-setup.md)でwebとworkerを準備済みなら、ここで別構成を追加せず[第5節](#5-クライアント側で監視を設定する)へ進みます。
+
 ### 重要: Docker の基本起動だけでは監視は完成しない
 
 標準 `compose.yaml` は web のみ、`compose.ai.yaml` が追加するのは AI runtime です。Beeper CLI のインストール・認証やイベント worker のサービス定義は含まれません。イベント worker の JavaScript は web イメージにビルドされますが、常駐起動や外部 CLI・認証ファイルの準備は別です。
@@ -195,7 +229,7 @@ curl -fsS http://127.0.0.1:8080/readyz
 node .output/server/tools/events-worker.js
 ```
 
-Nix パッケージでは対応するコマンドが `twitter-lite-events-worker` です。新しい Docker 環境には、CLI の配置、認証設定の安全なマウント、共有 volume、環境変数、worker サービスを定義する追加のデプロイ作業が必要です。[ビルドエントリ](https://github.com/yutakobayashidev/ori/blob/bf9587b7c25518209da8d26057bc0905cc304c58/scripts/build-tools.mjs)、[Nix パッケージ](https://github.com/yutakobayashidev/ori/blob/bf9587b7c25518209da8d26057bc0905cc304c58/flake.nix)
+Nix パッケージでは対応するコマンドが `twitter-lite-events-worker` です。新しい Docker 環境には、CLI の配置、認証設定の安全なマウント、共有 volume、環境変数、worker サービスを定義する追加のデプロイ作業が必要です。Beeper変数を`.env`に書くだけでは標準Composeのwebへ渡りません。環境変数の明示マッピング、UID/GID 1000が読める鍵、WALも含む共有DBディレクトリ、workerに合ったhealthcheckが必要です。すべての起動手順がある経路は[Linux / Nix版](native-event-setup.md)を参照してください。[ビルドエントリ](https://github.com/yutakobayashidev/ori/blob/bf9587b7c25518209da8d26057bc0905cc304c58/scripts/build-tools.mjs)、[Nix パッケージ](https://github.com/yutakobayashidev/ori/blob/bf9587b7c25518209da8d26057bc0905cc304c58/flake.nix)
 
 5. web からは購読 callback 検証、worker からはイベント配送の外向き HTTPS を許可する。イベント用の新しい inbound ポートは不要。`beeper status --json` 等の生出力には認証情報が含まれ得るため公開ログに出さない。[イベント運用](https://github.com/yutakobayashidev/ori/blob/bf9587b7c25518209da8d26057bc0905cc304c58/docs/beeper-mcp-events.md)
 
@@ -292,6 +326,8 @@ docker compose -f compose.yaml -f compose.ai.yaml exec runtime codex login --dev
 その他の任意連携は X の `TWITTER_RELAY_BASE_URL`、Reddit の `RDT_GATEWAY_URL`、Mastodon の `TWITTER_LITE_MASTODON_ORIGINS` と暗号鍵です。使うものだけ設定します。秘密ファイルはイメージへ焼き込まず、必要なコンテナへ安全にマウントします。[設定項目](https://github.com/yutakobayashidev/ori/blob/bf9587b7c25518209da8d26057bc0905cc304c58/.env.example)
 
 ## 9. バックアップと更新
+
+以下はDocker版の操作です。Linux / Nix版では[nativeのバックアップ手順](native-event-setup.md#6-バックアップと更新)を使います。
 
 既存バックアップ名と重ならない保存先を選んで実行します。
 
