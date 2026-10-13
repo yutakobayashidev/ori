@@ -1,0 +1,34 @@
+# Opt in: docker compose -f compose.yaml -f compose.ai.yaml up -d --build
+services:
+  web:
+    environment:
+      WORKSPACE_RUNTIME_URL: http://runtime:4318
+      WORKSPACE_RUNTIME_TOKEN_FILE: /run/ori/runtime-token
+      TWITTER_LITE_MCP_URL: http://web:3000/mcp
+      TWITTER_LITE_REPORT_ROOT: /data/workspaces
+      TWITTER_LITE_CODEX_MODEL: ${ORI_CODEX_MODEL:-gpt-6-astra}
+    volumes:
+      - runtime-auth:/run/ori:ro
+      - workspaces:/data/workspaces
+    depends_on:
+      runtime:
+        condition: service_healthy
+
+  runtime:
+    image: ori-runtime:local
+    build: ./runtime
+    init: true
+    restart: unless-stopped
+    environment:
+      WORKSPACE_RUNTIME_TOKEN_FILE: /run/ori/runtime-token
+    volumes:
+      - runtime-auth:/run/ori
+      - runtime-state:/data/runtime
+      - codex-home:/data/codex
+      - workspaces:/data/workspaces
+
+volumes:
+  runtime-auth:
+  runtime-state:
+  codex-home:
+  workspaces:

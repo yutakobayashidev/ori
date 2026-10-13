@@ -10,6 +10,8 @@
     "e2e/fixtures/beeper-cli.mjs",
     "public/sw.js",
     "scripts/events-worker.ts",
+    // Executed by the optional runtime container's HEALTHCHECK.
+    "runtime/healthcheck.mjs",
     "src/features/mcp-app/main.tsx",
   ],
   "ignoreFindings": ["e2e/generated/**"],

@@ -17,12 +17,21 @@ defmodule WorkspaceRuntime.Application do
       WorkspaceRuntime.Store,
       {Bandit,
        plug: WorkspaceRuntime.Router,
-       ip: {127, 0, 0, 1},
+       ip: listen_address(),
        port: String.to_integer(System.get_env("WORKSPACE_RUNTIME_PORT", "4318"))}
     ]
 
     # Symphony's agent_runtime_supervisor uses this strategy: scheduler and workers
     # share a lifetime so no surviving worker can lose its scheduling authority.
     Supervisor.start_link(children, strategy: :one_for_all, name: WorkspaceRuntime.Supervisor)
+  end
+
+  defp listen_address do
+    host = System.get_env("WORKSPACE_RUNTIME_HOST", "127.0.0.1")
+
+    case :inet.parse_address(String.to_charlist(host)) do
+      {:ok, address} -> address
+      {:error, _} -> raise "WORKSPACE_RUNTIME_HOST must be an IP address"
+    end
   end
 end

@@ -1,5 +1,5 @@
 import { randomUUID } from "node:crypto";
-import { asc, eq } from "drizzle-orm";
+import { and, asc, eq } from "drizzle-orm";
 import { ProfileUnavailableError } from "../profiles/errors";
 import { fetchProfileNames } from "../profiles/profile-service.server";
 import { type AppDatabase, getDatabase } from "../storage/database.server";
@@ -80,11 +80,19 @@ export async function listConnections(
   fetchProfiles = fetchProfileNames,
 ): Promise<{ connections: Connection[]; relayError?: string }> {
   let relayError: string | undefined;
-  try {
-    await syncTwitterConnections(database, fetchProfiles);
-  } catch (error) {
-    if (!(error instanceof ProfileUnavailableError)) throw error;
-    relayError = error.message;
+  if (process.env.TWITTER_RELAY_BASE_URL) {
+    try {
+      await syncTwitterConnections(database, fetchProfiles);
+    } catch (error) {
+      if (!(error instanceof ProfileUnavailableError)) throw error;
+      relayError = error.message;
+    }
+  } else {
+    database
+      .update(connections)
+      .set({ status: "disconnected", updatedAt: Date.now() })
+      .where(and(eq(connections.platform, "twitter"), eq(connections.status, "connected")))
+      .run();
   }
   const saved = database
     .select(publicFields)

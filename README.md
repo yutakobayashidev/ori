@@ -1,4 +1,20 @@
-# Personal Workspace
+# Ori
+
+## Quick start with Docker
+
+```sh
+docker compose up -d --build --wait
+docker compose exec web node .output/server/tools/account-setup.js
+```
+
+Open **http://localhost:3000** and create your owner account with the printed
+setup code. Docker is the only host prerequisite. The default deployment runs
+the web app and SQLite with persistent storage; no Tailscale, SNS account,
+Beeper, or AI runtime is required. To add Codex execution, use the optional
+`compose.ai.yaml`. See [Docker deployment and dependency boundaries](docs/docker.md)
+for configuration, login, backups, and the remaining build-time registry dependency.
+
+## Personal workspace
 
 A personal workspace with two main functions: supporting message replies and
 daily execution through external AI agents, and tracing life across the person,
@@ -231,6 +247,7 @@ nix develop -c pnpm check:code
 nix develop -c pnpm check:cycles
 nix develop -c pnpm test
 nix develop -c pnpm test:e2e
+nix develop -c pnpm test:docker # Build the Docker image first; see docs/docker.md.
 nix develop -c pnpm test:live
 nix develop -c pnpm build
 nix develop -c pnpm start

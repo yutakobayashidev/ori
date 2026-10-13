@@ -77,16 +77,21 @@ describe("access boundary", () => {
     expect(checkAccess(new Request(config.origin), null)?.status).toBe(503);
   });
 
-  it.each(["", "https://deck.invalid/path", "http://deck.invalid", "not a URL"])(
-    "rejects an invalid configured origin: %s",
-    (origin) => {
-      vi.stubEnv("TWITTER_LITE_ORIGIN", origin);
-      vi.stubEnv("TWITTER_LITE_ALLOWED_LOGIN", config.allowedLogin);
-      expect(readAccessConfig()).toBeNull();
-    },
-  );
+  it.each([
+    "",
+    "https://deck.invalid/path",
+    "http://deck.invalid",
+    "http://localhost.invalid:3000",
+    "http://0.0.0.0:3000",
+    "http://192.168.1.2:3000",
+    "not a URL",
+  ])("rejects an invalid configured origin: %s", (origin) => {
+    vi.stubEnv("TWITTER_LITE_ORIGIN", origin);
+    vi.stubEnv("TWITTER_LITE_ALLOWED_LOGIN", config.allowedLogin);
+    expect(readAccessConfig()).toBeNull();
+  });
 
-  it.each(["https://deck.invalid", "http://127.0.0.1:4173"])(
+  it.each(["https://deck.invalid", "http://127.0.0.1:4173", "http://localhost:3000"])(
     "accepts an explicit deployment origin: %s",
     (origin) => {
       vi.stubEnv("TWITTER_LITE_ORIGIN", origin);

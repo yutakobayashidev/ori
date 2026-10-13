@@ -21,6 +21,7 @@
     "test": "vitest run",
     "test:watch": "vitest",
     "test:e2e": "playwright test",
+    "test:docker": "node scripts/docker-smoke.mjs",
     "test:live": "TWITTER_LITE_LIVE=1 vitest run tests/live/relay.test.ts",
     "account:setup": "node --env-file-if-exists=.env.local --import tsx scripts/account-setup.ts",
     "format:check": "oxfmt --check .",

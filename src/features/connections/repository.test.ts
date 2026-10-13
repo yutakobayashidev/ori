@@ -31,6 +31,46 @@ afterEach(() => {
   vi.unstubAllEnvs();
 });
 
+it("starts with no connections or relay error when Twitter is not configured", async () => {
+  vi.stubEnv("TWITTER_RELAY_BASE_URL", undefined);
+  const fetchProfiles = vi.fn<() => Promise<string[]>>();
+  expect(await listConnections(database, fetchProfiles)).toEqual({ connections: [] });
+  expect(fetchProfiles).not.toHaveBeenCalled();
+});
+
+it("disconnects saved Twitter accounts without losing their bindings when the relay is disabled", async () => {
+  const original = await listConnections(database, async () => ["first"]);
+  database
+    .insert(connections)
+    .values({
+      id: "mastodon-account",
+      platform: "mastodon",
+      origin: "https://mastodon.invalid",
+      displayName: "@owner",
+      status: "connected",
+      createdAt: 1,
+      updatedAt: 1,
+    })
+    .run();
+  vi.stubEnv("TWITTER_RELAY_BASE_URL", "");
+  const disabled = await listConnections(database);
+  expect(disabled.relayError).toBeUndefined();
+  expect(disabled.connections).toEqual([
+    expect.objectContaining({ id: "mastodon-account", status: "connected" }),
+    { ...original.connections[0], status: "disconnected" },
+  ]);
+  expect(
+    database.select().from(connections).where(eq(connections.platform, "twitter")).get(),
+  ).toMatchObject({ id: original.connections[0]?.id, relayProfile: "first" });
+  await expect(
+    requireTwitterConnection(original.connections[0]?.id ?? "", database),
+  ).rejects.toThrow("Set TWITTER_RELAY_BASE_URL.");
+  vi.stubEnv("TWITTER_RELAY_BASE_URL", "https://relay.invalid/");
+  expect((await listConnections(database, async () => ["first"])).connections).toContainEqual(
+    original.connections[0],
+  );
+});
+
 it("retains stable distinct IDs for multiple relay profiles across repeated discovery", async () => {
   const fetchProfiles = vi
     .fn<() => Promise<string[]>>()

@@ -47,7 +47,9 @@ well as Desktop. No additional GUI machine or remote tunnel is needed here.
 | Browser HTTP + SSE                           | Persisted views, direct UI operations and update notifications |
 
 Existing CLI authentication can be reused with bounded, fixed-argument
-`api get` calls and `watch --target um790 --read-only --json`. Do not expose
+`api get` calls and `watch --target "$TWITTER_LITE_BEEPER_TARGET" --read-only --json`.
+Set `TWITTER_LITE_BEEPER_TARGET` explicitly to your authenticated target in the app
+and worker environments; the locally verified `um790` target above is not a default. Do not expose
 arbitrary CLI/RPC command strings as agent tools. The
 [official TypeScript SDK](https://github.com/beeper/desktop-api-js) is an alternative
 after explicitly provisioning an application credential. Choose one transport

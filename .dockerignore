@@ -1,0 +1,17 @@
+# Only build inputs enter the context; never send credentials or personal data.
+*
+!Dockerfile
+!package.json
+!pnpm-lock.yaml
+!pnpm-workspace.yaml
+!.npmrc
+!tsconfig.json
+!vite.config.ts
+!patches/
+!patches/**
+!public/
+!public/**
+!scripts/
+!scripts/**
+!src/
+!src/**

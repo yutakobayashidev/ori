@@ -117,7 +117,9 @@ export function createBeeperAdapter(
   options: { binary?: string; targetId?: string } = {},
 ): BeeperMessagingAdapter {
   const binary = options.binary ?? process.env.TWITTER_LITE_BEEPER_CLI ?? "beeper-cli";
-  const targetId = options.targetId ?? process.env.TWITTER_LITE_BEEPER_TARGET ?? "um790";
+  const targetId = (options.targetId ?? process.env.TWITTER_LITE_BEEPER_TARGET ?? "").trim();
+  if (!targetId)
+    throw new Error("Set TWITTER_LITE_BEEPER_TARGET to an authenticated Beeper target.");
   const flags = ["--target", targetId, "--read-only", "--json"];
   async function request(
     path: string,

@@ -153,7 +153,11 @@ Configuration:
 - `TWITTER_LITE_DB_PATH`: absolute shared SQLite path.
 - `TWITTER_LITE_CREDENTIAL_KEY_FILE`: existing private credential encryption key.
 - `TWITTER_LITE_BEEPER_CLI`: absolute path to `beeper-cli`.
-- `TWITTER_LITE_BEEPER_TARGET`: existing authenticated target (`um790`).
+- `TWITTER_LITE_BEEPER_TARGET`: required name of your existing authenticated CLI target.
+
+Set the target explicitly in both the web app and worker environments. There is
+no default target. Beeper is optional for the core app; start this worker only
+after provisioning the CLI, its credentials and the target.
 
 The worker checks subscriptions every five seconds and reconciles at least once
 a minute. WebSocket notifications request an earlier reconciliation. It scans

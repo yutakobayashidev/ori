@@ -1,8 +1,8 @@
 // @vitest-environment node
-import { mkdtempSync, readFileSync, rmSync, writeFileSync } from "node:fs";
+import { existsSync, mkdtempSync, readFileSync, rmSync, writeFileSync } from "node:fs";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
-import { afterEach, beforeEach, expect, it } from "vitest";
+import { afterEach, beforeEach, expect, it, vi } from "vitest";
 import { createBeeperAdapter } from "./adapter.server";
 let directory: string;
 let binary: string;
@@ -17,7 +17,38 @@ beforeEach(() => {
     { mode: 0o700 },
   );
 });
-afterEach(() => rmSync(directory, { recursive: true, force: true }));
+afterEach(() => {
+  rmSync(directory, { recursive: true, force: true });
+  vi.unstubAllEnvs();
+});
+it.each([undefined, "", "   "])(
+  "requires a configured target before starting Beeper: %s",
+  (target) => {
+    vi.stubEnv("TWITTER_LITE_BEEPER_TARGET", target);
+    expect(() => createBeeperAdapter({ binary })).toThrow("Set TWITTER_LITE_BEEPER_TARGET");
+    expect(existsSync(argumentsFile)).toBe(false);
+  },
+);
+it("uses the configured authenticated target for Beeper requests", async () => {
+  vi.stubEnv("TWITTER_LITE_BEEPER_TARGET", "configured-target");
+  const adapter = createBeeperAdapter({ binary });
+  await adapter.sendMessage("chat", { text: "Hi" });
+  expect(adapter.targetId).toBe("configured-target");
+  expect(JSON.parse(readFileSync(argumentsFile, "utf8"))).toContain("configured-target");
+});
+it("uses an explicit target instead of the environment target", () => {
+  vi.stubEnv("TWITTER_LITE_BEEPER_TARGET", "configured-target");
+  expect(createBeeperAdapter({ binary, targetId: "explicit-target" }).targetId).toBe(
+    "explicit-target",
+  );
+});
+it("rejects an empty explicit target instead of falling back to a configured target", () => {
+  vi.stubEnv("TWITTER_LITE_BEEPER_TARGET", "configured-target");
+  expect(() => createBeeperAdapter({ binary, targetId: " " })).toThrow(
+    "Set TWITTER_LITE_BEEPER_TARGET",
+  );
+  expect(existsSync(argumentsFile)).toBe(false);
+});
 it("uses only the fixed message endpoint and explicit JSON body for sending", async () => {
   const adapter = createBeeperAdapter({ binary, targetId: "test" });
   expect(

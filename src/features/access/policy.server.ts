@@ -11,7 +11,7 @@ export function readAccessConfig(): AccessConfig | null {
   try {
     const url = new URL(origin);
     const secure = url.protocol === "https:";
-    const local = url.protocol === "http:" && url.hostname === "127.0.0.1";
+    const local = url.protocol === "http:" && ["127.0.0.1", "localhost"].includes(url.hostname);
     if ((!secure && !local) || url.origin !== origin) return null;
     if (mode === "none") return { origin, mode };
     if (!allowedLogin?.trim()) return null;

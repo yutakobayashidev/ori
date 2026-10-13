@@ -1,0 +1,21 @@
+name: ori
+
+services:
+  web:
+    image: ori:local
+    build: .
+    init: true
+    restart: unless-stopped
+    ports:
+      - "127.0.0.1:${ORI_PORT:-3000}:3000"
+    environment:
+      TWITTER_LITE_ORIGIN: ${ORI_ORIGIN:-http://localhost:${ORI_PORT:-3000}}
+      TWITTER_RELAY_BASE_URL: ${TWITTER_RELAY_BASE_URL:-}
+      RDT_GATEWAY_URL: ${RDT_GATEWAY_URL:-}
+      TWITTER_LITE_MASTODON_ORIGINS: ${TWITTER_LITE_MASTODON_ORIGINS:-}
+      TWITTER_LITE_CREDENTIAL_KEY_FILE: ${TWITTER_LITE_CREDENTIAL_KEY_FILE:-}
+    volumes:
+      - workspace:/data
+
+volumes:
+  workspace:

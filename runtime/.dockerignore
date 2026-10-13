@@ -1,0 +1,10 @@
+*
+!Dockerfile
+!mix.exs
+!mix.lock
+!lib/
+!lib/**
+!vendor/
+!vendor/**
+!docker-entrypoint.sh
+!healthcheck.mjs

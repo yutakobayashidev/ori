@@ -7,6 +7,10 @@ that outer check, not app login. Origin checks still protect mutations.
 
 ## First use
 
+For Docker, run `docker compose exec web node .output/server/tools/account-setup.js`
+after starting the service, then open `http://localhost:3000`.
+See [Docker deployment](docker.md) for the complete setup.
+
 Start the server with its usual database and public-origin configuration, then
 run this on the server using the same database:
 

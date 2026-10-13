@@ -5,6 +5,11 @@ participants and avatars, and send their saved draft as text with an optional qu
 message. The web app and embedded MCP App share the same UI and application services.
 Generating a draft or monitoring a conversation does not authorize sending.
 
+Enable this optional integration by installing an authenticated `beeper-cli` and
+setting `TWITTER_LITE_BEEPER_TARGET` to its target name in both the web app and
+events worker. `TWITTER_LITE_BEEPER_CLI` can specify the CLI's absolute path.
+There is no default target; the core workspace can run without Beeper.
+
 ## Ownership and persisted records
 
 Beeper owns upstream conversations, identities and messages. SQLite owns Activities,
