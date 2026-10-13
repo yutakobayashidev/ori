@@ -276,7 +276,10 @@ Activity では `activityIds` と `origins` も指定できます。`origins` �
 
 ## 6. 接続から動作までを分けて確認する
 
-- [ ] `docker compose ps` で web が healthy。Home にログインできる。
+- [ ] 利用中の構成に合う方法で web の起動を確認した（次のどちらか一方）。
+  - Linux / Nix: `systemctl --user is-active ori-web.service` が `active`。`curl -fsS http://127.0.0.1:3000/api/auth > /dev/null` が成功する。
+  - Docker: `docker compose ps` で web が `healthy`。
+- [ ] Home に owner でログインできる。
 - [ ] 再読み込み後もテスト用 Activity が残る。
 - [ ] dots の `get_activity_context` でその Activity が読める。
 - [ ] 再スキャン後、対象イベントがプラグインに表示される。
@@ -305,7 +308,14 @@ Webhook の `2xx` は受領の確認です。dots の処理完了や Activity �
 | 配信成功だが Activity が変わらない | dots 側のタスク実行結果・権限・指示を確認。配信 ACK と処理成功を分ける |
 | タスクが増え続ける | agent-origin を含む購読や、毎回新規 ID を作る処理によるループを確認 |
 
-基本ログは次で確認できます。認証情報、callback URL、署名secret、個人のtunnel/workspace ID、会話本文を公開 issue に貼らないでください。TLSの警告や認証チェックを無効化して解決しないでください。
+Linux / Nix 版の基本ログは次で確認できます。
+
+```sh
+systemctl --user status ori-web.service ori-events.service
+journalctl --user -u ori-web.service -u ori-events.service --since '5 minutes ago'
+```
+
+Docker 版の基本ログは次で確認できます。認証情報、callback URL、署名secret、個人のtunnel/workspace ID、会話本文を公開 issue に貼らないでください。TLSの警告や認証チェックを無効化して解決しないでください。
 
 ```sh
 docker compose ps
@@ -345,3 +355,4 @@ docker compose cp web:/data/backup.sqlite ./backup.sqlite
 - MCP は信頼された単一 owner 向けのプライベート境界。マルチユーザーや公開 MCP 向けの認証設計ではありません。
 - 標準 Docker は core と任意 AI まで。Beeper／イベント監視を含む turnkey 構成ではありません。
 - カレンダー連携、life / Rensheng との自動読み書きは未実装・計画段階です。Journal、Reader、Vitals、routines にもプロトタイプの制限があります。Home の永続タスクや返信 Activity と混同しないでください。[README の実装状況](https://github.com/yutakobayashidev/ori/blob/bf9587b7c25518209da8d26057bc0905cc304c58/README.md#workspaces-and-current-status)
+

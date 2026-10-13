@@ -13,9 +13,11 @@
 ```sh
 git clone https://github.com/yutakobayashidev/ori.git
 cd ori
-# 確認したソースへ固定する場合（新規 checkout のみ）:
-git checkout bf9587b7c25518209da8d26057bc0905cc304c58
+# ビルドに使う版を記録する（checkout は変更しない）:
+git rev-parse HEAD
 ```
+
+表示されたコミットIDを控え、このREADMEと`docs/dots/`が存在するcheckoutのまま進めます。末尾の参照コミットは実装を照合した根拠であり、そこへcheckoutを戻す手順ではありません。
 
 Nix flakes と systemd user セッション、Node.js/npm が利用可能か先に確認します。失敗する前提があれば、その公式導入手順を完了してから進みます。
 
@@ -192,3 +194,4 @@ test ! -e "$BACKUP_DIR/workspace.sqlite" || exit 1
 更新は DB と鍵をバックアップしてからビルドします。`nix build` で `result` が変わっても上のサービスは以前の絶対 store path を保持するため、両方の `ExecStart` を新しい同一 package に更新し、daemon-reload と再起動が必要です。元の package と復元可能なバックアップを確保してから更新してください。新しいバージョンが DB schema を変更した場合、単純な旧版起動で戻せるとは限りません。
 
 根拠: Ori の [flake.nix](https://github.com/yutakobayashidev/ori/blob/bf9587b7c25518209da8d26057bc0905cc304c58/flake.nix)、[worker](https://github.com/yutakobayashidev/ori/blob/bf9587b7c25518209da8d26057bc0905cc304c58/scripts/events-worker.ts)、[Beeper adapter](https://github.com/yutakobayashidev/ori/blob/bf9587b7c25518209da8d26057bc0905cc304c58/src/features/beeper/adapter.server.ts)、[共有DB](https://github.com/yutakobayashidev/ori/blob/bf9587b7c25518209da8d26057bc0905cc304c58/src/features/storage/database.server.ts)。
+
