@@ -14,6 +14,14 @@ Beeper, or AI runtime is required. To add Codex execution, use the optional
 `compose.ai.yaml`. See [Docker deployment and dependency boundaries](docs/docker.md)
 for configuration, login, backups, and the remaining build-time registry dependency.
 
+## dots workflow setup
+
+For a reusable Japanese-language guide to connect Ori to dots, set up the Secure
+MCP Tunnel and ChatGPT plugin, and configure task, progress, Slack, and daily
+planning workflows, see [dots workflow setup](docs/dots-workflows.md).
+The guide separates required infrastructure, copyable workflow instructions,
+and checks that must be completed in your own environment.
+
 ## Personal workspace
 
 A personal workspace with two main functions: supporting message replies and
@@ -612,3 +620,4 @@ The pinned Bird patch in `patches/@yuta__bird@0.10.1.patch` preserves bottom
 cursors returned as `TimelineReplaceEntry.entry` on subsequent pages. Without
 it, searches can incorrectly stop after the second page. Regression tests cover
 multiple pages through the actual Bird search, user, and list clients.
+
