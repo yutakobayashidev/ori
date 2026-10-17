@@ -1,0 +1,13 @@
+#!/bin/sh
+[ "$1" = app-server ] || exit 1
+IFS= read -r line
+case "$line" in *'"method":"initialize"'*) ;; *) exit 2;; esac
+echo '{"id":1,"result":{}}'
+IFS= read -r line
+case "$line" in *'"method":"initialized"'*) ;; *) exit 3;; esac
+IFS= read -r line
+case "$line" in *'"method":"account/rateLimits/read"'*) ;; *) exit 4;; esac
+echo '{"id":2,"result":{"rateLimits":{"primary":{"usedPercent":32,"windowDurationMins":300,"resetsAt":2000000000},"secondary":{"usedPercent":61,"windowDurationMins":10080,"resetsAt":2000100000}}}}'
+# Any further request (especially a thread or turn) fails the protocol contract.
+IFS= read -r line && exit 5
+exit 0

@@ -15,6 +15,7 @@ defmodule WorkspaceRuntime.Application do
     children = [
       {Task.Supervisor, name: WorkspaceRuntime.Tasks},
       WorkspaceRuntime.Store,
+      WorkspaceRuntime.Usage,
       {Bandit,
        plug: WorkspaceRuntime.Router,
        ip: listen_address(),

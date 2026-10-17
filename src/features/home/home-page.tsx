@@ -10,6 +10,7 @@ import { WorkspaceNavigation } from "#/components/workspace-navigation";
 import { articles } from "#/features/inbox/mock-articles";
 import { useUrlState } from "#/features/navigation/use-url-state";
 import { useActivities } from "#/features/activities/activity-state";
+import { CodexUsage } from "#/features/codex-usage/codex-usage";
 import { entryKindLabels, useWorkspaceState } from "#/features/workspace/workspace-state";
 import { DailyBrief } from "./daily-brief";
 import { ExecutionWorkbench } from "./execution-workbench";
@@ -190,6 +191,7 @@ export function HomePage() {
           <div className="min-h-0 flex-1 overflow-y-auto">
             <div className="mx-auto max-w-[1200px] px-px-48 pt-px-40 pb-px-80 max-[1000px]:px-px-28 max-[1000px]:pb-px-40 max-md:px-px-20 max-md:py-px-32">
               <header className="mb-px-32">
+                <CodexUsage />
                 <p className="text-sm text-muted-foreground">Today</p>
                 <h1 className="mt-px-12 text-home-greeting font-book tracking-home leading-normal max-md:text-ui-25">
                   <Greeting name={auth.owner?.name} />

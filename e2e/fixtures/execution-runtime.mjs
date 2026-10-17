@@ -44,13 +44,43 @@ const run = {
   artifacts: [],
 };
 
+let usageAvailable = true;
+
 createServer((req, res) => {
   if (req.headers.authorization !== "Bearer isolated-execution-app-test-token") {
     res.writeHead(401).end();
     return;
   }
   res.setHeader("Content-Type", "application/json");
-  if (req.url === "/runs") res.end(JSON.stringify([run]));
+  if (req.method === "POST" && req.url?.startsWith("/fixture/usage/")) {
+    usageAvailable = req.url.endsWith("/ready");
+    res.end("{}");
+  } else if (req.url === "/usage") {
+    if (!usageAvailable) {
+      res.writeHead(503).end("{}");
+      return;
+    }
+    res.end(
+      JSON.stringify({
+        status: "ready",
+        fetchedAt: new Date().toISOString(),
+        windows: [
+          {
+            id: "primary",
+            usedPercent: 32,
+            windowDurationMins: 300,
+            resetsAt: new Date(Date.now() + 2 * 60 * 60 * 1000).toISOString(),
+          },
+          {
+            id: "secondary",
+            usedPercent: 61,
+            windowDurationMins: 10080,
+            resetsAt: new Date(Date.now() + 3 * 24 * 60 * 60 * 1000).toISOString(),
+          },
+        ],
+      }),
+    );
+  } else if (req.url === "/runs") res.end(JSON.stringify([run]));
   else if (req.url === `/runs/${run.id}`) res.end(JSON.stringify(run));
   else res.writeHead(404).end("{}");
 }).listen(4339, "127.0.0.1");

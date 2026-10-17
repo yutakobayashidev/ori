@@ -17,6 +17,10 @@ defmodule WorkspaceRuntime.Router do
     json(conn, %{"ok" => true})
   end
 
+  get "/usage" do
+    json(conn, WorkspaceRuntime.Usage.read())
+  end
+
   get "/runs" do
     json(conn, WorkspaceRuntime.Store.call(:list))
   end

@@ -55,6 +55,19 @@ Home's greeting follows the device's local time: morning from 05:00, afternoon
 from 12:00, and evening from 18:00 until 05:00. It refreshes while the page is
 open and when returning to the app.
 
+Home also shows Codex account usage above the greeting. The compact row reports
+the percentage used for each available limit window; expand it for reset and
+last-update times in the device's timezone. These are account-wide subscription
+limits shared with other apps, not Ori-only token counts or billed amounts.
+The authenticated web server reads `/usage` from the existing Elixir runtime,
+which uses the runtime host's Codex login for a read-only `account/rateLimits/read`
+request. No model turn is started and no credentials reach the browser.
+Successful readings are cached in memory for up to two minutes (or the next
+reset), failures for one minute. Home checks once a minute while visible and
+refreshes stale readings on return. Expired readings remain marked as last known
+until refreshed; missing usage is never shown as zero. Runtime failures do not
+block other Home actions. No database migration or additional service is needed.
+
 ## Workspaces and current status
 
 | Workspace | Route                | Current implementation                                                                                                 |

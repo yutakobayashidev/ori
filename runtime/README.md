@@ -18,6 +18,18 @@ thread. Supply fresh scoped MCP config after a Research interruption. Pending
 questions persist for inspection; answer via followup if the runtime restarted.
 No automatic replay of side effects.
 
+GET /usage returns Codex account quota consumption (not monetary cost or usage
+attributable only to Ori): {status: "ready" | "unavailable", fetchedAt, windows}.
+Each window has {id, usedPercent, windowDurationMins, resetsAt}; timestamps are
+ISO 8601 or null. A separate supervised cache reads account/rateLimits/read over
+a short-lived Codex app-server connection using the runtime's HOME/CODEX_HOME
+login. It creates no thread or turn and times out after 10 seconds. Concurrent
+requests share the result without blocking run scheduling. Successful results
+are cached for 120 seconds or until the next reset, failures for 60 seconds.
+Failures retain the last successful windows and fetchedAt with status unavailable;
+no reading means empty windows and null fetchedAt. Reset times never imply zero
+consumption without another account read. No quota data is persisted.
+
 ### Container
 
 Build from the repository root with `docker build -t ori-runtime runtime`.

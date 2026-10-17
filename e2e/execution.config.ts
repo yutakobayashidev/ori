@@ -5,7 +5,7 @@ import base from "../playwright.config";
 export default defineConfig({
   ...base,
   testDir: ".",
-  testMatch: "integrations/execution-app.test.ts",
+  testMatch: ["integrations/execution-app.test.ts", "integrations/codex-usage.test.ts"],
   testIgnore: [],
   webServer: [
     ...(Array.isArray(base.webServer) ? base.webServer : []).map((server) => ({
