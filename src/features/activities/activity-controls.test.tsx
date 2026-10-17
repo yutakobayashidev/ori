@@ -23,6 +23,7 @@ const activity: Activity = {
     sources: [],
   },
   userState: "available",
+  completedAt: null,
   userOverrides: {},
   effective: {
     id: "review-materials",

@@ -161,6 +161,7 @@ export const activities = sqliteTable("activities", {
     .notNull()
     .default("agent"),
   readAt: integer("read_at"),
+  completedAt: integer("completed_at"),
   assessment: text("assessment", { mode: "json" }).$type<
     import("../activities/model").ActivityAssessment
   >(),

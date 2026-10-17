@@ -155,12 +155,12 @@ export function changeFocus(input: unknown, database = getDatabase()) {
       if (parsed.action === "complete") {
         database
           .update(activities)
-          .set({ userState: "completed", assessment: null, updatedAt: now })
+          .set({ userState: "completed", completedAt: now, assessment: null, updatedAt: now })
           .where(eq(activities.id, row.id))
           .run();
         enqueueEvent(
           "activity.status_changed",
-          { ...row, userState: "completed" },
+          { ...row, userState: "completed", completedAt: now },
           "user",
           receipt,
           database,

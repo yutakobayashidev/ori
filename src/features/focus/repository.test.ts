@@ -315,3 +315,13 @@ it("records timer work on the owner's start date across UTC midnight and persist
     /fields/,
   );
 });
+
+it("records completion time when completing a focus session", () => {
+  startFocus({ ...input(), activityId: "task", budgetSeconds: 900 }, db);
+  vi.advanceTimersByTime(60000);
+  changeFocus({ ...input(), sessionId: session().id, action: "complete" }, db);
+  expect(getActivityContext({}, db).activities[0]).toMatchObject({
+    userState: "completed",
+    completedAt: "2026-10-09T06:01:00.000Z",
+  });
+});

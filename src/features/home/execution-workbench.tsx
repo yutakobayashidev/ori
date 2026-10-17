@@ -15,6 +15,8 @@ import { Button } from "#/components/ui/button";
 import { Checkbox } from "#/components/ui/checkbox";
 import { Input } from "#/components/ui/input";
 import { Textarea } from "#/components/ui/textarea";
+import { CompletedActivities } from "#/features/activities/completed-activities";
+import { isCompletedToday, useLocalDay } from "#/features/activities/completion";
 import { ActivityCard } from "#/features/activities/activity-card";
 import { ActivityFeedback } from "#/features/activities/activity-controls";
 import { useActivities } from "#/features/activities/activity-state";
@@ -32,6 +34,12 @@ type ExecutionWorkbenchProps = {
 export function ExecutionWorkbench({ selectedId, onSelect }: ExecutionWorkbenchProps) {
   const { tasks, setTasks, entries } = useWorkspaceState();
   const { activities, loading } = useActivities();
+  const today = useLocalDay();
+  const visibleActivities = activities.filter(
+    (activity) =>
+      !["dismissed", "deferred"].includes(activity.userState) &&
+      (activity.userState !== "completed" || isCompletedToday(activity, today)),
+  );
   const currentEntries = entries.filter(
     (entry) => !entries.some((other) => other.correctionOf === entry.id),
   );
@@ -49,6 +57,7 @@ export function ExecutionWorkbench({ selectedId, onSelect }: ExecutionWorkbenchP
   return (
     <section className="min-w-0" aria-label="Today’s plan">
       <ActivityFeedback />
+      {!loading && <CompletedActivities activities={activities} today={today} />}
       {(
         [
           { id: "focus", label: "Start here", subtitle: "Just the next thing" },
@@ -64,12 +73,8 @@ export function ExecutionWorkbench({ selectedId, onSelect }: ExecutionWorkbenchP
             )}
           </header>
           <div className="grid gap-px-9">
-            {activities
-              .filter(
-                (activity) =>
-                  activity.effective.section === section.id &&
-                  !["dismissed", "deferred"].includes(activity.userState),
-              )
+            {visibleActivities
+              .filter((activity) => activity.effective.section === section.id)
               .map((activity) => {
                 return (
                   <div key={activity.id}>
@@ -219,11 +224,7 @@ export function ExecutionWorkbench({ selectedId, onSelect }: ExecutionWorkbenchP
                 )}
               </div>
             )}
-            {!activities.some(
-              (activity) =>
-                activity.effective.section === section.id &&
-                !["dismissed", "deferred"].includes(activity.userState),
-            ) &&
+            {!visibleActivities.some((activity) => activity.effective.section === section.id) &&
               !loading &&
               section.id !== "routine" && (
                 <p className="py-px-16 text-ui-12 text-muted-foreground">Nothing here right now.</p>

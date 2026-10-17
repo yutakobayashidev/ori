@@ -68,6 +68,7 @@ export function activityAuditSnapshots(
           number: row.number,
           proposal: row.proposal,
           userState: row.userState,
+          completedAt: row.completedAt,
           userOverrides: row.userOverrides,
           assessment: row.assessment,
           time:

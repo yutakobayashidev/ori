@@ -142,4 +142,13 @@ export const migrations = [
     folderMillis: 1791693599326,
     hash: "73793f3928f03cc69f16d1895f040592ba57b5a37fa6dc44aaf095f5b97a0cea",
   },
+  {
+    sql: [
+      "ALTER TABLE `activities` ADD `completed_at` integer;",
+      "\n-- Recover only recorded transitions into completion; unrelated later edits are not completion dates.\nUPDATE activities\nSET completed_at = (\n  SELECT occurred_at FROM activity_audit\n  WHERE activity_id = activities.id\n    AND json_extract(\"after\", '$.userState') = 'completed'\n    AND json_extract(\"before\", '$.userState') IS NOT 'completed'\n  ORDER BY id DESC LIMIT 1\n)\nWHERE user_state = 'completed';\n",
+    ],
+    bps: true,
+    folderMillis: 1792256937849,
+    hash: "2e0b2dbe4b13fa35819d4a2ae621576f5d4c9bedc0c0aff853009864f0a9016f",
+  },
 ];

@@ -45,6 +45,7 @@ beforeEach(() => {
     proposal,
     effective: { ...proposal, section: "focus" },
     userState: "available",
+    completedAt: null,
     userOverrides: {},
     time: {
       estimatedMinutes: 40,

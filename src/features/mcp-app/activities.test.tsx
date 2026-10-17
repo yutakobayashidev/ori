@@ -23,6 +23,7 @@ const task: Activity = {
     section: "focus",
   },
   userState: "available",
+  completedAt: null,
   userOverrides: {},
 };
 const initial: ActivityContext = {
@@ -199,6 +200,7 @@ it("opens the existing reply detail and saves a draft through MCP without sendin
     proposal,
     effective: { ...proposal, section: "focus" },
     userState: "available",
+    completedAt: null,
     userOverrides: {},
   };
   const page = { ...initial, activities: [reply] };

@@ -20,6 +20,7 @@ export type ActivityAuditSnapshot = {
   number: number;
   proposal: ActivityProposal;
   userState: ActivityState;
+  completedAt?: number | null;
   userOverrides: ActivityOverrides;
   assessment: ActivityAssessment | null;
   time: typeof activityTime.$inferSelect | null;

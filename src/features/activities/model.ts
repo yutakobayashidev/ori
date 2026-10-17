@@ -187,6 +187,7 @@ export type Activity = {
   isUnread: boolean;
   proposal: ActivityProposal;
   userState: ActivityState;
+  completedAt: string | null;
   userOverrides: ActivityOverrides;
   assessment?: ActivityAssessment | null;
   time?: import("../focus/model").ActivityTime;

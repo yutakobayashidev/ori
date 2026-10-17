@@ -27,6 +27,33 @@ User edits and decisions remain authoritative. Sending success does not prove
 that the underlying commitment is complete, and manual completion does not
 require in-app sending or delivery verification. See the [current status](../README.md).
 
+## Completion visibility
+
+Home keeps activities completed today in their original section and order, as a
+compact row with a check, title, explicit Completed label, and restore control.
+Details remain expandable. Completing an expanded activity collapses its details.
+The “completed today” button opens that day's completed tasks and replies;
+“Completion history” opens all completions, with title/number search and restore.
+Older completed activities leave the main flow, without deleting their records.
+
+The board keeps its Done column, initially showing today's completions. A
+counted “Show past completions” control includes older and undated completions;
+search and Focus only apply to both. Existing details and status changes remain
+available.
+
+Today follows the viewer's local calendar date and refreshes at midnight and on
+returning to the tab. This scopes completion visibility, not the activity's
+planned date. Counts cover persisted tasks and replies; session-only routines
+and measurements keep their existing behavior.
+
+`completedAt` records when the server accepted the transition to completed, not
+when the real-world work necessarily finished. Manual updates, agent progress,
+and focus completion share this rule. Edits and repeated completion keep it;
+reopening clears it, and completing again records the new transition. Existing
+completed records use the latest completion transition in their audit history;
+when no such evidence exists, the date remains unknown and the record is
+available in history with “Completion date unavailable.”
+
 ## Earlier prototype and remaining local features
 
 The sections below describe the original prototype. Its sample conversation,
@@ -80,8 +107,9 @@ reader samples open for reading. Research remains a separate work surface.
 
 Activity blocks expand in place into controls suited to their content: routine
 steps, a task's next action and resumption note, or a weight input that records
-an entry in Journal. Completed and deferred activities stay in their original positions with visible
-status and undo controls. Measurements retain the recorded value in place, and
+an entry in Journal. Session-only routine outcomes stay in their original positions with visible
+status and undo controls. Persisted activities use the completion visibility rules above.
+Measurements retain the recorded value in place, and
 reply previews retain their outcome, so the user need not remember what was done. Expanded activity selection
 uses the `activity` URL parameter. This remains a session-only mock; a reload
 restores navigation, not recorded activity data.

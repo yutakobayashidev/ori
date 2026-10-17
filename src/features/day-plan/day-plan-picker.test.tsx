@@ -17,6 +17,7 @@ const activity = {
   proposal,
   effective: { ...proposal, section: "optional" },
   userState: "available",
+  completedAt: null,
   userOverrides: {},
   assessment: null,
 } as Activity;

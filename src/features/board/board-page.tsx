@@ -1,5 +1,6 @@
 import { ActivityHistory } from "#/features/activities/activity-history";
 import { ActivityMarkdown } from "#/features/activities/activity-markdown";
+import { isCompletedToday, useLocalDay } from "#/features/activities/completion";
 import { ActivityTimeLabel } from "#/features/focus/focus-controls";
 import { StartFocusButton } from "#/features/focus/start-focus-button";
 import { ActivityTimeDetails } from "#/features/focus/time-details";
@@ -43,6 +44,8 @@ export function BoardPage() {
   const store = useActivities();
   const [query, setQuery] = useState("");
   const [focus, setFocus] = useState(false);
+  const [showPastCompletions, setShowPastCompletions] = useState(false);
+  const today = useLocalDay();
   const [search, updateSearch] = useUrlState();
   const selectedId = search.activity;
   const setSelectedId = (id: string | null) => updateSearch({ activity: id ?? undefined });
@@ -55,6 +58,10 @@ export function BoardPage() {
       `#${number} ${effective.title} ${effective.nextAction}`
         .toLowerCase()
         .includes(query.toLowerCase()),
+  );
+  const completedToday = visible.filter((activity) => isCompletedToday(activity, today));
+  const pastCompletions = visible.filter(
+    (activity) => activity.userState === "completed" && !isCompletedToday(activity, today),
   );
   return (
     <TooltipProvider>
@@ -102,7 +109,13 @@ export function BoardPage() {
           <BoardDrag disabled={store.busy} move={(id, state) => void store.change(id, { state })}>
             <div className="flex min-h-0 flex-1 snap-x overflow-x-auto">
               {columns.map(({ state, label, icon: Icon, color }) => {
-                const cards = visible.filter((activity) => activity.userState === state);
+                const cards = visible.filter(
+                  (activity) =>
+                    activity.userState === state &&
+                    (state !== "completed" ||
+                      showPastCompletions ||
+                      isCompletedToday(activity, today)),
+                );
                 return (
                   <BoardDropColumn key={state} state={state} label={label}>
                     <div className="sticky top-0 z-10 flex items-center gap-2 bg-muted/30 p-4 dark:bg-background">
@@ -112,6 +125,23 @@ export function BoardPage() {
                       <h2 className="text-sm font-medium">{label}</h2>
                       <span className="text-xs text-muted-foreground">{cards.length}</span>
                     </div>
+                    {state === "completed" && (
+                      <div className="mb-3 space-y-2 px-4">
+                        <p className="text-xs text-muted-foreground" role="status">
+                          {completedToday.length} completed today
+                        </p>
+                        <Button
+                          variant="outline"
+                          size="sm"
+                          disabled={store.loading}
+                          aria-expanded={showPastCompletions}
+                          onClick={() => setShowPastCompletions(!showPastCompletions)}
+                        >
+                          {showPastCompletions ? "Hide past completions" : "Show past completions"}
+                          {` (${pastCompletions.length})`}
+                        </Button>
+                      </div>
+                    )}
                     <div className="flex flex-col gap-3.5 px-4">
                       {cards.map((activity) => (
                         <BoardDragCard
@@ -142,6 +172,15 @@ export function BoardPage() {
                               {activity.effective.nextAction}
                             </p>
                             <ActivityTimeLabel activity={activity} />
+                            {state === "completed" && (
+                              <p className="mt-2 text-xs text-muted-foreground">
+                                {isCompletedToday(activity, today)
+                                  ? "Completed today"
+                                  : activity.completedAt
+                                    ? `Completed ${new Date(activity.completedAt).toLocaleDateString()}`
+                                    : "Completion date unavailable"}
+                              </p>
+                            )}
                           </div>
                           <div className="flex items-center gap-2 border-t border-black/5 px-4 py-3 text-xs text-muted-foreground">
                             <span className="rounded-md border px-2 py-1">
@@ -157,7 +196,9 @@ export function BoardPage() {
                       ))}
                       {cards.length === 0 && (
                         <p className="rounded-2xl border border-dashed py-10 text-center text-xs text-muted-foreground">
-                          No tasks here
+                          {state === "completed" && !showPastCompletions
+                            ? "No completions today yet"
+                            : "No tasks here"}
                         </p>
                       )}
                     </div>

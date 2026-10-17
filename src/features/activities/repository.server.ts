@@ -106,6 +106,7 @@ function activity(
     isUnread: row.origin === "agent" && row.readAt === null,
     proposal,
     userState,
+    completedAt: row.completedAt === null ? null : new Date(row.completedAt).toISOString(),
     userOverrides,
     effective,
     assessment: row.assessment,
@@ -405,6 +406,7 @@ export function publishActivities(input: unknown, database = getDatabase()): Act
               number,
               origin: "agent",
               readAt: null,
+              completedAt: null,
               proposal,
               userState: "available",
               userOverrides: {},
@@ -452,6 +454,12 @@ export function updateActivityUser(
       const updated = {
         ...existing,
         userState: parsed.state ?? existing.userState,
+        completedAt:
+          parsed.state === undefined || parsed.state === existing.userState
+            ? existing.completedAt
+            : parsed.state === "completed"
+              ? now
+              : null,
         userOverrides,
         assessment:
           parsed.state && parsed.state !== existing.userState ? null : existing.assessment,
@@ -461,6 +469,7 @@ export function updateActivityUser(
         .update(activities)
         .set({
           userState: updated.userState,
+          completedAt: updated.completedAt,
           userOverrides,
           assessment: updated.assessment,
           updatedAt: now,
@@ -534,6 +543,7 @@ export function createUserActivity(input: unknown, database = getDatabase()): Ac
         number: allocateActivityNumber(database),
         origin: "user",
         readAt: now,
+        completedAt: null,
         proposal: {
           id,
           kind: "task",
@@ -575,6 +585,12 @@ export function updateActivityProgress(input: unknown, database = getDatabase())
         ...existing,
         proposal,
         userState: parsed.state ?? existing.userState,
+        completedAt:
+          parsed.state === undefined || parsed.state === existing.userState
+            ? existing.completedAt
+            : parsed.state === "completed"
+              ? now
+              : null,
         assessment: {
           reason: parsed.reason,
           evidence: parsed.evidence,
@@ -587,6 +603,7 @@ export function updateActivityProgress(input: unknown, database = getDatabase())
         .set({
           proposal,
           userState: updated.userState,
+          completedAt: updated.completedAt,
           assessment: updated.assessment,
           updatedAt: now,
         })

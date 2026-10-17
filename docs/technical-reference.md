@@ -27,7 +27,10 @@ controls for routine steps, tasks, replies and weight entries. Messages uses
 a Beeper conversation layout with real history, participant avatars, editable
 drafts, quoted text replies and a contextual side panel. Tasks and reply activities share persistent
 SQLite records across Home, Messages, and MCP. User edits and decisions survive
-agent updates and reloads. Routines and Journal remain session-only prototypes.
+agent updates and reloads. Home keeps today's completed activities in place as compact
+rows; older completions remain accessible through searchable completion history.
+The board's Done column shows today by default, with an option to show past
+completions. Both use the device's local date. Routines and Journal remain session-only prototypes.
 Reply sending snapshots the saved draft into a durable operation; upstream send
 success does not automatically complete the task.
 Tasks and replies share permanent `#number` references, including existing records.
@@ -602,5 +605,3 @@ The pinned Bird patch in `patches/@yuta__bird@0.10.1.patch` preserves bottom
 cursors returned as `TimelineReplaceEntry.entry` on subsequent pages. Without
 it, searches can incorrectly stop after the second page. Regression tests cover
 multiple pages through the actual Bird search, user, and list clients.
-
-

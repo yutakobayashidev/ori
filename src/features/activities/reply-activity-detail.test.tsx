@@ -40,6 +40,7 @@ const activity: Activity = {
   proposal,
   effective: { ...proposal, section: "focus" },
   userState: "available",
+  completedAt: null,
   userOverrides: {},
 };
 const snapshot: ConversationSnapshot = {

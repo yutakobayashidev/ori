@@ -638,3 +638,66 @@ it("binds number filters into pagination cursors", () => {
     getActivityContext({ activityNumbers: [1], limit: 1, cursor: first.nextCursor }, database),
   ).toThrow(expect.objectContaining({ code: "invalid-input" }));
 });
+
+it("keeps the completion date through edits and repeats, clears it on reopening, and dates a new completion", () => {
+  const clock = vi.spyOn(Date, "now");
+  try {
+    clock.mockReturnValue(Date.parse("2026-10-17T10:00:00Z"));
+    publish([task]);
+    expect(getActivityContext({}, database).activities[0]?.completedAt).toBeNull();
+    const update = (requestId: string, changes: object) =>
+      updateActivityUser(
+        {
+          requestId,
+          expectedRevision: getActivityContext({}, database).revision,
+          id: task.id,
+          ...changes,
+        },
+        database,
+      );
+    update("complete", { state: "completed" });
+    clock.mockReturnValue(Date.parse("2026-10-18T10:00:00Z"));
+    update("edit", { overrides: { title: "Bought detergent" } });
+    update("repeat", { state: "completed" });
+    expect(getActivityContext({}, second).activities[0]?.completedAt).toBe(
+      "2026-10-17T10:00:00.000Z",
+    );
+    update("reopen", { state: "available" });
+    expect(getActivityContext({}, database).activities[0]?.completedAt).toBeNull();
+    update("complete-again", { state: "completed" });
+    expect(getActivityContext({}, second).activities[0]?.completedAt).toBe(
+      "2026-10-18T10:00:00.000Z",
+    );
+  } finally {
+    clock.mockRestore();
+  }
+});
+
+it("dates contextual agent completions without changing the date on subsequent assessments", () => {
+  publish([task]);
+  const assess = (requestId: string, state: string) =>
+    updateActivityProgress(
+      {
+        requestId,
+        expectedRevision: getActivityContext({}, database).revision,
+        id: task.id,
+        state,
+        reason: "Observed task outcome",
+        evidence: [
+          {
+            kind: "external",
+            reference: "owner-note",
+            observedAt: "2026-10-18T10:00:00Z",
+            summary: "Owner confirmed outcome",
+          },
+        ],
+      },
+      database,
+    );
+  const completed = assess("agent-complete", "completed");
+  expect(getActivityContext({}, database).activities[0]?.completedAt).toBe(completed.receivedAt);
+  assess("agent-repeat", "completed");
+  expect(getActivityContext({}, second).activities[0]?.completedAt).toBe(completed.receivedAt);
+  assess("agent-reopen", "inProgress");
+  expect(getActivityContext({}, database).activities[0]?.completedAt).toBeNull();
+});

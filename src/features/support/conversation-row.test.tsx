@@ -23,6 +23,7 @@ function activity(id: string): Activity {
     proposal,
     effective: { ...proposal, section: "focus" },
     userState: "waiting",
+    completedAt: null,
     userOverrides: {},
   };
 }

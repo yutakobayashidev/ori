@@ -249,3 +249,73 @@ it("backfills activity numbers by creation date and preserves referenced records
     upgraded.$client.prepare("SELECT last_number FROM activity_number_sequence WHERE id = 1").get(),
   ).toEqual({ last_number: 3 });
 });
+
+it("backfills the latest recorded completion transition, leaving unknown and reopened dates empty", () => {
+  const path = join(directory, "completion-upgrade.db");
+  const legacy = new Database(path);
+  const completionMigration = migrations.find((migration) =>
+    migration.sql.some((statement) => statement.includes("ADD `completed_at`")),
+  );
+  assert(completionMigration);
+  legacy.exec(
+    "CREATE TABLE __drizzle_migrations (id INTEGER PRIMARY KEY AUTOINCREMENT, hash TEXT NOT NULL, created_at NUMERIC)",
+  );
+  for (const migration of migrations.filter(
+    (item) => item.folderMillis < completionMigration.folderMillis,
+  )) {
+    for (const statement of migration.sql) legacy.exec(statement);
+    legacy
+      .prepare("INSERT INTO __drizzle_migrations (hash, created_at) VALUES (?, ?)")
+      .run(migration.hash, migration.folderMillis);
+  }
+  const insert = legacy.prepare(
+    "INSERT INTO activities (id, number, proposal, user_state, user_overrides, created_at, updated_at) VALUES (?, ?, ?, ?, '{}', 1, 9999)",
+  );
+  insert.run(
+    "known",
+    1,
+    JSON.stringify({ id: "known", kind: "task", title: "Known", nextAction: "Act", sources: [] }),
+    "completed",
+  );
+  insert.run(
+    "unknown",
+    2,
+    JSON.stringify({
+      id: "unknown",
+      kind: "task",
+      title: "Unknown",
+      nextAction: "Act",
+      sources: [],
+    }),
+    "completed",
+  );
+  insert.run(
+    "reopened",
+    3,
+    JSON.stringify({
+      id: "reopened",
+      kind: "task",
+      title: "Reopened",
+      nextAction: "Act",
+      sources: [],
+    }),
+    "available",
+  );
+  const audit = legacy.prepare(
+    "INSERT INTO activity_audit (activity_id, operation, actor, channel, request_id, revision, occurred_at, \"before\", \"after\") VALUES (?, 'user', 'user', 'internal', ?, ?, ?, ?, ?)",
+  );
+  audit.run("known", "first", 1, 1000, '{"userState":"available"}', '{"userState":"completed"}');
+  audit.run("known", "reopen", 2, 2000, '{"userState":"completed"}', '{"userState":"available"}');
+  audit.run("known", "second", 3, 3000, '{"userState":"available"}', '{"userState":"completed"}');
+  audit.run("known", "edit", 4, 4000, '{"userState":"completed"}', '{"userState":"completed"}');
+  audit.run("reopened", "old", 5, 5000, '{"userState":"available"}', '{"userState":"completed"}');
+  legacy.close();
+  const upgraded = open("completion-upgrade.db");
+  expect(
+    upgraded.$client.prepare("SELECT id, completed_at FROM activities ORDER BY id").all(),
+  ).toEqual([
+    { id: "known", completed_at: 3000 },
+    { id: "reopened", completed_at: null },
+    { id: "unknown", completed_at: null },
+  ]);
+});

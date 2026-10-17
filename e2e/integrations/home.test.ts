@@ -167,14 +167,93 @@ test("keeps completed actions in their original positions with visible outcomes"
   await homePage.goTo();
   await expect(activitiesPage.card("send-documents")).toBeVisible();
   const before = await homePage.flowTitles.allTextContents();
+  const originalHeight = await activitiesPage
+    .card("buy-detergent")
+    .evaluate((element) => element.getBoundingClientRect().height);
   await activitiesPage.complete("Buy detergent").click();
   await expect(activitiesPage.restore("Buy detergent")).toHaveAttribute("aria-pressed", "true");
   await expect(activitiesPage.card("buy-detergent")).toContainText("Completed");
+  await expect(page.getByRole("button", { name: "1 completed today" })).toBeVisible();
+  expect(
+    await activitiesPage
+      .card("buy-detergent")
+      .evaluate((element) => element.getBoundingClientRect().height),
+  ).toBeLessThan(originalHeight);
   await homePage.recordMeasurement("65.2");
   await expect(homePage.recordedWeight("65.2")).toBeVisible();
   expect(await homePage.flowTitles.allTextContents()).toEqual(before);
   expect((await a11y().analyze()).violations).toEqual([]);
+  await activitiesPage.card("buy-detergent").scrollIntoViewIfNeeded();
   await page.screenshot({ path: testInfo.outputPath("completion-in-place.png") });
   await activitiesPage.restore("Buy detergent").click();
   await expect(activitiesPage.complete("Buy detergent")).toHaveAttribute("aria-pressed", "false");
+});
+
+test("keeps yesterday's completions in history and restores them across home and board", async ({
+  page,
+  homePage,
+  activitiesPage,
+  a11y,
+}, testInfo) => {
+  await homePage.goTo();
+  await activitiesPage.complete("Buy detergent").click();
+  await expect(activitiesPage.restore("Buy detergent")).toBeVisible();
+  await page.reload();
+  await expect(page.getByRole("button", { name: "1 completed today" })).toBeVisible();
+  await page.getByRole("button", { name: "1 completed today" }).click();
+  await expect(page.getByRole("dialog")).toContainText("Buy detergent");
+  await page.getByRole("button", { name: "Close", exact: true }).click();
+
+  const tomorrow = new Date();
+  tomorrow.setDate(tomorrow.getDate() + 1);
+  await page.clock.setFixedTime(tomorrow);
+  await page.evaluate(() => window.dispatchEvent(new Event("focus")));
+  await expect(activitiesPage.card("buy-detergent")).toHaveCount(0);
+  await expect(page.getByRole("button", { name: "0 completed today" })).toBeVisible();
+  await page.getByRole("button", { name: "Completion history", exact: true }).click();
+  await expect(page.getByRole("dialog")).toContainText("Buy detergent");
+  await expect(page.getByRole("dialog")).toContainText("Completion recorded");
+  expect((await a11y().analyze()).violations).toEqual([]);
+  await page.screenshot({ path: testInfo.outputPath("completion-history.png") });
+  await page.getByRole("button", { name: "Close", exact: true }).click();
+
+  await page.goto("/board");
+  const done = page.getByRole("region", { name: "Done", exact: true });
+  await expect(done.getByRole("button", { name: /Buy detergent/ })).toHaveCount(0);
+  const pastCompletions = done.getByRole("button", {
+    name: "Show past completions (1)",
+    exact: true,
+  });
+  await pastCompletions.click();
+  await expect(
+    done.getByRole("button", { name: "Hide past completions (1)", exact: true }),
+  ).toHaveAttribute("aria-expanded", "true");
+  await done.getByRole("button", { name: /Buy detergent/ }).click();
+  await page.getByRole("combobox", { name: "Status", exact: true }).selectOption("available");
+  await page.getByRole("button", { name: "Close", exact: true }).click();
+  await page.goto("/");
+  await expect(activitiesPage.complete("Buy detergent")).toBeVisible();
+  await page.getByRole("button", { name: "Completion history", exact: true }).click();
+  await expect(page.getByRole("dialog")).toContainText("No completed activities yet.");
+});
+
+test("collapses completed details and lets the owner search and undo from completion history", async ({
+  page,
+  homePage,
+  activitiesPage,
+}) => {
+  await homePage.goTo();
+  const card = activitiesPage.card("buy-detergent");
+  await card.getByRole("button", { name: /Buy detergent Buy one refill/ }).click();
+  await card.getByRole("button", { name: "Mark complete", exact: true }).click();
+  await expect(card).toHaveAttribute("data-expanded", "false");
+  await expect(activitiesPage.restore("Buy detergent")).toBeVisible();
+  await page.getByRole("button", { name: "Completion history", exact: true }).click();
+  const history = page.getByRole("dialog");
+  await history.getByRole("textbox", { name: "Search completed activities" }).fill("detergent");
+  await history.getByRole("button", { name: "Restore Buy detergent", exact: true }).click();
+  await expect(history).toContainText("No matching completions.");
+  await page.getByRole("button", { name: "Close", exact: true }).click();
+  await expect(activitiesPage.complete("Buy detergent")).toBeVisible();
+  await expect(page.getByRole("button", { name: "0 completed today" })).toBeVisible();
 });
