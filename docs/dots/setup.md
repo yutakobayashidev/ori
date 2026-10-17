@@ -212,12 +212,12 @@ curl -fsS http://127.0.0.1:8080/readyz
 2. 実際に web と worker を動かすユーザー・コンテナから、その CLI・target 設定・認証情報・Beeper endpoint にアクセスできるようにする。ホストで動くだけではコンテナからの利用確認にならない。
 3. web と worker に同じ SQLite と暗号鍵を指定し、次の設定を渡す。
 
-| 設定 | 内容 |
-| --- | --- |
-| `TWITTER_LITE_DB_PATH` | 同一の SQLite ファイル。各実行環境から見える絶対パス |
+| 設定                               | 内容                                                  |
+| ---------------------------------- | ----------------------------------------------------- |
+| `TWITTER_LITE_DB_PATH`             | 同一の SQLite ファイル。各実行環境から見える絶対パス  |
 | `TWITTER_LITE_CREDENTIAL_KEY_FILE` | 同一の暗号鍵ファイル。base64 で表した 32 random bytes |
-| `TWITTER_LITE_BEEPER_CLI` | 実際の CLI 実行ファイルの絶対パス |
-| `TWITTER_LITE_BEEPER_TARGET` | 用意済みの認証済み target 名。既定値なし |
+| `TWITTER_LITE_BEEPER_CLI`          | 実際の CLI 実行ファイルの絶対パス                     |
+| `TWITTER_LITE_BEEPER_TARGET`       | 用意済みの認証済み target 名。既定値なし              |
 
 現行 Beeper 公式 CLI の npm パッケージ名は `beeper-cli`、インストールされるコマンド名は `beeper` です。Ori の既定の実行名 `beeper-cli` に頼らず、`TWITTER_LITE_BEEPER_CLI` を実物に合わせます。CLI の資格情報は本人の安全なセットアップ経路で保存し、Ori の環境変数にトークン本文を貼る手順にはしません。[Beeper CLI](https://github.com/beeper/cli#install)
 
@@ -244,13 +244,13 @@ MCP Events の利用先は公式案内上、ChatGPT web の Work chat、desktop 
 
 ### イベントとフィルター
 
-| イベント名 | 用途 | フィルター |
-| --- | --- | --- |
-| `beeper.message.received` | 選択チャットの新着受信 | `{"chatIds":["選択した実際のID"]}` |
-| `beeper.message.sent` | 本人の送信メッセージが Beeper に同期されたことを観測 | 同上。受信とは別購読 |
-| `activity.created` | タスク／返信 Activity の新規作成 | `{}` は user 起点のみ |
-| `activity.status_changed` | Activity の状態変化 | 同上 |
-| `activity.time_changed` | 見積もり・記録済み作業時間の変化 | 同上。タイマーの tick では発火しない |
+| イベント名                | 用途                                                 | フィルター                           |
+| ------------------------- | ---------------------------------------------------- | ------------------------------------ |
+| `beeper.message.received` | 選択チャットの新着受信                               | `{"chatIds":["選択した実際のID"]}`   |
+| `beeper.message.sent`     | 本人の送信メッセージが Beeper に同期されたことを観測 | 同上。受信とは別購読                 |
+| `activity.created`        | タスク／返信 Activity の新規作成                     | `{}` は user 起点のみ                |
+| `activity.status_changed` | Activity の状態変化                                  | 同上                                 |
+| `activity.time_changed`   | 見積もり・記録済み作業時間の変化                     | 同上。タイマーの tick では発火しない |
 
 Activity では `activityIds` と `origins` も指定できます。`origins` の既定は `["user"]`。`["user","agent"]` を選ぶ場合は、自分の変更から同じ処理を繰り返さない条件を設けます。購読時に既存 Activity や過去メッセージが新規イベントとして一括配信されるわけではありません。[イベント仕様](https://github.com/yutakobayashidev/ori/blob/bf9587b7c25518209da8d26057bc0905cc304c58/docs/beeper-mcp-events.md)
 
@@ -293,20 +293,20 @@ Webhook の `2xx` は受領の確認です。dots の処理完了や Activity �
 
 ## 7. よくある問題
 
-| 症状 | 確認すること |
-| --- | --- |
-| ビルドで依存を取得できない | `.npmrc` の Gitea Packages、npm、Docker base image への接続。まだ配布イメージの pull に置き換えられる前提ではない |
-| UI は開くが保存に失敗 | `ORI_ORIGIN` と実際のブラウザ origin。`localhost` と `127.0.0.1` は別 origin |
-| `/health` は通るが準備完了しない | Docker の healthcheck は `/api/auth` で DB 初期化も確認する。`/health` だけでは不十分 |
-| トンネルが見えない | 対象 ChatGPT workspace との関連付けと Tunnels Read + Use 権限 |
-| tunnel-client に401/403 | runtime keyとその主体の権限・対象組織。管理キーへの置き換えはしない |
-| 接続作成やツール発見に失敗 | `doctor --explain`、`readyz`、Oriの起動と内部URL、サーバーエラー |
-| MCP ツールが古い／イベントがない | 新しい app のデプロイ、トンネルが指すポート、再スキャン |
-| ツールは呼べるがイベントが来ない | worker の別起動、共有 DB、鍵、callback 検証、購読期限、外向き HTTPS、対象フィルター、新規イベントで試したか |
-| `TWITTER_LITE_BEEPER_TARGET` エラー | web と worker の両方に認証済み target を指定。現行 worker は Activity のみでもこの設定が必要 |
-| CLI が見つからない／Beeper の読み取り失敗 | 実行ファイル名 `beeper` とパス、サービス実行ユーザーの設定・認証、コンテナから Beeper への到達性 |
-| 配信成功だが Activity が変わらない | dots 側のタスク実行結果・権限・指示を確認。配信 ACK と処理成功を分ける |
-| タスクが増え続ける | agent-origin を含む購読や、毎回新規 ID を作る処理によるループを確認 |
+| 症状                                      | 確認すること                                                                                                      |
+| ----------------------------------------- | ----------------------------------------------------------------------------------------------------------------- |
+| ビルドで依存を取得できない                | `.npmrc` の Gitea Packages、npm、Docker base image への接続。まだ配布イメージの pull に置き換えられる前提ではない |
+| UI は開くが保存に失敗                     | `ORI_ORIGIN` と実際のブラウザ origin。`localhost` と `127.0.0.1` は別 origin                                      |
+| `/health` は通るが準備完了しない          | Docker の healthcheck は `/api/auth` で DB 初期化も確認する。`/health` だけでは不十分                             |
+| トンネルが見えない                        | 対象 ChatGPT workspace との関連付けと Tunnels Read + Use 権限                                                     |
+| tunnel-client に401/403                   | runtime keyとその主体の権限・対象組織。管理キーへの置き換えはしない                                               |
+| 接続作成やツール発見に失敗                | `doctor --explain`、`readyz`、Oriの起動と内部URL、サーバーエラー                                                  |
+| MCP ツールが古い／イベントがない          | 新しい app のデプロイ、トンネルが指すポート、再スキャン                                                           |
+| ツールは呼べるがイベントが来ない          | worker の別起動、共有 DB、鍵、callback 検証、購読期限、外向き HTTPS、対象フィルター、新規イベントで試したか       |
+| `TWITTER_LITE_BEEPER_TARGET` エラー       | web と worker の両方に認証済み target を指定。現行 worker は Activity のみでもこの設定が必要                      |
+| CLI が見つからない／Beeper の読み取り失敗 | 実行ファイル名 `beeper` とパス、サービス実行ユーザーの設定・認証、コンテナから Beeper への到達性                  |
+| 配信成功だが Activity が変わらない        | dots 側のタスク実行結果・権限・指示を確認。配信 ACK と処理成功を分ける                                            |
+| タスクが増え続ける                        | agent-origin を含む購読や、毎回新規 ID を作る処理によるループを確認                                               |
 
 Linux / Nix 版の基本ログは次で確認できます。
 
@@ -355,4 +355,3 @@ docker compose cp web:/data/backup.sqlite ./backup.sqlite
 - MCP は信頼された単一 owner 向けのプライベート境界。マルチユーザーや公開 MCP 向けの認証設計ではありません。
 - 標準 Docker は core と任意 AI まで。Beeper／イベント監視を含む turnkey 構成ではありません。
 - カレンダー連携、life / Rensheng との自動読み書きは未実装・計画段階です。Journal、Reader、Vitals、routines にもプロトタイプの制限があります。Home の永続タスクや返信 Activity と混同しないでください。[README の実装状況](https://github.com/yutakobayashidev/ori/blob/bf9587b7c25518209da8d26057bc0905cc304c58/README.md#workspaces-and-current-status)
-

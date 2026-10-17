@@ -194,4 +194,3 @@ test ! -e "$BACKUP_DIR/workspace.sqlite" || exit 1
 更新は DB と鍵をバックアップしてからビルドします。`nix build` で `result` が変わっても上のサービスは以前の絶対 store path を保持するため、両方の `ExecStart` を新しい同一 package に更新し、daemon-reload と再起動が必要です。元の package と復元可能なバックアップを確保してから更新してください。新しいバージョンが DB schema を変更した場合、単純な旧版起動で戻せるとは限りません。
 
 根拠: Ori の [flake.nix](https://github.com/yutakobayashidev/ori/blob/bf9587b7c25518209da8d26057bc0905cc304c58/flake.nix)、[worker](https://github.com/yutakobayashidev/ori/blob/bf9587b7c25518209da8d26057bc0905cc304c58/scripts/events-worker.ts)、[Beeper adapter](https://github.com/yutakobayashidev/ori/blob/bf9587b7c25518209da8d26057bc0905cc304c58/src/features/beeper/adapter.server.ts)、[共有DB](https://github.com/yutakobayashidev/ori/blob/bf9587b7c25518209da8d26057bc0905cc304c58/src/features/storage/database.server.ts)。
-
