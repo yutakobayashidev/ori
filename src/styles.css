@@ -248,3 +248,15 @@
     }
   }
 }
+
+/* Shapeshift (MIT): layered composer surfaces. */
+@utility composer-shadow-rest {
+  box-shadow:
+    0 1px 2px rgb(26 26 25 / 0.04),
+    0 1px 1px rgb(26 26 25 / 0.03);
+}
+@utility composer-shadow-float {
+  box-shadow:
+    0 2px 4px rgb(26 26 25 / 0.04),
+    0 20px 48px -12px rgb(26 26 25 / 0.14);
+}

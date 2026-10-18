@@ -12,6 +12,7 @@ import { ActivityStoreProvider, useActivityStore } from "./activity-store";
 import {
   changeActivity,
   createHomeActivity,
+  createHomeActivities,
   loadActivities,
   loadActivityAudit,
   loadCommunicationLogs,
@@ -42,7 +43,10 @@ type NewTask = Omit<
   Parameters<typeof createHomeActivity>[0]["data"],
   "requestId" | "expectedRevision" | "id"
 >;
-const CreateContext = createContext<((task: NewTask) => Promise<boolean>) | null>(null);
+const CreateContext = createContext<{
+  create: (task: NewTask) => Promise<boolean>;
+  createMany: (tasks: NewTask[]) => Promise<boolean>;
+} | null>(null);
 
 export function ActivityStateProvider({
   children,
@@ -163,14 +167,24 @@ export function ActivityStateProvider({
       }}
     >
       <CreateContext.Provider
-        value={(task) => {
-          const data = {
-            ...task,
-            id: crypto.randomUUID(),
-            requestId: crypto.randomUUID(),
-            expectedRevision: revision.current,
-          };
-          return mutate(() => createHomeActivity({ data }));
+        value={{
+          create: (task) => {
+            const data = {
+              ...task,
+              id: crypto.randomUUID(),
+              requestId: crypto.randomUUID(),
+              expectedRevision: revision.current,
+            };
+            return mutate(() => createHomeActivity({ data }));
+          },
+          createMany: (tasks) => {
+            const data = {
+              activities: tasks.map((task) => ({ ...task, id: crypto.randomUUID() })),
+              requestId: crypto.randomUUID(),
+              expectedRevision: revision.current,
+            };
+            return mutate(() => createHomeActivities({ data }));
+          },
         }}
       >
         {children}
@@ -182,5 +196,5 @@ export function useActivities() {
   const state = useActivityStore();
   const create = useContext(CreateContext);
   if (!create) throw new Error("ActivityStateProvider is required");
-  return { ...state, create };
+  return { ...state, ...create };
 }

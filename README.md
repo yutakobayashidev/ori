@@ -136,6 +136,8 @@ docker compose exec web node .output/server/tools/account-setup.js
 
 ## 現在の機能と確認範囲
 
+Homeの入力欄は、TypeSafe Jevで日本語のタスク・複数タスク・期限を提案します。内容を編集して確定するとActivityへまとめて保存します。`/`でカードの種類を選ぶ手動入力も利用できます。設定と対応範囲は[Home入力ガイド](docs/home-task-composer.md)を参照してください。
+
 Home は今日の完了を元の位置にコンパクトに残し、過去分は検索できる完了履歴から確認・復元できます。Board の Done 列は今日の完了を初期表示し、過去分も開けます。当日の判定には端末のローカル日付を使います。
 
 タスク・返信 Activity、owner ログイン、Board、Focus は永続化されています。Journal、Reader、Vitals、routines にはプロトタイプの制限があります。カレンダー同期や life / Rensheng との自動連携は未実装です。[機能別の状況](docs/technical-reference.md#workspaces-and-current-status)を確認してください。

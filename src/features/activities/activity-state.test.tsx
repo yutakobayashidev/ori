@@ -9,6 +9,7 @@ const actions = vi.hoisted(() => ({
   load: vi.fn<typeof import("./server-functions").loadActivities>(),
   change: vi.fn<typeof import("./server-functions").changeActivity>(),
   create: vi.fn<typeof import("./server-functions").createHomeActivity>(),
+  createMany: vi.fn<typeof import("./server-functions").createHomeActivities>(),
   history: vi.fn<typeof import("./server-functions").loadActivityAudit>(),
   communications: vi.fn<typeof import("./server-functions").loadCommunicationLogs>(),
 }));
@@ -16,6 +17,7 @@ vi.mock("./server-functions", () => ({
   loadActivities: actions.load,
   changeActivity: actions.change,
   createHomeActivity: actions.create,
+  createHomeActivities: actions.createMany,
   loadActivityAudit: actions.history,
   loadCommunicationLogs: actions.communications,
 }));
@@ -76,6 +78,63 @@ function Composer() {
     </>
   );
 }
+function BatchComposer() {
+  const { createMany, busy, loading } = useActivities();
+  const [saved, setSaved] = useState(false);
+  return (
+    <>
+      <ActivityFeedback />
+      <button
+        disabled={busy || loading}
+        onClick={async () => {
+          if (
+            await createMany([
+              {
+                title: "牛乳を買う",
+                nextAction: "牛乳を買う",
+                section: "optional",
+                dueDate: "2026-10-19",
+              },
+              {
+                title: "報告書を送る",
+                nextAction: "報告書を送る",
+                section: "focus",
+                dueDate: null,
+              },
+            ])
+          )
+            setSaved(true);
+        }}
+      >
+        Add tasks
+      </button>
+      <p>{saved ? "Batch saved" : "Batch pending"}</p>
+    </>
+  );
+}
+it("retries the whole batch with stable task IDs and its original revision", async () => {
+  actions.createMany.mockRejectedValueOnce(new Error("response lost")).mockResolvedValueOnce({
+    ok: true,
+    requestId: "receipt",
+    revision: 1,
+    activityIds: ["first", "second"],
+    receivedAt: "2026-10-07T01:00:00Z",
+  });
+  render(
+    <ActivityStateProvider enabled>
+      <BatchComposer />
+    </ActivityStateProvider>,
+  );
+  await waitFor(() => expect(screen.getByRole("button", { name: "Add tasks" })).toBeEnabled());
+  fireEvent.click(screen.getByRole("button", { name: "Add tasks" }));
+  expect(await screen.findByText("Batch saved")).toBeVisible();
+  expect(actions.createMany).toHaveBeenCalledTimes(2);
+  expect(actions.createMany.mock.calls[1]).toEqual(actions.createMany.mock.calls[0]);
+  expect(actions.createMany.mock.calls[0]?.[0].data).toMatchObject({
+    expectedRevision: 0,
+    activities: [{ dueDate: "2026-10-19" }, { dueDate: null }],
+  });
+});
 it("retries an uncertain save with the identical input and resolves the original caller", async () => {
   actions.create
     .mockRejectedValueOnce(new Error("response lost"))

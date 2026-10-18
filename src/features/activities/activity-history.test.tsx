@@ -52,6 +52,21 @@ it("loads per-task history only when opened and shows before and after text", as
   expect(screen.getByText("Before")).toBeVisible();
   expect(screen.getByText("After")).toBeVisible();
 });
+it("shows clearing a deadline even while its proposed date remains", async () => {
+  const dated = { ...snapshot, proposal: { ...snapshot.proposal, dueDate: "2026-10-19" } };
+  state.history.changes.mockResolvedValue({
+    ok: true,
+    nextBeforeId: null,
+    entries: [
+      { ...entry(3), before: dated, after: { ...dated, userOverrides: { dueDate: null } } },
+    ],
+  });
+  render(<HistoryPanel activityId="task" />);
+  expect(await screen.findByText("Due date", { exact: true })).toBeVisible();
+  expect(screen.getByText("2026-10-19", { exact: true })).toBeVisible();
+  expect(screen.getByText("—", { exact: true })).toBeVisible();
+  expect(screen.queryByText("Proposed due date", { exact: true })).not.toBeInTheDocument();
+});
 it("keeps newer entries visible and retries a failed older page with its cursor", async () => {
   state.history.changes
     .mockResolvedValueOnce({ ok: true, entries: [entry(3)], nextBeforeId: 3 })

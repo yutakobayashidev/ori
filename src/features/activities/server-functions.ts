@@ -3,6 +3,7 @@ import { getActivityAuditInput } from "./audit-model";
 import { getCommunicationLogsInput } from "./communication-model";
 import {
   createHomeActivityInput,
+  createHomeActivitiesInput,
   updateActivityUserInput,
   type ActivityContext,
   type ActivityFailure,
@@ -43,6 +44,11 @@ export const createHomeActivity = createServerFn({ method: "POST" })
   .validator(createHomeActivityInput)
   .handler(({ data }): Promise<ActivityReceipt | ActivityFailure> =>
     run((repository) => repository.createUserActivity(data)),
+  );
+export const createHomeActivities = createServerFn({ method: "POST" })
+  .validator(createHomeActivitiesInput)
+  .handler(({ data }): Promise<ActivityReceipt | ActivityFailure> =>
+    run((repository) => repository.createUserActivities(data)),
   );
 export const markActivityRead = createServerFn({ method: "POST" })
   .validator((id: string) => id)

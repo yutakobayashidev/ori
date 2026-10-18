@@ -1,10 +1,9 @@
 import { Link, useNavigate, useRouteContext } from "@tanstack/react-router";
-import { ArrowUp, ArrowUpRight, Plus, X } from "lucide-react";
+import { ArrowUpRight, Plus, X } from "lucide-react";
 import { useRef, useState } from "react";
 import { Dialog } from "#/components/dialog";
 import { Button } from "#/components/ui/button";
 import { SidebarInset, SidebarProvider } from "#/components/ui/sidebar";
-import { Textarea } from "#/components/ui/textarea";
 import { TooltipProvider } from "#/components/ui/tooltip";
 import { WorkspaceNavigation } from "#/components/workspace-navigation";
 import { articles } from "#/features/inbox/mock-articles";
@@ -12,6 +11,7 @@ import { useUrlState } from "#/features/navigation/use-url-state";
 import { useActivities } from "#/features/activities/activity-state";
 import { CodexUsage } from "#/features/codex-usage/codex-usage";
 import { entryKindLabels, useWorkspaceState } from "#/features/workspace/workspace-state";
+import { TaskComposer } from "./task-composer";
 import { DailyBrief } from "./daily-brief";
 import { ExecutionWorkbench } from "./execution-workbench";
 import { Greeting } from "./greeting";
@@ -20,7 +20,7 @@ import { type HomeAction, interpretAction } from "./interpret-action";
 export function HomePage() {
   const { auth } = useRouteContext({ from: "__root__" });
   const { tasks, setTasks, entries, setEntries } = useWorkspaceState();
-  const { activities, create, change, busy, loading } = useActivities();
+  const { activities, create, createMany, change, busy, loading } = useActivities();
   const navigate = useNavigate();
   const input = useRef<HTMLTextAreaElement>(null);
   const [prompt, setPrompt] = useState("");
@@ -198,48 +198,49 @@ export function HomePage() {
                 </h1>
                 <DailyBrief onOpenContact={openContact} />
               </header>
-              <form
-                className="rounded-ui-20 border border-border bg-muted p-px-16 max-md:p-px-10"
-                onSubmit={(event) => {
-                  event.preventDefault();
-                  interpret();
+              <TaskComposer
+                text={prompt}
+                onTextChange={(value) => {
+                  setPrompt(value);
+                  setProposal(null);
+                  setNotice("");
                 }}
-              >
-                <Textarea
-                  variant="composer"
-                  className="min-h-[130px] max-md:min-h-[150px]"
-                  ref={input}
-                  aria-label="Home input"
-                  placeholder="What’s on your mind?"
-                  value={prompt}
-                  onChange={(event) => {
-                    setPrompt(event.target.value);
-                    setProposal(null);
-                    setNotice("");
-                  }}
-                  onKeyDown={(event) => {
-                    if (
-                      (event.metaKey || event.ctrlKey) &&
-                      event.key === "Enter" &&
-                      !event.nativeEvent.isComposing
-                    ) {
-                      event.preventDefault();
-                      interpret();
-                    }
-                  }}
-                />
-                <div className="flex items-center justify-between p-px-8">
-                  <span className="text-xs text-muted-foreground">Tasks, replies, notes.</span>
-                  <Button
-                    type="submit"
-                    size="icon"
-                    aria-label="Preview action"
-                    disabled={!prompt.trim()}
-                  >
-                    <ArrowUp />
-                  </Button>
-                </div>
-              </form>
+                inputRef={input}
+                disabled={busy || loading}
+                isLegacyAction={(() => {
+                  const result = interpretAction(
+                    prompt,
+                    [
+                      ...tasks,
+                      ...activities
+                        .filter((item) => item.effective.kind === "task")
+                        .map((item) => item.effective),
+                    ],
+                    activities.flatMap((item) =>
+                      item.effective.kind === "reply"
+                        ? [{ id: item.id, name: item.effective.reply.recipientName }]
+                        : [],
+                    ),
+                  );
+                  return (
+                    "action" in result &&
+                    (result.action.type !== "add-task" ||
+                      result.action.section === "routine" ||
+                      result.action.section === "optional")
+                  );
+                })()}
+                onPreviewAction={interpret}
+                createTasks={(drafts) =>
+                  createMany(
+                    drafts.map((draft) => ({
+                      title: draft.title,
+                      nextAction: draft.title,
+                      section: "focus",
+                      dueDate: draft.dueDate,
+                    })),
+                  )
+                }
+              />
               <div className="mt-px-16 flex flex-wrap gap-x-px-20 gap-y-px-8 max-md:gap-px-12">
                 {["Add grocery shopping", "Open messages", "Note: Resume on page 2"].map((text) => (
                   <button

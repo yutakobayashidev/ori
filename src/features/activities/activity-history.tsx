@@ -170,6 +170,7 @@ function fields(snapshot: ActivityAuditSnapshot | null): Record<string, unknown>
   return {
     Title: userOverrides.title ?? proposal.title,
     "Next action": userOverrides.nextAction ?? proposal.nextAction,
+    "Due date": userOverrides.dueDate !== undefined ? userOverrides.dueDate : proposal.dueDate,
     Details: userOverrides.detail ?? proposal.detail,
     Status: stateLabels[snapshot.userState],
     Section: userOverrides.section ?? proposal.recommendation?.section,
@@ -179,6 +180,7 @@ function fields(snapshot: ActivityAuditSnapshot | null): Record<string, unknown>
     "Reply context": proposal.kind === "reply" ? proposal.reply.context : undefined,
     "Proposed title": proposal.title,
     "Proposed next action": proposal.nextAction,
+    "Proposed due date": proposal.dueDate,
     "Proposed details": proposal.detail,
     "Proposed reply draft": proposal.kind === "reply" ? proposal.reply.draft : undefined,
     Recommendation: proposal.recommendation?.reason,
@@ -225,6 +227,7 @@ function ChangeEntry({ entry }: { entry: ActivityAuditEntry }) {
   const effectiveFields: Record<string, string> = {
     "Proposed title": "Title",
     "Proposed next action": "Next action",
+    "Proposed due date": "Due date",
     "Proposed details": "Details",
     "Proposed reply draft": "Reply draft",
   };

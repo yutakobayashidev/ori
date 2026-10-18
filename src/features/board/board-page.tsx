@@ -172,6 +172,14 @@ export function BoardPage() {
                               {activity.effective.nextAction}
                             </p>
                             <ActivityTimeLabel activity={activity} />
+                            {activity.effective.dueDate && (
+                              <p className="mt-2 text-xs text-muted-foreground">
+                                Due{" "}
+                                <time dateTime={activity.effective.dueDate}>
+                                  {activity.effective.dueDate}
+                                </time>
+                              </p>
+                            )}
                             {state === "completed" && (
                               <p className="mt-2 text-xs text-muted-foreground">
                                 {isCompletedToday(activity, today)
@@ -224,6 +232,14 @@ export function BoardPage() {
                   <p className="text-xs text-muted-foreground">#{selected.number}</p>
                   <SheetTitle>{selected.effective.title}</SheetTitle>
                   <ActivityMarkdown text={selected.effective.nextAction} />
+                  {selected.effective.dueDate && (
+                    <p className="text-xs text-muted-foreground">
+                      Due{" "}
+                      <time dateTime={selected.effective.dueDate}>
+                        {selected.effective.dueDate}
+                      </time>
+                    </p>
+                  )}
                   <div className="flex items-center gap-3">
                     <ActivityTimeLabel activity={selected} />
                     <StartFocusButton activity={selected} />

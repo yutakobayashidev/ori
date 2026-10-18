@@ -83,6 +83,11 @@ export function FocusPage({
             <div className="mx-auto mt-4 max-w-md text-left text-muted-foreground">
               <ActivityMarkdown text={activity.effective.nextAction} />
             </div>
+            {activity.effective.dueDate && (
+              <p className="mt-3 text-sm text-muted-foreground">
+                Due <time dateTime={activity.effective.dueDate}>{activity.effective.dueDate}</time>
+              </p>
+            )}
             {canStart || session ? (
               <>
                 <FocusClock

@@ -24,6 +24,7 @@ import {
 import { notifyActivities } from "./events.server";
 import {
   createHomeActivityInput,
+  createHomeActivitiesInput,
   updateActivityProgressInput,
   getActivityContextInput,
   publishActivitiesInput,
@@ -534,35 +535,54 @@ export function createUserActivity(input: unknown, database = getDatabase()): Ac
     "user-create",
     parsed,
     [parsed.id],
+    (receipt, now) => insertUserActivity(parsed, receipt, now, database),
+    database,
+  );
+}
+export function createUserActivities(input: unknown, database = getDatabase()): ActivityReceipt {
+  const parsed = parse(createHomeActivitiesInput, input);
+  return writeActivity(
+    "user-create-batch",
+    parsed,
+    parsed.activities.map((task) => task.id),
     (receipt, now) => {
-      if (database.select().from(activities).where(eq(activities.id, parsed.id)).get())
-        fail("invalid-input", "This activity ID is already in use.");
-      const { id, title, nextAction, section } = parsed;
-      const row: typeof activities.$inferSelect = {
-        id,
-        number: allocateActivityNumber(database),
-        origin: "user",
-        readAt: now,
-        completedAt: null,
-        proposal: {
-          id,
-          kind: "task",
-          title,
-          nextAction,
-          recommendation: { section },
-          sources: [],
-        },
-        userState: "available",
-        userOverrides: { title, nextAction, section },
-        assessment: null,
-        createdAt: now,
-        updatedAt: now,
-      };
-      database.insert(activities).values(row).run();
-      enqueueEvent("activity.created", row, "user", receipt, database, now);
+      for (const task of parsed.activities) insertUserActivity(task, receipt, now, database);
     },
     database,
   );
+}
+function insertUserActivity(
+  task: z.infer<typeof createHomeActivitiesInput>["activities"][number],
+  receipt: ActivityReceipt,
+  now: number,
+  database: AppDatabase,
+) {
+  if (database.select().from(activities).where(eq(activities.id, task.id)).get())
+    fail("invalid-input", "This activity ID is already in use.");
+  const { id, title, nextAction, section, dueDate } = task;
+  const row: typeof activities.$inferSelect = {
+    id,
+    number: allocateActivityNumber(database),
+    origin: "user",
+    readAt: now,
+    completedAt: null,
+    proposal: {
+      id,
+      kind: "task",
+      title,
+      nextAction,
+      dueDate,
+      recommendation: { section },
+      sources: [],
+    },
+    userState: "available",
+    userOverrides: { title, nextAction, section, dueDate },
+    assessment: null,
+    createdAt: now,
+    updatedAt: now,
+  };
+  database.insert(activities).values(row).run();
+  enqueueEvent("activity.created", row, "user", receipt, database, now);
 }
 
 /** Save the agent's contextual assessment; evidence is reported context, not delivery proof. */

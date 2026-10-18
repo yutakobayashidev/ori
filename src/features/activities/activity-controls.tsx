@@ -95,8 +95,9 @@ export function ActivityEditor({ activity }: { activity: Activity }) {
     nextAction: activity.effective.nextAction,
     detail: activity.effective.detail ?? "",
     section: activity.effective.section,
+    dueDate: activity.effective.dueDate ?? "",
   });
-  const editable = ["title", "nextAction", "detail", "section"] as const;
+  const editable = ["title", "nextAction", "detail", "section", "dueDate"] as const;
   if (!editing)
     return (
       <Button
@@ -109,6 +110,7 @@ export function ActivityEditor({ activity }: { activity: Activity }) {
             nextAction: activity.effective.nextAction,
             detail: activity.effective.detail ?? "",
             section: activity.effective.section,
+            dueDate: activity.effective.dueDate ?? "",
           });
           setChangedFields(new Set());
           setEditRevision(revision);
@@ -126,7 +128,9 @@ export function ActivityEditor({ activity }: { activity: Activity }) {
         const overrides: ActivityOverrides = {};
         for (const key of editable) {
           if (changedFields.has(key) && values[key] !== (activity.effective[key] ?? ""))
-            Object.assign(overrides, { [key]: values[key] });
+            Object.assign(overrides, {
+              [key]: key === "dueDate" ? values[key] || null : values[key],
+            });
         }
         if (
           !Object.keys(overrides).length ||
@@ -170,6 +174,21 @@ export function ActivityEditor({ activity }: { activity: Activity }) {
           )}
         </label>
       ))}
+      {activity.effective.kind === "task" && (
+        <label className="grid gap-1 text-xs" htmlFor={`activity-due-${activity.id}`}>
+          期限
+          <Input
+            id={`activity-due-${activity.id}`}
+            type="date"
+            disabled={busy}
+            value={values.dueDate}
+            onChange={(event) => {
+              setChangedFields(new Set([...changedFields, "dueDate"]));
+              setValues({ ...values, dueDate: event.target.value });
+            }}
+          />
+        </label>
+      )}
       <label className="grid gap-1 text-xs">
         Placement
         <select

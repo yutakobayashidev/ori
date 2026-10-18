@@ -1,0 +1,2797 @@
+{
+  "startedAt": "2026-10-18T12:50:16.286Z",
+  "model": "jev-1.13.0",
+  "methodology": "Synthetic exploratory set, labels and prompts fixed before run. Two sequential passes, reversed order on second pass; no retries or application cache. Warmup excluded from latency, included in token totals. Urgency is exploratory, not scored. Not the unmodified Shapeshift classifier. No extraction evaluation.",
+  "questions": {
+    "intent": {
+      "type": "choice",
+      "instructions": "Choose the preview card for the current input in a personal workspace. Interpret the user's actual intended action, respecting negation and whether the text is a past observation or unfinished. Select none for unsupported requests. Do not execute anything.",
+      "criteria": {
+        "task": "A single new action the user intends to do or add to their task list. Includes personal chores and making a booking; excludes drafting replies and appointments themselves.",
+        "checklist": "Several distinct new actions or items to do or buy, intended as a list.",
+        "note": "A note, idea, feeling, or observation about the past, rather than a new action to perform.",
+        "reply": "The user wants help composing or opening a reply to a person or conversation.",
+        "event": "An appointment or gathering with other people at a time; not the task of booking it.",
+        "update": "An explicit request to change the status of an existing task, such as complete, defer, or restore.",
+        "none": "No supported action or note: unfinished input, cancellation of creation, a question for information, or an unrelated request."
+      }
+    },
+    "urgent": {
+      "type": "noul",
+      "instructions": "Does the input explicitly convey urgency or an immediate need to act? A future date alone does not imply urgency."
+    }
+  },
+  "warmup": {
+    "latencyMs": 234,
+    "model": "jev-1.13.0",
+    "answers": {
+      "intent": {
+        "type": "choice",
+        "choice": "note",
+        "confidence": 0.89,
+        "probabilities": {
+          "task": 0.02,
+          "checklist": 0,
+          "note": 0.91,
+          "reply": 0,
+          "event": 0,
+          "update": 0,
+          "none": 0.07
+        }
+      },
+      "urgent": {
+        "type": "noul",
+        "noul": 0.05
+      }
+    },
+    "usage": {
+      "input_tokens": 589,
+      "output_tokens": 85
+    }
+  },
+  "summary": {
+    "completed": 80,
+    "planned": 80,
+    "failure": null,
+    "correct": 80,
+    "japanese": {
+      "correct": 64,
+      "total": 64
+    },
+    "english": {
+      "correct": 16,
+      "total": 16
+    },
+    "latencyMs": {
+      "p50": 158,
+      "p95": 258,
+      "min": 134,
+      "max": 438
+    },
+    "highConfidenceErrors": 0,
+    "inputTokens": 47933,
+    "outputTokens": 6905
+  },
+  "results": [
+    {
+      "id": 1,
+      "language": "ja",
+      "expected": "task",
+      "text": "明日までに見積書を送る",
+      "round": 1,
+      "latencyMs": 174,
+      "model": "jev-1.13.0",
+      "answers": {
+        "intent": {
+          "type": "choice",
+          "choice": "task",
+          "confidence": 0.98,
+          "probabilities": {
+            "task": 0.98,
+            "checklist": 0,
+            "note": 0,
+            "reply": 0,
+            "event": 0,
+            "update": 0,
+            "none": 0.02
+          }
+        },
+        "urgent": {
+          "type": "noul",
+          "noul": 0.41
+        }
+      },
+      "usage": {
+        "input_tokens": 592,
+        "output_tokens": 85
+      },
+      "correct": true
+    },
+    {
+      "id": 2,
+      "language": "ja",
+      "expected": "task",
+      "text": "牛乳を買う",
+      "round": 1,
+      "latencyMs": 141,
+      "model": "jev-1.13.0",
+      "answers": {
+        "intent": {
+          "type": "choice",
+          "choice": "task",
+          "confidence": 1,
+          "probabilities": {
+            "task": 1,
+            "checklist": 0,
+            "note": 0,
+            "reply": 0,
+            "event": 0,
+            "update": 0,
+            "none": 0
+          }
+        },
+        "urgent": {
+          "type": "noul",
+          "noul": 0.05
+        }
+      },
+      "usage": {
+        "input_tokens": 586,
+        "output_tokens": 85
+      },
+      "correct": true
+    },
+    {
+      "id": 3,
+      "language": "ja",
+      "expected": "task",
+      "text": "歯医者を予約しなきゃ",
+      "round": 1,
+      "latencyMs": 161,
+      "model": "jev-1.13.0",
+      "answers": {
+        "intent": {
+          "type": "choice",
+          "choice": "task",
+          "confidence": 0.99,
+          "probabilities": {
+            "task": 0.99,
+            "checklist": 0,
+            "note": 0,
+            "reply": 0,
+            "event": 0,
+            "update": 0,
+            "none": 0.01
+          }
+        },
+        "urgent": {
+          "type": "noul",
+          "noul": 0.57
+        }
+      },
+      "usage": {
+        "input_tokens": 592,
+        "output_tokens": 85
+      },
+      "correct": true
+    },
+    {
+      "id": 4,
+      "language": "ja",
+      "expected": "task",
+      "text": "来週金曜までに確定申告の資料をまとめたい",
+      "round": 1,
+      "latencyMs": 150,
+      "model": "jev-1.13.0",
+      "answers": {
+        "intent": {
+          "type": "choice",
+          "choice": "task",
+          "confidence": 0.94,
+          "probabilities": {
+            "task": 0.95,
+            "checklist": 0,
+            "note": 0.02,
+            "reply": 0,
+            "event": 0,
+            "update": 0,
+            "none": 0.03
+          }
+        },
+        "urgent": {
+          "type": "noul",
+          "noul": 0.25
+        }
+      },
+      "usage": {
+        "input_tokens": 601,
+        "output_tokens": 85
+      },
+      "correct": true
+    },
+    {
+      "id": 5,
+      "language": "ja",
+      "expected": "task",
+      "text": "洗濯をタスクに追加して",
+      "round": 1,
+      "latencyMs": 170,
+      "model": "jev-1.13.0",
+      "answers": {
+        "intent": {
+          "type": "choice",
+          "choice": "task",
+          "confidence": 1,
+          "probabilities": {
+            "task": 1,
+            "checklist": 0,
+            "note": 0,
+            "reply": 0,
+            "event": 0,
+            "update": 0,
+            "none": 0
+          }
+        },
+        "urgent": {
+          "type": "noul",
+          "noul": 0.08
+        }
+      },
+      "usage": {
+        "input_tokens": 593,
+        "output_tokens": 85
+      },
+      "correct": true
+    },
+    {
+      "id": 6,
+      "language": "ja",
+      "expected": "task",
+      "text": "今日中に請求書を提出。至急！",
+      "round": 1,
+      "latencyMs": 161,
+      "model": "jev-1.13.0",
+      "answers": {
+        "intent": {
+          "type": "choice",
+          "choice": "task",
+          "confidence": 0.94,
+          "probabilities": {
+            "task": 0.95,
+            "checklist": 0,
+            "note": 0,
+            "reply": 0.01,
+            "event": 0,
+            "update": 0,
+            "none": 0.04
+          }
+        },
+        "urgent": {
+          "type": "noul",
+          "noul": 0.97
+        }
+      },
+      "usage": {
+        "input_tokens": 595,
+        "output_tokens": 85
+      },
+      "correct": true
+    },
+    {
+      "id": 7,
+      "language": "ja",
+      "expected": "task",
+      "text": "時間があるときに本棚を整理する",
+      "round": 1,
+      "latencyMs": 148,
+      "model": "jev-1.13.0",
+      "answers": {
+        "intent": {
+          "type": "choice",
+          "choice": "task",
+          "confidence": 0.84,
+          "probabilities": {
+            "task": 0.86,
+            "checklist": 0,
+            "note": 0.08,
+            "reply": 0,
+            "event": 0,
+            "update": 0,
+            "none": 0.06
+          }
+        },
+        "urgent": {
+          "type": "noul",
+          "noul": 0.03
+        }
+      },
+      "usage": {
+        "input_tokens": 596,
+        "output_tokens": 85
+      },
+      "correct": true
+    },
+    {
+      "id": 8,
+      "language": "ja",
+      "expected": "task",
+      "text": "牛乳は買わないで、卵を買う",
+      "round": 1,
+      "latencyMs": 138,
+      "model": "jev-1.13.0",
+      "answers": {
+        "intent": {
+          "type": "choice",
+          "choice": "task",
+          "confidence": 0.58,
+          "probabilities": {
+            "task": 0.64,
+            "checklist": 0.32,
+            "note": 0,
+            "reply": 0,
+            "event": 0,
+            "update": 0.02,
+            "none": 0.02
+          }
+        },
+        "urgent": {
+          "type": "noul",
+          "noul": 0.14
+        }
+      },
+      "usage": {
+        "input_tokens": 595,
+        "output_tokens": 85
+      },
+      "correct": true
+    },
+    {
+      "id": 9,
+      "language": "ja",
+      "expected": "checklist",
+      "text": "牛乳、卵、パンを買う",
+      "round": 1,
+      "latencyMs": 146,
+      "model": "jev-1.13.0",
+      "answers": {
+        "intent": {
+          "type": "choice",
+          "choice": "checklist",
+          "confidence": 0.98,
+          "probabilities": {
+            "task": 0.02,
+            "checklist": 0.98,
+            "note": 0,
+            "reply": 0,
+            "event": 0,
+            "update": 0,
+            "none": 0
+          }
+        },
+        "urgent": {
+          "type": "noul",
+          "noul": 0.05
+        }
+      },
+      "usage": {
+        "input_tokens": 592,
+        "output_tokens": 87
+      },
+      "correct": true
+    },
+    {
+      "id": 10,
+      "language": "ja",
+      "expected": "checklist",
+      "text": "洗濯する、掃除する、ゴミを出す",
+      "round": 1,
+      "latencyMs": 184,
+      "model": "jev-1.13.0",
+      "answers": {
+        "intent": {
+          "type": "choice",
+          "choice": "checklist",
+          "confidence": 0.98,
+          "probabilities": {
+            "task": 0.01,
+            "checklist": 0.98,
+            "note": 0,
+            "reply": 0,
+            "event": 0,
+            "update": 0,
+            "none": 0.01
+          }
+        },
+        "urgent": {
+          "type": "noul",
+          "noul": 0.04
+        }
+      },
+      "usage": {
+        "input_tokens": 597,
+        "output_tokens": 87
+      },
+      "correct": true
+    },
+    {
+      "id": 11,
+      "language": "ja",
+      "expected": "checklist",
+      "text": "やること：\nメール確認\n資料印刷",
+      "round": 1,
+      "latencyMs": 148,
+      "model": "jev-1.13.0",
+      "answers": {
+        "intent": {
+          "type": "choice",
+          "choice": "checklist",
+          "confidence": 0.98,
+          "probabilities": {
+            "task": 0.01,
+            "checklist": 0.98,
+            "note": 0,
+            "reply": 0,
+            "event": 0,
+            "update": 0,
+            "none": 0.01
+          }
+        },
+        "urgent": {
+          "type": "noul",
+          "noul": 0.07
+        }
+      },
+      "usage": {
+        "input_tokens": 597,
+        "output_tokens": 87
+      },
+      "correct": true
+    },
+    {
+      "id": 12,
+      "language": "ja",
+      "expected": "checklist",
+      "text": "パスポート更新とホテル予約を追加",
+      "round": 1,
+      "latencyMs": 149,
+      "model": "jev-1.13.0",
+      "answers": {
+        "intent": {
+          "type": "choice",
+          "choice": "checklist",
+          "confidence": 0.86,
+          "probabilities": {
+            "task": 0.12,
+            "checklist": 0.88,
+            "note": 0,
+            "reply": 0,
+            "event": 0,
+            "update": 0,
+            "none": 0
+          }
+        },
+        "urgent": {
+          "type": "noul",
+          "noul": 0.06
+        }
+      },
+      "usage": {
+        "input_tokens": 597,
+        "output_tokens": 87
+      },
+      "correct": true
+    },
+    {
+      "id": 13,
+      "language": "ja",
+      "expected": "note",
+      "text": "メモ：会議室の暗証番号は1234",
+      "round": 1,
+      "latencyMs": 154,
+      "model": "jev-1.13.0",
+      "answers": {
+        "intent": {
+          "type": "choice",
+          "choice": "note",
+          "confidence": 0.99,
+          "probabilities": {
+            "task": 0,
+            "checklist": 0,
+            "note": 0.99,
+            "reply": 0,
+            "event": 0,
+            "update": 0,
+            "none": 0.01
+          }
+        },
+        "urgent": {
+          "type": "noul",
+          "noul": 0.03
+        }
+      },
+      "usage": {
+        "input_tokens": 597,
+        "output_tokens": 85
+      },
+      "correct": true
+    },
+    {
+      "id": 14,
+      "language": "ja",
+      "expected": "note",
+      "text": "今日は疲れたなあ",
+      "round": 1,
+      "latencyMs": 144,
+      "model": "jev-1.13.0",
+      "answers": {
+        "intent": {
+          "type": "choice",
+          "choice": "note",
+          "confidence": 0.98,
+          "probabilities": {
+            "task": 0,
+            "checklist": 0,
+            "note": 0.98,
+            "reply": 0,
+            "event": 0,
+            "update": 0,
+            "none": 0.02
+          }
+        },
+        "urgent": {
+          "type": "noul",
+          "noul": 0.02
+        }
+      },
+      "usage": {
+        "input_tokens": 589,
+        "output_tokens": 85
+      },
+      "correct": true
+    },
+    {
+      "id": 15,
+      "language": "ja",
+      "expected": "note",
+      "text": "アイデア：ホーム画面に天気を表示する",
+      "round": 1,
+      "latencyMs": 155,
+      "model": "jev-1.13.0",
+      "answers": {
+        "intent": {
+          "type": "choice",
+          "choice": "note",
+          "confidence": 0.74,
+          "probabilities": {
+            "task": 0.19,
+            "checklist": 0,
+            "note": 0.78,
+            "reply": 0,
+            "event": 0,
+            "update": 0,
+            "none": 0.03
+          }
+        },
+        "urgent": {
+          "type": "noul",
+          "noul": 0.03
+        }
+      },
+      "usage": {
+        "input_tokens": 599,
+        "output_tokens": 85
+      },
+      "correct": true
+    },
+    {
+      "id": 16,
+      "language": "ja",
+      "expected": "note",
+      "text": "昨日、牛乳を買った",
+      "round": 1,
+      "latencyMs": 161,
+      "model": "jev-1.13.0",
+      "answers": {
+        "intent": {
+          "type": "choice",
+          "choice": "note",
+          "confidence": 0.98,
+          "probabilities": {
+            "task": 0.01,
+            "checklist": 0,
+            "note": 0.98,
+            "reply": 0,
+            "event": 0,
+            "update": 0,
+            "none": 0.01
+          }
+        },
+        "urgent": {
+          "type": "noul",
+          "noul": 0.02
+        }
+      },
+      "usage": {
+        "input_tokens": 589,
+        "output_tokens": 85
+      },
+      "correct": true
+    },
+    {
+      "id": 17,
+      "language": "ja",
+      "expected": "reply",
+      "text": "田中さんに返信したい",
+      "round": 1,
+      "latencyMs": 170,
+      "model": "jev-1.13.0",
+      "answers": {
+        "intent": {
+          "type": "choice",
+          "choice": "reply",
+          "confidence": 0.99,
+          "probabilities": {
+            "task": 0,
+            "checklist": 0,
+            "note": 0,
+            "reply": 0.99,
+            "event": 0,
+            "update": 0,
+            "none": 0.01
+          }
+        },
+        "urgent": {
+          "type": "noul",
+          "noul": 0.07
+        }
+      },
+      "usage": {
+        "input_tokens": 591,
+        "output_tokens": 85
+      },
+      "correct": true
+    },
+    {
+      "id": 18,
+      "language": "ja",
+      "expected": "reply",
+      "text": "佐藤さんへの返信案を考えて",
+      "round": 1,
+      "latencyMs": 273,
+      "model": "jev-1.13.0",
+      "answers": {
+        "intent": {
+          "type": "choice",
+          "choice": "reply",
+          "confidence": 0.99,
+          "probabilities": {
+            "task": 0,
+            "checklist": 0,
+            "note": 0,
+            "reply": 0.99,
+            "event": 0,
+            "update": 0,
+            "none": 0.01
+          }
+        },
+        "urgent": {
+          "type": "noul",
+          "noul": 0.07
+        }
+      },
+      "usage": {
+        "input_tokens": 594,
+        "output_tokens": 85
+      },
+      "correct": true
+    },
+    {
+      "id": 19,
+      "language": "ja",
+      "expected": "reply",
+      "text": "Slackで来た依頼に返事したい",
+      "round": 1,
+      "latencyMs": 156,
+      "model": "jev-1.13.0",
+      "answers": {
+        "intent": {
+          "type": "choice",
+          "choice": "reply",
+          "confidence": 0.99,
+          "probabilities": {
+            "task": 0,
+            "checklist": 0,
+            "note": 0,
+            "reply": 0.99,
+            "event": 0,
+            "update": 0,
+            "none": 0.01
+          }
+        },
+        "urgent": {
+          "type": "noul",
+          "noul": 0.27
+        }
+      },
+      "usage": {
+        "input_tokens": 594,
+        "output_tokens": 85
+      },
+      "correct": true
+    },
+    {
+      "id": 20,
+      "language": "ja",
+      "expected": "event",
+      "text": "明日15時に田中さんと打ち合わせ",
+      "round": 1,
+      "latencyMs": 152,
+      "model": "jev-1.13.0",
+      "answers": {
+        "intent": {
+          "type": "choice",
+          "choice": "event",
+          "confidence": 0.94,
+          "probabilities": {
+            "task": 0,
+            "checklist": 0,
+            "note": 0.03,
+            "reply": 0,
+            "event": 0.95,
+            "update": 0,
+            "none": 0.02
+          }
+        },
+        "urgent": {
+          "type": "noul",
+          "noul": 0.06
+        }
+      },
+      "usage": {
+        "input_tokens": 597,
+        "output_tokens": 85
+      },
+      "correct": true
+    },
+    {
+      "id": 21,
+      "language": "ja",
+      "expected": "event",
+      "text": "金曜の19時から友達と夕飯",
+      "round": 1,
+      "latencyMs": 142,
+      "model": "jev-1.13.0",
+      "answers": {
+        "intent": {
+          "type": "choice",
+          "choice": "event",
+          "confidence": 0.96,
+          "probabilities": {
+            "task": 0,
+            "checklist": 0,
+            "note": 0.02,
+            "reply": 0,
+            "event": 0.97,
+            "update": 0,
+            "none": 0.01
+          }
+        },
+        "urgent": {
+          "type": "noul",
+          "noul": 0.03
+        }
+      },
+      "usage": {
+        "input_tokens": 594,
+        "output_tokens": 85
+      },
+      "correct": true
+    },
+    {
+      "id": 22,
+      "language": "ja",
+      "expected": "event",
+      "text": "来週月曜10時にZoomで面談",
+      "round": 1,
+      "latencyMs": 438,
+      "model": "jev-1.13.0",
+      "answers": {
+        "intent": {
+          "type": "choice",
+          "choice": "event",
+          "confidence": 0.94,
+          "probabilities": {
+            "task": 0.01,
+            "checklist": 0,
+            "note": 0.02,
+            "reply": 0,
+            "event": 0.95,
+            "update": 0,
+            "none": 0.02
+          }
+        },
+        "urgent": {
+          "type": "noul",
+          "noul": 0.05
+        }
+      },
+      "usage": {
+        "input_tokens": 594,
+        "output_tokens": 85
+      },
+      "correct": true
+    },
+    {
+      "id": 23,
+      "language": "ja",
+      "expected": "update",
+      "text": "買い物タスクを完了にして",
+      "round": 1,
+      "latencyMs": 168,
+      "model": "jev-1.13.0",
+      "answers": {
+        "intent": {
+          "type": "choice",
+          "choice": "update",
+          "confidence": 0.99,
+          "probabilities": {
+            "task": 0,
+            "checklist": 0,
+            "note": 0,
+            "reply": 0,
+            "event": 0,
+            "update": 0.99,
+            "none": 0.01
+          }
+        },
+        "urgent": {
+          "type": "noul",
+          "noul": 0.2
+        }
+      },
+      "usage": {
+        "input_tokens": 593,
+        "output_tokens": 85
+      },
+      "correct": true
+    },
+    {
+      "id": 24,
+      "language": "ja",
+      "expected": "update",
+      "text": "見積書のタスクを保留にする",
+      "round": 1,
+      "latencyMs": 153,
+      "model": "jev-1.13.0",
+      "answers": {
+        "intent": {
+          "type": "choice",
+          "choice": "update",
+          "confidence": 1,
+          "probabilities": {
+            "task": 0,
+            "checklist": 0,
+            "note": 0,
+            "reply": 0,
+            "event": 0,
+            "update": 1,
+            "none": 0
+          }
+        },
+        "urgent": {
+          "type": "noul",
+          "noul": 0.04
+        }
+      },
+      "usage": {
+        "input_tokens": 594,
+        "output_tokens": 85
+      },
+      "correct": true
+    },
+    {
+      "id": 25,
+      "language": "ja",
+      "expected": "update",
+      "text": "掃除のタスクを未完了に戻す",
+      "round": 1,
+      "latencyMs": 157,
+      "model": "jev-1.13.0",
+      "answers": {
+        "intent": {
+          "type": "choice",
+          "choice": "update",
+          "confidence": 1,
+          "probabilities": {
+            "task": 0,
+            "checklist": 0,
+            "note": 0,
+            "reply": 0,
+            "event": 0,
+            "update": 1,
+            "none": 0
+          }
+        },
+        "urgent": {
+          "type": "noul",
+          "noul": 0.11
+        }
+      },
+      "usage": {
+        "input_tokens": 594,
+        "output_tokens": 85
+      },
+      "correct": true
+    },
+    {
+      "id": 26,
+      "language": "ja",
+      "expected": "none",
+      "text": "タスクは追加しないで",
+      "round": 1,
+      "latencyMs": 169,
+      "model": "jev-1.13.0",
+      "answers": {
+        "intent": {
+          "type": "choice",
+          "choice": "none",
+          "confidence": 0.99,
+          "probabilities": {
+            "task": 0.01,
+            "checklist": 0,
+            "note": 0,
+            "reply": 0,
+            "event": 0,
+            "update": 0,
+            "none": 0.99
+          }
+        },
+        "urgent": {
+          "type": "noul",
+          "noul": 0.07
+        }
+      },
+      "usage": {
+        "input_tokens": 591,
+        "output_tokens": 85
+      },
+      "correct": true
+    },
+    {
+      "id": 27,
+      "language": "ja",
+      "expected": "none",
+      "text": "牛乳を買うタスクは作らないで",
+      "round": 1,
+      "latencyMs": 186,
+      "model": "jev-1.13.0",
+      "answers": {
+        "intent": {
+          "type": "choice",
+          "choice": "none",
+          "confidence": 1,
+          "probabilities": {
+            "task": 0,
+            "checklist": 0,
+            "note": 0,
+            "reply": 0,
+            "event": 0,
+            "update": 0,
+            "none": 1
+          }
+        },
+        "urgent": {
+          "type": "noul",
+          "noul": 0.05
+        }
+      },
+      "usage": {
+        "input_tokens": 595,
+        "output_tokens": 85
+      },
+      "correct": true
+    },
+    {
+      "id": 28,
+      "language": "ja",
+      "expected": "none",
+      "text": "明日までに",
+      "round": 1,
+      "latencyMs": 235,
+      "model": "jev-1.13.0",
+      "answers": {
+        "intent": {
+          "type": "choice",
+          "choice": "none",
+          "confidence": 0.88,
+          "probabilities": {
+            "task": 0.08,
+            "checklist": 0,
+            "note": 0.02,
+            "reply": 0,
+            "event": 0,
+            "update": 0,
+            "none": 0.9
+          }
+        },
+        "urgent": {
+          "type": "noul",
+          "noul": 0.47
+        }
+      },
+      "usage": {
+        "input_tokens": 586,
+        "output_tokens": 85
+      },
+      "correct": true
+    },
+    {
+      "id": 29,
+      "language": "ja",
+      "expected": "none",
+      "text": "えーと",
+      "round": 1,
+      "latencyMs": 152,
+      "model": "jev-1.13.0",
+      "answers": {
+        "intent": {
+          "type": "choice",
+          "choice": "none",
+          "confidence": 1,
+          "probabilities": {
+            "task": 0,
+            "checklist": 0,
+            "note": 0,
+            "reply": 0,
+            "event": 0,
+            "update": 0,
+            "none": 1
+          }
+        },
+        "urgent": {
+          "type": "noul",
+          "noul": 0.02
+        }
+      },
+      "usage": {
+        "input_tokens": 584,
+        "output_tokens": 85
+      },
+      "correct": true
+    },
+    {
+      "id": 30,
+      "language": "ja",
+      "expected": "none",
+      "text": "",
+      "round": 1,
+      "latencyMs": 146,
+      "model": "jev-1.13.0",
+      "answers": {
+        "intent": {
+          "type": "choice",
+          "choice": "none",
+          "confidence": 1,
+          "probabilities": {
+            "task": 0,
+            "checklist": 0,
+            "note": 0,
+            "reply": 0,
+            "event": 0,
+            "update": 0,
+            "none": 1
+          }
+        },
+        "urgent": {
+          "type": "noul",
+          "noul": 0.03
+        }
+      },
+      "usage": {
+        "input_tokens": 581,
+        "output_tokens": 85
+      },
+      "correct": true
+    },
+    {
+      "id": 31,
+      "language": "ja",
+      "expected": "none",
+      "text": "タスクとメモの違いは何？",
+      "round": 1,
+      "latencyMs": 136,
+      "model": "jev-1.13.0",
+      "answers": {
+        "intent": {
+          "type": "choice",
+          "choice": "none",
+          "confidence": 1,
+          "probabilities": {
+            "task": 0,
+            "checklist": 0,
+            "note": 0,
+            "reply": 0,
+            "event": 0,
+            "update": 0,
+            "none": 1
+          }
+        },
+        "urgent": {
+          "type": "noul",
+          "noul": 0.04
+        }
+      },
+      "usage": {
+        "input_tokens": 593,
+        "output_tokens": 85
+      },
+      "correct": true
+    },
+    {
+      "id": 32,
+      "language": "ja",
+      "expected": "none",
+      "text": "天気を教えて",
+      "round": 1,
+      "latencyMs": 153,
+      "model": "jev-1.13.0",
+      "answers": {
+        "intent": {
+          "type": "choice",
+          "choice": "none",
+          "confidence": 0.99,
+          "probabilities": {
+            "task": 0.01,
+            "checklist": 0,
+            "note": 0,
+            "reply": 0,
+            "event": 0,
+            "update": 0,
+            "none": 0.99
+          }
+        },
+        "urgent": {
+          "type": "noul",
+          "noul": 0.06
+        }
+      },
+      "usage": {
+        "input_tokens": 587,
+        "output_tokens": 85
+      },
+      "correct": true
+    },
+    {
+      "id": 33,
+      "language": "en",
+      "expected": "task",
+      "text": "Buy milk tomorrow",
+      "round": 1,
+      "latencyMs": 150,
+      "model": "jev-1.13.0",
+      "answers": {
+        "intent": {
+          "type": "choice",
+          "choice": "task",
+          "confidence": 1,
+          "probabilities": {
+            "task": 1,
+            "checklist": 0,
+            "note": 0,
+            "reply": 0,
+            "event": 0,
+            "update": 0,
+            "none": 0
+          }
+        },
+        "urgent": {
+          "type": "noul",
+          "noul": 0.09
+        }
+      },
+      "usage": {
+        "input_tokens": 584,
+        "output_tokens": 85
+      },
+      "correct": true
+    },
+    {
+      "id": 34,
+      "language": "en",
+      "expected": "task",
+      "text": "Submit the invoice urgently today",
+      "round": 1,
+      "latencyMs": 137,
+      "model": "jev-1.13.0",
+      "answers": {
+        "intent": {
+          "type": "choice",
+          "choice": "task",
+          "confidence": 0.87,
+          "probabilities": {
+            "task": 0.89,
+            "checklist": 0,
+            "note": 0,
+            "reply": 0.05,
+            "event": 0,
+            "update": 0,
+            "none": 0.06
+          }
+        },
+        "urgent": {
+          "type": "noul",
+          "noul": 0.98
+        }
+      },
+      "usage": {
+        "input_tokens": 586,
+        "output_tokens": 85
+      },
+      "correct": true
+    },
+    {
+      "id": 35,
+      "language": "en",
+      "expected": "checklist",
+      "text": "Buy milk, eggs and bread",
+      "round": 1,
+      "latencyMs": 145,
+      "model": "jev-1.13.0",
+      "answers": {
+        "intent": {
+          "type": "choice",
+          "choice": "checklist",
+          "confidence": 0.99,
+          "probabilities": {
+            "task": 0.01,
+            "checklist": 0.99,
+            "note": 0,
+            "reply": 0,
+            "event": 0,
+            "update": 0,
+            "none": 0
+          }
+        },
+        "urgent": {
+          "type": "noul",
+          "noul": 0.05
+        }
+      },
+      "usage": {
+        "input_tokens": 587,
+        "output_tokens": 87
+      },
+      "correct": true
+    },
+    {
+      "id": 36,
+      "language": "en",
+      "expected": "note",
+      "text": "Note: the meeting room code is 1234",
+      "round": 1,
+      "latencyMs": 199,
+      "model": "jev-1.13.0",
+      "answers": {
+        "intent": {
+          "type": "choice",
+          "choice": "note",
+          "confidence": 0.96,
+          "probabilities": {
+            "task": 0,
+            "checklist": 0,
+            "note": 0.97,
+            "reply": 0,
+            "event": 0,
+            "update": 0,
+            "none": 0.03
+          }
+        },
+        "urgent": {
+          "type": "noul",
+          "noul": 0.02
+        }
+      },
+      "usage": {
+        "input_tokens": 593,
+        "output_tokens": 85
+      },
+      "correct": true
+    },
+    {
+      "id": 37,
+      "language": "en",
+      "expected": "reply",
+      "text": "Help me draft a reply to Alice",
+      "round": 1,
+      "latencyMs": 156,
+      "model": "jev-1.13.0",
+      "answers": {
+        "intent": {
+          "type": "choice",
+          "choice": "reply",
+          "confidence": 1,
+          "probabilities": {
+            "task": 0,
+            "checklist": 0,
+            "note": 0,
+            "reply": 1,
+            "event": 0,
+            "update": 0,
+            "none": 0
+          }
+        },
+        "urgent": {
+          "type": "noul",
+          "noul": 0.07
+        }
+      },
+      "usage": {
+        "input_tokens": 588,
+        "output_tokens": 85
+      },
+      "correct": true
+    },
+    {
+      "id": 38,
+      "language": "en",
+      "expected": "event",
+      "text": "Lunch with Bob on Friday at noon",
+      "round": 1,
+      "latencyMs": 215,
+      "model": "jev-1.13.0",
+      "answers": {
+        "intent": {
+          "type": "choice",
+          "choice": "event",
+          "confidence": 0.95,
+          "probabilities": {
+            "task": 0.01,
+            "checklist": 0,
+            "note": 0.01,
+            "reply": 0,
+            "event": 0.96,
+            "update": 0,
+            "none": 0.02
+          }
+        },
+        "urgent": {
+          "type": "noul",
+          "noul": 0.03
+        }
+      },
+      "usage": {
+        "input_tokens": 589,
+        "output_tokens": 85
+      },
+      "correct": true
+    },
+    {
+      "id": 39,
+      "language": "en",
+      "expected": "update",
+      "text": "Mark the shopping task as done",
+      "round": 1,
+      "latencyMs": 233,
+      "model": "jev-1.13.0",
+      "answers": {
+        "intent": {
+          "type": "choice",
+          "choice": "update",
+          "confidence": 1,
+          "probabilities": {
+            "task": 0,
+            "checklist": 0,
+            "note": 0,
+            "reply": 0,
+            "event": 0,
+            "update": 1,
+            "none": 0
+          }
+        },
+        "urgent": {
+          "type": "noul",
+          "noul": 0.11
+        }
+      },
+      "usage": {
+        "input_tokens": 587,
+        "output_tokens": 85
+      },
+      "correct": true
+    },
+    {
+      "id": 40,
+      "language": "en",
+      "expected": "none",
+      "text": "Do not create a task to buy milk",
+      "round": 1,
+      "latencyMs": 158,
+      "model": "jev-1.13.0",
+      "answers": {
+        "intent": {
+          "type": "choice",
+          "choice": "none",
+          "confidence": 0.99,
+          "probabilities": {
+            "task": 0.01,
+            "checklist": 0,
+            "note": 0,
+            "reply": 0,
+            "event": 0,
+            "update": 0,
+            "none": 0.99
+          }
+        },
+        "urgent": {
+          "type": "noul",
+          "noul": 0.03
+        }
+      },
+      "usage": {
+        "input_tokens": 589,
+        "output_tokens": 85
+      },
+      "correct": true
+    },
+    {
+      "id": 40,
+      "language": "en",
+      "expected": "none",
+      "text": "Do not create a task to buy milk",
+      "round": 2,
+      "latencyMs": 151,
+      "model": "jev-1.13.0",
+      "answers": {
+        "intent": {
+          "type": "choice",
+          "choice": "none",
+          "confidence": 0.99,
+          "probabilities": {
+            "task": 0.01,
+            "checklist": 0,
+            "note": 0,
+            "reply": 0,
+            "event": 0,
+            "update": 0,
+            "none": 0.99
+          }
+        },
+        "urgent": {
+          "type": "noul",
+          "noul": 0.03
+        }
+      },
+      "usage": {
+        "input_tokens": 589,
+        "output_tokens": 85
+      },
+      "correct": true
+    },
+    {
+      "id": 39,
+      "language": "en",
+      "expected": "update",
+      "text": "Mark the shopping task as done",
+      "round": 2,
+      "latencyMs": 232,
+      "model": "jev-1.13.0",
+      "answers": {
+        "intent": {
+          "type": "choice",
+          "choice": "update",
+          "confidence": 1,
+          "probabilities": {
+            "task": 0,
+            "checklist": 0,
+            "note": 0,
+            "reply": 0,
+            "event": 0,
+            "update": 1,
+            "none": 0
+          }
+        },
+        "urgent": {
+          "type": "noul",
+          "noul": 0.1
+        }
+      },
+      "usage": {
+        "input_tokens": 587,
+        "output_tokens": 85
+      },
+      "correct": true
+    },
+    {
+      "id": 38,
+      "language": "en",
+      "expected": "event",
+      "text": "Lunch with Bob on Friday at noon",
+      "round": 2,
+      "latencyMs": 189,
+      "model": "jev-1.13.0",
+      "answers": {
+        "intent": {
+          "type": "choice",
+          "choice": "event",
+          "confidence": 0.96,
+          "probabilities": {
+            "task": 0.01,
+            "checklist": 0,
+            "note": 0.01,
+            "reply": 0,
+            "event": 0.97,
+            "update": 0,
+            "none": 0.01
+          }
+        },
+        "urgent": {
+          "type": "noul",
+          "noul": 0.03
+        }
+      },
+      "usage": {
+        "input_tokens": 589,
+        "output_tokens": 85
+      },
+      "correct": true
+    },
+    {
+      "id": 37,
+      "language": "en",
+      "expected": "reply",
+      "text": "Help me draft a reply to Alice",
+      "round": 2,
+      "latencyMs": 258,
+      "model": "jev-1.13.0",
+      "answers": {
+        "intent": {
+          "type": "choice",
+          "choice": "reply",
+          "confidence": 1,
+          "probabilities": {
+            "task": 0,
+            "checklist": 0,
+            "note": 0,
+            "reply": 1,
+            "event": 0,
+            "update": 0,
+            "none": 0
+          }
+        },
+        "urgent": {
+          "type": "noul",
+          "noul": 0.07
+        }
+      },
+      "usage": {
+        "input_tokens": 588,
+        "output_tokens": 85
+      },
+      "correct": true
+    },
+    {
+      "id": 36,
+      "language": "en",
+      "expected": "note",
+      "text": "Note: the meeting room code is 1234",
+      "round": 2,
+      "latencyMs": 254,
+      "model": "jev-1.13.0",
+      "answers": {
+        "intent": {
+          "type": "choice",
+          "choice": "note",
+          "confidence": 0.96,
+          "probabilities": {
+            "task": 0,
+            "checklist": 0,
+            "note": 0.97,
+            "reply": 0,
+            "event": 0,
+            "update": 0,
+            "none": 0.03
+          }
+        },
+        "urgent": {
+          "type": "noul",
+          "noul": 0.03
+        }
+      },
+      "usage": {
+        "input_tokens": 593,
+        "output_tokens": 85
+      },
+      "correct": true
+    },
+    {
+      "id": 35,
+      "language": "en",
+      "expected": "checklist",
+      "text": "Buy milk, eggs and bread",
+      "round": 2,
+      "latencyMs": 198,
+      "model": "jev-1.13.0",
+      "answers": {
+        "intent": {
+          "type": "choice",
+          "choice": "checklist",
+          "confidence": 0.99,
+          "probabilities": {
+            "task": 0.01,
+            "checklist": 0.99,
+            "note": 0,
+            "reply": 0,
+            "event": 0,
+            "update": 0,
+            "none": 0
+          }
+        },
+        "urgent": {
+          "type": "noul",
+          "noul": 0.04
+        }
+      },
+      "usage": {
+        "input_tokens": 587,
+        "output_tokens": 87
+      },
+      "correct": true
+    },
+    {
+      "id": 34,
+      "language": "en",
+      "expected": "task",
+      "text": "Submit the invoice urgently today",
+      "round": 2,
+      "latencyMs": 203,
+      "model": "jev-1.13.0",
+      "answers": {
+        "intent": {
+          "type": "choice",
+          "choice": "task",
+          "confidence": 0.87,
+          "probabilities": {
+            "task": 0.89,
+            "checklist": 0,
+            "note": 0,
+            "reply": 0.06,
+            "event": 0,
+            "update": 0,
+            "none": 0.05
+          }
+        },
+        "urgent": {
+          "type": "noul",
+          "noul": 0.98
+        }
+      },
+      "usage": {
+        "input_tokens": 586,
+        "output_tokens": 85
+      },
+      "correct": true
+    },
+    {
+      "id": 33,
+      "language": "en",
+      "expected": "task",
+      "text": "Buy milk tomorrow",
+      "round": 2,
+      "latencyMs": 397,
+      "model": "jev-1.13.0",
+      "answers": {
+        "intent": {
+          "type": "choice",
+          "choice": "task",
+          "confidence": 1,
+          "probabilities": {
+            "task": 1,
+            "checklist": 0,
+            "note": 0,
+            "reply": 0,
+            "event": 0,
+            "update": 0,
+            "none": 0
+          }
+        },
+        "urgent": {
+          "type": "noul",
+          "noul": 0.1
+        }
+      },
+      "usage": {
+        "input_tokens": 584,
+        "output_tokens": 85
+      },
+      "correct": true
+    },
+    {
+      "id": 32,
+      "language": "ja",
+      "expected": "none",
+      "text": "天気を教えて",
+      "round": 2,
+      "latencyMs": 166,
+      "model": "jev-1.13.0",
+      "answers": {
+        "intent": {
+          "type": "choice",
+          "choice": "none",
+          "confidence": 0.99,
+          "probabilities": {
+            "task": 0.01,
+            "checklist": 0,
+            "note": 0,
+            "reply": 0,
+            "event": 0,
+            "update": 0,
+            "none": 0.99
+          }
+        },
+        "urgent": {
+          "type": "noul",
+          "noul": 0.06
+        }
+      },
+      "usage": {
+        "input_tokens": 587,
+        "output_tokens": 85
+      },
+      "correct": true
+    },
+    {
+      "id": 31,
+      "language": "ja",
+      "expected": "none",
+      "text": "タスクとメモの違いは何？",
+      "round": 2,
+      "latencyMs": 215,
+      "model": "jev-1.13.0",
+      "answers": {
+        "intent": {
+          "type": "choice",
+          "choice": "none",
+          "confidence": 1,
+          "probabilities": {
+            "task": 0,
+            "checklist": 0,
+            "note": 0,
+            "reply": 0,
+            "event": 0,
+            "update": 0,
+            "none": 1
+          }
+        },
+        "urgent": {
+          "type": "noul",
+          "noul": 0.03
+        }
+      },
+      "usage": {
+        "input_tokens": 593,
+        "output_tokens": 85
+      },
+      "correct": true
+    },
+    {
+      "id": 30,
+      "language": "ja",
+      "expected": "none",
+      "text": "",
+      "round": 2,
+      "latencyMs": 176,
+      "model": "jev-1.13.0",
+      "answers": {
+        "intent": {
+          "type": "choice",
+          "choice": "none",
+          "confidence": 1,
+          "probabilities": {
+            "task": 0,
+            "checklist": 0,
+            "note": 0,
+            "reply": 0,
+            "event": 0,
+            "update": 0,
+            "none": 1
+          }
+        },
+        "urgent": {
+          "type": "noul",
+          "noul": 0.03
+        }
+      },
+      "usage": {
+        "input_tokens": 581,
+        "output_tokens": 85
+      },
+      "correct": true
+    },
+    {
+      "id": 29,
+      "language": "ja",
+      "expected": "none",
+      "text": "えーと",
+      "round": 2,
+      "latencyMs": 190,
+      "model": "jev-1.13.0",
+      "answers": {
+        "intent": {
+          "type": "choice",
+          "choice": "none",
+          "confidence": 1,
+          "probabilities": {
+            "task": 0,
+            "checklist": 0,
+            "note": 0,
+            "reply": 0,
+            "event": 0,
+            "update": 0,
+            "none": 1
+          }
+        },
+        "urgent": {
+          "type": "noul",
+          "noul": 0.03
+        }
+      },
+      "usage": {
+        "input_tokens": 584,
+        "output_tokens": 85
+      },
+      "correct": true
+    },
+    {
+      "id": 28,
+      "language": "ja",
+      "expected": "none",
+      "text": "明日までに",
+      "round": 2,
+      "latencyMs": 359,
+      "model": "jev-1.13.0",
+      "answers": {
+        "intent": {
+          "type": "choice",
+          "choice": "none",
+          "confidence": 0.91,
+          "probabilities": {
+            "task": 0.06,
+            "checklist": 0,
+            "note": 0.02,
+            "reply": 0,
+            "event": 0,
+            "update": 0,
+            "none": 0.92
+          }
+        },
+        "urgent": {
+          "type": "noul",
+          "noul": 0.41
+        }
+      },
+      "usage": {
+        "input_tokens": 586,
+        "output_tokens": 85
+      },
+      "correct": true
+    },
+    {
+      "id": 27,
+      "language": "ja",
+      "expected": "none",
+      "text": "牛乳を買うタスクは作らないで",
+      "round": 2,
+      "latencyMs": 141,
+      "model": "jev-1.13.0",
+      "answers": {
+        "intent": {
+          "type": "choice",
+          "choice": "none",
+          "confidence": 1,
+          "probabilities": {
+            "task": 0,
+            "checklist": 0,
+            "note": 0,
+            "reply": 0,
+            "event": 0,
+            "update": 0,
+            "none": 1
+          }
+        },
+        "urgent": {
+          "type": "noul",
+          "noul": 0.04
+        }
+      },
+      "usage": {
+        "input_tokens": 595,
+        "output_tokens": 85
+      },
+      "correct": true
+    },
+    {
+      "id": 26,
+      "language": "ja",
+      "expected": "none",
+      "text": "タスクは追加しないで",
+      "round": 2,
+      "latencyMs": 172,
+      "model": "jev-1.13.0",
+      "answers": {
+        "intent": {
+          "type": "choice",
+          "choice": "none",
+          "confidence": 0.99,
+          "probabilities": {
+            "task": 0.01,
+            "checklist": 0,
+            "note": 0,
+            "reply": 0,
+            "event": 0,
+            "update": 0,
+            "none": 0.99
+          }
+        },
+        "urgent": {
+          "type": "noul",
+          "noul": 0.07
+        }
+      },
+      "usage": {
+        "input_tokens": 591,
+        "output_tokens": 85
+      },
+      "correct": true
+    },
+    {
+      "id": 25,
+      "language": "ja",
+      "expected": "update",
+      "text": "掃除のタスクを未完了に戻す",
+      "round": 2,
+      "latencyMs": 138,
+      "model": "jev-1.13.0",
+      "answers": {
+        "intent": {
+          "type": "choice",
+          "choice": "update",
+          "confidence": 1,
+          "probabilities": {
+            "task": 0,
+            "checklist": 0,
+            "note": 0,
+            "reply": 0,
+            "event": 0,
+            "update": 1,
+            "none": 0
+          }
+        },
+        "urgent": {
+          "type": "noul",
+          "noul": 0.13
+        }
+      },
+      "usage": {
+        "input_tokens": 594,
+        "output_tokens": 85
+      },
+      "correct": true
+    },
+    {
+      "id": 24,
+      "language": "ja",
+      "expected": "update",
+      "text": "見積書のタスクを保留にする",
+      "round": 2,
+      "latencyMs": 144,
+      "model": "jev-1.13.0",
+      "answers": {
+        "intent": {
+          "type": "choice",
+          "choice": "update",
+          "confidence": 1,
+          "probabilities": {
+            "task": 0,
+            "checklist": 0,
+            "note": 0,
+            "reply": 0,
+            "event": 0,
+            "update": 1,
+            "none": 0
+          }
+        },
+        "urgent": {
+          "type": "noul",
+          "noul": 0.05
+        }
+      },
+      "usage": {
+        "input_tokens": 594,
+        "output_tokens": 85
+      },
+      "correct": true
+    },
+    {
+      "id": 23,
+      "language": "ja",
+      "expected": "update",
+      "text": "買い物タスクを完了にして",
+      "round": 2,
+      "latencyMs": 173,
+      "model": "jev-1.13.0",
+      "answers": {
+        "intent": {
+          "type": "choice",
+          "choice": "update",
+          "confidence": 1,
+          "probabilities": {
+            "task": 0,
+            "checklist": 0,
+            "note": 0,
+            "reply": 0,
+            "event": 0,
+            "update": 1,
+            "none": 0
+          }
+        },
+        "urgent": {
+          "type": "noul",
+          "noul": 0.21
+        }
+      },
+      "usage": {
+        "input_tokens": 593,
+        "output_tokens": 85
+      },
+      "correct": true
+    },
+    {
+      "id": 22,
+      "language": "ja",
+      "expected": "event",
+      "text": "来週月曜10時にZoomで面談",
+      "round": 2,
+      "latencyMs": 203,
+      "model": "jev-1.13.0",
+      "answers": {
+        "intent": {
+          "type": "choice",
+          "choice": "event",
+          "confidence": 0.92,
+          "probabilities": {
+            "task": 0.01,
+            "checklist": 0,
+            "note": 0.03,
+            "reply": 0,
+            "event": 0.93,
+            "update": 0,
+            "none": 0.02
+          }
+        },
+        "urgent": {
+          "type": "noul",
+          "noul": 0.06
+        }
+      },
+      "usage": {
+        "input_tokens": 594,
+        "output_tokens": 85
+      },
+      "correct": true
+    },
+    {
+      "id": 21,
+      "language": "ja",
+      "expected": "event",
+      "text": "金曜の19時から友達と夕飯",
+      "round": 2,
+      "latencyMs": 156,
+      "model": "jev-1.13.0",
+      "answers": {
+        "intent": {
+          "type": "choice",
+          "choice": "event",
+          "confidence": 0.95,
+          "probabilities": {
+            "task": 0,
+            "checklist": 0,
+            "note": 0.03,
+            "reply": 0,
+            "event": 0.96,
+            "update": 0,
+            "none": 0.01
+          }
+        },
+        "urgent": {
+          "type": "noul",
+          "noul": 0.03
+        }
+      },
+      "usage": {
+        "input_tokens": 594,
+        "output_tokens": 85
+      },
+      "correct": true
+    },
+    {
+      "id": 20,
+      "language": "ja",
+      "expected": "event",
+      "text": "明日15時に田中さんと打ち合わせ",
+      "round": 2,
+      "latencyMs": 175,
+      "model": "jev-1.13.0",
+      "answers": {
+        "intent": {
+          "type": "choice",
+          "choice": "event",
+          "confidence": 0.96,
+          "probabilities": {
+            "task": 0,
+            "checklist": 0,
+            "note": 0.02,
+            "reply": 0,
+            "event": 0.97,
+            "update": 0,
+            "none": 0.01
+          }
+        },
+        "urgent": {
+          "type": "noul",
+          "noul": 0.06
+        }
+      },
+      "usage": {
+        "input_tokens": 597,
+        "output_tokens": 85
+      },
+      "correct": true
+    },
+    {
+      "id": 19,
+      "language": "ja",
+      "expected": "reply",
+      "text": "Slackで来た依頼に返事したい",
+      "round": 2,
+      "latencyMs": 149,
+      "model": "jev-1.13.0",
+      "answers": {
+        "intent": {
+          "type": "choice",
+          "choice": "reply",
+          "confidence": 0.99,
+          "probabilities": {
+            "task": 0,
+            "checklist": 0,
+            "note": 0,
+            "reply": 0.99,
+            "event": 0,
+            "update": 0,
+            "none": 0.01
+          }
+        },
+        "urgent": {
+          "type": "noul",
+          "noul": 0.3
+        }
+      },
+      "usage": {
+        "input_tokens": 594,
+        "output_tokens": 85
+      },
+      "correct": true
+    },
+    {
+      "id": 18,
+      "language": "ja",
+      "expected": "reply",
+      "text": "佐藤さんへの返信案を考えて",
+      "round": 2,
+      "latencyMs": 140,
+      "model": "jev-1.13.0",
+      "answers": {
+        "intent": {
+          "type": "choice",
+          "choice": "reply",
+          "confidence": 0.99,
+          "probabilities": {
+            "task": 0,
+            "checklist": 0,
+            "note": 0,
+            "reply": 0.99,
+            "event": 0,
+            "update": 0,
+            "none": 0.01
+          }
+        },
+        "urgent": {
+          "type": "noul",
+          "noul": 0.07
+        }
+      },
+      "usage": {
+        "input_tokens": 594,
+        "output_tokens": 85
+      },
+      "correct": true
+    },
+    {
+      "id": 17,
+      "language": "ja",
+      "expected": "reply",
+      "text": "田中さんに返信したい",
+      "round": 2,
+      "latencyMs": 201,
+      "model": "jev-1.13.0",
+      "answers": {
+        "intent": {
+          "type": "choice",
+          "choice": "reply",
+          "confidence": 0.99,
+          "probabilities": {
+            "task": 0,
+            "checklist": 0,
+            "note": 0,
+            "reply": 0.99,
+            "event": 0,
+            "update": 0,
+            "none": 0.01
+          }
+        },
+        "urgent": {
+          "type": "noul",
+          "noul": 0.08
+        }
+      },
+      "usage": {
+        "input_tokens": 591,
+        "output_tokens": 85
+      },
+      "correct": true
+    },
+    {
+      "id": 16,
+      "language": "ja",
+      "expected": "note",
+      "text": "昨日、牛乳を買った",
+      "round": 2,
+      "latencyMs": 158,
+      "model": "jev-1.13.0",
+      "answers": {
+        "intent": {
+          "type": "choice",
+          "choice": "note",
+          "confidence": 0.99,
+          "probabilities": {
+            "task": 0,
+            "checklist": 0,
+            "note": 0.99,
+            "reply": 0,
+            "event": 0,
+            "update": 0,
+            "none": 0.01
+          }
+        },
+        "urgent": {
+          "type": "noul",
+          "noul": 0.02
+        }
+      },
+      "usage": {
+        "input_tokens": 589,
+        "output_tokens": 85
+      },
+      "correct": true
+    },
+    {
+      "id": 15,
+      "language": "ja",
+      "expected": "note",
+      "text": "アイデア：ホーム画面に天気を表示する",
+      "round": 2,
+      "latencyMs": 188,
+      "model": "jev-1.13.0",
+      "answers": {
+        "intent": {
+          "type": "choice",
+          "choice": "note",
+          "confidence": 0.74,
+          "probabilities": {
+            "task": 0.18,
+            "checklist": 0,
+            "note": 0.78,
+            "reply": 0,
+            "event": 0,
+            "update": 0,
+            "none": 0.04
+          }
+        },
+        "urgent": {
+          "type": "noul",
+          "noul": 0.02
+        }
+      },
+      "usage": {
+        "input_tokens": 599,
+        "output_tokens": 85
+      },
+      "correct": true
+    },
+    {
+      "id": 14,
+      "language": "ja",
+      "expected": "note",
+      "text": "今日は疲れたなあ",
+      "round": 2,
+      "latencyMs": 155,
+      "model": "jev-1.13.0",
+      "answers": {
+        "intent": {
+          "type": "choice",
+          "choice": "note",
+          "confidence": 0.98,
+          "probabilities": {
+            "task": 0,
+            "checklist": 0,
+            "note": 0.98,
+            "reply": 0,
+            "event": 0,
+            "update": 0,
+            "none": 0.02
+          }
+        },
+        "urgent": {
+          "type": "noul",
+          "noul": 0.03
+        }
+      },
+      "usage": {
+        "input_tokens": 589,
+        "output_tokens": 85
+      },
+      "correct": true
+    },
+    {
+      "id": 13,
+      "language": "ja",
+      "expected": "note",
+      "text": "メモ：会議室の暗証番号は1234",
+      "round": 2,
+      "latencyMs": 177,
+      "model": "jev-1.13.0",
+      "answers": {
+        "intent": {
+          "type": "choice",
+          "choice": "note",
+          "confidence": 0.99,
+          "probabilities": {
+            "task": 0,
+            "checklist": 0,
+            "note": 0.99,
+            "reply": 0,
+            "event": 0,
+            "update": 0,
+            "none": 0.01
+          }
+        },
+        "urgent": {
+          "type": "noul",
+          "noul": 0.03
+        }
+      },
+      "usage": {
+        "input_tokens": 597,
+        "output_tokens": 85
+      },
+      "correct": true
+    },
+    {
+      "id": 12,
+      "language": "ja",
+      "expected": "checklist",
+      "text": "パスポート更新とホテル予約を追加",
+      "round": 2,
+      "latencyMs": 139,
+      "model": "jev-1.13.0",
+      "answers": {
+        "intent": {
+          "type": "choice",
+          "choice": "checklist",
+          "confidence": 0.84,
+          "probabilities": {
+            "task": 0.14,
+            "checklist": 0.86,
+            "note": 0,
+            "reply": 0,
+            "event": 0,
+            "update": 0,
+            "none": 0
+          }
+        },
+        "urgent": {
+          "type": "noul",
+          "noul": 0.06
+        }
+      },
+      "usage": {
+        "input_tokens": 597,
+        "output_tokens": 87
+      },
+      "correct": true
+    },
+    {
+      "id": 11,
+      "language": "ja",
+      "expected": "checklist",
+      "text": "やること：\nメール確認\n資料印刷",
+      "round": 2,
+      "latencyMs": 209,
+      "model": "jev-1.13.0",
+      "answers": {
+        "intent": {
+          "type": "choice",
+          "choice": "checklist",
+          "confidence": 0.98,
+          "probabilities": {
+            "task": 0.01,
+            "checklist": 0.98,
+            "note": 0,
+            "reply": 0,
+            "event": 0,
+            "update": 0,
+            "none": 0.01
+          }
+        },
+        "urgent": {
+          "type": "noul",
+          "noul": 0.06
+        }
+      },
+      "usage": {
+        "input_tokens": 597,
+        "output_tokens": 87
+      },
+      "correct": true
+    },
+    {
+      "id": 10,
+      "language": "ja",
+      "expected": "checklist",
+      "text": "洗濯する、掃除する、ゴミを出す",
+      "round": 2,
+      "latencyMs": 135,
+      "model": "jev-1.13.0",
+      "answers": {
+        "intent": {
+          "type": "choice",
+          "choice": "checklist",
+          "confidence": 0.98,
+          "probabilities": {
+            "task": 0.01,
+            "checklist": 0.98,
+            "note": 0,
+            "reply": 0,
+            "event": 0,
+            "update": 0,
+            "none": 0.01
+          }
+        },
+        "urgent": {
+          "type": "noul",
+          "noul": 0.04
+        }
+      },
+      "usage": {
+        "input_tokens": 597,
+        "output_tokens": 87
+      },
+      "correct": true
+    },
+    {
+      "id": 9,
+      "language": "ja",
+      "expected": "checklist",
+      "text": "牛乳、卵、パンを買う",
+      "round": 2,
+      "latencyMs": 159,
+      "model": "jev-1.13.0",
+      "answers": {
+        "intent": {
+          "type": "choice",
+          "choice": "checklist",
+          "confidence": 0.99,
+          "probabilities": {
+            "task": 0.01,
+            "checklist": 0.99,
+            "note": 0,
+            "reply": 0,
+            "event": 0,
+            "update": 0,
+            "none": 0
+          }
+        },
+        "urgent": {
+          "type": "noul",
+          "noul": 0.04
+        }
+      },
+      "usage": {
+        "input_tokens": 592,
+        "output_tokens": 87
+      },
+      "correct": true
+    },
+    {
+      "id": 8,
+      "language": "ja",
+      "expected": "task",
+      "text": "牛乳は買わないで、卵を買う",
+      "round": 2,
+      "latencyMs": 173,
+      "model": "jev-1.13.0",
+      "answers": {
+        "intent": {
+          "type": "choice",
+          "choice": "task",
+          "confidence": 0.53,
+          "probabilities": {
+            "task": 0.6,
+            "checklist": 0.35,
+            "note": 0,
+            "reply": 0,
+            "event": 0,
+            "update": 0.02,
+            "none": 0.03
+          }
+        },
+        "urgent": {
+          "type": "noul",
+          "noul": 0.14
+        }
+      },
+      "usage": {
+        "input_tokens": 595,
+        "output_tokens": 85
+      },
+      "correct": true
+    },
+    {
+      "id": 7,
+      "language": "ja",
+      "expected": "task",
+      "text": "時間があるときに本棚を整理する",
+      "round": 2,
+      "latencyMs": 139,
+      "model": "jev-1.13.0",
+      "answers": {
+        "intent": {
+          "type": "choice",
+          "choice": "task",
+          "confidence": 0.86,
+          "probabilities": {
+            "task": 0.88,
+            "checklist": 0,
+            "note": 0.07,
+            "reply": 0,
+            "event": 0,
+            "update": 0,
+            "none": 0.05
+          }
+        },
+        "urgent": {
+          "type": "noul",
+          "noul": 0.03
+        }
+      },
+      "usage": {
+        "input_tokens": 596,
+        "output_tokens": 85
+      },
+      "correct": true
+    },
+    {
+      "id": 6,
+      "language": "ja",
+      "expected": "task",
+      "text": "今日中に請求書を提出。至急！",
+      "round": 2,
+      "latencyMs": 145,
+      "model": "jev-1.13.0",
+      "answers": {
+        "intent": {
+          "type": "choice",
+          "choice": "task",
+          "confidence": 0.94,
+          "probabilities": {
+            "task": 0.95,
+            "checklist": 0,
+            "note": 0,
+            "reply": 0.01,
+            "event": 0,
+            "update": 0,
+            "none": 0.04
+          }
+        },
+        "urgent": {
+          "type": "noul",
+          "noul": 0.97
+        }
+      },
+      "usage": {
+        "input_tokens": 595,
+        "output_tokens": 85
+      },
+      "correct": true
+    },
+    {
+      "id": 5,
+      "language": "ja",
+      "expected": "task",
+      "text": "洗濯をタスクに追加して",
+      "round": 2,
+      "latencyMs": 209,
+      "model": "jev-1.13.0",
+      "answers": {
+        "intent": {
+          "type": "choice",
+          "choice": "task",
+          "confidence": 1,
+          "probabilities": {
+            "task": 1,
+            "checklist": 0,
+            "note": 0,
+            "reply": 0,
+            "event": 0,
+            "update": 0,
+            "none": 0
+          }
+        },
+        "urgent": {
+          "type": "noul",
+          "noul": 0.09
+        }
+      },
+      "usage": {
+        "input_tokens": 593,
+        "output_tokens": 85
+      },
+      "correct": true
+    },
+    {
+      "id": 4,
+      "language": "ja",
+      "expected": "task",
+      "text": "来週金曜までに確定申告の資料をまとめたい",
+      "round": 2,
+      "latencyMs": 162,
+      "model": "jev-1.13.0",
+      "answers": {
+        "intent": {
+          "type": "choice",
+          "choice": "task",
+          "confidence": 0.92,
+          "probabilities": {
+            "task": 0.93,
+            "checklist": 0,
+            "note": 0.02,
+            "reply": 0,
+            "event": 0,
+            "update": 0,
+            "none": 0.04
+          }
+        },
+        "urgent": {
+          "type": "noul",
+          "noul": 0.25
+        }
+      },
+      "usage": {
+        "input_tokens": 601,
+        "output_tokens": 85
+      },
+      "correct": true
+    },
+    {
+      "id": 3,
+      "language": "ja",
+      "expected": "task",
+      "text": "歯医者を予約しなきゃ",
+      "round": 2,
+      "latencyMs": 145,
+      "model": "jev-1.13.0",
+      "answers": {
+        "intent": {
+          "type": "choice",
+          "choice": "task",
+          "confidence": 0.99,
+          "probabilities": {
+            "task": 0.99,
+            "checklist": 0,
+            "note": 0,
+            "reply": 0,
+            "event": 0,
+            "update": 0,
+            "none": 0.01
+          }
+        },
+        "urgent": {
+          "type": "noul",
+          "noul": 0.61
+        }
+      },
+      "usage": {
+        "input_tokens": 592,
+        "output_tokens": 85
+      },
+      "correct": true
+    },
+    {
+      "id": 2,
+      "language": "ja",
+      "expected": "task",
+      "text": "牛乳を買う",
+      "round": 2,
+      "latencyMs": 150,
+      "model": "jev-1.13.0",
+      "answers": {
+        "intent": {
+          "type": "choice",
+          "choice": "task",
+          "confidence": 1,
+          "probabilities": {
+            "task": 1,
+            "checklist": 0,
+            "note": 0,
+            "reply": 0,
+            "event": 0,
+            "update": 0,
+            "none": 0
+          }
+        },
+        "urgent": {
+          "type": "noul",
+          "noul": 0.05
+        }
+      },
+      "usage": {
+        "input_tokens": 586,
+        "output_tokens": 85
+      },
+      "correct": true
+    },
+    {
+      "id": 1,
+      "language": "ja",
+      "expected": "task",
+      "text": "明日までに見積書を送る",
+      "round": 2,
+      "latencyMs": 134,
+      "model": "jev-1.13.0",
+      "answers": {
+        "intent": {
+          "type": "choice",
+          "choice": "task",
+          "confidence": 0.96,
+          "probabilities": {
+            "task": 0.97,
+            "checklist": 0,
+            "note": 0,
+            "reply": 0.01,
+            "event": 0,
+            "update": 0,
+            "none": 0.02
+          }
+        },
+        "urgent": {
+          "type": "noul",
+          "noul": 0.38
+        }
+      },
+      "usage": {
+        "input_tokens": 592,
+        "output_tokens": 85
+      },
+      "correct": true
+    }
+  ]
+}

@@ -8,6 +8,7 @@ import { subscribeActivities } from "./events.server";
 import type { ActivityProposal } from "./model";
 import {
   createUserActivity,
+  createUserActivities,
   updateActivityProgress,
   getActivityContext,
   publishActivities,
@@ -340,6 +341,88 @@ it("preserves explicitly entered Home content when an agent publishes new sugges
     proposal: { title: "Agent title" },
     effective: { title: "My title", nextAction: "My next step", section: "focus" },
   });
+});
+it("creates a dated batch in one revision and replays its receipt without duplicates", () => {
+  const input = {
+    requestId: "home-batch",
+    expectedRevision: 0,
+    activities: [
+      {
+        id: "milk",
+        title: "牛乳を買う",
+        nextAction: "牛乳を買う",
+        section: "optional",
+        dueDate: "2026-10-19",
+      },
+      {
+        id: "report",
+        title: "報告書を送る",
+        nextAction: "報告書を送る",
+        section: "focus",
+        dueDate: null,
+      },
+    ],
+  };
+  const receipt = createUserActivities(input, database);
+  expect(receipt).toMatchObject({ revision: 1, activityIds: ["milk", "report"] });
+  expect(createUserActivities(input, second)).toEqual(receipt);
+  expect(getActivityContext({}, second)).toMatchObject({
+    revision: 1,
+    activities: [
+      { effective: { title: "牛乳を買う", dueDate: "2026-10-19" } },
+      { effective: { title: "報告書を送る", dueDate: null } },
+    ],
+  });
+});
+it("rolls back the whole Home batch when a later task already exists", () => {
+  publish([task]);
+  expect(() =>
+    createUserActivities(
+      {
+        requestId: "home-collision",
+        expectedRevision: 1,
+        activities: [
+          { id: "new", title: "New", nextAction: "New", section: "optional" },
+          { id: task.id, title: "Existing", nextAction: "Existing", section: "optional" },
+        ],
+      },
+      database,
+    ),
+  ).toThrow(expect.objectContaining({ code: "invalid-input" }));
+  expect(getActivityContext({}, second)).toMatchObject({
+    revision: 1,
+    activities: [{ id: task.id }],
+  });
+});
+it("allows an owner to clear and reset a suggested deadline", () => {
+  publish([{ ...task, dueDate: "2026-10-19" }]);
+  updateActivityUser(
+    { requestId: "clear-date", expectedRevision: 1, id: task.id, overrides: { dueDate: null } },
+    database,
+  );
+  expect(getActivityContext({}, database).activities[0]?.effective.dueDate).toBeNull();
+  updateActivityUser(
+    { requestId: "reset-date", expectedRevision: 2, id: task.id, resetOverrides: ["dueDate"] },
+    database,
+  );
+  expect(getActivityContext({}, database).activities[0]?.effective.dueDate).toBe("2026-10-19");
+});
+it.each(["2026-02-30", "2026-10-19T00:00:00Z"])("rejects invalid Home date %s", (dueDate) => {
+  expect(() =>
+    createUserActivity(
+      {
+        requestId: "bad-date",
+        expectedRevision: 0,
+        id: "new",
+        title: "Task",
+        nextAction: "Task",
+        section: "optional",
+        dueDate,
+      },
+      database,
+    ),
+  ).toThrow(expect.objectContaining({ code: "invalid-input" }));
+  expect(getActivityContext({}, database).revision).toBe(0);
 });
 it("does not move the original message anchor when a newer message arrives", () => {
   publish([reply]);

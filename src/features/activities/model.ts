@@ -8,6 +8,7 @@ const required = (max: number) =>
     .min(1)
     .max(max)
     .refine((value) => value.trim().length > 0);
+const dueDate = z.iso.date().nullable().optional();
 const section = z.enum(["focus", "optional"]);
 const activityState = z.enum([
   "available",
@@ -44,6 +45,7 @@ const base = {
   id,
   title: required(300),
   nextAction: required(2000),
+  dueDate,
   detail: z.string().max(8000).optional(),
   recommendation: z.strictObject({ section, reason: z.string().max(2000).optional() }).optional(),
   timeEstimate: z
@@ -98,6 +100,7 @@ export const publishActivitiesInput = z
     "Activity IDs must be unique.",
   );
 const activityOverrides = z.strictObject({
+  dueDate,
   title: required(300).optional(),
   nextAction: required(2000).optional(),
   detail: z.string().max(8000).optional(),
@@ -123,9 +126,10 @@ export const updateActivityUserInput = z
           "section",
           "estimatedMinutes",
           "remainingMinutes",
+          "dueDate",
         ]),
       )
-      .max(7)
+      .max(8)
       .optional(),
   })
   .refine(
@@ -220,11 +224,24 @@ export type ActivityErrorCode =
   | "immutable-field"
   | "internal-error";
 export type ActivityFailure = { ok: false; error: { code: ActivityErrorCode; message: string } };
-export const createHomeActivityInput = z.strictObject({
-  requestId: id,
-  expectedRevision: z.number().int().nonnegative(),
+const homeTask = z.strictObject({
   id,
   title: required(300),
   nextAction: required(2000),
   section,
+  dueDate,
 });
+export const createHomeActivityInput = homeTask.extend({
+  requestId: id,
+  expectedRevision: z.number().int().nonnegative(),
+});
+export const createHomeActivitiesInput = z
+  .strictObject({
+    requestId: id,
+    expectedRevision: z.number().int().nonnegative(),
+    activities: z.array(homeTask).min(1).max(20),
+  })
+  .refine(
+    (value) => new Set(value.activities.map((task) => task.id)).size === value.activities.length,
+    "Activity IDs must be unique.",
+  );

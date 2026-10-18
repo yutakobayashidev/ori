@@ -85,6 +85,11 @@ export function ActivityCard({
           >
             {item.title}
           </span>
+          {item.kind === "task" && item.dueDate && (
+            <span className="text-ui-12 text-muted-foreground">
+              期限：<time dateTime={item.dueDate}>{item.dueDate}</time>
+            </span>
+          )}
           <span className="shrink-0 text-ui-12 text-muted-foreground">
             {activity.userState === "available" || activity.userState === "inProgress"
               ? item.nextAction

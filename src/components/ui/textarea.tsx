@@ -10,6 +10,8 @@ const textareaVariants = cva(
         default: "",
         composer:
           "resize-y border-0 bg-transparent p-px-8 text-ui-16 leading-relaxed-copy shadow-none md:text-ui-16 dark:bg-transparent",
+        morphComposer:
+          "min-h-8 resize-none border-0 bg-transparent p-0 text-ui-22 leading-8 shadow-none focus-visible:ring-0 md:text-ui-22 dark:bg-transparent",
         note: "bg-background text-ui-12 md:text-ui-12 dark:bg-background",
         summary: "text-ui-13 md:text-ui-13",
       },

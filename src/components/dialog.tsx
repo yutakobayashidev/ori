@@ -14,9 +14,11 @@ export function Dialog({
   onClose,
   children,
   className,
+  variant,
 }: {
   title: string;
   className?: string;
+  variant?: "default" | "palette";
   onClose: () => void;
   children: React.ReactNode;
 }) {
@@ -29,6 +31,7 @@ export function Dialog({
     >
       <DialogContent
         showCloseButton={false}
+        variant={variant}
         className={cn("max-h-[calc(100dvh-2rem)] overflow-y-auto", className)}
         aria-describedby={undefined}
       >
