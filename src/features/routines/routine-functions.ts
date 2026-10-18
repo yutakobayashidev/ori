@@ -1,6 +1,7 @@
 import { createServerFn } from "@tanstack/react-start";
 import {
   routineRunInputSchema,
+  undoRoutineRunInputSchema,
   saveRoutineInputSchema,
   saveRoutinesInputSchema,
 } from "./routine-model";
@@ -26,6 +27,12 @@ export const loadRoutineRuns = createServerFn({ method: "GET" }).handler(async (
   const repository = await import("./routine-repository.server");
   return repository.loadRoutineRuns();
 });
+export const undoRoutineRun = createServerFn({ method: "POST" })
+  .validator(undoRoutineRunInputSchema)
+  .handler(async ({ data }) => {
+    const repository = await import("./routine-repository.server");
+    return repository.undoRoutineRun(data);
+  });
 export const loadRoutineHistory = createServerFn({ method: "GET" }).handler(async () => {
   const repository = await import("./routine-repository.server");
   return repository.loadRoutineHistory();

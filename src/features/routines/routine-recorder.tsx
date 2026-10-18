@@ -4,7 +4,12 @@ import { useQuery } from "@tanstack/react-query";
 import { Button } from "#/components/ui/button";
 import { Input } from "#/components/ui/input";
 import { RoutineForm, type RoutineValues } from "./routine-form";
-import { listRoutines, loadRoutineHistory, recordRoutineRun } from "./routine-functions";
+import {
+  listRoutines,
+  loadRoutineHistory,
+  recordRoutineRun,
+  undoRoutineRun,
+} from "./routine-functions";
 import { RoutineTrends } from "./routine-trends";
 import {
   validateRoutineRun,
@@ -12,7 +17,12 @@ import {
   type RoutineRun,
   type RoutineRunInput,
 } from "./routine-model";
-import { inferRoutineSchedule, scheduleLabel } from "./routine-schedule";
+import {
+  inferRoutineSchedule,
+  routineDateForSchedule,
+  routineDay,
+  scheduleLabel,
+} from "./routine-schedule";
 
 function localDateTime(date: Date) {
   return `${date.getFullYear()}-${String(date.getMonth() + 1).padStart(2, "0")}-${String(date.getDate()).padStart(2, "0")}T${String(date.getHours()).padStart(2, "0")}:${String(date.getMinutes()).padStart(2, "0")}`;
@@ -21,24 +31,47 @@ export function RoutineQuickDone({
   routine,
   scheduleId,
   onSaved,
-  recorded = false,
+  runs = [],
 }: {
   routine: RoutineDefinition;
   scheduleId?: string;
   onSaved: () => void;
-  recorded?: boolean;
+  runs?: RoutineRun[];
 }) {
   const pending = useRef<RoutineRunInput | null>(null);
   const locked = useRef(false);
   const [busy, setBusy] = useState(false);
-  const [saved, setSaved] = useState(false);
+  const [localRun, setLocalRun] = useState<RoutineRunInput | null>(null);
+  const [undone, setUndone] = useState<string[]>([]);
+  const undoRequests = useRef(new Map<string, string>());
+  const active = [...runs, ...(localRun ? [localRun] : [])]
+    .filter(
+      (run, index, all) =>
+        !undone.includes(run.id) && all.findIndex((item) => item.id === run.id) === index,
+    )
+    .sort((a, b) => Date.parse(b.occurredAt) - Date.parse(a.occurredAt));
+  const recorded = active.length > 0;
+  if (localRun && runs.some((run) => run.id === localRun.id)) setLocalRun(null);
   const [error, setError] = useState("");
   async function submit() {
-    if (locked.current || recorded) return;
+    if (locked.current) return;
     locked.current = true;
     setBusy(true);
     setError("");
     try {
+      const run = active[0];
+      if (run) {
+        const requestId = undoRequests.current.get(run.id) ?? crypto.randomUUID();
+        undoRequests.current.set(run.id, requestId);
+        await undoRoutineRun({
+          data: { requestId, runId: run.id },
+        });
+        setUndone((ids) => [...ids, run.id]);
+        if (localRun?.id === run.id) setLocalRun(null);
+        pending.current = null;
+        onSaved();
+        return;
+      }
       pending.current ??= {
         id: crypto.randomUUID(),
         routineId: routine.id,
@@ -49,12 +82,14 @@ export function RoutineQuickDone({
       };
       validateRoutineRun(routine, pending.current);
       await recordRoutineRun({ data: pending.current });
-      setSaved(true);
+      setLocalRun(pending.current);
+      pending.current = null;
       onSaved();
     } catch (cause) {
       locked.current = false;
       setError(cause instanceof Error ? cause.message : "Couldn’t save the entry. Try again.");
     } finally {
+      locked.current = false;
       setBusy(false);
     }
   }
@@ -63,14 +98,14 @@ export function RoutineQuickDone({
       <button
         type="button"
         className="flex size-8 shrink-0 cursor-pointer items-center justify-center rounded-full text-muted-foreground aria-pressed:text-success focus-visible:outline-2 focus-visible:outline-ring disabled:cursor-default"
-        aria-pressed={saved || recorded}
-        disabled={busy || saved || recorded}
-        aria-label={`Mark ${routine.name} done`}
+        aria-pressed={recorded}
+        disabled={busy}
+        aria-label={recorded ? `Undo latest ${routine.name}` : `Mark ${routine.name} done`}
         onClick={() => void submit()}
       >
         {busy ? (
           <LoaderCircle className="size-5 animate-spin" />
-        ) : saved || recorded ? (
+        ) : recorded ? (
           <Check className="size-5" />
         ) : (
           <Circle className="size-5" />
@@ -89,6 +124,7 @@ export function RoutineRecorder({
   scheduleId: initialScheduleId,
   onClose,
   onSaved,
+  onUndone,
   onEdit,
   initialValues = {},
   onInteract,
@@ -97,6 +133,7 @@ export function RoutineRecorder({
   scheduleId?: string;
   onClose: () => void;
   onSaved: () => void;
+  onUndone?: () => void;
   onEdit: () => void;
   initialValues?: RoutineValues;
   onInteract?: () => void;
@@ -109,6 +146,17 @@ export function RoutineRecorder({
   );
   const [value, setValue] = useState<RoutineValues>(initialValues);
   const [when, setWhen] = useState("");
+  const [dateOverride, setDateOverride] = useState("");
+  const selectedSchedule = routine.schedules.find((item) => item.id === scheduleId);
+  const actualDate = when ? new Date(when) : new Date();
+  const validDate = Number.isFinite(actualDate.getTime());
+  const routineDate =
+    dateOverride ||
+    (selectedSchedule && validDate ? routineDateForSchedule(selectedSchedule, actualDate) : "");
+  const previousDay =
+    selectedSchedule &&
+    validDate &&
+    routineDate < routineDay(actualDate, selectedSchedule.timeZone);
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState("");
   const [saved, setSaved] = useState(false);
@@ -146,7 +194,7 @@ export function RoutineRecorder({
       });
       if (!steps.some((step) => step.done || step.entries.length))
         throw new Error("Complete a step or add a measurement.");
-      const key = JSON.stringify({ when, steps, scheduleId });
+      const key = JSON.stringify({ when, steps, scheduleId, dateOverride });
       if (pending.current?.key !== key)
         pending.current = { key, id: crypto.randomUUID(), occurredAt: date.toISOString() };
       const data: RoutineRunInput = {
@@ -155,6 +203,7 @@ export function RoutineRecorder({
         routineVersion: routine.version,
         occurredAt: pending.current.occurredAt,
         scheduleId: scheduleId || null,
+        ...(dateOverride ? { routineDate: dateOverride } : {}),
         steps,
       };
       validateRoutineRun(routine, data);
@@ -206,8 +255,9 @@ export function RoutineRecorder({
       <div className="flex items-center justify-between gap-2">
         <div className="min-w-0">
           <h3 className="text-sm font-medium wrap-anywhere">{routine.name}</h3>
-          {initialScheduleId && (
+          {selectedSchedule && (
             <p className="text-xs text-muted-foreground">
+              {previousDay ? "Previous day · " : ""}
               {routine.schedules
                 .filter((item) => item.id === scheduleId)
                 .map(scheduleLabel)
@@ -230,6 +280,7 @@ export function RoutineRecorder({
                 setSaved(false);
                 setValue({});
                 setWhen("");
+                setDateOverride("");
               }}
             >
               Record another
@@ -257,6 +308,23 @@ export function RoutineRecorder({
               <div className="pt-3">
                 {initialScheduleId && scheduleControl}
 
+                {selectedSchedule && (
+                  <div className="mb-5 space-y-2">
+                    <label htmlFor={`${scope}-routine-date`} className="text-sm">
+                      Routine date
+                    </label>
+                    <Input
+                      id={`${scope}-routine-date`}
+                      type="date"
+                      value={routineDate}
+                      disabled={busy}
+                      onChange={(event) => {
+                        onInteract?.();
+                        setDateOverride(event.target.value);
+                      }}
+                    />
+                  </div>
+                )}
                 <div className="mb-5 space-y-2">
                   <label htmlFor={`${scope}-occurred-at`} className="text-sm">
                     Recorded for
@@ -297,7 +365,15 @@ export function RoutineRecorder({
                 ?.filter((item) => item.run.routineId === routine.id)
                 .slice(0, 20)
                 .map(({ run, definition }) => (
-                  <RoutineHistoryEntry key={run.id} run={run} definition={definition} />
+                  <RoutineHistoryEntry
+                    key={run.id}
+                    run={run}
+                    definition={definition}
+                    onUndone={() => {
+                      onUndone?.();
+                      void history.refetch();
+                    }}
+                  />
                 ))}
               {history.data && !history.data.some((item) => item.run.routineId === routine.id) && (
                 <p className="text-sm text-muted-foreground">No entries yet.</p>
@@ -334,12 +410,50 @@ export function RoutineRecorder({
 function RoutineHistoryEntry({
   run,
   definition,
+  onUndone,
 }: {
   run: RoutineRun;
   definition: RoutineDefinition;
+  onUndone: () => void;
 }) {
+  const requestId = useRef<string | null>(null);
+  const locked = useRef(false);
+  const [busy, setBusy] = useState(false);
+  const [removed, setRemoved] = useState(false);
+  const [error, setError] = useState("");
+  async function undo() {
+    if (locked.current) return;
+    locked.current = true;
+    setBusy(true);
+    setError("");
+    requestId.current ??= crypto.randomUUID();
+    try {
+      await undoRoutineRun({ data: { requestId: requestId.current, runId: run.id } });
+      setRemoved(true);
+      onUndone();
+    } catch (cause) {
+      locked.current = false;
+      setError(cause instanceof Error ? cause.message : "Couldn’t undo the entry. Try again.");
+    } finally {
+      setBusy(false);
+    }
+  }
+  if (removed) return null;
   return (
     <article className="space-y-2 border-b border-border py-3 last:border-0">
+      <Button
+        variant="ghost"
+        disabled={busy}
+        onClick={() => void undo()}
+        aria-label={`Undo entry ${new Date(run.occurredAt).toLocaleString()}`}
+      >
+        {busy ? "Undoing…" : "Undo"}
+      </Button>
+      {error && (
+        <p role="alert" className="text-sm text-destructive">
+          {error}
+        </p>
+      )}
       <time dateTime={run.occurredAt} className="text-xs text-muted-foreground">
         {new Date(run.occurredAt).toLocaleString()}
       </time>

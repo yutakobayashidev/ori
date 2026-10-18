@@ -12,6 +12,7 @@ import {
   recordRoutineRun,
   saveRoutine,
   saveRoutines,
+  undoRoutineRun,
 } from "./routine-repository.server";
 
 const draft: RoutineDraft = {
@@ -81,14 +82,112 @@ afterEach(async () => {
   await rm(dir, { recursive: true, force: true });
 });
 const create = () =>
-  saveRoutine({ requestId: randomUUID(), routineId: null, baseVersion: null, draft });
+  saveRoutine({
+    requestId: randomUUID(),
+    routineId: null,
+    baseVersion: null,
+    draft,
+  });
 describe("routine persistence", () => {
+  it("persists the routine date separately from the actual timestamp, with optional override", async () => {
+    const routine = await create();
+    const input = {
+      id: randomUUID(),
+      routineId: routine.id,
+      routineVersion: 1,
+      scheduleId: "bedtime",
+      occurredAt: "2026-10-19T01:00:00+09:00",
+      steps: [{ stepId: "measure", done: true, entries: [{ value: 65 }] }],
+    };
+    const run = await recordRoutineRun(input);
+    expect(run.routineDate).toBe("2026-10-18");
+    expect(run.occurredAt).toBe(input.occurredAt);
+    expect(await recordRoutineRun(input)).toEqual(run);
+    expect(
+      (
+        await recordRoutineRun({
+          ...input,
+          id: randomUUID(),
+          routineDate: "2026-10-19",
+        })
+      ).routineDate,
+    ).toBe("2026-10-19");
+    expect(
+      (await recordRoutineRun({ ...input, id: randomUUID(), scheduleId: null })).routineDate,
+    ).toBe("2026-10-19");
+    for (const routineDate of ["yesterday", "2026-02-30", "2026-10-19T00:00:00Z"]) {
+      expect(() => recordRoutineRun({ ...input, id: randomUUID(), routineDate })).toThrow(
+        /Invalid ISO date/,
+      );
+    }
+  });
+  it("undoes by appending cancellations, preserves originals and never resurrects a retried run", async () => {
+    const routine = await create();
+    const input = {
+      id: randomUUID(),
+      routineId: routine.id,
+      routineVersion: 1,
+      scheduleId: "bedtime",
+      occurredAt: "2026-10-19T01:00:00+09:00",
+      steps: [{ stepId: "measure", done: true, entries: [{ value: 65 }] }],
+    };
+    const first = await recordRoutineRun(input);
+    const second = await recordRoutineRun({ ...input, id: randomUUID() });
+    const original = await readFile(join(dir, "2026-10-19.jsonl"), "utf8");
+    const undo = { requestId: randomUUID(), runId: first.id };
+    const [cancelled, retry] = await Promise.all([undoRoutineRun(undo), undoRoutineRun(undo)]);
+    expect(retry).toEqual(cancelled);
+    expect(await loadRoutineRuns()).toEqual([second]);
+    expect((await loadRoutineHistory()).map(({ run }) => run.id)).toEqual([second.id]);
+    expect(await readFile(join(dir, "2026-10-19.jsonl"), "utf8")).toBe(original);
+    expect(
+      (await readFile(join(dir, "cancellations.jsonl"), "utf8")).trim().split("\n"),
+    ).toHaveLength(1);
+    expect((await stat(join(dir, "cancellations.jsonl"))).mode & 0o777).toBe(0o600);
+    expect(await recordRoutineRun(input)).toEqual(first);
+    expect(await loadRoutineRuns()).toEqual([second]);
+    await expect(undoRoutineRun({ ...undo, runId: second.id })).rejects.toThrow(
+      "already been used",
+    );
+    await expect(undoRoutineRun({ requestId: randomUUID(), runId: randomUUID() })).rejects.toThrow(
+      "does not exist",
+    );
+    await undoRoutineRun({ requestId: randomUUID(), runId: first.id });
+    expect(await loadRoutineRuns()).toEqual([second]);
+    const replacement = await recordRoutineRun({ ...input, id: randomUUID() });
+    expect(await loadRoutineRuns()).toEqual([replacement, second]);
+  });
+  it("reads and cancels legacy runs without routineDate without rewriting them", async () => {
+    const routine = await create();
+    const legacy = {
+      id: randomUUID(),
+      routineId: routine.id,
+      routineVersion: 1,
+      scheduleId: "bedtime",
+      occurredAt: "2026-10-19T01:00:00+09:00",
+      steps: [{ stepId: "measure", done: true, entries: [{ value: 65 }] }],
+      recordedAt: new Date().toISOString(),
+    };
+    const original = JSON.stringify(legacy) + "\n";
+    await writeFile(join(dir, "2026-10-19.jsonl"), original);
+    expect(await loadRoutineRuns()).toEqual([legacy]);
+    const { recordedAt, ...input } = legacy;
+    void recordedAt;
+    expect(await recordRoutineRun(input)).toEqual(legacy);
+    await undoRoutineRun({ requestId: randomUUID(), runId: legacy.id });
+    expect(await loadRoutineHistory()).toEqual([]);
+    expect(await readFile(join(dir, "2026-10-19.jsonl"), "utf8")).toBe(original);
+  });
   it("saves independent routines in one append and retries the whole batch without duplicates", async () => {
     const input = {
       requestId: randomUUID(),
       routines: [
         { routineId: null, baseVersion: null, draft },
-        { routineId: null, baseVersion: null, draft: { ...draft, name: "Weight" } },
+        {
+          routineId: null,
+          baseVersion: null,
+          draft: { ...draft, name: "Weight" },
+        },
       ],
     };
     const [first, retry] = await Promise.all([saveRoutines(input), saveRoutines(input)]);
@@ -109,13 +208,21 @@ describe("routine persistence", () => {
       saveRoutines({
         requestId: randomUUID(),
         routines: [
-          { routineId: null, baseVersion: null, draft: { ...draft, name: "New" } },
+          {
+            routineId: null,
+            baseVersion: null,
+            draft: { ...draft, name: "New" },
+          },
           { routineId: first.id, baseVersion: 2, draft },
         ],
       }),
     ).rejects.toThrow("changed");
     const mapped = structuredClone(draft);
-    fixtureField(mapped).metric = { id: "body_weight", label: "Weight", group: "body_weight" };
+    fixtureField(mapped).metric = {
+      id: "body_weight",
+      label: "Weight",
+      group: "body_weight",
+    };
     const conflict = structuredClone(mapped);
     fixtureField(conflict).unit = "lb";
     await expect(
@@ -141,7 +248,13 @@ describe("routine persistence", () => {
       ...rest,
       schedule,
       steps: [
-        { id: "brush", label: "Brush teeth", repeatable: false, layout: "stack", fields: [] },
+        {
+          id: "brush",
+          label: "Brush teeth",
+          repeatable: false,
+          layout: "stack",
+          fields: [],
+        },
         ...draft.steps,
       ],
       id: randomUUID(),
@@ -207,7 +320,11 @@ describe("routine persistence", () => {
       steps: [{ stepId: "measure", done: true, entries: [{ value: 65 }] }],
     };
     await recordRoutineRun(input);
-    await recordRoutineRun({ ...input, id: randomUUID(), scheduleId: "evening" });
+    await recordRoutineRun({
+      ...input,
+      id: randomUUID(),
+      scheduleId: "evening",
+    });
     expect((await loadRoutineRuns()).map((run) => run.scheduleId)).toEqual(["evening", "morning"]);
     await expect(
       recordRoutineRun({ ...input, id: randomUUID(), scheduleId: "unknown" }),
@@ -298,7 +415,11 @@ describe("routine persistence", () => {
   });
   it("rejects nonnumeric metric bindings and inconsistent bindings within one definition", async () => {
     const invalid = structuredClone(draft);
-    fixtureField(invalid, 1).metric = { id: "context", label: "Context", group: "context" };
+    fixtureField(invalid, 1).metric = {
+      id: "context",
+      label: "Context",
+      group: "context",
+    };
     expect(routineDraftSchema.safeParse(invalid).success).toBe(false);
     const mapped = structuredClone(draft);
     const field = fixtureField(mapped, 0);
@@ -309,7 +430,12 @@ describe("routine persistence", () => {
       fields: [{ ...field, id: "different", unit: "lb" }],
     });
     await expect(
-      saveRoutine({ requestId: randomUUID(), routineId: null, baseVersion: null, draft: mapped }),
+      saveRoutine({
+        requestId: randomUUID(),
+        routineId: null,
+        baseVersion: null,
+        draft: mapped,
+      }),
     ).rejects.toThrow("Too big");
     mapped.steps.pop();
     fixtureStep(mapped).fields.push({ ...field, id: "duplicate" });
@@ -322,7 +448,12 @@ describe("routine persistence", () => {
     if (!field) throw new Error("Missing fixture field");
     field.unit = "lb";
     await expect(
-      saveRoutine({ requestId: randomUUID(), routineId: first.id, baseVersion: 1, draft: changed }),
+      saveRoutine({
+        requestId: randomUUID(),
+        routineId: first.id,
+        baseVersion: 1,
+        draft: changed,
+      }),
     ).rejects.toThrow("new field ID");
     const removed = await saveRoutine({
       requestId: randomUUID(),
@@ -376,7 +507,12 @@ describe("routine persistence", () => {
       routineVersion: 1,
       occurredAt: "2026-10-18T14:00:00Z",
       steps: [
-        { stepId: "measure", done: true, occurredAt: measurementTime, entries: [{ value: 65 }] },
+        {
+          stepId: "measure",
+          done: true,
+          occurredAt: measurementTime,
+          entries: [{ value: 65 }],
+        },
       ],
     });
     expect(run.steps[0]?.occurredAt).toBe(measurementTime);
@@ -407,12 +543,22 @@ describe("routine persistence", () => {
     expect(await listRoutines()).toEqual([second]);
     expect((await readFile(join(dir, "definitions.jsonl"), "utf8")).startsWith(before)).toBe(true);
     await expect(
-      saveRoutine({ requestId: randomUUID(), routineId: first.id, baseVersion: 1, draft }),
+      saveRoutine({
+        requestId: randomUUID(),
+        routineId: first.id,
+        baseVersion: 1,
+        draft,
+      }),
     ).rejects.toThrow("changed");
     expect((await stat(join(dir, "definitions.jsonl"))).mode & 0o777).toBe(0o600);
   });
   it("deduplicates concurrent retries and rejects ID reuse", async () => {
-    const input = { requestId: randomUUID(), routineId: null, baseVersion: null, draft };
+    const input = {
+      requestId: randomUUID(),
+      routineId: null,
+      baseVersion: null,
+      draft,
+    };
     const [a, b] = await Promise.all([saveRoutine(input), saveRoutine(input)]);
     expect(a).toEqual(b);
     expect(await listRoutines()).toHaveLength(1);
@@ -515,7 +661,10 @@ describe("routine persistence", () => {
       steps: [{ stepId: "brush", done: true, entries: [] }],
     };
     await expect(
-      recordRoutineRun({ ...input, steps: [{ stepId: "brush", done: true, entries: [{}] }] }),
+      recordRoutineRun({
+        ...input,
+        steps: [{ stepId: "brush", done: true, entries: [{}] }],
+      }),
     ).rejects.toThrow("Done-only");
     expect((await recordRoutineRun(input)).steps).toEqual([
       { stepId: "brush", done: true, entries: [] },
@@ -528,7 +677,10 @@ describe("routine persistence", () => {
   });
   it("rejects ambiguous definitions", () => {
     expect(
-      routineDraftSchema.safeParse({ ...draft, steps: [draft.steps[0], draft.steps[0]] }).success,
+      routineDraftSchema.safeParse({
+        ...draft,
+        steps: [draft.steps[0], draft.steps[0]],
+      }).success,
     ).toBe(false);
     expect(
       routineDraftSchema.safeParse({

@@ -5,6 +5,9 @@ import { join, resolve } from "node:path";
 import { z } from "zod";
 import {
   routineDefinitionSchema,
+  routineCancellationSchema,
+  undoRoutineRunInputSchema,
+  type RoutineCancellation,
   routineRunInputSchema,
   routineRunSchema,
   saveRoutineInputSchema,
@@ -14,15 +17,22 @@ import {
   type RoutineMetric,
   type RoutineRun,
 } from "./routine-model";
+import { routineDateForSchedule, routineDay } from "./routine-schedule";
 
 const storedDefinition = z.preprocess((value) => {
   if (typeof value !== "object" || value === null || !("schedule" in value)) return value;
   const { schedule, ...definition } = value;
-  return { ...definition, schedules: [{ id: "default", ...(schedule as object) }] };
+  return {
+    ...definition,
+    schedules: [{ id: "default", ...(schedule as object) }],
+  };
 }, routineDefinitionSchema);
 const definitionRecord = z.union([
   z.strictObject({ requestId: z.uuid(), definition: storedDefinition }),
-  z.strictObject({ requestId: z.uuid(), definitions: z.array(storedDefinition).min(1) }),
+  z.strictObject({
+    requestId: z.uuid(),
+    definitions: z.array(storedDefinition).min(1),
+  }),
 ]);
 const queues = new Map<string, Promise<unknown>>();
 const day = new Intl.DateTimeFormat("sv-SE", {
@@ -90,6 +100,35 @@ async function runs(dir: string): Promise<RoutineRun[]> {
   for (const name of names.filter((name) => /^\d{4}-\d{2}-\d{2}\.jsonl$/.test(name)).sort())
     records.push(...(await readLines(join(dir, name), routineRunSchema)));
   return records.reverse();
+}
+async function activeRuns(dir: string): Promise<RoutineRun[]> {
+  const cancelled = new Set(
+    (await readLines(join(dir, "cancellations.jsonl"), routineCancellationSchema)).map(
+      (record) => record.runId,
+    ),
+  );
+  return (await runs(dir)).filter((run) => !cancelled.has(run.id));
+}
+export function undoRoutineRun(input: unknown): Promise<RoutineCancellation> {
+  const parsed = undoRoutineRunInputSchema.parse(input);
+  const dir = directory();
+  return serialized(dir, async () => {
+    const cancellations = await readLines(
+      join(dir, "cancellations.jsonl"),
+      routineCancellationSchema,
+    );
+    const existing = cancellations.find((record) => record.requestId === parsed.requestId);
+    if (existing) {
+      if (existing.runId !== parsed.runId)
+        throw new Error("This request ID has already been used.");
+      return existing;
+    }
+    if (!(await runs(dir)).some((run) => run.id === parsed.runId))
+      throw new Error("Routine run does not exist.");
+    const record = { ...parsed, recordedAt: new Date().toISOString() };
+    await append(dir, "cancellations.jsonl", record);
+    return record;
+  });
 }
 export function listRoutines(): Promise<RoutineDefinition[]> {
   const dir = directory();
@@ -184,13 +223,16 @@ export function saveRoutines(input: unknown): Promise<RoutineDefinition[]> {
     });
     metricCatalogue([...records.map((record) => record.definition), ...saved]);
     // One append makes the batch indivisible to readers and retryable by one request ID.
-    await append(dir, "definitions.jsonl", { requestId: parsed.requestId, definitions: saved });
+    await append(dir, "definitions.jsonl", {
+      requestId: parsed.requestId,
+      definitions: saved,
+    });
     return saved;
   });
 }
 export function loadRoutineRuns(): Promise<RoutineRun[]> {
   const dir = directory();
-  return serialized(dir, () => runs(dir));
+  return serialized(dir, () => activeRuns(dir));
 }
 export function loadRoutineHistory(): Promise<
   Array<{ run: RoutineRun; definition: RoutineDefinition }>
@@ -198,7 +240,7 @@ export function loadRoutineHistory(): Promise<
   const dir = directory();
   return serialized(dir, async () => {
     const records = await definitions(dir);
-    return (await runs(dir)).map((run) => {
+    return (await activeRuns(dir)).map((run) => {
       const definition = records.find(
         (record) =>
           record.definition.id === run.routineId &&
@@ -213,14 +255,6 @@ export function recordRoutineRun(input: unknown): Promise<RoutineRun> {
   const parsed = routineRunInputSchema.parse(input);
   const dir = directory();
   return serialized(dir, async () => {
-    const existing = (await runs(dir)).find((run) => run.id === parsed.id);
-    if (existing) {
-      const { recordedAt, ...original } = existing;
-      void recordedAt;
-      if (JSON.stringify(original) !== JSON.stringify(parsed))
-        throw new Error("This run ID has already been used.");
-      return existing;
-    }
     const definition = (await definitions(dir)).find(
       (record) =>
         record.definition.id === parsed.routineId &&
@@ -228,7 +262,32 @@ export function recordRoutineRun(input: unknown): Promise<RoutineRun> {
     )?.definition;
     if (!definition) throw new Error("Routine version does not exist.");
     validateRoutineRun(definition, parsed);
-    const record = { ...parsed, recordedAt: new Date().toISOString() };
+    const schedule = definition.schedules.find((schedule) => schedule.id === parsed.scheduleId);
+    const firstSchedule = definition.schedules[0];
+    if (!firstSchedule) throw new Error("Routine has no schedule.");
+    const resolveDate = (input: typeof parsed) =>
+      input.routineDate ??
+      (schedule
+        ? routineDateForSchedule(schedule, new Date(input.occurredAt))
+        : routineDay(new Date(input.occurredAt), firstSchedule.timeZone));
+    const normalized = routineRunInputSchema.parse({
+      ...parsed,
+      routineDate: resolveDate(parsed),
+    });
+    // Search raw records so retrying a canceled submission cannot resurrect it.
+    const existing = (await runs(dir)).find((run) => run.id === parsed.id);
+    if (existing) {
+      const { recordedAt, ...storedInput } = existing;
+      void recordedAt;
+      const original = routineRunInputSchema.parse({
+        ...storedInput,
+        routineDate: resolveDate(existing),
+      });
+      if (JSON.stringify(original) !== JSON.stringify(normalized))
+        throw new Error("This run ID has already been used.");
+      return existing;
+    }
+    const record = { ...normalized, recordedAt: new Date().toISOString() };
     await append(dir, `${day.format(new Date(record.recordedAt))}.jsonl`, record);
     return record;
   });

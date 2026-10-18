@@ -39,10 +39,21 @@ weekdays, qualitative time of day, optional exact time, and timezone. Morning an
 night blood pressure share one definition and form with two schedule slots.
 An execution explicitly identifies its schedule slot or is unscheduled, and has
 its own actual timestamp. Home tracks completion separately for each slot and
-local date; recording morning blood pressure does not complete the night slot.
+routine date; recording morning blood pressure does not complete the night slot.
+Evening and bedtime slots belong to the previous date until 04:00 in their timezone.
+Morning, afternoon and anytime slots keep the calendar date. The same rule applies
+to weekday eligibility, automatic slot selection and Home's completion display.
+`occurredAt` remains the actual instant used by charts; `routineDate` identifies
+the intended day's slot and can be overridden under Timing. Existing records without
+`routineDate` derive it from their timestamp and schedule without rewriting files.
 Timing is optional: unspecified timing produces one anytime slot without blocking
 creation or asking a date question. Recording defaults to now. Date/time and slot
 overrides are tucked under Timing, so ordinary entry needs no date interaction.
+
+Click a completed Done-only card's check to undo its latest matching record.
+History offers Undo per entry, including measurements. Undo removes that record
+from active completion counts, history and graphs; recording again creates a new
+entry. Original entries are preserved, with cancellations appended separately.
 
 The builder saves all proposed routines in one atomic, idempotent batch. Each
 proposal can be targeted for changes in the conversation or removed before saving.
@@ -98,6 +109,8 @@ or that a particular storage implementation improves tracking adherence.
 `TWITTER_LITE_ROUTINE_DIR` defaults to `~/.local/state/twitter-lite/routines`.
 `definitions.jsonl` contains immutable definition versions (new batches share one JSONL record); `YYYY-MM-DD.jsonl`
 contains execution records partitioned by recording date in Asia/Tokyo. Files are
+accompanied by `cancellations.jsonl`, whose idempotent events reference undone run IDs.
+Retrying an old save after its cancellation does not restore the record. Files are
 append-only, mode 0600 in a 0700 directory. Back up this directory along with the
 separate Journal Markdown directory and SQLite database. Routine observations
 remain typed JSON values; they are not flattened into Journal prose.
@@ -165,3 +178,8 @@ Automatic form preview verification: 203 Home/routine tests and desktop/mobile E
 passed. Six live Jev checks covered weight, paired blood pressure with an explicit
 morning slot, a bare routine name, a Done completion, a reflection, and a negated
 measurement. These checks did not save production records.
+
+Overnight/undo verification: Home and routine tests cover the 04:00 boundary,
+weekday selection, timezone/DST boundaries, date overrides, idempotent cancellation
+and original-record preservation. Desktop/mobile E2E records at 01:00 local time,
+toggles Done → Undo → Done and removes a measurement from the active chart.

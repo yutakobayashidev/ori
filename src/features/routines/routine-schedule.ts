@@ -25,18 +25,47 @@ export function routineDay(date: Date, timeZone: string): string {
   }).format(date);
 }
 export function isRoutineDay(schedule: RoutineDraft["schedules"][number], now: Date): boolean {
-  const day = new Intl.DateTimeFormat("en-US", {
-    timeZone: schedule.timeZone,
-    weekday: "short",
-  }).format(now);
-  return schedule.weekdays.includes(weekdays.indexOf(day));
+  const day = new Date(`${routineDateForSchedule(schedule, now)}T00:00:00Z`).getUTCDay();
+  return schedule.weekdays.includes(day);
+}
+
+function localHour(date: Date, timeZone: string): number {
+  return Number(
+    new Intl.DateTimeFormat("en-GB", {
+      timeZone,
+      hour: "2-digit",
+      hourCycle: "h23",
+    }).format(date),
+  );
+}
+
+export function routineDateForSchedule(
+  schedule: RoutineDraft["schedules"][number],
+  date: Date,
+): string {
+  const day = routineDay(date, schedule.timeZone);
+  if (
+    (schedule.timeOfDay === "evening" || schedule.timeOfDay === "bedtime") &&
+    localHour(date, schedule.timeZone) < 4
+  ) {
+    const previous = new Date(`${day}T00:00:00Z`);
+    previous.setUTCDate(previous.getUTCDate() - 1);
+    return previous.toISOString().slice(0, 10);
+  }
+  return day;
 }
 
 export function inferRoutineSchedule(
   schedules: RoutineDraft["schedules"],
   now: Date,
 ): string | null {
-  const candidates = schedules.filter((schedule) => isRoutineDay(schedule, now));
+  const eligible = schedules.filter((schedule) => isRoutineDay(schedule, now));
+  const overnight = eligible.filter(
+    (schedule) =>
+      (schedule.timeOfDay === "evening" || schedule.timeOfDay === "bedtime") &&
+      localHour(now, schedule.timeZone) < 4,
+  );
+  const candidates = overnight.length ? overnight : eligible;
   const targets = { morning: 8, afternoon: 14, evening: 18, bedtime: 22 };
   let nearest: { id: string; distance: number } | undefined;
   for (const schedule of candidates) {
@@ -67,11 +96,20 @@ export function isScheduleRecorded(
   runs: RoutineRun[],
   now: Date,
 ): boolean {
-  const today = routineDay(now, schedule.timeZone);
-  return runs.some(
+  return getScheduleRuns(routineId, schedule, runs, now).length > 0;
+}
+
+export function getScheduleRuns(
+  routineId: string,
+  schedule: RoutineDraft["schedules"][number],
+  runs: RoutineRun[],
+  now: Date,
+): RoutineRun[] {
+  const today = routineDateForSchedule(schedule, now);
+  return runs.filter(
     (run) =>
       run.routineId === routineId &&
       run.scheduleId === schedule.id &&
-      routineDay(new Date(run.occurredAt), schedule.timeZone) === today,
+      (run.routineDate ?? routineDateForSchedule(schedule, new Date(run.occurredAt))) === today,
   );
 }

@@ -7,7 +7,9 @@ export const routineMetricSchema = z.strictObject({
   label,
   group: z.string().regex(/^[a-z][a-z0-9_.-]{0,99}$/),
 });
-export type RoutineMetric = z.infer<typeof routineMetricSchema> & { unit: string | null };
+export type RoutineMetric = z.infer<typeof routineMetricSchema> & {
+  unit: string | null;
+};
 
 export const routineFieldSchema = z
   .strictObject({
@@ -88,7 +90,11 @@ export const routineDraftShapeSchema = z.strictObject({
   steps: z.array(routineStepSchema).length(1),
 });
 function uniqueDefinition(
-  draft: { aliases: string[]; schedules: RoutineSchedule[]; steps: Array<{ id: string }> },
+  draft: {
+    aliases: string[];
+    schedules: RoutineSchedule[];
+    steps: Array<{ id: string }>;
+  },
   ctx: z.RefinementCtx,
 ) {
   for (const [name, values] of [
@@ -120,7 +126,9 @@ const saveRoutineItemSchema = z
     (input) => (input.routineId === null) === (input.baseVersion === null),
     "Editing requires the current version.",
   );
-export const saveRoutineInputSchema = saveRoutineItemSchema.safeExtend({ requestId: z.uuid() });
+export const saveRoutineInputSchema = saveRoutineItemSchema.safeExtend({
+  requestId: z.uuid(),
+});
 export const saveRoutinesInputSchema = z
   .strictObject({
     requestId: z.uuid(),
@@ -143,6 +151,7 @@ export const routineRunInputSchema = z.strictObject({
   routineVersion: z.number().int().positive(),
   scheduleId: identifier.nullable().optional(),
   occurredAt: z.iso.datetime({ offset: true }),
+  routineDate: z.iso.date().optional(),
   steps: z
     .array(
       z.strictObject({
@@ -155,6 +164,14 @@ export const routineRunInputSchema = z.strictObject({
     .min(1)
     .max(30),
 });
+export const undoRoutineRunInputSchema = z.strictObject({
+  requestId: z.uuid(),
+  runId: z.uuid(),
+});
+export const routineCancellationSchema = undoRoutineRunInputSchema.extend({
+  recordedAt: z.iso.datetime({ offset: true }),
+});
+export type RoutineCancellation = z.infer<typeof routineCancellationSchema>;
 export const routineRunSchema = routineRunInputSchema.extend({
   recordedAt: z.iso.datetime({ offset: true }),
 });

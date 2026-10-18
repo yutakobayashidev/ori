@@ -55,6 +55,7 @@ test("creates independent routines in one conversation and records morning and n
   );
   await builder.getByRole("button", { name: "Create routines", exact: true }).click();
   await expect(builder).toHaveCount(0);
+  await page.clock.setFixedTime(new Date("2026-10-19T16:00:00Z"));
   await page.reload();
 
   async function openRoutine(name: string) {
@@ -124,7 +125,11 @@ test("creates independent routines in one conversation and records morning and n
   await execution.getByRole("button", { name: "Save entry", exact: true }).click();
   await expect(execution).toHaveCount(0);
   await page.getByRole("button", { name: "Mark Bath done", exact: true }).click();
-  await expect(page.getByRole("button", { name: "Mark Bath done", exact: true })).toBeDisabled();
+  await page.getByRole("button", { name: "Undo latest Bath", exact: true }).click();
+  await expect(page.getByRole("button", { name: "Mark Bath done", exact: true })).toBeEnabled();
+  await expect.poll(routineFiles).toContain('"runId":');
+  await page.getByRole("button", { name: "Mark Bath done", exact: true }).click();
+  await expect(page.getByRole("button", { name: "Undo latest Bath", exact: true })).toBeEnabled();
   await expect(page.getByRole("dialog")).toHaveCount(0);
   await expect(page.getByRole("region", { name: "Record Bath", exact: true })).toHaveCount(0);
   await expect.poll(routineFiles).toContain('"stepId":"bath","done":true');
@@ -134,6 +139,7 @@ test("creates independent routines in one conversation and records morning and n
   expect(original).toContain('"medicines":["med_a"]');
   expect(original).toContain('"weight":65.2');
   expect(original).toContain('"systolic":118');
+  expect(original).toContain('"routineDate":"2026-10-19"');
 
   execution = await openRoutine("Blood pressure");
   await execution.getByRole("button", { name: "Edit Blood pressure", exact: true }).click();
@@ -154,4 +160,11 @@ test("creates independent routines in one conversation and records morning and n
     "120 mmHg",
   );
   expect(await routineFiles()).toContain('"version":2');
+  const entry = execution.getByRole("article").filter({ hasText: "120 mmHg" });
+  await entry.getByRole("button", { name: /^Undo entry/ }).click();
+  await expect(entry).toHaveCount(0);
+  await expect(
+    execution.getByRole("figure", { name: /^Blood pressure · mmHg/ }).getByRole("button"),
+  ).toHaveCount(2);
+  expect(await routineFiles()).toContain('"systolic":120');
 });

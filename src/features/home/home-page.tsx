@@ -1,13 +1,15 @@
 import { Link, useNavigate, useRouteContext } from "@tanstack/react-router";
 import { ArrowUpRight, Check, ChevronDown, Circle, Plus, X } from "lucide-react";
-import { useRef, useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { RoutineBuilderSheet } from "#/features/routines/routine-builder-sheet";
 import { RoutineRecorder, RoutineQuickDone } from "#/features/routines/routine-recorder";
 import { listRoutines, loadRoutineRuns } from "#/features/routines/routine-functions";
 import {
   isRoutineDay,
-  isScheduleRecorded,
+  getScheduleRuns,
+  routineDateForSchedule,
+  routineDay,
   scheduleLabel,
 } from "#/features/routines/routine-schedule";
 import type { RoutineDefinition } from "#/features/routines/routine-model";
@@ -33,6 +35,16 @@ export function HomePage() {
   const { activities, create, createMany, change, busy, loading } = useActivities();
   const navigate = useNavigate();
   const input = useRef<HTMLTextAreaElement>(null);
+  const [now, setNow] = useState(() => new Date());
+  useEffect(() => {
+    const refresh = () => setNow(new Date());
+    const timer = setInterval(refresh, 60_000);
+    window.addEventListener("focus", refresh);
+    return () => {
+      clearInterval(timer);
+      window.removeEventListener("focus", refresh);
+    };
+  }, []);
   const [prompt, setPrompt] = useState("");
   const queryClient = useQueryClient();
   const routines = useQuery({ queryKey: ["routines"], queryFn: () => listRoutines() });
@@ -64,6 +76,7 @@ export function HomePage() {
         onClose={() => setRunning(null)}
         onEdit={() => openBuilder("", running.routine)}
         onSaved={refreshRoutineRecords}
+        onUndone={refreshRoutineRecords}
       />
     );
   }
@@ -242,6 +255,7 @@ export function HomePage() {
                       onClose={onClose}
                       onInteract={onInteract}
                       onEdit={() => openBuilder("", routine)}
+                      onUndone={refreshRoutineRecords}
                       onSaved={() => {
                         refreshRoutineRecords();
                         onSaved();
@@ -326,12 +340,15 @@ export function HomePage() {
                       )}
                       {routines.data?.flatMap((routine) =>
                         routine.schedules.map((schedule) => {
-                          const recorded = isScheduleRecorded(
+                          const matchingRuns = getScheduleRuns(
                             routine.id,
                             schedule,
                             routineRuns.data ?? [],
-                            new Date(),
+                            now,
                           );
+                          const recorded = matchingRuns.length > 0;
+                          const logicalDate = routineDateForSchedule(schedule, now);
+                          const previousDay = logicalDate < routineDay(now, schedule.timeZone);
                           const expanded =
                             running?.source === "row" &&
                             running.routine.id === routine.id &&
@@ -349,7 +366,8 @@ export function HomePage() {
                                   <RoutineQuickDone
                                     routine={routine}
                                     scheduleId={schedule.id}
-                                    recorded={recorded}
+                                    key={logicalDate}
+                                    runs={matchingRuns}
                                     onSaved={refreshRoutineRecords}
                                   />
                                 ) : (
@@ -382,9 +400,13 @@ export function HomePage() {
                                   </span>
                                   <span className="text-ui-12 text-muted-foreground">
                                     {recorded
-                                      ? "Recorded today"
-                                      : isRoutineDay(schedule, new Date())
-                                        ? "Today"
+                                      ? previousDay
+                                        ? "Recorded yesterday"
+                                        : "Recorded today"
+                                      : isRoutineDay(schedule, now)
+                                        ? previousDay
+                                          ? "Yesterday"
+                                          : "Today"
                                         : "On demand"}
                                     {" · "}
                                     {scheduleLabel(schedule)}
