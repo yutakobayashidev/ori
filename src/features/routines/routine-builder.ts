@@ -1,11 +1,11 @@
 import { z } from "zod";
-import { routineDraftSchema, routineDraftShapeSchema } from "./routine-model";
+import { routineDraftSchema, routineDraftShapeSchema, routineStepSchema } from "./routine-model";
 
 export const routineBuilderReplySchema = z.strictObject({
   message: z.string().min(1).max(3000),
   questions: z.array(z.string().min(1).max(500)).max(3),
   missingFields: z.array(z.string().min(1).max(200)).max(30),
-  draft: routineDraftShapeSchema.nullable(),
+  drafts: z.array(routineDraftShapeSchema).max(20),
 });
 export const routineBuilderInputSchema = z
   .strictObject({
@@ -15,7 +15,9 @@ export const routineBuilderInputSchema = z
       )
       .min(1)
       .max(80),
-    currentDraft: routineDraftShapeSchema.nullable(),
+    currentDrafts: z
+      .array(routineDraftShapeSchema.extend({ steps: z.array(routineStepSchema).min(1).max(30) }))
+      .max(20),
   })
   .refine((input) => input.messages.at(-1)?.role === "user", "A new message is required.");
 export type RoutineBuilderReply = z.infer<typeof routineBuilderReplySchema>;
@@ -25,6 +27,7 @@ export function canSaveRoutine(reply: RoutineBuilderReply | null): boolean {
     reply &&
     !reply.missingFields.length &&
     !reply.questions.length &&
-    routineDraftSchema.safeParse(reply.draft).success,
+    reply.drafts.length > 0 &&
+    reply.drafts.every((draft) => routineDraftSchema.safeParse(draft).success),
   );
 }

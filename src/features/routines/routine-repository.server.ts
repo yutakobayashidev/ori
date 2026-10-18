@@ -8,16 +8,22 @@ import {
   routineRunInputSchema,
   routineRunSchema,
   saveRoutineInputSchema,
+  saveRoutinesInputSchema,
   validateRoutineRun,
   type RoutineDefinition,
   type RoutineMetric,
   type RoutineRun,
 } from "./routine-model";
 
-const definitionRecord = z.strictObject({
-  requestId: z.uuid(),
-  definition: routineDefinitionSchema,
-});
+const storedDefinition = z.preprocess((value) => {
+  if (typeof value !== "object" || value === null || !("schedule" in value)) return value;
+  const { schedule, ...definition } = value;
+  return { ...definition, schedules: [{ id: "default", ...(schedule as object) }] };
+}, routineDefinitionSchema);
+const definitionRecord = z.union([
+  z.strictObject({ requestId: z.uuid(), definition: storedDefinition }),
+  z.strictObject({ requestId: z.uuid(), definitions: z.array(storedDefinition).min(1) }),
+]);
 const queues = new Map<string, Promise<unknown>>();
 const day = new Intl.DateTimeFormat("sv-SE", {
   timeZone: "Asia/Tokyo",
@@ -63,8 +69,14 @@ async function append(dir: string, fileName: string, value: unknown) {
     await file.close();
   }
 }
-function definitions(dir: string) {
-  return readLines(join(dir, "definitions.jsonl"), definitionRecord);
+async function definitions(dir: string) {
+  const records = await readLines(join(dir, "definitions.jsonl"), definitionRecord);
+  return records.flatMap((record) =>
+    ("definitions" in record ? record.definitions : [record.definition]).map((definition) => ({
+      requestId: record.requestId,
+      definition,
+    })),
+  );
 }
 async function runs(dir: string): Promise<RoutineRun[]> {
   let names: string[];
@@ -115,50 +127,65 @@ export function listRoutineMetrics(): Promise<RoutineMetric[]> {
     metricCatalogue((await definitions(dir)).map((record) => record.definition)),
   );
 }
-export function saveRoutine(input: unknown): Promise<RoutineDefinition> {
-  const parsed = saveRoutineInputSchema.parse(input);
+export async function saveRoutine(input: unknown): Promise<RoutineDefinition> {
+  const { requestId, ...routine } = saveRoutineInputSchema.parse(input);
+  const [definition] = await saveRoutines({ requestId, routines: [routine] });
+  if (!definition) throw new Error("No routine saved.");
+  return definition;
+}
+export function saveRoutines(input: unknown): Promise<RoutineDefinition[]> {
+  const parsed = saveRoutinesInputSchema.parse(input);
   const dir = directory();
   return serialized(dir, async () => {
     const records = await definitions(dir);
-    const existing = records.find((record) => record.requestId === parsed.requestId);
-    if (existing) {
-      const { id, version, createdAt, ...draft } = existing.definition;
-      void createdAt;
+    const existing = records.filter((record) => record.requestId === parsed.requestId);
+    if (existing.length) {
       if (
-        JSON.stringify(draft) !== JSON.stringify(parsed.draft) ||
-        (parsed.routineId !== null &&
-          (id !== parsed.routineId || version !== (parsed.baseVersion ?? 0) + 1)) ||
-        (parsed.routineId === null && version !== 1)
+        existing.length !== parsed.routines.length ||
+        existing.some((record, index) => {
+          const requested = parsed.routines[index];
+          if (!requested) return true;
+          const { id, version, createdAt, ...draft } = record.definition;
+          void createdAt;
+          return (
+            JSON.stringify(draft) !== JSON.stringify(requested.draft) ||
+            (requested.routineId !== null
+              ? id !== requested.routineId || version !== (requested.baseVersion ?? 0) + 1
+              : version !== 1)
+          );
+        })
       )
         throw new Error("This request ID has already been used.");
-      return existing.definition;
+      return existing.map((record) => record.definition);
     }
-    const previous = records
-      .filter((record) => record.definition.id === parsed.routineId)
-      .at(-1)?.definition;
-    if (parsed.routineId !== null && (!previous || previous.version !== parsed.baseVersion))
-      throw new Error("Routine changed. Reload before editing.");
-    for (const record of records.filter((record) => record.definition.id === parsed.routineId)) {
-      for (const step of parsed.draft.steps) {
-        const oldStep = record.definition.steps.find((candidate) => candidate.id === step.id);
-        for (const field of step.fields) {
-          const oldField = oldStep?.fields.find((candidate) => candidate.id === field.id);
-          if (oldField?.metric && oldField.metric.id !== field.metric?.id)
-            throw new Error("Changing a field metric requires a new field ID.");
-          if (oldField && (oldField.type !== field.type || oldField.unit !== field.unit))
-            throw new Error("Changing a field type or unit requires a new field ID.");
+    const saved = parsed.routines.map((item) => {
+      const history = records.filter((record) => record.definition.id === item.routineId);
+      const previous = history.at(-1)?.definition;
+      if (item.routineId !== null && (!previous || previous.version !== item.baseVersion))
+        throw new Error("Routine changed. Reload before editing.");
+      for (const record of history) {
+        for (const step of item.draft.steps) {
+          const oldStep = record.definition.steps.find((candidate) => candidate.id === step.id);
+          for (const field of step.fields) {
+            const oldField = oldStep?.fields.find((candidate) => candidate.id === field.id);
+            if (oldField?.metric && oldField.metric.id !== field.metric?.id)
+              throw new Error("Changing a field metric requires a new field ID.");
+            if (oldField && (oldField.type !== field.type || oldField.unit !== field.unit))
+              throw new Error("Changing a field type or unit requires a new field ID.");
+          }
         }
       }
-    }
-    const definition = routineDefinitionSchema.parse({
-      ...parsed.draft,
-      id: parsed.routineId ?? randomUUID(),
-      version: (previous?.version ?? 0) + 1,
-      createdAt: new Date().toISOString(),
+      return routineDefinitionSchema.parse({
+        ...item.draft,
+        id: item.routineId ?? randomUUID(),
+        version: (previous?.version ?? 0) + 1,
+        createdAt: new Date().toISOString(),
+      });
     });
-    metricCatalogue([...records.map((record) => record.definition), definition]);
-    await append(dir, "definitions.jsonl", { requestId: parsed.requestId, definition });
-    return definition;
+    metricCatalogue([...records.map((record) => record.definition), ...saved]);
+    // One append makes the batch indivisible to readers and retryable by one request ID.
+    await append(dir, "definitions.jsonl", { requestId: parsed.requestId, definitions: saved });
+    return saved;
   });
 }
 export function loadRoutineRuns(): Promise<RoutineRun[]> {

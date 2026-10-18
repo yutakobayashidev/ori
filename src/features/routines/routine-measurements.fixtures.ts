@@ -7,7 +7,9 @@ export const measurementRoutine: RoutineDefinition = {
   name: "Daily health",
   description: "",
   aliases: [],
-  schedule: { weekdays: [1], timeOfDay: "anytime", time: null, timeZone: "Asia/Tokyo" },
+  schedules: [
+    { id: "default", weekdays: [1], timeOfDay: "anytime", time: null, timeZone: "Asia/Tokyo" },
+  ],
   steps: ["morning", "night"].map((id) => ({
     id,
     label: `${id} blood pressure`,

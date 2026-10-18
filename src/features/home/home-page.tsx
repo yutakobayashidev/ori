@@ -5,7 +5,11 @@ import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { RoutineBuilderSheet } from "#/features/routines/routine-builder-sheet";
 import { RoutineRunSheet } from "#/features/routines/routine-run-sheet";
 import { listRoutines, loadRoutineRuns } from "#/features/routines/routine-functions";
-import { isRoutineDay, routineDay, scheduleLabel } from "#/features/routines/routine-schedule";
+import {
+  isRoutineDay,
+  isScheduleRecorded,
+  scheduleLabel,
+} from "#/features/routines/routine-schedule";
 import type { RoutineDefinition } from "#/features/routines/routine-model";
 import { Dialog } from "#/components/dialog";
 import { Button } from "#/components/ui/button";
@@ -36,7 +40,10 @@ export function HomePage() {
   const [builder, setBuilder] = useState<{ prompt: string; routine?: RoutineDefinition } | null>(
     null,
   );
-  const [running, setRunning] = useState<RoutineDefinition | null>(null);
+  const [running, setRunning] = useState<{
+    routine: RoutineDefinition;
+    scheduleId?: string;
+  } | null>(null);
   function openBuilder(text: string, routine?: RoutineDefinition) {
     setProposal(null);
     setRunning(null);
@@ -206,7 +213,7 @@ export function HomePage() {
                 onCreateRoutine={(text) => openBuilder(text)}
                 onRunRoutine={(id) => {
                   const routine = routines.data?.find((item) => item.id === id);
-                  if (routine) setRunning(routine);
+                  if (routine) setRunning({ routine });
                 }}
                 text={prompt}
                 onTextChange={(value) => {
@@ -282,34 +289,37 @@ export function HomePage() {
                           </Button>
                         </p>
                       )}
-                      {routines.data?.map((routine) => {
-                        const today = routineDay(new Date(), routine.schedule.timeZone);
-                        const recorded = routineRuns.data?.some(
-                          (run) =>
-                            run.routineId === routine.id &&
-                            routineDay(new Date(run.occurredAt), routine.schedule.timeZone) ===
-                              today,
-                        );
-                        return (
-                          <button
-                            key={routine.id}
-                            onClick={() => setRunning(routine)}
-                            className="flex min-h-16 w-full flex-col gap-1 rounded-xl border border-border bg-muted px-4 py-3 text-left hover:bg-accent focus-visible:outline-2 focus-visible:outline-ring"
-                          >
-                            <span className="text-sm font-medium wrap-anywhere">
-                              {routine.name}
-                            </span>
-                            <span className="text-xs text-muted-foreground">
-                              {recorded
-                                ? "Recorded today"
-                                : isRoutineDay(routine.schedule, new Date())
-                                  ? "Today"
-                                  : "On demand"}{" "}
-                              · {scheduleLabel(routine.schedule)}
-                            </span>
-                          </button>
-                        );
-                      })}
+                      {routines.data?.flatMap((routine) =>
+                        routine.schedules.map((schedule) => {
+                          const recorded = isScheduleRecorded(
+                            routine.id,
+                            schedule,
+                            routineRuns.data ?? [],
+                            new Date(),
+                          );
+                          return (
+                            <button
+                              key={`${routine.id}:${schedule.id}`}
+                              aria-label={`${routine.name} · ${scheduleLabel(schedule)}`}
+                              onClick={() => setRunning({ routine, scheduleId: schedule.id })}
+                              className="flex min-h-16 w-full flex-col gap-1 rounded-xl border border-border bg-muted px-4 py-3 text-left hover:bg-accent focus-visible:outline-2 focus-visible:outline-ring"
+                            >
+                              <span className="text-sm font-medium wrap-anywhere">
+                                {routine.name}
+                              </span>
+                              <span className="text-xs text-muted-foreground">
+                                {recorded
+                                  ? "Recorded today"
+                                  : isRoutineDay(schedule, new Date())
+                                    ? "Today"
+                                    : "On demand"}
+                                {" · "}
+                                {scheduleLabel(schedule)}
+                              </span>
+                            </button>
+                          );
+                        }),
+                      )}
                       <Button
                         variant="ghost"
                         className="justify-start"
@@ -419,19 +429,20 @@ export function HomePage() {
           prompt={builder.prompt}
           routine={builder.routine}
           onClose={() => setBuilder(null)}
-          onSaved={() => {
+          onSaved={(definitions) => {
             void queryClient.invalidateQueries({ queryKey: ["routines"] });
             setBuilder(null);
             setPrompt("");
-            setNotice("Routine saved.");
+            setNotice(definitions.length === 1 ? "Routine saved." : "Routines saved.");
           }}
         />
       )}
       {running && (
         <RoutineRunSheet
-          routine={running}
+          routine={running.routine}
+          scheduleId={running.scheduleId}
           onClose={() => setRunning(null)}
-          onEdit={() => openBuilder("", running)}
+          onEdit={() => openBuilder("", running.routine)}
           onSaved={() => {
             void queryClient.invalidateQueries({ queryKey: ["routine-runs"] });
             void queryClient.invalidateQueries({ queryKey: ["routine-history"] });

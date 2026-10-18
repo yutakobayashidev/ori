@@ -8,18 +8,33 @@ Home's natural-language input offers routine creation or a saved routine invocat
 The owner explicitly opens a right-hand sheet; typing never opens it automatically.
 `/` provides the same creation and saved-routine entry points.
 
-Codex app-server builds a routine through conversation. Each turn uses `outputSchema`
-and returns a proposed definition, missing information, and questions. The app renders
-that definition as a working form preview. Required information gates saving; optional
+Codex app-server builds one or more independent routines through a single conversation.
+Each turn uses `outputSchema` and returns `drafts`, missing information, and questions.
+The app renders each draft as a separate working form preview. Required information gates saving; optional
 information must not create an endless questionnaire. User-facing chrome is English;
 conversation and owner-provided names retain the owner's language.
 
-Definitions include name, aliases, schedule (weekdays, qualitative time of day,
-optional exact time, timezone), and ordered steps. A step can be Done-only or contain
-AI-designed typed fields. Repeated steps support multiple measurements; layout can
-place related inputs together. No medication names or routine contents are compiled
-into the application. Exact notification scheduling is not implied by a qualitative
-time such as bedtime.
+Each new routine represents one independently executable action and exactly one form.
+Blood pressure keeps systolic and diastolic fields together, with repeatable paired
+readings. Weight, medication, bathing, and toothbrushing become separate routines.
+Codex must not wrap unrelated actions in a Daily Care container. A Done-only form
+has no fields; other forms keep AI-designed field types, units, and layout.
+
+Definitions include name, aliases, and one or more schedules with stable IDs,
+weekdays, qualitative time of day, optional exact time, and timezone. Morning and
+night blood pressure share one definition and form with two schedule slots.
+An execution explicitly identifies its schedule slot or is unscheduled, and has
+its own actual timestamp. Home tracks completion separately for each slot and
+local date; recording morning blood pressure does not complete the night slot.
+Timing is optional: unspecified timing produces one anytime slot without blocking
+creation or asking a date question. Recording defaults to now. Date/time and slot
+overrides are tucked under Timing, so ordinary entry needs no date interaction.
+
+The builder saves all proposed routines in one atomic, idempotent batch. Each
+proposal can be targeted for changes in the conversation or removed before saving.
+When editing an existing routine, the first proposal updates that routine; extra
+proposals create independent routines. Existing aggregate routines can be split
+through conversation while their historical versions and runs remain intact.
 
 Saved definitions have immutable versions. A run records the version, occurrence
 and recording timestamps, explicit Done actions and typed input values. Missing input
@@ -42,6 +57,9 @@ For a routine created before metric bindings existed, edit it and ask Codex to l
 its measurement fields to shared metrics. The chart then includes older records
 with the same stable field IDs and units, without modifying stored observations.
 Labels alone never trigger a merge. Unmapped values remain available in History.
+When splitting a legacy aggregate whose fields have no metric bindings, older
+values for actions moved into new routine IDs are not retroactively bound to those
+new routines. Already-mapped historical measurements still share the same graph.
 
 ## Implementation research
 
@@ -64,12 +82,14 @@ or that a particular storage implementation improves tracking adherence.
 ## Storage and operation
 
 `TWITTER_LITE_ROUTINE_DIR` defaults to `~/.local/state/twitter-lite/routines`.
-`definitions.jsonl` contains immutable definition versions; `YYYY-MM-DD.jsonl`
+`definitions.jsonl` contains immutable definition versions (new batches share one JSONL record); `YYYY-MM-DD.jsonl`
 contains execution records partitioned by recording date in Asia/Tokyo. Files are
 append-only, mode 0600 in a 0700 directory. Back up this directory along with the
 separate Journal Markdown directory and SQLite database. Routine observations
 remain typed JSON values; they are not flattened into Journal prose.
 
+Existing single-schedule records are read as a single default slot without rewriting files.
+Historical aggregate forms remain readable; newly saved forms must contain one action.
 Every execution references the exact definition version. History renders with that
 version's labels and units. Reusing a field ID with a different type or unit is
 rejected; meaningful semantic changes should also receive a new ID. Retries reuse
@@ -78,24 +98,23 @@ work. This local repository assumes one writer process (the existing web service
 
 Scheduling specifies days, qualitative time or an exact clock time and timezone.
 Home shows today's schedule and lets the owner invoke any routine on demand.
-This release does not send notifications. A routine can be partly recorded; no
-record is inferred for untouched steps. Done-only actions record completion time;
+This release does not send notifications. No record is inferred for untouched forms. Done-only actions record completion time;
 measurement steps preserve false and zero separately from missing input. The
-execution timestamp can be adjusted for earlier observations. Each step's Time
-disclosure can override that timestamp when morning and evening observations are
-entered together. The app never invents a clock time from the step's name; without
+execution timestamp can be adjusted under Timing for earlier observations.
+Legacy aggregate forms retain their per-step time overrides. Morning and
+evening are saved as independent runs of the same form. The app never invents a clock time from the step's name; without
 an override, the execution timestamp applies to that step's entries.
 
 Routine creation/editing calls the existing authenticated Elixir runtime through
 `WORKSPACE_RUNTIME_URL` and `WORKSPACE_RUNTIME_TOKEN[_FILE]`. That runtime's Codex
 installation and login are used, with no separate OpenAI API key. Each builder
-request sends the conversation and current draft in a bounded, read-only turn,
+request sends the conversation and current drafts in a bounded, read-only turn,
 using `turn/start.outputSchema`. The runtime exposes the final completed answer
 separately from commentary. Replies are parsed and validated before rendering.
 Errors preserve the conversation and offer retry. Unsaved drafts currently live
 in the open sheet; close/reload discards them. Saved forms run without Codex.
 
-## Verification (2026-10-18)
+## Original builder verification (2026-10-18)
 
 - Full unit suite: 961 passed, one opt-in test skipped; runtime suite: 27 passed.
 - Home/Journal/routine browser suite: 36 passed across desktop and mobile.
@@ -109,3 +128,18 @@ in the open sheet; close/reload discards them. Saved forms run without Codex.
   past-tense observations, ordinary tasks and refusal.
 - Typecheck and lint passed. Browser scenarios use an isolated protocol fixture
   for deterministic Codex replies; live Codex is verified separately as above.
+
+## Multi-routine verification (2026-10-19)
+
+Batch persistence tests cover all-or-nothing validation, concurrent retry, legacy
+aggregate splitting and unchanged historical records. Schedule tests distinguish
+morning and night and use each slot’s local day. Builder tests cover independent
+previews, removing proposals, edits and retries. Live Codex returned three separate
+routines for blood pressure, weight and medication, with two blood-pressure slots.
+
+The full unit suite passed 989 tests before the optional-timing refinement; the
+final routine suite passed 69 tests. Desktop/mobile browser tests passed for batch
+creation, morning/night recording, shared charts, immediate Done/medication/weight
+entry and history-preserving edits, including axe checks. A second live Codex check
+created toothbrushing and bathing without asking for dates or times. Typecheck,
+lint and production build passed.

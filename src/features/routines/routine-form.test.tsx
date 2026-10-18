@@ -17,7 +17,9 @@ const draft: RoutineDraft = {
   name: "Evening",
   description: "",
   aliases: [],
-  schedule: { weekdays: [1], timeOfDay: "evening", time: null, timeZone: "Asia/Tokyo" },
+  schedules: [
+    { id: "default", weekdays: [1], timeOfDay: "evening", time: null, timeZone: "Asia/Tokyo" },
+  ],
   steps: [
     { id: "brush", label: "Brush teeth", repeatable: false, layout: "stack", fields: [] },
     {

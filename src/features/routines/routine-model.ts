@@ -53,11 +53,9 @@ export const routineStepSchema = z
     if (new Set(metrics).size !== metrics.length)
       ctx.addIssue({ code: "custom", message: "Duplicate metrics in a step." });
   });
-export const routineDraftShapeSchema = z.strictObject({
-  name: label,
-  description: z.string().max(2000),
-  aliases: z.array(label).max(30),
-  schedule: z.strictObject({
+export const routineScheduleSchema = z
+  .strictObject({
+    id: identifier,
     weekdays: z.array(z.number().int().min(0).max(6)).min(1).max(7),
     timeOfDay: z.enum(["morning", "afternoon", "evening", "bedtime", "anytime"]),
     time: z
@@ -76,27 +74,44 @@ export const routineDraftShapeSchema = z.strictObject({
           return false;
         }
       }, "Invalid time zone."),
-  }),
-  steps: z.array(routineStepSchema).min(1).max(30),
+  })
+  .refine(
+    (schedule) => new Set(schedule.weekdays).size === schedule.weekdays.length,
+    "Duplicate weekdays.",
+  );
+export type RoutineSchedule = z.infer<typeof routineScheduleSchema>;
+export const routineDraftShapeSchema = z.strictObject({
+  name: label,
+  description: z.string().max(2000),
+  aliases: z.array(label).max(30),
+  schedules: z.array(routineScheduleSchema).min(1).max(30),
+  steps: z.array(routineStepSchema).length(1),
 });
-export const routineDraftSchema = routineDraftShapeSchema.superRefine((draft, ctx) => {
+function uniqueDefinition(
+  draft: { aliases: string[]; schedules: RoutineSchedule[]; steps: Array<{ id: string }> },
+  ctx: z.RefinementCtx,
+) {
   for (const [name, values] of [
     ["step IDs", draft.steps.map((step) => step.id)],
     ["aliases", draft.aliases],
-    ["weekdays", draft.schedule.weekdays],
+    ["schedule IDs", draft.schedules.map((schedule) => schedule.id)],
   ] as const) {
-    if (new Set<string | number>(values).size !== values.length)
+    if (new Set(values).size !== values.length)
       ctx.addIssue({ code: "custom", message: `Duplicate ${name}.` });
   }
-});
-export const routineDefinitionSchema = routineDraftSchema.safeExtend({
-  id: z.uuid(),
-  version: z.number().int().positive(),
-  createdAt: z.iso.datetime({ offset: true }),
-});
-export const saveRoutineInputSchema = z
+}
+export const routineDraftSchema = routineDraftShapeSchema.superRefine(uniqueDefinition);
+// Historical versions retain their original forms; only newly saved drafts require one action.
+export const routineDefinitionSchema = routineDraftShapeSchema
+  .extend({
+    steps: z.array(routineStepSchema).min(1).max(30),
+    id: z.uuid(),
+    version: z.number().int().positive(),
+    createdAt: z.iso.datetime({ offset: true }),
+  })
+  .superRefine(uniqueDefinition);
+const saveRoutineItemSchema = z
   .strictObject({
-    requestId: z.uuid(),
     routineId: z.uuid().nullable(),
     baseVersion: z.number().int().positive().nullable(),
     draft: routineDraftSchema,
@@ -105,6 +120,17 @@ export const saveRoutineInputSchema = z
     (input) => (input.routineId === null) === (input.baseVersion === null),
     "Editing requires the current version.",
   );
+export const saveRoutineInputSchema = saveRoutineItemSchema.safeExtend({ requestId: z.uuid() });
+export const saveRoutinesInputSchema = z
+  .strictObject({
+    requestId: z.uuid(),
+    routines: z.array(saveRoutineItemSchema).min(1).max(30),
+  })
+  .refine((input) => {
+    const ids = input.routines.flatMap((routine) => (routine.routineId ? [routine.routineId] : []));
+    return new Set(ids).size === ids.length;
+  }, "A routine can only be updated once per batch.");
+export type SaveRoutinesInput = z.infer<typeof saveRoutinesInputSchema>;
 export const routineValueSchema = z.union([
   z.string().max(10000),
   z.number().finite(),
@@ -115,6 +141,7 @@ export const routineRunInputSchema = z.strictObject({
   id: z.uuid(),
   routineId: z.uuid(),
   routineVersion: z.number().int().positive(),
+  scheduleId: identifier.nullable().optional(),
   occurredAt: z.iso.datetime({ offset: true }),
   steps: z
     .array(
@@ -140,6 +167,11 @@ export type RoutineRunInput = z.infer<typeof routineRunInputSchema>;
 export type SaveRoutineInput = z.infer<typeof saveRoutineInputSchema>;
 
 export function validateRoutineRun(definition: RoutineDefinition, input: RoutineRunInput): void {
+  if (
+    input.scheduleId &&
+    !definition.schedules.some((schedule) => schedule.id === input.scheduleId)
+  )
+    throw new Error("Unknown routine schedule.");
   if (
     !input.steps.some(
       (step) =>

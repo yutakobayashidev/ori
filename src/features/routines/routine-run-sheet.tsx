@@ -25,15 +25,20 @@ function localDateTime(date: Date) {
 }
 export function RoutineRunSheet({
   routine,
+  scheduleId: initialScheduleId,
   onClose,
   onSaved,
   onEdit,
 }: {
   routine: RoutineDefinition;
+  scheduleId?: string;
   onClose: () => void;
   onSaved: () => void;
   onEdit: () => void;
 }) {
+  const [scheduleId, setScheduleId] = useState(
+    initialScheduleId ?? (routine.schedules.length === 1 ? (routine.schedules[0]?.id ?? "") : ""),
+  );
   const [value, setValue] = useState<RoutineValues>({});
   const [when, setWhen] = useState(() => localDateTime(new Date()));
   const [busy, setBusy] = useState(false);
@@ -65,13 +70,14 @@ export function RoutineRunSheet({
       });
       if (!steps.some((step) => step.done || step.entries.length))
         throw new Error("Complete a step or add a measurement.");
-      const key = JSON.stringify({ when, steps });
+      const key = JSON.stringify({ when, steps, scheduleId });
       if (pending.current?.key !== key) pending.current = { key, id: crypto.randomUUID() };
       const data: RoutineRunInput = {
         id: pending.current.id,
         routineId: routine.id,
         routineVersion: routine.version,
         occurredAt: date.toISOString(),
+        scheduleId: scheduleId || null,
         steps,
       };
       validateRoutineRun(routine, data);
@@ -100,7 +106,12 @@ export function RoutineRunSheet({
         <div className="border-b border-border pr-8">
           <SheetHeader>
             <SheetTitle>{routine.name}</SheetTitle>
-            <SheetDescription>{scheduleLabel(routine.schedule)}</SheetDescription>
+            <SheetDescription>
+              {routine.schedules
+                .filter((schedule) => !scheduleId || schedule.id === scheduleId)
+                .map(scheduleLabel)
+                .join(" / ")}
+            </SheetDescription>
           </SheetHeader>
         </div>
         <div className="min-h-0 flex-1 overflow-y-auto p-5">
@@ -120,26 +131,53 @@ export function RoutineRunSheet({
             </div>
           ) : (
             <>
-              <div className="mb-5 space-y-2">
-                <label htmlFor="routine-occurred-at" className="text-sm">
-                  Recorded for
-                </label>
-                <Input
-                  id="routine-occurred-at"
-                  aria-label="Recorded for"
-                  type="datetime-local"
-                  value={when}
-                  disabled={busy}
-                  onChange={(event) => setWhen(event.target.value)}
-                />
-              </div>
               <RoutineForm
                 draft={routine}
                 value={value}
                 onChange={setValue}
                 disabled={busy}
-                recordedFor={when}
+                recordedFor={routine.steps.length > 1 ? when : undefined}
               />
+              <details className="mt-5 text-sm">
+                <summary className="cursor-pointer text-muted-foreground">Timing</summary>
+                <div className="pt-3">
+                  {routine.schedules.length > 1 && (
+                    <div className="mb-5 space-y-2">
+                      <label htmlFor="routine-schedule" className="text-sm">
+                        Schedule
+                      </label>
+                      <select
+                        id="routine-schedule"
+                        aria-label="Schedule"
+                        value={scheduleId}
+                        disabled={busy}
+                        onChange={(event) => setScheduleId(event.target.value)}
+                        className="h-10 w-full rounded-md border border-input bg-background px-3 text-sm"
+                      >
+                        <option value="">Unscheduled</option>
+                        {routine.schedules.map((schedule) => (
+                          <option key={schedule.id} value={schedule.id}>
+                            {scheduleLabel(schedule)}
+                          </option>
+                        ))}
+                      </select>
+                    </div>
+                  )}
+                  <div className="mb-5 space-y-2">
+                    <label htmlFor="routine-occurred-at" className="text-sm">
+                      Recorded for
+                    </label>
+                    <Input
+                      id="routine-occurred-at"
+                      aria-label="Recorded for"
+                      type="datetime-local"
+                      value={when}
+                      disabled={busy}
+                      onChange={(event) => setWhen(event.target.value)}
+                    />
+                  </div>
+                </div>
+              </details>
             </>
           )}
           {history.data && routines.data && (
@@ -204,6 +242,14 @@ function RoutineHistoryEntry({
       <time dateTime={run.occurredAt} className="text-xs text-muted-foreground">
         {new Date(run.occurredAt).toLocaleString()}
       </time>
+      {run.scheduleId && (
+        <p className="text-xs text-muted-foreground">
+          {definition.schedules
+            .filter((schedule) => schedule.id === run.scheduleId)
+            .map(scheduleLabel)
+            .join("")}
+        </p>
+      )}
       {run.steps
         .filter((step) => step.done || step.entries.length)
         .map((result) => {

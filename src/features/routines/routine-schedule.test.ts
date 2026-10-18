@@ -1,7 +1,8 @@
 import { describe, expect, it } from "vitest";
 import type { RoutineDraft } from "./routine-model";
-import { isRoutineDay, routineDay, scheduleLabel } from "./routine-schedule";
-const schedule: RoutineDraft["schedule"] = {
+import { isRoutineDay, isScheduleRecorded, routineDay, scheduleLabel } from "./routine-schedule";
+const schedule: RoutineDraft["schedules"][number] = {
+  id: "bedtime",
   weekdays: [1],
   timeOfDay: "bedtime",
   time: null,
@@ -31,4 +32,28 @@ describe("routine schedules", () => {
       "Sun, Sat · Anytime",
     );
   });
+});
+
+it("tracks morning and night separately using each schedule's local recording day", () => {
+  const morning = { ...schedule, id: "morning", timeOfDay: "morning" as const };
+  const night = { ...schedule, id: "night" };
+  const run = {
+    id: "record",
+    routineId: "blood-pressure",
+    routineVersion: 1,
+    scheduleId: "morning",
+    occurredAt: "2026-10-18T23:12:00Z",
+    recordedAt: "2026-10-19T16:00:00Z",
+    steps: [],
+  };
+  const today = new Date("2026-10-19T12:00:00Z");
+  expect(isScheduleRecorded("blood-pressure", morning, [run], today)).toBe(true);
+  expect(isScheduleRecorded("blood-pressure", night, [run], today)).toBe(false);
+  expect(isScheduleRecorded("weight", morning, [run], today)).toBe(false);
+  expect(
+    isScheduleRecorded("blood-pressure", morning, [run], new Date("2026-10-19T15:00:00Z")),
+  ).toBe(false);
+  expect(isScheduleRecorded("blood-pressure", morning, [{ ...run, scheduleId: null }], today)).toBe(
+    false,
+  );
 });

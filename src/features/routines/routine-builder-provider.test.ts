@@ -8,7 +8,7 @@ vi.mock("../execution/runtime-client.server", () => ({
 const request = vi.mocked(runtimeRequest);
 const input = {
   messages: [{ role: "user" as const, text: "毎晩、歯磨きしたい" }],
-  currentDraft: null,
+  currentDrafts: [],
   outputSchema: { type: "object" },
   instructions: "Ask only for missing required fields.",
 };
@@ -32,7 +32,7 @@ it("submits a schema-constrained read-only turn and parses its final answer, exc
   const body = JSON.parse(request.mock.calls[0]?.[1]?.body as string);
   expect(body.config).toMatchObject({ readOnly: true, outputSchema: input.outputSchema });
   expect(body.config.developerInstructions).toContain(input.instructions);
-  expect(JSON.parse(body.prompt)).toEqual({ conversation: input.messages, currentDraft: null });
+  expect(JSON.parse(body.prompt)).toEqual({ conversation: input.messages, currentDrafts: [] });
   expect(body.cwd).toBeUndefined();
   expect(body.config.mcpServers).toBeUndefined();
   expect(request).toHaveBeenCalledTimes(2);

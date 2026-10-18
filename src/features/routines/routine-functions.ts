@@ -1,5 +1,9 @@
 import { createServerFn } from "@tanstack/react-start";
-import { routineRunInputSchema, saveRoutineInputSchema } from "./routine-model";
+import {
+  routineRunInputSchema,
+  saveRoutineInputSchema,
+  saveRoutinesInputSchema,
+} from "./routine-model";
 
 // Protected by the application's owner-session and CSRF middleware.
 export const listRoutines = createServerFn({ method: "GET" }).handler(async () => {
@@ -26,3 +30,10 @@ export const loadRoutineHistory = createServerFn({ method: "GET" }).handler(asyn
   const repository = await import("./routine-repository.server");
   return repository.loadRoutineHistory();
 });
+
+export const saveRoutines = createServerFn({ method: "POST" })
+  .validator(saveRoutinesInputSchema)
+  .handler(async ({ data }) => {
+    const repository = await import("./routine-repository.server");
+    return repository.saveRoutines(data);
+  });

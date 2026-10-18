@@ -3,7 +3,7 @@ import { runtimeRequest } from "../execution/runtime-client.server";
 
 export type RoutineDraftGenerationInput = {
   messages: Array<{ role: "user" | "assistant"; text: string }>;
-  currentDraft: unknown;
+  currentDrafts: unknown[];
   outputSchema: Record<string, unknown>;
   instructions?: string;
   signal?: AbortSignal;
@@ -31,7 +31,10 @@ export async function generateRoutineDraft(input: RoutineDraftGenerationInput): 
       signal,
       body: JSON.stringify({
         id,
-        prompt: JSON.stringify({ conversation: input.messages, currentDraft: input.currentDraft }),
+        prompt: JSON.stringify({
+          conversation: input.messages,
+          currentDrafts: input.currentDrafts,
+        }),
         config: {
           readOnly: true,
           outputSchema: input.outputSchema,

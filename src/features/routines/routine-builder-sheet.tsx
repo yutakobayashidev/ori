@@ -15,7 +15,7 @@ import {
 } from "./routine-builder";
 import { continueRoutineBuilder } from "./routine-builder-functions";
 import { RoutineForm, type RoutineValues } from "./routine-form";
-import { saveRoutine } from "./routine-functions";
+import { saveRoutines } from "./routine-functions";
 import type { RoutineDefinition, RoutineDraft } from "./routine-model";
 import { scheduleLabel } from "./routine-schedule";
 
@@ -28,7 +28,7 @@ export function RoutineBuilderSheet({
   prompt: string;
   routine?: RoutineDefinition;
   onClose: () => void;
-  onSaved: (routine: RoutineDefinition) => void;
+  onSaved: (routines: RoutineDefinition[]) => void;
 }) {
   const initial = prompt.trim();
   const [messages, setMessages] = useState<RoutineBuilderMessage[]>(
@@ -36,7 +36,7 @@ export function RoutineBuilderSheet({
   );
   const [reply, setReply] = useState<RoutineBuilderReply | null>(
     routine
-      ? { message: "", questions: [], missingFields: [], draft: draftFromRoutine(routine) }
+      ? { message: "", questions: [], missingFields: [], drafts: [draftFromRoutine(routine)] }
       : null,
   );
   const [input, setInput] = useState("");
@@ -44,11 +44,12 @@ export function RoutineBuilderSheet({
   const [saving, setSaving] = useState(false);
   const [error, setError] = useState("");
   const [retry, setRetry] = useState<RoutineBuilderMessage[] | null>(null);
-  const [preview, setPreview] = useState<RoutineValues>({});
+  const [preview, setPreview] = useState<RoutineValues[]>([]);
   const requestId = useRef(crypto.randomUUID());
   const started = useRef(false);
   const inFlight = useRef(false);
   const end = useRef<HTMLDivElement>(null);
+  const messageInput = useRef<HTMLTextAreaElement>(null);
 
   const ask = useCallback(
     async (next: RoutineBuilderMessage[]) => {
@@ -59,10 +60,10 @@ export function RoutineBuilderSheet({
       setRetry(null);
       try {
         const result = await continueRoutineBuilder({
-          data: { messages: next, currentDraft: reply?.draft ?? null },
+          data: { messages: next, currentDrafts: reply?.drafts ?? [] },
         });
         setReply(result);
-        setPreview({});
+        setPreview([]);
         requestId.current = crypto.randomUUID();
         setMessages([
           ...next,
@@ -89,17 +90,19 @@ export function RoutineBuilderSheet({
   }, [messages, busy]);
 
   async function save() {
-    if (!reply?.draft || !canSaveRoutine(reply) || inFlight.current) return;
+    if (!reply?.drafts.length || !canSaveRoutine(reply) || inFlight.current) return;
     inFlight.current = true;
     setSaving(true);
     setError("");
     try {
-      const saved = await saveRoutine({
+      const saved = await saveRoutines({
         data: {
           requestId: requestId.current,
-          routineId: routine?.id ?? null,
-          baseVersion: routine?.version ?? null,
-          draft: reply.draft,
+          routines: reply.drafts.map((draft, index) => ({
+            routineId: index === 0 ? (routine?.id ?? null) : null,
+            baseVersion: index === 0 ? (routine?.version ?? null) : null,
+            draft,
+          })),
         },
       });
       onSaved(saved);
@@ -150,22 +153,68 @@ export function RoutineBuilderSheet({
             )}
             <div ref={end} />
           </div>
-          {reply?.draft && (
-            <section aria-label="Routine preview" className="mt-7 border-t border-border pt-5">
+          {reply?.drafts.map((draft, index) => (
+            <section
+              key={index}
+              aria-label="Routine preview"
+              className="mt-7 border-t border-border pt-5"
+            >
               <div className="mb-5 space-y-1">
-                <h3 className="font-medium wrap-anywhere">{reply.draft.name}</h3>
-                <p className="text-xs text-muted-foreground">
-                  {scheduleLabel(reply.draft.schedule)}
-                </p>
+                <div className="flex items-center justify-between gap-2">
+                  <h3 className="font-medium wrap-anywhere">{draft.name}</h3>
+                  <div className="flex gap-1">
+                    <Button
+                      type="button"
+                      variant="ghost"
+                      disabled={busy || saving}
+                      aria-label={"Edit " + draft.name}
+                      onClick={() => {
+                        setInput("Change routine " + (index + 1) + " (" + draft.name + "): ");
+                        messageInput.current?.focus();
+                      }}
+                    >
+                      Edit
+                    </Button>
+                    {(!routine || index > 0) && (
+                      <Button
+                        type="button"
+                        variant="ghost"
+                        disabled={busy || saving}
+                        aria-label={"Remove " + draft.name}
+                        onClick={() => {
+                          setReply({
+                            ...reply,
+                            drafts: reply.drafts.filter((_, at) => at !== index),
+                          });
+                          setPreview((values) => values.filter((_, at) => at !== index));
+                          requestId.current = crypto.randomUUID();
+                        }}
+                      >
+                        Remove
+                      </Button>
+                    )}
+                  </div>
+                </div>
+                {draft.schedules.map((schedule) => (
+                  <p key={schedule.id} className="text-xs text-muted-foreground">
+                    {scheduleLabel(schedule)}
+                  </p>
+                ))}
               </div>
               <RoutineForm
-                draft={reply.draft}
-                value={preview}
-                onChange={setPreview}
+                draft={draft}
+                value={preview[index] ?? {}}
+                onChange={(value) =>
+                  setPreview((values) => {
+                    const next = [...values];
+                    next[index] = value;
+                    return next;
+                  })
+                }
                 disabled={busy || saving}
               />
             </section>
-          )}
+          ))}
         </div>
         <div className="space-y-3 border-t border-border p-4">
           {error && (
@@ -193,6 +242,7 @@ export function RoutineBuilderSheet({
             className="space-y-2"
           >
             <Textarea
+              ref={messageInput}
               aria-label="Routine message"
               placeholder="Describe or change your routine…"
               value={input}
@@ -216,7 +266,13 @@ export function RoutineBuilderSheet({
                 }
                 onClick={() => void save()}
               >
-                {saving ? "Saving…" : routine ? "Save changes" : "Create routine"}
+                {saving
+                  ? "Saving…"
+                  : routine
+                    ? "Save changes"
+                    : reply && reply.drafts.length > 1
+                      ? "Create routines"
+                      : "Create routine"}
               </Button>
             </div>
           </form>
@@ -231,7 +287,7 @@ function draftFromRoutine(routine: RoutineDefinition): RoutineDraft {
     name: routine.name,
     description: routine.description,
     aliases: routine.aliases,
-    schedule: routine.schedule,
+    schedules: routine.schedules,
     steps: routine.steps,
   };
 }
