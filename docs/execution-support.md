@@ -58,13 +58,14 @@ available in history with “Completion date unavailable.”
 
 The sections below describe the original prototype. Its sample conversation,
 scheduling, and simulated-send flows have been superseded on Home and Messages
-by the persistent inbox above. Routine steps and Journal remain local prototypes;
-their records are not copied into the persistent activity store.
+by the persistent inbox above. Routine steps remain local prototypes.
+Journal now persists separately in daily append-only Markdown files; see
+[Home capture](home-task-composer.md) for storage and backup details.
 
 The shared sidebar opens `/support` (Messages) and `/journal` (Journal), alongside
-Reader and Research. These are UI-only prototypes with fictional contacts
+Reader and Research. The original implementation used UI-only prototypes with fictional contacts
 and in-memory state. Reloading resets the prototype state. Tasks, communication status, outcomes, and
-journal entries are shared between routes for the current browser session.
+journal entries were shared between routes for the current browser session.
 No messages, calendar events, medical records, or Rensheng pages are written.
 
 ## Reference and scope

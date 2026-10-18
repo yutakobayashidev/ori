@@ -4,8 +4,10 @@
 
 The default deployment is one web container and one persistent SQLite volume.
 It supports owner login, Home, tasks, Board, Focus, and saved workspace state
-without a Twitter relay, Tailscale, Beeper, Elixir, or a Codex account. Journal,
+without a Twitter relay, Tailscale, Beeper, Elixir, or a Codex account.
 Reader, Vitals, and routines retain their existing prototype limitations.
+Journal uses separate daily Markdown files. Set `TWITTER_LITE_JOURNAL_DIR` to a
+mounted persistent directory to retain entries when replacing the container.
 
 AI execution is a separate, optional process. The web service owns user sessions,
 SQLite, activities, and MCP; the runtime owns Codex subprocesses, scheduling,

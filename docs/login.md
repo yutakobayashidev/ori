@@ -51,8 +51,9 @@ their own sessions. Authenticated responses are not cached.
 Account registration is closed once the owner exists. Multiple users,
 email-based password recovery, and account management are not implemented.
 Back up the SQLite database as described in [storage](storage-and-oauth.md).
-Home tasks, messages, and journal entries remain session-local prototypes;
-onboarding does not make those records persistent.
+Home tasks and reply activities persist in SQLite. Journal entries persist
+separately in daily Markdown files; include the [Journal directory](home-task-composer.md)
+in backups as well.
 
 ## Implementation
 

@@ -30,7 +30,8 @@ SQLite records across Home, Messages, and MCP. User edits and decisions survive
 agent updates and reloads. Home keeps today's completed activities in place as compact
 rows; older completions remain accessible through searchable completion history.
 The board's Done column shows today by default, with an option to show past
-completions. Both use the device's local date. Routines and Journal remain session-only prototypes.
+completions. Both use the device's local date. Routines remain session-only prototypes.
+Journal entries persist in daily append-only Markdown files using Japan Standard Time.
 Reply sending snapshots the saved draft into a durable operation; upstream send
 success does not automatically complete the task.
 Tasks and replies share permanent `#number` references, including existing records.
@@ -74,7 +75,7 @@ block other Home actions. No database migration or additional service is needed.
 | --------- | -------------------- | ---------------------------------------------------------------------------------------------------------------------- |
 | Home      | `/`                  | Persistent mixed task/reply inbox and action proposals; routine and measurement controls remain local prototypes.      |
 | Messages  | `/support`           | Reply activities, Beeper history and avatars, persistent drafts, quoted text sending and operation status.             |
-| Journal   | `/journal`           | Notes, resume points, medication and weight entries, append-only corrections, and summary previews. Local prototype.   |
+| Journal   | `/journal`           | Notes, resume points, medication and weight entries with daily Markdown persistence and append-only corrections.       |
 | Reader    | `/inbox`             | Searchable sample articles and a responsive article reader. Recommendation from activity history is not connected yet. |
 | Vitals    | `/vitals`            | Body and Environment dashboards with sample readings, charts, and simulated controls. No health or device connection.  |
 | Research  | `/browse`, `/deck`   | Intentional search and user/list reading, Twitter/Mastodon/Reddit decks, and optional Codex research chat.             |
@@ -82,9 +83,10 @@ block other Home actions. No database migration or additional service is needed.
 | Focus     | `/focus/$activityId` | One task, visual timer, reply/source access, estimates and recorded effort.                                            |
 
 Home and Messages share activity IDs, user decisions, and drafts through a common
-server service. Journal and routine prototype state resets on reload. The home
-input uses a deterministic English/Japanese interpreter to preview an action
-before confirmation, rather than an LLM. Research decks, connections, and chat
+server service. Journal survives reload; routine prototype state does not. The home
+input uses Jev to classify tasks and journal text and previews entries before
+confirmation. See [Home capture](home-task-composer.md) for parsing and storage details.
+Research decks, connections, and chat
 history also use server-side persistence.
 
 See [execution support](execution-support.md) and the
