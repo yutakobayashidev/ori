@@ -7,13 +7,19 @@ Implemented on 2026-10-18.
 Home's natural-language input offers routine creation or a saved routine invocation.
 Creation and editing explicitly open a right-hand sheet; typing never opens it automatically.
 Routine execution stays in Home: a row expands an inline form, while invoking a
-routine from the composer opens the same form directly below the input. Done-only
+routine from the composer automatically previews the same form below the input,
+without a Run routine confirmation. Done-only
 rows record in one click. History and graphs open only when requested.
 Cards use the task-card completion indicators: an empty circle before recording
 and a green check after recording for that day and schedule. Composer invocation
 initially selects the nearest schedule from the current time in its timezone;
 users can change it or choose Unscheduled. Explicit row invocation keeps that
-row's schedule. Selection is computed locally without an AI request.
+row's schedule. The current-time default is computed locally without an AI request.
+When input names a schedule explicitly, the preview can select that schedule.
+Jev matches a saved routine and selects values present in the input for its dynamic
+fields (for example, weight or systolic/diastolic readings). Users can edit the
+prefilled form; saving always requires an explicit action. Routine creation still
+requires opening the builder.
 `/` provides the same creation and saved-routine entry points.
 
 Codex app-server builds one or more independent routines through a single conversation.
@@ -154,3 +160,8 @@ lint and production build passed.
 
 Inline recording verification: 77 routine tests, desktop/mobile E2E including
 accessibility checks, typecheck, lint and production build passed.
+
+Automatic form preview verification: 203 Home/routine tests and desktop/mobile E2E
+passed. Six live Jev checks covered weight, paired blood pressure with an explicit
+morning slot, a bare routine name, a Done completion, a reflection, and a negated
+measurement. These checks did not save production records.

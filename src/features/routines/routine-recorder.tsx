@@ -90,12 +90,16 @@ export function RoutineRecorder({
   onClose,
   onSaved,
   onEdit,
+  initialValues = {},
+  onInteract,
 }: {
   routine: RoutineDefinition;
   scheduleId?: string;
   onClose: () => void;
   onSaved: () => void;
   onEdit: () => void;
+  initialValues?: RoutineValues;
+  onInteract?: () => void;
 }) {
   const scope = useId();
   const doneOnly = routine.steps.every((step) => step.fields.length === 0);
@@ -103,7 +107,7 @@ export function RoutineRecorder({
   const [scheduleId, setScheduleId] = useState(
     initialScheduleId ?? inferRoutineSchedule(routine.schedules, new Date()) ?? "",
   );
-  const [value, setValue] = useState<RoutineValues>({});
+  const [value, setValue] = useState<RoutineValues>(initialValues);
   const [when, setWhen] = useState("");
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState("");
@@ -179,7 +183,10 @@ export function RoutineRecorder({
           aria-label="Schedule"
           value={scheduleId}
           disabled={busy}
-          onChange={(event) => setScheduleId(event.target.value)}
+          onChange={(event) => {
+            onInteract?.();
+            setScheduleId(event.target.value);
+          }}
           className="h-10 w-full rounded-md border border-input bg-background px-3 text-sm"
         >
           <option value="">Unscheduled</option>
@@ -235,7 +242,10 @@ export function RoutineRecorder({
               <RoutineForm
                 draft={routine}
                 value={value}
-                onChange={setValue}
+                onChange={(next) => {
+                  onInteract?.();
+                  setValue(next);
+                }}
                 disabled={busy}
                 recordedFor={
                   routine.steps.length > 1 ? when || localDateTime(new Date()) : undefined
@@ -257,7 +267,10 @@ export function RoutineRecorder({
                     type="datetime-local"
                     value={when}
                     disabled={busy}
-                    onChange={(event) => setWhen(event.target.value)}
+                    onChange={(event) => {
+                      onInteract?.();
+                      setWhen(event.target.value);
+                    }}
                   />
                 </div>
               </div>

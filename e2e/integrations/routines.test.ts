@@ -81,8 +81,8 @@ test("creates independent routines in one conversation and records morning and n
     .nth(1)
     .fill("78");
   await execution.getByRole("button", { name: "Save entry", exact: true }).click();
-  await expect(execution.getByRole("status")).toHaveText("Entry saved.");
-  await execution.getByRole("button", { name: "Dismiss", exact: true }).click();
+  await expect(execution).toHaveCount(0);
+  await expect(page.getByRole("status").filter({ hasText: "Entry saved." })).toBeVisible();
   execution = await openRoutine("Blood pressure");
   await execution.getByText("Timing", { exact: true }).click();
   await execution.getByRole("combobox", { name: "Schedule", exact: true }).selectOption("night");
@@ -90,7 +90,8 @@ test("creates independent routines in one conversation and records morning and n
   await execution.getByRole("spinbutton", { name: "Systolic (mmHg)", exact: true }).fill("125");
   await execution.getByRole("spinbutton", { name: "Diastolic (mmHg)", exact: true }).fill("82");
   await execution.getByRole("button", { name: "Save entry", exact: true }).click();
-  await expect(execution.getByRole("status")).toHaveText("Entry saved.");
+  await expect(execution).toHaveCount(0);
+  execution = await openRoutine("Blood pressure");
   await execution.getByText("History", { exact: true }).click();
   const trends = execution.getByRole("region", { name: "Measurement trends" });
   const pressure = trends.getByRole("figure", { name: /^Blood pressure · mmHg/ });
@@ -121,8 +122,7 @@ test("creates independent routines in one conversation and records morning and n
   execution = await openRoutine("Medication");
   await execution.getByRole("checkbox", { name: "Medicine A", exact: true }).check();
   await execution.getByRole("button", { name: "Save entry", exact: true }).click();
-  await expect(execution.getByRole("status")).toHaveText("Entry saved.");
-  await execution.getByRole("button", { name: "Dismiss", exact: true }).click();
+  await expect(execution).toHaveCount(0);
   await page.getByRole("button", { name: "Mark Bath done", exact: true }).click();
   await expect(page.getByRole("button", { name: "Mark Bath done", exact: true })).toBeDisabled();
   await expect(page.getByRole("dialog")).toHaveCount(0);

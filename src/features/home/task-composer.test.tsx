@@ -2,7 +2,21 @@ import { act, fireEvent, render, screen } from "@testing-library/react";
 import { createRef, useState } from "react";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import type { TaskIntentResult } from "./task-intent";
-import { TaskComposer } from "./task-composer";
+import { TaskComposer, type RoutinePreviewProps } from "./task-composer";
+import type { ReactNode } from "react";
+import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
+import { RoutineRecorder } from "#/features/routines/routine-recorder";
+import {
+  recordRoutineRun,
+  type listRoutines,
+  type loadRoutineHistory,
+} from "#/features/routines/routine-functions";
+import type { RoutineDefinition } from "#/features/routines/routine-model";
+vi.mock("#/features/routines/routine-functions", () => ({
+  recordRoutineRun: vi.fn<typeof recordRoutineRun>(),
+  listRoutines: vi.fn<typeof listRoutines>(),
+  loadRoutineHistory: vi.fn<typeof loadRoutineHistory>(),
+}));
 const { classify } = vi.hoisted(() => ({
   classify:
     vi.fn<
@@ -19,6 +33,11 @@ function Composer({
   preview = vi.fn<() => void>(),
   onCreateRoutine,
   onRunRoutine,
+  renderRoutine = ({ onClose }) => (
+    <section aria-label="Record Evening">
+      <button onClick={onClose}>Close</button>
+    </section>
+  ),
 }: {
   save?: (tasks: unknown[]) => Promise<boolean>;
   journal?: (text: string) => Promise<boolean>;
@@ -26,6 +45,7 @@ function Composer({
   preview?: () => void;
   onCreateRoutine?: (text: string) => void;
   onRunRoutine?: (id: string) => void;
+  renderRoutine?: (preview: RoutinePreviewProps) => ReactNode;
 }) {
   const [text, setText] = useState("");
   return (
@@ -40,6 +60,7 @@ function Composer({
       createJournal={journal}
       onCreateRoutine={onCreateRoutine}
       onRunRoutine={onRunRoutine}
+      renderRoutine={renderRoutine}
       routines={[{ id: "night", name: "Evening", aliases: ["夜"], description: "Bedtime routine" }]}
     />
   );
@@ -231,7 +252,7 @@ it("opens routine creation only after confirmation", async () => {
   fireEvent.click(screen.getByRole("button", { name: "Create routine" }));
   expect(create).toHaveBeenCalledExactlyOnceWith("毎晩のルーティンを作りたい");
 });
-it("runs the selected registered routine after confirmation", async () => {
+it("automatically previews the selected routine without clearing the input", async () => {
   const run = vi.fn<(id: string) => void>();
   classify.mockResolvedValue({
     status: "routine_run",
@@ -241,10 +262,16 @@ it("runs the selected registered routine after confirmation", async () => {
   });
   render(<Composer onRunRoutine={run} />);
   await type("夜のルーティンやる");
-  expect(screen.getByRole("region", { name: "Routine preview" })).toHaveTextContent("Evening");
-  expect(run).not.toHaveBeenCalled();
-  fireEvent.click(screen.getByRole("button", { name: "Run routine" }));
+  expect(screen.getByRole("region", { name: "Record Evening" })).toBeInTheDocument();
+  expect(screen.queryByRole("button", { name: "Run routine" })).not.toBeInTheDocument();
+  expect(screen.getByRole("textbox", { name: "Home input" })).toHaveValue("夜のルーティンやる");
   expect(run).toHaveBeenCalledExactlyOnceWith("night");
+  fireEvent.click(screen.getByRole("button", { name: "Close" }));
+  await act(async () => {
+    await vi.advanceTimersByTimeAsync(1000);
+  });
+  expect(screen.queryByRole("region", { name: "Record Evening" })).not.toBeInTheDocument();
+  expect(classify).toHaveBeenCalledTimes(1);
 });
 it("offers saved routines in the slash palette", () => {
   const run = vi.fn<(id: string) => void>();
@@ -252,6 +279,98 @@ it("offers saved routines in the slash palette", () => {
   fireEvent.keyDown(screen.getByRole("textbox", { name: "Home input" }), { key: "/" });
   fireEvent.click(screen.getByRole("option", { name: "Evening" }));
   expect(run).toHaveBeenCalledExactlyOnceWith("night");
+});
+it("prefills the real inline recorder, preserves manual edits, and saves only on confirmation", async () => {
+  const weight: RoutineDefinition = {
+    id: "night",
+    version: 1,
+    createdAt: "2026-10-19T00:00:00.000Z",
+    name: "Weight",
+    description: "",
+    aliases: [],
+    schedules: [],
+    steps: [
+      {
+        id: "weight",
+        label: "Weight",
+        layout: "stack",
+        repeatable: false,
+        fields: [
+          {
+            id: "kg",
+            label: "Weight",
+            type: "number",
+            unit: "kg",
+            required: true,
+            options: [],
+            min: null,
+            max: null,
+          },
+        ],
+      },
+    ],
+  };
+  vi.mocked(recordRoutineRun).mockResolvedValue(undefined as never);
+  classify.mockResolvedValue({
+    status: "routine_run",
+    routineId: "night",
+    tasks: [],
+    notice: null,
+    routineValues: { weight: { done: true, entries: [{ kg: 65.2 }] } },
+  });
+  render(
+    <QueryClientProvider client={new QueryClient()}>
+      <Composer
+        renderRoutine={({ values, scheduleId, onClose, onSaved, onInteract }) => (
+          <RoutineRecorder
+            routine={weight}
+            initialValues={values}
+            scheduleId={scheduleId}
+            onClose={onClose}
+            onSaved={onSaved}
+            onInteract={onInteract}
+            onEdit={() => undefined}
+          />
+        )}
+      />
+    </QueryClientProvider>,
+  );
+  await type("体重65.2kg");
+  expect(screen.getByRole("region", { name: "Record Weight" })).toBeInTheDocument();
+  expect(screen.getByRole("spinbutton")).toHaveValue(65.2);
+  expect(recordRoutineRun).not.toHaveBeenCalled();
+  fireEvent.change(screen.getByRole("spinbutton"), { target: { value: "65.4" } });
+  await act(async () => {
+    await vi.advanceTimersByTimeAsync(1000);
+  });
+  expect(screen.getByRole("spinbutton")).toHaveValue(65.4);
+  expect(classify).toHaveBeenCalledTimes(1);
+  await act(async () => fireEvent.click(screen.getByRole("button", { name: "Save entry" })));
+  expect(recordRoutineRun).toHaveBeenCalledTimes(1);
+  expect(vi.mocked(recordRoutineRun).mock.calls[0]?.[0]?.data).toMatchObject({
+    steps: [{ stepId: "weight", done: true, entries: [{ kg: 65.4 }] }],
+  });
+  expect(screen.getByRole("textbox", { name: "Home input" })).toHaveValue("");
+  expect(screen.queryByRole("region", { name: "Record Weight" })).not.toBeInTheDocument();
+  await act(async () => {
+    await vi.advanceTimersByTimeAsync(1000);
+  });
+  expect(recordRoutineRun).toHaveBeenCalledTimes(1);
+});
+it("removes a routine preview immediately when the input changes", async () => {
+  classify.mockResolvedValueOnce({
+    status: "routine_run",
+    routineId: "night",
+    tasks: [],
+    notice: null,
+  });
+  render(<Composer />);
+  await type("夜のルーティン");
+  expect(screen.getByRole("region", { name: "Record Evening" })).toBeInTheDocument();
+  fireEvent.change(screen.getByRole("textbox", { name: "Home input" }), {
+    target: { value: "買い物" },
+  });
+  expect(screen.queryByRole("region", { name: "Record Evening" })).not.toBeInTheDocument();
 });
 it("ignores a stale routine classification after the input changes", async () => {
   let resolve!: (result: TaskIntentResult) => void;

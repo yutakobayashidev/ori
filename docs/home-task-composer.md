@@ -1,7 +1,10 @@
 # Home task composer
 
 Home's input uses Jev to distinguish Japanese tasks from journal entries while typing.
-It also offers routine creation and invocation of saved routines, with explicit click-to-open sheets. The slash palette includes New routine and saved routine names. See [Routine builder](routine-builder.md).
+It also recognizes saved routines and automatically previews their recording forms.
+Values present in the input can prefill the saved form's fields; users can edit them
+before explicitly saving. Routine creation and editing still open a sheet on click.
+The slash palette includes New routine and saved routine names. See [Routine builder](routine-builder.md).
 No `Note:` prefix is needed. Interface labels stay in English. Review the extracted titles and
 date-only deadlines, edit or remove rows, then confirm to save the selected tasks
 as Activities. Saving a list is atomic: the whole list succeeds or none is saved.
@@ -34,8 +37,10 @@ node --env-file=.env node_modules/vite/bin/vite.js --host 127.0.0.1 --port 3000
 ```
 
 For production, supply the same environment variable to the web service. The
-preview sends the Home text, derived task/date candidates, and browser-local
-calendar date to TypeSafe. It does not send other Activities, messages, or account
+preview sends the Home text, derived task/date candidates, saved routine definitions,
+and browser-local calendar date to TypeSafe. Routine field prefilling uses a second
+request for the selected form and source value candidates. It does not send past
+routine records, other Activities, messages, or account
 credentials. Owner-session and CSRF checks apply to this server function.
 
 Automatic preview never saves a task. If the service is unavailable, the UI says so

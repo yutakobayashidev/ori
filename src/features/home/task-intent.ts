@@ -1,10 +1,21 @@
+import type { RoutineValues } from "../routines/routine-form";
+import type { RoutineDraft } from "../routines/routine-model";
 export const MAX_TASK_INPUT_LENGTH = 500;
 export const MAX_TASKS = 8;
 export type TaskDraft = { title: string; dueDate: string | null };
-export type RoutineCandidate = { id: string; name: string; aliases: string[]; description: string };
+export type RoutineCandidate = {
+  id: string;
+  name: string;
+  aliases: string[];
+  description: string;
+  steps?: RoutineDraft["steps"];
+  schedules?: RoutineDraft["schedules"];
+};
 export type TaskIntentResult = {
   status: "task" | "journal" | "routine_create" | "routine_run" | "none" | "uncertain";
   routineId?: string;
+  routineValues?: RoutineValues;
+  routineScheduleId?: string;
   tasks: TaskDraft[];
   notice: string | null;
 };

@@ -43,7 +43,7 @@ export function HomePage() {
   const [running, setRunning] = useState<{
     routine: RoutineDefinition;
     scheduleId?: string;
-    source: "composer" | "row";
+    source: "row";
   } | null>(null);
   function openBuilder(text: string, routine?: RoutineDefinition) {
     setProposal(null);
@@ -228,15 +228,27 @@ export function HomePage() {
               </header>
               <TaskComposer
                 routines={routines.data ?? []}
+                hideRoutinePreview={Boolean(running || builder)}
                 onCreateRoutine={(text) => openBuilder(text)}
-                onRunRoutine={(id) => {
+                onRunRoutine={() => setRunning(null)}
+                renderRoutine={({ id, values, scheduleId, onClose, onSaved, onInteract }) => {
                   const routine = routines.data?.find((item) => item.id === id);
-                  if (routine) {
-                    setRunning({ routine, source: "composer" });
-                    setPrompt("");
-                    setProposal(null);
-                    setNotice("");
-                  }
+                  return routine ? (
+                    <RoutineRecorder
+                      key={`${routine.id}:${routine.version}`}
+                      routine={routine}
+                      initialValues={values}
+                      scheduleId={scheduleId}
+                      onClose={onClose}
+                      onInteract={onInteract}
+                      onEdit={() => openBuilder("", routine)}
+                      onSaved={() => {
+                        refreshRoutineRecords();
+                        onSaved();
+                        setNotice("Entry saved.");
+                      }}
+                    />
+                  ) : null;
                 }}
                 text={prompt}
                 onTextChange={(value) => {
@@ -281,7 +293,6 @@ export function HomePage() {
                   )
                 }
               />
-              {running?.source === "composer" && <div className="mt-px-16">{renderRecorder()}</div>}
               {proposal && (
                 <div className="mt-px-20 flex flex-wrap items-center gap-px-12 rounded-ui-12 border border-border p-px-16">
                   <p className="min-w-[140px] flex-1 text-ui-14">{proposal.label}</p>

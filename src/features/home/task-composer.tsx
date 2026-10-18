@@ -1,5 +1,15 @@
 import { Repeat, BookOpen, Check, CornerDownLeft, ListTodo, Plus, X } from "lucide-react";
-import { useEffect, useId, useRef, useState, useSyncExternalStore, type RefObject } from "react";
+import {
+  useEffect,
+  useEffectEvent,
+  useId,
+  useRef,
+  useState,
+  useSyncExternalStore,
+  type ReactNode,
+  type RefObject,
+} from "react";
+import type { RoutineValues } from "#/features/routines/routine-form";
 import { DueDatePicker } from "#/features/activities/due-date-picker";
 import { Button } from "#/components/ui/button";
 import { Textarea } from "#/components/ui/textarea";
@@ -19,6 +29,24 @@ const subscribeToHydration = () => () => {};
 const clientHydrated = () => true;
 const serverHydrated = () => false;
 
+export type RoutinePreviewProps = {
+  id: string;
+  values?: RoutineValues;
+  scheduleId?: string;
+  onClose: () => void;
+  onSaved: () => void;
+  onInteract: () => void;
+};
+function RoutinePreviewContent({
+  render,
+  preview,
+}: {
+  render: (preview: RoutinePreviewProps) => ReactNode;
+  preview: RoutinePreviewProps;
+}) {
+  return render(preview);
+}
+
 export function TaskComposer({
   text,
   onTextChange,
@@ -31,6 +59,8 @@ export function TaskComposer({
   routines = [],
   onCreateRoutine,
   onRunRoutine,
+  renderRoutine,
+  hideRoutinePreview = false,
 }: {
   text: string;
   onTextChange: (text: string) => void;
@@ -43,6 +73,8 @@ export function TaskComposer({
   routines?: RoutineCandidate[];
   onCreateRoutine?: (text: string) => void;
   onRunRoutine?: (id: string) => void;
+  renderRoutine?: (preview: RoutinePreviewProps) => ReactNode;
+  hideRoutinePreview?: boolean;
 }) {
   const layoutScope = useId();
   const hydrated = useSyncExternalStore(subscribeToHydration, clientHydrated, serverHydrated);
@@ -58,7 +90,9 @@ export function TaskComposer({
   const observedText = useRef(text);
   const [journalDraft, setJournalDraft] = useState<string | null>(null);
   const [routineDraft, setRoutineDraft] = useState<
-    { kind: "create" } | { kind: "run"; id: string } | null
+    | { kind: "create" }
+    | { kind: "run"; id: string; values?: RoutineValues; scheduleId?: string }
+    | null
   >(null);
   const [drafts, setDrafts] = useState<TaskDraft[]>([]);
   const [notice, setNotice] = useState("");
@@ -75,6 +109,17 @@ export function TaskComposer({
   }, [drafts.length, journalDraft, routineDraft, readiness]);
   const revision = useRef(0);
   const saveInFlight = useRef(false);
+  const [previousHidden, setPreviousHidden] = useState(hideRoutinePreview);
+  const notifyRoutine = useEffectEvent((id: string) => onRunRoutine?.(id));
+
+  if (previousHidden !== hideRoutinePreview) {
+    setPreviousHidden(hideRoutinePreview);
+    if (hideRoutinePreview) {
+      setChecking(false);
+      setLocked(true);
+      setRoutineDraft(null);
+    }
+  }
 
   useEffect(() => {
     if (observedText.current !== text) {
@@ -90,7 +135,7 @@ export function TaskComposer({
   useEffect(() => {
     const current = ++revision.current;
     let cancelled = false;
-    if (!text.trim() || composing || locked || legacyAction) {
+    if (!text.trim() || composing || locked || legacyAction || hideRoutinePreview) {
       return;
     }
     const timer = setTimeout(async () => {
@@ -104,9 +149,15 @@ export function TaskComposer({
           result.status === "routine_create"
             ? { kind: "create" }
             : result.status === "routine_run" && result.routineId
-              ? { kind: "run", id: result.routineId }
+              ? {
+                  kind: "run",
+                  id: result.routineId,
+                  values: result.routineValues,
+                  scheduleId: result.routineScheduleId,
+                }
               : null,
         );
+        if (result.status === "routine_run" && result.routineId) notifyRoutine(result.routineId);
         setDrafts(result.tasks);
         setJournalDraft(result.status === "journal" ? text.trim() : null);
         setNotice(result.notice ?? "");
@@ -124,7 +175,7 @@ export function TaskComposer({
       clearTimeout(timer);
       cancelled = true;
     };
-  }, [text, composing, locked, legacyAction]);
+  }, [text, composing, locked, legacyAction, hideRoutinePreview]);
 
   function editDrafts(next: TaskDraft[]) {
     revision.current++;
@@ -132,6 +183,15 @@ export function TaskComposer({
     setLocked(true);
     setDrafts(next);
     setJournalDraft(null);
+    setRoutineDraft(null);
+  }
+  function lockRoutine() {
+    revision.current++;
+    setChecking(false);
+    setLocked(true);
+  }
+  function dismissRoutine() {
+    lockRoutine();
     setRoutineDraft(null);
   }
   function changeText(value: string) {
@@ -210,10 +270,14 @@ export function TaskComposer({
               : undefined
           }
           onRunRoutine={
-            onRunRoutine
+            renderRoutine
               ? (id) => {
                   setPaletteOpen(false);
-                  onRunRoutine(id);
+                  lockRoutine();
+                  setDrafts([]);
+                  setJournalDraft(null);
+                  setRoutineDraft({ kind: "run", id });
+                  onRunRoutine?.(id);
                 }
               : undefined
           }
@@ -309,7 +373,31 @@ export function TaskComposer({
           </p>
         </div>
         <AnimatePresence initial={false}>
-          {routineDraft && !legacyAction && (
+          {routineDraft?.kind === "run" &&
+            !hideRoutinePreview &&
+            !legacyAction &&
+            renderRoutine && (
+              <div key="routine-form" className="px-4 pb-4">
+                <RoutinePreviewContent
+                  render={renderRoutine}
+                  preview={{
+                    id: routineDraft.id,
+                    values: routineDraft.values,
+                    scheduleId: routineDraft.scheduleId,
+                    onClose: dismissRoutine,
+                    onInteract: lockRoutine,
+                    onSaved: () => {
+                      if (observedText.current !== text) return;
+                      setForcedMode(null);
+                      changeText("");
+                      setJournalDraft(null);
+                      setDrafts([]);
+                    },
+                  }}
+                />
+              </div>
+            )}
+          {routineDraft?.kind === "create" && !legacyAction && (
             <motion.section
               key="routine-preview"
               aria-label="Routine preview"
@@ -320,28 +408,15 @@ export function TaskComposer({
             >
               <span className="flex min-w-0 items-center gap-3 text-ui-15 font-medium">
                 <Repeat className="size-5 shrink-0" aria-hidden />
-                <span className="truncate">
-                  {routineDraft.kind === "create"
-                    ? "New routine"
-                    : (routines.find((routine) => routine.id === routineDraft.id)?.name ??
-                      "Routine")}
-                </span>
+                <span className="truncate">New routine</span>
               </span>
               <Button
-                disabled={
-                  disabled ||
-                  checking ||
-                  composing ||
-                  (routineDraft.kind === "create"
-                    ? !onCreateRoutine
-                    : !onRunRoutine || !routines.some((routine) => routine.id === routineDraft.id))
-                }
+                disabled={disabled || checking || composing || !onCreateRoutine}
                 onClick={() => {
-                  if (routineDraft.kind === "create") onCreateRoutine?.(text);
-                  else onRunRoutine?.(routineDraft.id);
+                  onCreateRoutine?.(text);
                 }}
               >
-                {routineDraft.kind === "create" ? "Create routine" : "Run routine"}
+                Create routine
               </Button>
             </motion.section>
           )}

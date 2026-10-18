@@ -22,12 +22,7 @@ export const classifyHomeTasks = createServerFn({ method: "POST" })
     const { interpretTaskInput } = await import("./task-intent.server");
     try {
       const { listRoutines } = await import("../routines/routine-repository.server");
-      const routines = (await listRoutines()).map(({ id, name, aliases, description }) => ({
-        id,
-        name,
-        aliases,
-        description,
-      }));
+      const routines = await listRoutines();
       return await interpretTaskInput(data, { routines });
     } catch {
       return {
