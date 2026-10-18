@@ -42,15 +42,23 @@ describe("Japanese task drafts", () => {
     ]);
   });
   it("never silently truncates more than eight candidates", async () => {
-    const fetch = vi.fn<typeof globalThis.fetch>();
+    const fetch = vi.fn<typeof globalThis.fetch>().mockResolvedValue(
+      Response.json({
+        model: "jev",
+        answers: { intent: { type: "choice", choice: "task", confidence: 1 } },
+      }),
+    );
     vi.stubGlobal("fetch", fetch);
-    const result = await interpretTaskInput({
-      text: Array.from({ length: 9 }, (_, i) => `用事${i}`).join("\n"),
-      today: "2026-10-18",
-    });
+    const result = await interpretTaskInput(
+      {
+        text: Array.from({ length: 9 }, (_, i) => `用事${i}`).join("\n"),
+        today: "2026-10-18",
+      },
+      { apiKey: "test" },
+    );
     expect(result.status).toBe("uncertain");
     expect(result.tasks).toEqual([]);
-    expect(fetch).not.toHaveBeenCalled();
+    expect(fetch).toHaveBeenCalledOnce();
   });
   it("does not echo the upstream body or credential on HTTP errors", async () => {
     vi.stubGlobal(
@@ -87,6 +95,16 @@ it("only removes the selected deadline while preserving a document date", () => 
   );
 });
 
+it.each([
+  ["明日は資料を提出する", "資料を提出する"],
+  ["明日はがきを買う", "はがきを買う"],
+  ["明日までにはがきを買う", "はがきを買う"],
+  ["資料は明日までに提出する", "資料は提出する"],
+])("removes a date's topic particle without stripping a noun: %s", (text, expected) => {
+  const dates = findDateCandidates(text, "2026-10-18");
+  expect(titleWithoutDeadline(text, { source: "明日", date: "2026-10-19" }, dates)).toBe(expected);
+});
+
 it("keeps source wording and leaves a low-confidence deadline unset", async () => {
   vi.stubGlobal(
     "fetch",
@@ -108,4 +126,62 @@ it("keeps source wording and leaves a low-confidence deadline unset", async () =
   );
   expect(result.tasks).toEqual([{ title: "10月1日に届いた資料を読む", dueDate: null }]);
   expect(result.notice).toBeNull();
+});
+
+it.each([
+  "今日は散歩して気分がよかった",
+  "牛乳を買った",
+  "最近ちょっと疲れている",
+  "メモ：会議ではまず相手の話を聞くことが大事だと感じた",
+  "朝起きた。顔を洗った。散歩した。朝食を食べた。出勤した。働いた。帰宅した。夕食を食べた。よく眠れそうだ。",
+])("recognizes a journal entry without task-only answers: %s", async (text) => {
+  vi.stubGlobal(
+    "fetch",
+    vi.fn().mockResolvedValue(
+      Response.json({
+        model: "jev-1.13.0",
+        answers: { intent: { type: "choice", choice: "journal", confidence: 1 } },
+      }),
+    ),
+  );
+  const input = { text, today: "2026-10-18" };
+  expect(await interpretTaskInput(input, { apiKey: "test" })).toEqual({
+    status: "journal",
+    tasks: [],
+    notice: null,
+  });
+  expect(input.text).toBe(text);
+});
+
+it.each([
+  ["journal", 0.2, "uncertain"],
+  ["none", 1, "none"],
+])("does not turn %s at confidence %s into an entry", async (choice, confidence, status) => {
+  vi.stubGlobal(
+    "fetch",
+    vi.fn().mockResolvedValue(
+      Response.json({
+        model: "jev-1.13.0",
+        answers: { intent: { type: "choice", choice, confidence } },
+      }),
+    ),
+  );
+  expect(
+    await interpretTaskInput({ text: "明日の天気は？", today: "2026-10-18" }, { apiKey: "test" }),
+  ).toEqual({ status, tasks: [], notice: null });
+});
+
+it("still requires task extraction answers when a task is selected", async () => {
+  vi.stubGlobal(
+    "fetch",
+    vi.fn().mockResolvedValue(
+      Response.json({
+        model: "jev-1.13.0",
+        answers: { intent: { type: "choice", choice: "task", confidence: 1 } },
+      }),
+    ),
+  );
+  await expect(
+    interpretTaskInput({ text: "牛乳を買う", today: "2026-10-18" }, { apiKey: "test" }),
+  ).rejects.toThrow("応答に必要な判定がありません");
 });

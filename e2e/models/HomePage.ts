@@ -3,7 +3,6 @@ import type { Locator, Page } from "@playwright/test";
 export class HomePage {
   readonly page: Page;
   readonly input: Locator;
-  readonly previewAction: Locator;
   readonly applyAction: Locator;
   readonly morningRoutine: Locator;
   readonly finishRoutine: Locator;
@@ -17,7 +16,6 @@ export class HomePage {
   constructor(page: Page) {
     this.page = page;
     this.input = page.getByRole("textbox", { name: "Home input" });
-    this.previewAction = page.getByRole("button", { name: "Preview action" });
     this.applyAction = page.getByRole("button", { name: "Apply", exact: true });
     this.morningRoutine = page.getByRole("button", { name: /Morning routine 0 of 3/ });
     this.finishRoutine = page.getByRole("button", { name: "Finish routine" });
@@ -45,7 +43,7 @@ export class HomePage {
   }
   async previewCommand(command: string) {
     await this.input.fill(command);
-    await this.previewAction.click();
+    await this.input.press("ControlOrMeta+Enter");
   }
   async recordMeasurement(weight: string) {
     await this.recordWeight.click();

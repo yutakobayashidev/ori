@@ -1,3 +1,7 @@
+import type { JournalEntry } from "#/features/journal/journal-model";
+export type { JournalEntry } from "#/features/journal/journal-model";
+import { useQuery, useQueryClient, useMutation } from "@tanstack/react-query";
+import { loadJournalEntries, saveJournalEntry } from "#/features/journal/journal-functions";
 import { useRouteContext } from "@tanstack/react-router";
 import { ActivityStateProvider } from "#/features/activities/activity-state";
 import { FocusProvider } from "#/features/focus/focus-state";
@@ -9,6 +13,7 @@ import {
   type SetStateAction,
   useContext,
   useState,
+  useRef,
 } from "react";
 
 export type Task = {
@@ -20,7 +25,7 @@ export type Task = {
   completedSteps?: string[];
 };
 
-export type EntryKind = "メモ" | "再開地点" | "服薬" | "体重";
+export type EntryKind = JournalEntry["kind"];
 export const entryKindLabels: Record<EntryKind, string> = {
   メモ: "Note",
   再開地点: "Resume point",
@@ -28,21 +33,15 @@ export const entryKindLabels: Record<EntryKind, string> = {
   体重: "Weight",
 };
 
-export type JournalEntry = {
-  id: string;
-  kind: EntryKind;
-  text: string;
-  source: string;
-  occurredAt: string;
-  recordedAt: string;
-  correctionOf?: string;
-};
-
 type WorkspaceState = {
   tasks: Task[];
   setTasks: Dispatch<SetStateAction<Task[]>>;
   entries: JournalEntry[];
-  setEntries: Dispatch<SetStateAction<JournalEntry[]>>;
+  appendEntry: (draft: Omit<JournalEntry, "id" | "recordedAt">) => Promise<boolean>;
+  journalSaving: boolean;
+  journalLoading: boolean;
+  journalError: string | null;
+  reloadJournal: () => void;
 };
 
 const WorkspaceContext = createContext<WorkspaceState | null>(null);
@@ -58,7 +57,41 @@ export function WorkspaceStateProvider({ children }: { children: ReactNode }) {
       steps: ["Drink water", "Get ready", "Have breakfast"],
     },
   ]);
-  const [entries, setEntries] = useState<JournalEntry[]>([]);
+  const queryClient = useQueryClient();
+  const journal = useQuery({
+    queryKey: ["journal"],
+    queryFn: () => loadJournalEntries(),
+    enabled: Boolean(auth.owner?.onboardingCompletedAt),
+  });
+  const mutation = useMutation({
+    mutationFn: (entry: JournalEntry) => saveJournalEntry({ data: entry }),
+  });
+  const pending = useRef(new Map<string, JournalEntry>());
+  const [saveError, setSaveError] = useState<string | null>(null);
+  async function appendEntry(draft: Omit<JournalEntry, "id" | "recordedAt">) {
+    const key = JSON.stringify(draft);
+    const entry = pending.current.get(key) ?? {
+      ...draft,
+      id: crypto.randomUUID(),
+      recordedAt: new Date().toISOString(),
+    };
+    pending.current.set(key, entry);
+    setSaveError(null);
+    try {
+      await queryClient.cancelQueries({ queryKey: ["journal"] });
+      const saved = await mutation.mutateAsync(entry);
+      queryClient.setQueryData<JournalEntry[]>(["journal"], (previous = []) => [
+        saved,
+        ...previous.filter((item) => item.id !== saved.id),
+      ]);
+      void queryClient.invalidateQueries({ queryKey: ["journal"] });
+      pending.current.delete(key);
+      return true;
+    } catch {
+      setSaveError("Couldn’t save the entry. Try again.");
+      return false;
+    }
+  }
 
   return (
     <ActivityStateProvider enabled={Boolean(auth.owner?.onboardingCompletedAt)}>
@@ -66,8 +99,14 @@ export function WorkspaceStateProvider({ children }: { children: ReactNode }) {
         value={{
           tasks,
           setTasks,
-          entries,
-          setEntries,
+          entries: journal.data ?? [],
+          appendEntry,
+          journalSaving: mutation.isPending,
+          journalLoading: journal.isLoading,
+          journalError: saveError ?? (journal.error ? "Couldn’t load the journal." : null),
+          reloadJournal: () => {
+            void journal.refetch();
+          },
         }}
       >
         {auth.owner?.onboardingCompletedAt ? (

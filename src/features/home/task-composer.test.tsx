@@ -14,10 +14,12 @@ const { classify } = vi.hoisted(() => ({
 vi.mock("./task-intent-functions", () => ({ classifyHomeTasks: classify }));
 function Composer({
   save = vi.fn<(tasks: unknown[]) => Promise<boolean>>().mockResolvedValue(true),
+  journal = vi.fn<(text: string) => Promise<boolean>>().mockResolvedValue(true),
   legacy = false,
   preview = vi.fn<() => void>(),
 }: {
   save?: (tasks: unknown[]) => Promise<boolean>;
+  journal?: (text: string) => Promise<boolean>;
   legacy?: boolean;
   preview?: () => void;
 }) {
@@ -31,6 +33,7 @@ function Composer({
       isLegacyAction={legacy}
       onPreviewAction={preview}
       createTasks={save}
+      createJournal={journal}
     />
   );
 }
@@ -58,14 +61,55 @@ afterEach(() => {
   vi.useRealTimers();
 });
 describe("TaskComposer", () => {
+  it("previews an unprefixed journal entry and preserves its wording when confirmed", async () => {
+    const journal = vi.fn<(text: string) => Promise<boolean>>().mockResolvedValue(true);
+    const save = vi.fn<(tasks: unknown[]) => Promise<boolean>>().mockResolvedValue(true);
+    classify.mockResolvedValue({ status: "journal", tasks: [], notice: null });
+    render(<Composer journal={journal} save={save} />);
+    const text = "今日は散歩して、少し気分がよくなった。";
+    await type(text);
+    expect(screen.getByRole("region", { name: "Journal preview" })).toHaveTextContent(text);
+    expect(screen.queryByRole("region", { name: "Task preview" })).not.toBeInTheDocument();
+    expect(journal).not.toHaveBeenCalled();
+    await act(async () => fireEvent.click(screen.getByRole("button", { name: "Add note" })));
+    expect(journal).toHaveBeenCalledExactlyOnceWith(text);
+    expect(save).not.toHaveBeenCalled();
+    expect(screen.getByRole("textbox", { name: "Home input" })).toHaveValue("");
+    expect(screen.getByRole("region", { name: "Note added" })).toHaveTextContent(text);
+  });
+  it("keeps the journal input when saving fails", async () => {
+    classify.mockResolvedValue({ status: "journal", tasks: [], notice: null });
+    render(
+      <Composer journal={vi.fn<(text: string) => Promise<boolean>>().mockResolvedValue(false)} />,
+    );
+    await type("今日はよく眠れた");
+    await act(async () => fireEvent.click(screen.getByRole("button", { name: "Add note" })));
+    expect(screen.getByRole("textbox", { name: "Home input" })).toHaveValue("今日はよく眠れた");
+    expect(screen.getByRole("button", { name: "Add note" })).toBeEnabled();
+  });
+  it("allows an explicit Journal selection without automatic reclassification", async () => {
+    const journal = vi.fn<(text: string) => Promise<boolean>>().mockResolvedValue(true);
+    render(<Composer journal={journal} />);
+    fireEvent.keyDown(screen.getByRole("textbox", { name: "Home input" }), { key: "/" });
+    const search = screen.getByRole("combobox", { name: "Search commands" });
+    fireEvent.change(search, { target: { value: "journal" } });
+    fireEvent.keyDown(search, { key: "Enter" });
+    await type("明日はゆっくりしたいな");
+    expect(classify).not.toHaveBeenCalled();
+    await act(async () => fireEvent.click(screen.getByRole("button", { name: "Add note" })));
+    expect(journal).toHaveBeenCalledExactlyOnceWith("明日はゆっくりしたいな");
+  });
   it("reviews and edits multiple tasks before saving once", async () => {
     const save = vi.fn<(tasks: unknown[]) => Promise<boolean>>().mockResolvedValue(true);
     render(<Composer save={save} />);
     await type("明日までに見積書を送る、牛乳を買う");
     expect(save).not.toHaveBeenCalled();
-    expect(screen.getByLabelText("Due date 1")).toHaveValue("2026-10-19");
+    expect(screen.getByRole("button", { name: /^Due date 1:/ })).toBeInTheDocument();
     fireEvent.change(screen.getByLabelText("Task 2"), { target: { value: "卵を買う" } });
+    fireEvent.click(screen.getByRole("button", { name: /^Due date 2:/ }));
+    fireEvent.click(screen.getByRole("menuitem", { name: "Pick a date…" }));
     fireEvent.change(screen.getByLabelText("Due date 2"), { target: { value: "2026-10-20" } });
+    fireEvent.click(screen.getByRole("button", { name: "Apply" }));
     await act(async () => fireEvent.click(screen.getByRole("button", { name: "Add 2 tasks" })));
     expect(save).toHaveBeenCalledExactlyOnceWith([
       { title: "見積書を送る", dueDate: "2026-10-19" },
@@ -126,11 +170,11 @@ describe("TaskComposer", () => {
     classify.mockResolvedValue({
       status: "unavailable",
       tasks: [],
-      notice: "Preview unavailable. Add tasks manually.",
+      notice: "Preview unavailable.",
     });
     render(<Composer />);
     await type("洗濯する");
-    expect(screen.getByText("Preview unavailable. Add tasks manually.")).toBeInTheDocument();
+    expect(screen.getByText("Preview unavailable.")).toBeInTheDocument();
     fireEvent.click(screen.getByRole("button", { name: "Add manually" }));
     expect(screen.getByLabelText("Task 1")).toHaveValue("洗濯する");
   });
@@ -159,8 +203,14 @@ describe("TaskComposer", () => {
     const preview = vi.fn<() => void>();
     render(<Composer legacy preview={preview} />);
     await type("Note: 再開は2ページ");
-    fireEvent.click(screen.getByRole("button", { name: "Preview action" }));
+    expect(screen.queryByRole("button", { name: "Preview action" })).not.toBeInTheDocument();
+    fireEvent.keyDown(screen.getByRole("textbox", { name: "Home input" }), {
+      key: "Enter",
+      ctrlKey: true,
+    });
     expect(preview).toHaveBeenCalledOnce();
     expect(classify).not.toHaveBeenCalled();
+    fireEvent.keyDown(screen.getByRole("textbox", { name: "Home input" }), { key: "Enter" });
+    expect(preview).toHaveBeenCalledTimes(2);
   });
 });

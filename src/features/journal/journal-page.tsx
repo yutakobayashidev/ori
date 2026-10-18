@@ -31,7 +31,8 @@ function formatTime(value: string | undefined) {
 }
 
 export function JournalPage() {
-  const { entries, setEntries } = useWorkspaceState();
+  const { entries, appendEntry, journalLoading, journalSaving, journalError, reloadJournal } =
+    useWorkspaceState();
   const [draft, setDraft] = useState<Draft>(emptyDraft);
   const [search, updateSearch] = useUrlState();
   const correcting = entries.find((entry) => entry.id === search.entry);
@@ -43,17 +44,12 @@ export function JournalPage() {
   const current = entries.filter((entry) => !superseded.has(entry.id));
 
   function append(value: Draft, correctionOf?: string) {
-    setEntries((previous) => [
-      {
-        ...value,
-        text: value.text.trim(),
-        source: value.source.trim(),
-        id: crypto.randomUUID(),
-        recordedAt: new Date().toISOString(),
-        correctionOf,
-      },
-      ...previous,
-    ]);
+    return appendEntry({
+      ...value,
+      text: value.text.trim(),
+      source: value.source.trim(),
+      ...(correctionOf ? { correctionOf } : {}),
+    });
   }
 
   return (
@@ -76,17 +72,26 @@ export function JournalPage() {
           </header>
           <div className="min-h-0 flex-1 overflow-y-auto">
             <div className="mx-auto w-full max-w-[760px] px-px-28 py-px-40 max-[600px]:px-px-14 max-[600px]:py-px-24">
+              {journalError && (
+                <div role="alert" className="mb-4 flex items-center gap-2 text-sm text-destructive">
+                  {journalError}
+                  <Button variant="ghost" onClick={reloadJournal}>
+                    Retry
+                  </Button>
+                </div>
+              )}
               <EntryEditor
+                disabled={journalSaving}
                 draft={draft}
                 onChange={setDraft}
-                onSubmit={() => {
-                  append(draft);
-                  setDraft(emptyDraft);
+                onSubmit={async () => {
+                  if (await append(draft)) setDraft(emptyDraft);
                 }}
                 submitLabel="Save entry"
               />
               <section className="mt-px-36" aria-label="Journal entries">
-                {entries.length === 0 && (
+                {journalLoading && <p role="status">Loading journal…</p>}
+                {!journalLoading && entries.length === 0 && (
                   <p className="py-px-40 text-center text-ui-14 text-muted-foreground">
                     No entries yet
                   </p>
@@ -140,10 +145,10 @@ export function JournalPage() {
         <CorrectionDialog
           entry={correcting}
           onClose={() => setCorrecting(null)}
-          onSave={(value) => {
-            append(value, correcting.id);
-            setCorrecting(null);
+          onSave={async (value) => {
+            if (await append(value, correcting.id)) setCorrecting(null);
           }}
+          disabled={journalSaving}
         />
       )}
       {reviewing && (
@@ -205,11 +210,13 @@ function EntryEditor({
   onChange,
   onSubmit,
   submitLabel,
+  disabled = false,
 }: {
   draft: Draft;
   onChange: (draft: Draft) => void;
   onSubmit: () => void;
   submitLabel: string;
+  disabled?: boolean;
 }) {
   const dateId = useId();
   const valid =
@@ -220,7 +227,7 @@ function EntryEditor({
       className="flex flex-col gap-px-16"
       onSubmit={(event) => {
         event.preventDefault();
-        if (valid) onSubmit();
+        if (valid && !disabled) onSubmit();
       }}
     >
       <fieldset className="flex flex-wrap gap-px-4 max-[600px]:gap-0" aria-label="Entry type">
@@ -289,7 +296,7 @@ function EntryEditor({
             onChange={(event) => onChange({ ...draft, occurredAt: event.target.value })}
           />
         </label>
-        <Button className="max-[600px]:self-end" type="submit" disabled={!valid}>
+        <Button className="max-[600px]:self-end" type="submit" disabled={!valid || disabled}>
           {submitLabel}
         </Button>
       </div>
@@ -301,10 +308,12 @@ function CorrectionDialog({
   entry,
   onClose,
   onSave,
+  disabled,
 }: {
   entry: Entry;
   onClose: () => void;
   onSave: (draft: Draft) => void;
+  disabled: boolean;
 }) {
   const [draft, setDraft] = useState<Draft>(entry);
   return (
@@ -315,6 +324,7 @@ function CorrectionDialog({
       <EntryEditor
         draft={draft}
         onChange={setDraft}
+        disabled={disabled}
         onSubmit={() => onSave(draft)}
         submitLabel="Add correction"
       />

@@ -1,5 +1,6 @@
-import { ArrowUp, Check, Clock, CornerDownLeft, ListTodo, Plus, X } from "lucide-react";
+import { BookOpen, Check, CornerDownLeft, ListTodo, Plus, X } from "lucide-react";
 import { useEffect, useId, useRef, useState, type RefObject } from "react";
+import { DueDatePicker } from "#/features/activities/due-date-picker";
 import { Button } from "#/components/ui/button";
 import { Textarea } from "#/components/ui/textarea";
 import { AnimatePresence, LayoutGroup, motion, useReducedMotion, useSpring } from "motion/react";
@@ -15,6 +16,7 @@ export function TaskComposer({
   inputRef,
   onPreviewAction,
   createTasks,
+  createJournal,
   disabled,
   isLegacyAction,
 }: {
@@ -23,16 +25,22 @@ export function TaskComposer({
   inputRef: RefObject<HTMLTextAreaElement | null>;
   onPreviewAction: () => void;
   createTasks: (tasks: TaskDraft[]) => Promise<boolean>;
+  createJournal: (text: string) => Promise<boolean>;
   disabled: boolean;
   isLegacyAction: boolean;
 }) {
   const layoutScope = useId();
   const [draftId, setDraftId] = useState(0);
-  const [receipt, setReceipt] = useState<{ id: number; tasks: TaskDraft[] } | null>(null);
+  const [receipt, setReceipt] = useState<{
+    id: number;
+    items: string[];
+    kind: "task" | "journal";
+  } | null>(null);
   const [paletteOpen, setPaletteOpen] = useState(false);
   const [forcedMode, setForcedMode] = useState<TaskCardMode | null>(null);
   const legacyAction = isLegacyAction && !forcedMode;
   const observedText = useRef(text);
+  const [journalDraft, setJournalDraft] = useState<string | null>(null);
   const [drafts, setDrafts] = useState<TaskDraft[]>([]);
   const [notice, setNotice] = useState("");
   const [checking, setChecking] = useState(false);
@@ -44,8 +52,8 @@ export function TaskComposer({
   const reduce = useReducedMotion();
   const readiness = useSpring(0, spring.number);
   useEffect(() => {
-    readiness.set(drafts.length ? 1 : 0);
-  }, [drafts.length, readiness]);
+    readiness.set(drafts.length || journalDraft !== null ? 1 : 0);
+  }, [drafts.length, journalDraft, readiness]);
   const revision = useRef(0);
   const saveInFlight = useRef(false);
 
@@ -55,6 +63,7 @@ export function TaskComposer({
       setLocked(false);
       setForcedMode(null);
       setDrafts([]);
+      setJournalDraft(null);
       setNotice("");
     }
   }, [text]);
@@ -72,10 +81,13 @@ export function TaskComposer({
         const result = await classifyHomeTasks({ data: { text, today } });
         if (cancelled || revision.current !== current) return;
         setDrafts(result.tasks);
+        setJournalDraft(result.status === "journal" ? text.trim() : null);
         setNotice(result.notice ?? "");
       } catch {
         if (cancelled || revision.current !== current) return;
-        setNotice("Preview unavailable. Add tasks manually.");
+        setDrafts([]);
+        setJournalDraft(null);
+        setNotice("Preview unavailable.");
       } finally {
         if (revision.current === current) setChecking(false);
       }
@@ -91,19 +103,23 @@ export function TaskComposer({
     setChecking(false);
     setLocked(true);
     setDrafts(next);
+    setJournalDraft(null);
   }
   function changeText(value: string) {
     revision.current++;
     observedText.current = value;
     setChecking(!forcedMode && Boolean(value.trim()));
+    setJournalDraft(forcedMode === "journal" ? value : value.trim() ? journalDraft : null);
     setDrafts(
-      forcedMode && value.trim()
-        ? (forcedMode === "list" ? value.split(/\n/).filter((row) => row.trim()) : [value]).map(
-            (title) => ({ title: title.trim(), dueDate: null }),
-          )
-        : value.trim()
-          ? drafts
-          : [],
+      forcedMode === "journal"
+        ? []
+        : forcedMode && value.trim()
+          ? (forcedMode === "list" ? value.split(/\n/).filter((row) => row.trim()) : [value]).map(
+              (title) => ({ title: title.trim(), dueDate: null }),
+            )
+          : value.trim()
+            ? drafts
+            : [],
     );
     setLocked(Boolean(forcedMode));
     setNotice("");
@@ -113,20 +129,30 @@ export function TaskComposer({
     if (
       saveInFlight.current ||
       composing ||
-      !drafts.length ||
-      invalidTitle ||
-      tooManyTasks ||
+      disabled ||
+      (journalDraft !== null
+        ? !journalDraft.trim()
+        : !drafts.length || invalidTitle || tooManyTasks) ||
       checking
     )
       return;
     saveInFlight.current = true;
     setSaving(true);
     try {
-      if (await createTasks(drafts.map((task) => ({ ...task, title: task.title.trim() })))) {
-        setReceipt({ id: draftId, tasks: drafts });
+      const isJournal = journalDraft !== null;
+      const saved = isJournal
+        ? await createJournal(journalDraft.trim())
+        : await createTasks(drafts.map((task) => ({ ...task, title: task.title.trim() })));
+      if (saved) {
+        setReceipt({
+          id: draftId,
+          kind: isJournal ? "journal" : "task",
+          items: isJournal ? [journalDraft.trim()] : drafts.map((task) => task.title),
+        });
         setDraftId((id) => id + 1);
         setForcedMode(null);
         changeText("");
+        setJournalDraft(null);
       } else setNotice("Couldn’t save. Try again.");
     } catch {
       setNotice("Couldn’t save. Try again.");
@@ -147,13 +173,16 @@ export function TaskComposer({
             setForcedMode(mode);
             setPaletteOpen(false);
             editDrafts(
-              mode === "list"
-                ? [
-                    { title: text.trim(), dueDate: null },
-                    { title: "", dueDate: null },
-                  ]
-                : [{ title: text.trim(), dueDate: null }],
+              mode === "journal"
+                ? []
+                : mode === "list"
+                  ? [
+                      { title: text.trim(), dueDate: null },
+                      { title: "", dueDate: null },
+                    ]
+                  : [{ title: text.trim(), dueDate: null }],
             );
+            if (mode === "journal") setJournalDraft(text);
             inputRef.current?.focus();
           }}
         />
@@ -166,7 +195,8 @@ export function TaskComposer({
             className="max-h-48"
             ref={inputRef}
             aria-label="Home input"
-            placeholder="Add a task…"
+            placeholder="Write something…"
+            enterKeyHint={legacyAction ? "go" : "enter"}
             maxLength={MAX_TASK_INPUT_LENGTH}
             value={text}
             disabled={saving}
@@ -187,6 +217,7 @@ export function TaskComposer({
                 event.preventDefault();
                 setForcedMode(null);
                 changeText("");
+                setJournalDraft(null);
                 return;
               }
               if (event.key === "Tab" && drafts.length && !locked) {
@@ -194,28 +225,19 @@ export function TaskComposer({
               }
 
               if (
-                (event.metaKey || event.ctrlKey) &&
+                (event.metaKey || event.ctrlKey || (legacyAction && !event.shiftKey)) &&
                 event.key === "Enter" &&
                 !event.nativeEvent.isComposing &&
                 !composing
               ) {
                 event.preventDefault();
-                if (legacyAction) onPreviewAction();
+                if (!legacyAction && journalDraft !== null) void save();
+                else onPreviewAction();
               }
             }}
           />
           <div className="flex flex-wrap items-center justify-end gap-2">
-            {text.trim() && (
-              <Button
-                size="icon"
-                aria-label="Preview action"
-                disabled={!text.trim() || composing || saving}
-                onClick={onPreviewAction}
-              >
-                <ArrowUp />
-              </Button>
-            )}
-            {!legacyAction && text.trim() && !drafts.length ? (
+            {!legacyAction && journalDraft === null && text.trim() && !drafts.length ? (
               <Button
                 variant="ghost"
                 disabled={saving || composing}
@@ -225,11 +247,42 @@ export function TaskComposer({
               </Button>
             ) : null}
           </div>
-          <p role="status" className="px-px-8 text-ui-12 text-muted-foreground" aria-live="polite">
+          <p
+            role="status"
+            className={checking ? "sr-only" : "text-ui-12 text-muted-foreground"}
+            aria-live="polite"
+          >
             {tooManyTasks ? "Add up to 8 tasks at a time." : checking ? "Checking…" : notice}
           </p>
         </div>
         <AnimatePresence initial={false}>
+          {journalDraft !== null && !legacyAction && (
+            <motion.section
+              key={`journal-card-${draftId}`}
+              aria-label="Journal preview"
+              layout="position"
+              layoutId={reduce ? undefined : `draft-${draftId}`}
+              initial={reduce ? { opacity: 0 } : { opacity: 0, y: 6, filter: "blur(4px)" }}
+              animate={{ opacity: 1, y: 0, filter: "blur(0px)" }}
+              exit={{ opacity: 0, transition: tween.exit }}
+              transition={reduce ? tween.fade : spring.settle}
+              className="flex flex-col gap-4 px-4 pt-1 pb-4"
+            >
+              <div className="flex items-center gap-3 text-ui-15 font-medium">
+                <BookOpen className="size-5" aria-hidden />
+                Journal
+              </div>
+              <p className="text-ui-15 whitespace-pre-wrap wrap-anywhere">{journalDraft}</p>
+              <div className="flex justify-end">
+                <Button
+                  disabled={disabled || saving || checking || composing || !journalDraft.trim()}
+                  onClick={() => void save()}
+                >
+                  {saving ? "Adding…" : "Add note"}
+                </Button>
+              </div>
+            </motion.section>
+          )}
           {!!drafts.length && !legacyAction && (
             <motion.section
               key={`task-card-${draftId}`}
@@ -307,24 +360,16 @@ export function TaskComposer({
                           )
                         }
                       />
-                      <label className="flex min-w-0 shrink-0 items-center gap-1.5 rounded-lg border border-border bg-muted/50 px-2.5 py-1 text-ui-12 text-muted-foreground">
-                        <Clock className="size-3.5" aria-hidden />
-                        <span className="sr-only">Due date</span>
-                        <input
-                          type="date"
-                          aria-label={`Due date ${index + 1}`}
-                          className="min-w-0 max-w-[130px] bg-transparent text-foreground focus-visible:outline-2 focus-visible:outline-ring"
-                          value={task.dueDate ?? ""}
-                          disabled={saving || checking}
-                          onChange={(event) =>
-                            editDrafts(
-                              drafts.map((row, i) =>
-                                i === index ? { ...row, dueDate: event.target.value || null } : row,
-                              ),
-                            )
-                          }
-                        />
-                      </label>
+                      <DueDatePicker
+                        label={`Due date ${index + 1}`}
+                        value={task.dueDate}
+                        disabled={saving || checking}
+                        onChange={(dueDate) =>
+                          editDrafts(
+                            drafts.map((row, i) => (i === index ? { ...row, dueDate } : row)),
+                          )
+                        }
+                      />
                       <Button
                         variant="ghost"
                         size="icon-sm"
@@ -377,7 +422,7 @@ export function TaskComposer({
         {receipt && (
           <motion.section
             key={receipt.id}
-            aria-label="Tasks added"
+            aria-label={receipt.kind === "journal" ? "Note added" : "Tasks added"}
             layout="position"
             layoutId={reduce ? undefined : "draft-" + receipt.id}
             initial={false}
@@ -391,11 +436,13 @@ export function TaskComposer({
             </span>
             <div className="min-w-0 flex-1">
               <p className="text-ui-13 text-muted-foreground">
-                {receipt.tasks.length === 1 ? "Task added" : `${receipt.tasks.length} tasks added`}
+                {receipt.kind === "journal"
+                  ? "Note added"
+                  : receipt.items.length === 1
+                    ? "Task added"
+                    : `${receipt.items.length} tasks added`}
               </p>
-              <p className="truncate text-ui-15 leading-5.5">
-                {receipt.tasks.map((task) => task.title).join(", ")}
-              </p>
+              <p className="truncate text-ui-15 leading-5.5">{receipt.items.join(", ")}</p>
             </div>
             <Button
               variant="ghost"

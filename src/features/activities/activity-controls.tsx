@@ -1,3 +1,4 @@
+import { DueDatePicker } from "./due-date-picker";
 import { SourceMessageSheet } from "./source-message-sheet";
 import { useState } from "react";
 import { Button } from "#/components/ui/button";
@@ -175,19 +176,17 @@ export function ActivityEditor({ activity }: { activity: Activity }) {
         </label>
       ))}
       {activity.effective.kind === "task" && (
-        <label className="grid gap-1 text-xs" htmlFor={`activity-due-${activity.id}`}>
-          Due date
-          <Input
-            id={`activity-due-${activity.id}`}
-            type="date"
+        <div className="grid justify-items-start gap-1 text-xs">
+          <span>Due date</span>
+          <DueDatePicker
             disabled={busy}
-            value={values.dueDate}
-            onChange={(event) => {
+            value={values.dueDate || null}
+            onChange={(dueDate) => {
               setChangedFields(new Set([...changedFields, "dueDate"]));
-              setValues({ ...values, dueDate: event.target.value });
+              setValues({ ...values, dueDate: dueDate ?? "" });
             }}
           />
-        </label>
+        </div>
       )}
       <label className="grid gap-1 text-xs">
         Placement

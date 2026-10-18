@@ -1,4 +1,5 @@
-import { basename, dirname, isAbsolute } from "node:path";
+import { rmSync } from "node:fs";
+import { basename, dirname, isAbsolute, join } from "node:path";
 import AxeBuilder from "@axe-core/playwright";
 import { test as base } from "@playwright/test";
 import {
@@ -128,6 +129,7 @@ export const test = base.extend<{
       database.pragma("foreign_keys = ON");
       database.exec("DELETE FROM decks; DELETE FROM legacy_imports;");
       database.close();
+      rmSync(join(dirname(path), "journal"), { recursive: true, force: true });
       await use(undefined);
     },
     { auto: true },

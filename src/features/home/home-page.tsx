@@ -19,7 +19,7 @@ import { type HomeAction, interpretAction } from "./interpret-action";
 
 export function HomePage() {
   const { auth } = useRouteContext({ from: "__root__" });
-  const { tasks, setTasks, entries, setEntries } = useWorkspaceState();
+  const { tasks, setTasks, entries, appendEntry, journalError } = useWorkspaceState();
   const { activities, create, createMany, change, busy, loading } = useActivities();
   const navigate = useNavigate();
   const input = useRef<HTMLTextAreaElement>(null);
@@ -145,17 +145,10 @@ export function HomePage() {
           return;
         break;
       case "journal":
-        setEntries((current) => [
-          {
-            id: crypto.randomUUID(),
-            kind: action.kind,
-            text: action.text,
-            source: "",
-            occurredAt: "",
-            recordedAt: new Date().toISOString(),
-          },
-          ...current,
-        ]);
+        if (
+          !(await appendEntry({ kind: action.kind, text: action.text, source: "", occurredAt: "" }))
+        )
+          return;
         break;
       case "navigate":
         void navigate({ to: action.to });
@@ -230,6 +223,9 @@ export function HomePage() {
                   );
                 })()}
                 onPreviewAction={interpret}
+                createJournal={(text) =>
+                  appendEntry({ kind: "メモ", text, source: "", occurredAt: "" })
+                }
                 createTasks={(drafts) =>
                   createMany(
                     drafts.map((draft) => ({
@@ -241,19 +237,6 @@ export function HomePage() {
                   )
                 }
               />
-              <div className="mt-px-16 flex flex-wrap gap-x-px-20 gap-y-px-8 max-md:gap-px-12">
-                {["Add grocery shopping", "Open messages", "Note: Resume on page 2"].map((text) => (
-                  <button
-                    className="flex cursor-pointer items-center gap-px-6 text-left text-ui-12 text-muted-foreground"
-                    type="button"
-                    key={text}
-                    onClick={() => suggest(text)}
-                  >
-                    {text}
-                    <ArrowUpRight className="size-3" />
-                  </button>
-                ))}
-              </div>
               {proposal && (
                 <div className="mt-px-20 flex flex-wrap items-center gap-px-12 rounded-ui-12 border border-border p-px-16">
                   <p className="min-w-[140px] flex-1 text-ui-14">{proposal.label}</p>
@@ -290,6 +273,11 @@ export function HomePage() {
                         <ArrowUpRight className="size-4" />
                       </Link>
                     </header>
+                    {journalError && (
+                      <p role="alert" className="text-sm text-destructive">
+                        {journalError}
+                      </p>
+                    )}
                     {currentEntries.slice(0, 2).map((entry) => (
                       <p
                         className="flex flex-col gap-px-6 py-px-12 text-left text-ui-13 leading-relaxed-copy wrap-anywhere"
@@ -308,7 +296,7 @@ export function HomePage() {
                       <button
                         type="button"
                         className="flex w-full cursor-pointer items-center justify-between gap-px-10 py-px-12 text-left text-ui-13"
-                        onClick={() => suggest("Note:")}
+                        onClick={() => suggest("")}
                       >
                         <span>Leave a note</span>
                         <Plus className="size-4" />

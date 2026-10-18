@@ -2,7 +2,7 @@ export const MAX_TASK_INPUT_LENGTH = 500;
 export const MAX_TASKS = 8;
 export type TaskDraft = { title: string; dueDate: string | null };
 export type TaskIntentResult = {
-  status: "task" | "none" | "uncertain";
+  status: "task" | "journal" | "none" | "uncertain";
   tasks: TaskDraft[];
   notice: string | null;
 };
@@ -110,5 +110,7 @@ export function titleWithoutDeadline(
       "",
     );
   }
-  return title.replace(new RegExp(`${escape(deadline.source)}(?:までに|まで|中に|に)?`), "").trim();
+  return title
+    .replace(new RegExp(`${escape(deadline.source)}(?:までに|まで|中に|に|は(?=[^ぁ-ゖ]))?`), "")
+    .trim();
 }

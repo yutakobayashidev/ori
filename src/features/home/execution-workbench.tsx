@@ -236,7 +236,7 @@ export function ExecutionWorkbench({ selectedId, onSelect }: ExecutionWorkbenchP
   );
 }
 function TaskDetail({ task, onAction }: { task: Task; onAction: () => void }) {
-  const { setTasks, entries, setEntries } = useWorkspaceState();
+  const { setTasks, entries, appendEntry, journalSaving } = useWorkspaceState();
   const source = `task:${task.id}`;
   const savedNote = entries.find((entry) => entry.kind === "再開地点" && entry.source === source);
   const [note, setNote] = useState(savedNote?.text ?? "");
@@ -392,21 +392,16 @@ function TaskDetail({ task, onAction }: { task: Task; onAction: () => void }) {
           <Button
             variant="ghost"
             size="sm"
-            disabled={!note.trim()}
-            onClick={() => {
-              setEntries((current) => [
-                {
-                  id: crypto.randomUUID(),
-                  kind: "再開地点",
-                  text: note.trim(),
-                  source,
-                  occurredAt: "",
-                  recordedAt: new Date().toISOString(),
-                  ...(savedNote ? { correctionOf: savedNote.id } : {}),
-                },
-                ...current,
-              ]);
-              setNotice("Saved");
+            disabled={!note.trim() || journalSaving}
+            onClick={async () => {
+              const saved = await appendEntry({
+                kind: "再開地点",
+                text: note.trim(),
+                source,
+                occurredAt: "",
+                ...(savedNote ? { correctionOf: savedNote.id } : {}),
+              });
+              setNotice(saved ? "Saved" : "Could not save. Try again.");
             }}
           >
             Save note
@@ -437,7 +432,7 @@ function TaskDetail({ task, onAction }: { task: Task; onAction: () => void }) {
 }
 
 function WeightDetail({ entry, onAction }: { entry?: JournalEntry; onAction: () => void }) {
-  const { setEntries } = useWorkspaceState();
+  const { appendEntry, journalSaving } = useWorkspaceState();
   const [weight, setWeight] = useState(entry?.text ?? "");
   const [error, setError] = useState("");
   return (
@@ -452,25 +447,25 @@ function WeightDetail({ entry, onAction }: { entry?: JournalEntry; onAction: () 
       </p>
       <form
         className="mt-px-18 flex flex-wrap items-end gap-px-12"
-        onSubmit={(event) => {
+        onSubmit={async (event) => {
           event.preventDefault();
+          if (journalSaving) return;
           const value = Number(weight);
           if (!weight.trim() || !Number.isFinite(value) || value <= 0 || value > 1000) {
             setError("Enter a weight greater than 0 and no more than 1,000 kg.");
             return;
           }
-          setEntries((current) => [
-            {
-              id: crypto.randomUUID(),
-              kind: "体重",
-              text: String(value),
-              source: "Home check-in",
-              occurredAt: new Date().toISOString(),
-              recordedAt: new Date().toISOString(),
-              ...(entry ? { correctionOf: entry.id } : {}),
-            },
-            ...current,
-          ]);
+          const saved = await appendEntry({
+            kind: "体重",
+            text: String(value),
+            source: "Home check-in",
+            occurredAt: new Date().toISOString(),
+            ...(entry ? { correctionOf: entry.id } : {}),
+          });
+          if (!saved) {
+            setError("Could not save. Try again.");
+            return;
+          }
           setError("");
           onAction();
         }}
@@ -508,7 +503,7 @@ function WeightDetail({ entry, onAction }: { entry?: JournalEntry; onAction: () 
             {error}
           </p>
         )}
-        <Button type="submit">
+        <Button type="submit" disabled={journalSaving}>
           <Check /> {entry ? "Save correction" : "Save measurement"}
         </Button>
       </form>

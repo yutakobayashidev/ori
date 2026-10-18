@@ -26,7 +26,7 @@ export const classifyHomeTasks = createServerFn({ method: "POST" })
       return {
         status: "unavailable",
         tasks: [],
-        notice: "Preview unavailable. Add tasks manually.",
+        notice: "Preview unavailable.",
       };
     }
   });

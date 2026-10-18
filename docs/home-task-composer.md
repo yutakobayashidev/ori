@@ -1,9 +1,28 @@
 # Home task composer
 
-Home's input previews Japanese tasks while typing. Interface labels stay in English. Review the extracted titles and
+Home's input uses Jev to distinguish Japanese tasks from journal entries while typing.
+No `Note:` prefix is needed. Interface labels stay in English. Review the extracted titles and
 date-only deadlines, edit or remove rows, then confirm to save the selected tasks
 as Activities. Saving a list is atomic: the whole list succeeds or none is saved.
 Tasks and deadlines survive reload and appear in the shared task views.
+
+Journal previews preserve the original wording. Add note appends the entry to a
+daily Markdown file and survives reload. Journal edits are corrections appended
+as new entries; existing file contents are not rewritten.
+
+Journal files live in `~/.local/state/twitter-lite/journal/YYYY-MM-DD.md` by default.
+Set `TWITTER_LITE_JOURNAL_DIR` on the web server to choose another directory.
+Daily filenames and timestamp headings use Japan Standard Time (`Asia/Tokyo`),
+independently of the browser's timezone. The production dotnix web service sets
+this path explicitly under its persistent state directory. Back up the Journal
+directory alongside the SQLite database; database backups alone do not contain
+these Markdown entries.
+
+The compact date menu offers Today, Tomorrow, This week, and Anytime.
+These resolve to local calendar dates (This week means the current Sunday),
+or clear the date for Anytime. Pick a date opens an explicit date input.
+The same menu is available when editing an existing task; no new scheduling
+model is introduced.
 
 Set `TYPESAFE_API_KEY` in the web server's environment to enable automatic previews.
 Keep it server-side; never use a `VITE_` or public environment prefix. For a local
@@ -26,7 +45,8 @@ Press `/` in an empty input to open the searchable card palette. Choose a task,
 task list, or task with a deadline using the arrow keys and Enter. Escape closes
 the palette or clears the composer. Tab keeps the current automatic preview for
 editing. Explicit card selection and edits stop automatic replacement. The palette
-contains the three task types supported here, not Shapeshift's unrelated utilities.
+contains task, task list, deadline, and Journal entries.
+Ctrl/Cmd+Enter previews a legacy action such as Note. Task cards have their own Add button.
 
 The live browser integration check is opt-in (it makes real API calls) and uses an
 isolated test database:
@@ -67,9 +87,9 @@ and day offsets. Specific times, recurring schedules, and unresolved timing rema
 in the title and require review. The model selects from source-derived candidates;
 it does not rewrite arbitrary prose into polished task names.
 
-Verification on 2026-10-18: 26 Home browser checks passed across desktop and mobile,
-including real Jev extraction, slash palette, atomic save/reload, deadline clearing,
-Board display, accessibility, and existing commands. The full unit suite passed
-883 tests (one opt-in test skipped); a subsequent oversized-manual-list regression
-also passed in the nine-test composer suite. Typecheck, lint, and production build
-were checked. This does not deploy or restart an existing installation.
+Verification on 2026-10-18: 34 Home browser checks passed across desktop and mobile,
+including real Jev task/journal classification, slash palette, deadline shortcuts,
+save/reload, Markdown persistence, append-only corrections, accessibility, and
+existing commands. The full unit suite passed 913 tests (one opt-in test skipped).
+Typecheck and lint passed. Journal repository tests cover concurrent appends,
+idempotent retries, exact text preservation, and Japan-time date boundaries.

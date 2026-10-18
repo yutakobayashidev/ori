@@ -1,8 +1,8 @@
 // Adapted from anishfn/shapeshift IntentPalette.tsx (MIT).
-import { CheckSquare, Clock, ListTodo } from "lucide-react";
+import { BookOpen, CheckSquare, Clock, ListTodo } from "lucide-react";
 import { useState } from "react";
 import { Dialog } from "#/components/dialog";
-export type TaskCardMode = "task" | "list" | "deadline";
+export type TaskCardMode = "task" | "list" | "deadline" | "journal";
 const choices = [
   {
     mode: "task",
@@ -22,6 +22,7 @@ const choices = [
     icon: Clock,
     keywords: "deadline reminder",
   },
+  { mode: "journal", label: "Journal", icon: BookOpen, keywords: "note diary journal" },
 ] as const;
 export function IntentPalette({
   onClose,
