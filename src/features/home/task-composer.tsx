@@ -188,7 +188,7 @@ export function TaskComposer({
         />
       )}
       <MorphContainer readiness={readiness}>
-        <div className="p-4">
+        <div className="px-4 py-5">
           <Textarea
             variant="morphComposer"
             rows={1}
