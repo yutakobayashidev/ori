@@ -17,6 +17,39 @@ defmodule WorkspaceRuntime.CodexTest do
              WorkspaceRuntime.Store.call({:create, Map.put(request, "prompt", "different")})
   end
 
+  test "structured output forwards schema, runs read-only, and separates final JSON from commentary" do
+    System.put_env("WORKSPACE_CODEX_PATH", Path.expand("test/fixtures/codex-structured"))
+    id = "structured-#{System.unique_integer([:positive])}"
+
+    WorkspaceRuntime.Store.call(
+      {:create,
+       %{
+         "id" => id,
+         "prompt" => "Design a routine",
+         "config" => %{"readOnly" => true, "outputSchema" => %{"type" => "object"}}
+       }}
+    )
+
+    run = await(id, 100)
+    assert run["status"] == "review", inspect(run["error"])
+    assert Jason.decode!(run["finalOutput"]) == %{"message" => "Which days?"}
+    assert List.last(run["messages"])["text"] == "Let me think. "
+  end
+
+  test "malformed structured-output configuration is rejected before starting a run" do
+    for config <- [%{"outputSchema" => "bad"}, %{"readOnly" => "true"}] do
+      assert {:error, _} =
+               WorkspaceRuntime.Store.call(
+                 {:create,
+                  %{
+                    "id" => "invalid-#{System.unique_integer([:positive])}",
+                    "prompt" => "hello",
+                    "config" => config
+                  }}
+               )
+    end
+  end
+
   defp await(id, 0), do: WorkspaceRuntime.Store.call({:get, id})
 
   defp await(id, n) do

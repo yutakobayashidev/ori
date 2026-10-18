@@ -33,16 +33,34 @@ defmodule WorkspaceRuntime.Codex do
       )
 
     overrides =
-      Enum.reduce(config["mcpServers"] || %{}, overrides, fn {name, server}, a ->
-        a =
-          Enum.reduce(server["tools"] || [], a, fn tool, a ->
-            Map.put(a, "mcp_servers.#{name}.tools.#{tool}.approval_mode", "approve")
-          end)
+      Enum.reduce(
+        if(config["readOnly"], do: %{}, else: config["mcpServers"] || %{}),
+        overrides,
+        fn {name, server}, a ->
+          a =
+            Enum.reduce(server["tools"] || [], a, fn tool, a ->
+              Map.put(a, "mcp_servers.#{name}.tools.#{tool}.approval_mode", "approve")
+            end)
 
-        a
-        |> Map.put("mcp_servers.#{name}.enabled", true)
-        |> Map.put("mcp_servers.#{name}.url", server["url"])
-      end)
+          a
+          |> Map.put("mcp_servers.#{name}.enabled", true)
+          |> Map.put("mcp_servers.#{name}.url", server["url"])
+        end
+      )
+
+    overrides =
+      if config["readOnly"] do
+        Map.merge(overrides, %{
+          "features.shell_tool" => false,
+          "features.apps" => false,
+          "features.browser_use" => false,
+          "features.computer_use" => false,
+          "features.code_mode" => false,
+          "features.code_mode_host" => false
+        })
+      else
+        overrides
+      end
 
     args =
       ["app-server"] ++
@@ -115,7 +133,7 @@ defmodule WorkspaceRuntime.Codex do
       %{
         "cwd" => r["cwd"],
         "approvalPolicy" => "never",
-        "sandbox" => "workspace-write",
+        "sandbox" => if(c["readOnly"], do: "read-only", else: "workspace-write"),
         "developerInstructions" => c["developerInstructions"],
         "model" => c["model"]
       }
@@ -129,11 +147,15 @@ defmodule WorkspaceRuntime.Codex do
   defp handle(port, r, %{"id" => 2, "result" => %{"thread" => %{"id" => thread}}}, pending) do
     Store.event(r["id"], {:patch, %{"threadId" => thread}})
 
-    send_rpc(port, 3, "turn/start", %{
+    params = %{
       "threadId" => thread,
       "input" => [%{"type" => "text", "text" => r["prompt"]}],
       "approvalPolicy" => "never"
-    })
+    }
+
+    schema = get_in(r, ["config", "outputSchema"])
+    params = if schema, do: Map.put(params, "outputSchema", schema), else: params
+    send_rpc(port, 3, "turn/start", params)
 
     loop(port, r, "", pending)
   end
@@ -161,6 +183,24 @@ defmodule WorkspaceRuntime.Codex do
          "artifacts" => WorkspaceRuntime.Artifacts.list(r["cwd"])
        }}
     )
+  end
+
+  defp handle(
+         port,
+         r,
+         %{
+           "method" => "item/completed",
+           "params" => %{"item" => %{"type" => "agentMessage", "text" => text} = item}
+         },
+         pending
+       ) do
+    # Deltas can contain commentary and multiple messages. Preserve the authoritative
+    # completed answer separately so structured-output callers never parse that mix.
+    if item["phase"] in [nil, "final_answer"] do
+      Store.event(r["id"], {:patch, %{"finalOutput" => text}})
+    end
+
+    loop(port, r, "", pending)
   end
 
   defp handle(port, r, %{"id" => id, "method" => "item/tool/requestUserInput", "params" => p}, _) do

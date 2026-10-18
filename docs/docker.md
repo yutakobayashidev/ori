@@ -5,9 +5,11 @@
 The default deployment is one web container and one persistent SQLite volume.
 It supports owner login, Home, tasks, Board, Focus, and saved workspace state
 without a Twitter relay, Tailscale, Beeper, Elixir, or a Codex account.
-Reader, Vitals, and routines retain their existing prototype limitations.
+Reader and Vitals retain their existing prototype limitations.
 Journal uses separate daily Markdown files. Set `TWITTER_LITE_JOURNAL_DIR` to a
 mounted persistent directory to retain entries when replacing the container.
+
+Routine definitions and executions use `TWITTER_LITE_ROUTINE_DIR` (default `~/.local/state/twitter-lite/routines`); mount that directory for persistence. Routine creation/editing needs the Codex runtime; saved forms execute without inference. See [Routine builder](routine-builder.md).
 
 AI execution is a separate, optional process. The web service owns user sessions,
 SQLite, activities, and MCP; the runtime owns Codex subprocesses, scheduling,

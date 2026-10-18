@@ -1,0 +1,30 @@
+#!/bin/sh
+if [ "$1" = mcp ]; then
+  echo '[]'
+  exit 0
+fi
+case "$*" in
+  *'features.shell_tool=false'*) ;;
+  *) echo '{"error":{"message":"missing tool restrictions"}}'; exit 1;;
+esac
+while IFS= read -r line; do
+case "$line" in
+  *'"method":"initialize"'*) echo '{"id":1,"result":{}}';;
+  *'"method":"thread/start"'*)
+    case "$line" in
+      *'"sandbox":"read-only"'*) echo '{"id":2,"result":{"thread":{"id":"structured-thread"}}}';;
+      *) echo '{"error":{"message":"missing read-only sandbox"}}';;
+    esac;;
+  *'"method":"turn/start"'*)
+    case "$line" in
+      *'"outputSchema":{"type":"object"}'*) ;;
+      *) echo '{"error":{"message":"missing outputSchema"}}'; continue;;
+    esac
+    echo '{"id":3,"result":{"turn":{"id":"structured-turn"}}}'
+    echo '{"method":"item/agentMessage/delta","params":{"delta":"Let me think. "}}'
+    echo '{"method":"item/completed","params":{"item":{"type":"agentMessage","phase":"commentary","text":"Let me think."}}}'
+    echo '{"method":"item/completed","params":{"item":{"type":"agentMessage","phase":"final_answer","text":"{\"message\":\"Which days?\"}"}}}'
+    echo '{"method":"turn/completed","params":{"turn":{"status":"completed"}}}'
+    ;;
+esac
+done

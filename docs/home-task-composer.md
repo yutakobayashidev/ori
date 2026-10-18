@@ -1,6 +1,7 @@
 # Home task composer
 
 Home's input uses Jev to distinguish Japanese tasks from journal entries while typing.
+It also offers routine creation and invocation of saved routines, with explicit click-to-open sheets. The slash palette includes New routine and saved routine names. See [Routine builder](routine-builder.md).
 No `Note:` prefix is needed. Interface labels stay in English. Review the extracted titles and
 date-only deadlines, edit or remove rows, then confirm to save the selected tasks
 as Activities. Saving a list is atomic: the whole list succeeds or none is saved.

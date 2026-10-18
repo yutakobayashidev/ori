@@ -43,7 +43,7 @@ available.
 
 Today follows the viewer's local calendar date and refreshes at midnight and on
 returning to the tab. This scopes completion visibility, not the activity's
-planned date. Counts cover persisted tasks and replies; session-only routines
+planned date. Counts cover persisted tasks and replies; routine records
 and measurements keep their existing behavior.
 
 `completedAt` records when the server accepted the transition to completed, not
@@ -58,7 +58,7 @@ available in history with “Completion date unavailable.”
 
 The sections below describe the original prototype. Its sample conversation,
 scheduling, and simulated-send flows have been superseded on Home and Messages
-by the persistent inbox above. Routine steps remain local prototypes.
+by the persistent inbox above. Routines now use a [conversational builder](routine-builder.md), versioned forms and append-only execution records; the fixed morning and weight examples below are historical.
 Journal now persists separately in daily append-only Markdown files; see
 [Home capture](home-task-composer.md) for storage and backup details.
 

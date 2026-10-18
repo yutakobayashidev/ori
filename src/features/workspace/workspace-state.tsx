@@ -48,15 +48,7 @@ const WorkspaceContext = createContext<WorkspaceState | null>(null);
 
 export function WorkspaceStateProvider({ children }: { children: ReactNode }) {
   const { auth } = useRouteContext({ from: "__root__" });
-  const [tasks, setTasks] = useState<Task[]>([
-    {
-      id: "morning",
-      title: "Morning routine",
-      section: "routine",
-      status: "todo",
-      steps: ["Drink water", "Get ready", "Have breakfast"],
-    },
-  ]);
+  const [tasks, setTasks] = useState<Task[]>([]);
   const queryClient = useQueryClient();
   const journal = useQuery({
     queryKey: ["journal"],

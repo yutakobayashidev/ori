@@ -23,14 +23,14 @@ The interface is in English. User-entered text and external posts retain their
 original language.
 
 Home uses a Tiimo-inspired day flow with expandable activities and direct
-controls for routine steps, tasks, replies and weight entries. Messages uses
+controls for tasks, replies, and saved routines with dynamic measurement forms. Messages uses
 a Beeper conversation layout with real history, participant avatars, editable
 drafts, quoted text replies and a contextual side panel. Tasks and reply activities share persistent
 SQLite records across Home, Messages, and MCP. User edits and decisions survive
 agent updates and reloads. Home keeps today's completed activities in place as compact
 rows; older completions remain accessible through searchable completion history.
 The board's Done column shows today by default, with an option to show past
-completions. Both use the device's local date. Routines remain session-only prototypes.
+completions. Both use the device's local date. Routines use AI-generated, versioned definitions and persistent execution records.
 Journal entries persist in daily append-only Markdown files using Japan Standard Time.
 Reply sending snapshots the saved draft into a durable operation; upstream send
 success does not automatically complete the task.
@@ -71,19 +71,19 @@ block other Home actions. No database migration or additional service is needed.
 
 ## Workspaces and current status
 
-| Workspace | Route                | Current implementation                                                                                                 |
-| --------- | -------------------- | ---------------------------------------------------------------------------------------------------------------------- |
-| Home      | `/`                  | Persistent mixed task/reply inbox and action proposals; routine and measurement controls remain local prototypes.      |
-| Messages  | `/support`           | Reply activities, Beeper history and avatars, persistent drafts, quoted text sending and operation status.             |
-| Journal   | `/journal`           | Notes, resume points, medication and weight entries with daily Markdown persistence and append-only corrections.       |
-| Reader    | `/inbox`             | Searchable sample articles and a responsive article reader. Recommendation from activity history is not connected yet. |
-| Vitals    | `/vitals`            | Body and Environment dashboards with sample readings, charts, and simulated controls. No health or device connection.  |
-| Research  | `/browse`, `/deck`   | Intentional search and user/list reading, Twitter/Mastodon/Reddit decks, and optional Codex research chat.             |
-| Board     | `/board`             | Shared tasks and replies in Kanban columns, with AI handoff, execution chat, questions, and artifacts.                 |
-| Focus     | `/focus/$activityId` | One task, visual timer, reply/source access, estimates and recorded effort.                                            |
+| Workspace | Route                | Current implementation                                                                                                               |
+| --------- | -------------------- | ------------------------------------------------------------------------------------------------------------------------------------ |
+| Home      | `/`                  | Persistent mixed task/reply inbox and action proposals; routine forms are generated through Codex and stored with execution history. |
+| Messages  | `/support`           | Reply activities, Beeper history and avatars, persistent drafts, quoted text sending and operation status.                           |
+| Journal   | `/journal`           | Notes, resume points, medication and weight entries with daily Markdown persistence and append-only corrections.                     |
+| Reader    | `/inbox`             | Searchable sample articles and a responsive article reader. Recommendation from activity history is not connected yet.               |
+| Vitals    | `/vitals`            | Body and Environment dashboards with sample readings, charts, and simulated controls. No health or device connection.                |
+| Research  | `/browse`, `/deck`   | Intentional search and user/list reading, Twitter/Mastodon/Reddit decks, and optional Codex research chat.                           |
+| Board     | `/board`             | Shared tasks and replies in Kanban columns, with AI handoff, execution chat, questions, and artifacts.                               |
+| Focus     | `/focus/$activityId` | One task, visual timer, reply/source access, estimates and recorded effort.                                                          |
 
 Home and Messages share activity IDs, user decisions, and drafts through a common
-server service. Journal survives reload; routine prototype state does not. The home
+server service. Journal and routine definitions/execution records survive reload. The home
 input uses Jev to classify tasks and journal text and previews entries before
 confirmation. See [Home capture](home-task-composer.md) for parsing and storage details.
 Research decks, connections, and chat

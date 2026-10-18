@@ -34,6 +34,7 @@ export default defineConfig({
     trace: "retain-on-failure",
   },
   webServer: [
+    { command: "node e2e/mock-routine-runtime.mjs", port: 6912, reuseExistingServer: false },
     {
       command: `TWITTER_LITE_MOCK_RELAY_PORT=${relayPort} pnpm exec tsx e2e/mock-relay.mjs`,
       port: relayPort,
@@ -41,7 +42,7 @@ export default defineConfig({
       timeout: 120_000,
     },
     {
-      command: `TWITTER_LITE_BEEPER_CLI=./e2e/fixtures/beeper-cli.mjs TWITTER_LITE_BEEPER_TARGET=e2e-target WORKSPACE_SETUP_TOKEN=isolated-e2e-setup-token-not-for-production TWITTER_LITE_CODEX_PATH= TWITTER_LITE_REPORT_ROOT= TWITTER_LITE_CODEX_MODEL= TWITTER_LITE_MASTODON_ORIGINS= TWITTER_LITE_CREDENTIAL_KEY_FILE= TWITTER_LITE_DB_PATH=${databasePath} TWITTER_LITE_JOURNAL_DIR=${join(dirname(databasePath), "journal")} TWITTER_LITE_ORIGIN=http://127.0.0.1:${appPort} TWITTER_LITE_ALLOWED_LOGIN=owner@twitter-lite.invalid TWITTER_RELAY_BASE_URL=http://127.0.0.1:${relayPort} RDT_GATEWAY_URL=http://127.0.0.1:${relayPort} BIRD_PROFILE_NAME=e2e ${appCommand}`,
+      command: `TWITTER_LITE_BEEPER_CLI=./e2e/fixtures/beeper-cli.mjs TWITTER_LITE_BEEPER_TARGET=e2e-target WORKSPACE_SETUP_TOKEN=isolated-e2e-setup-token-not-for-production TWITTER_LITE_CODEX_PATH= TWITTER_LITE_REPORT_ROOT= TWITTER_LITE_CODEX_MODEL= TWITTER_LITE_MASTODON_ORIGINS= TWITTER_LITE_CREDENTIAL_KEY_FILE= TWITTER_LITE_DB_PATH=${databasePath} TWITTER_LITE_JOURNAL_DIR=${join(dirname(databasePath), "journal")} TWITTER_LITE_ROUTINE_DIR=${join(dirname(databasePath), "routines")} WORKSPACE_RUNTIME_URL=http://127.0.0.1:6912 WORKSPACE_RUNTIME_TOKEN=isolated-e2e-routine-runtime TWITTER_LITE_ORIGIN=http://127.0.0.1:${appPort} TWITTER_LITE_ALLOWED_LOGIN=owner@twitter-lite.invalid TWITTER_RELAY_BASE_URL=http://127.0.0.1:${relayPort} RDT_GATEWAY_URL=http://127.0.0.1:${relayPort} BIRD_PROFILE_NAME=e2e ${appCommand}`,
       port: appPort,
       reuseExistingServer: false,
       timeout: 120_000,

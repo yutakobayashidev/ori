@@ -21,7 +21,14 @@ export const classifyHomeTasks = createServerFn({ method: "POST" })
   .handler(async ({ data }): Promise<HomeTaskPreview> => {
     const { interpretTaskInput } = await import("./task-intent.server");
     try {
-      return await interpretTaskInput(data);
+      const { listRoutines } = await import("../routines/routine-repository.server");
+      const routines = (await listRoutines()).map(({ id, name, aliases, description }) => ({
+        id,
+        name,
+        aliases,
+        description,
+      }));
+      return await interpretTaskInput(data, { routines });
     } catch {
       return {
         status: "unavailable",

@@ -4,30 +4,20 @@ test.beforeEach(async ({ activityMcp }) => {
   await activityMcp.publish();
 });
 
-test("executes routine steps and records a measurement in the shared journal", async ({
+test("starts with no invented routines and opens the routine builder", async ({
   page,
   a11y,
   homePage,
-  journalPage,
-  workspacePage,
 }, testInfo) => {
   await homePage.goTo();
-  await page.waitForLoadState("domcontentloaded");
-  await homePage.morningRoutine.click();
-  await expect(page).toHaveURL(/activity=task/);
-  await homePage.routineStep(/Drink water/).check();
-  await expect(homePage.finishRoutine).toBeDisabled();
-  await homePage.routineStep(/Get ready/).check();
-  await homePage.routineStep(/Have breakfast/).check();
+  await expect(page.getByRole("button", { name: /Morning routine/ })).toHaveCount(0);
+  await expect(page.getByRole("button", { name: /Record weight/ })).toHaveCount(0);
+  await page.getByRole("button", { name: "New routine", exact: true }).click();
+  const builder = page.getByRole("dialog", { name: "New routine", exact: true });
+  await expect(builder.getByRole("textbox", { name: "Routine message" })).toBeVisible();
+  await expect(builder.getByRole("button", { name: "Create routine", exact: true })).toBeDisabled();
   expect((await a11y().analyze()).violations).toEqual([]);
-  await page.screenshot({ path: testInfo.outputPath("home-routine.png"), fullPage: true });
-  await homePage.finishRoutine.click();
-  await homePage.recordMeasurement("65.2");
-  await expect(homePage.recordedWeight("65.2")).toBeVisible();
-  await workspacePage.navigateTo("Journal");
-  await expect(journalPage.weightEntries).toContainText("65.2 kg");
-  await workspacePage.navigateTo("Home");
-  await expect(homePage.restoreTask("Morning routine")).toBeVisible();
+  await page.screenshot({ path: testInfo.outputPath("home-routine-builder.png") });
 });
 
 test("shows the day flow and conversation context at desktop width", async ({
@@ -179,8 +169,6 @@ test("keeps completed actions in their original positions with visible outcomes"
       .card("buy-detergent")
       .evaluate((element) => element.getBoundingClientRect().height),
   ).toBeLessThan(originalHeight);
-  await homePage.recordMeasurement("65.2");
-  await expect(homePage.recordedWeight("65.2")).toBeVisible();
   expect(await homePage.flowTitles.allTextContents()).toEqual(before);
   expect((await a11y().analyze()).violations).toEqual([]);
   await activitiesPage.card("buy-detergent").scrollIntoViewIfNeeded();

@@ -185,3 +185,34 @@ it("still requires task extraction answers when a task is selected", async () =>
     interpretTaskInput({ text: "牛乳を買う", today: "2026-10-18" }, { apiKey: "test" }),
   ).rejects.toThrow("応答に必要な判定がありません");
 });
+
+it.each([
+  ["routine_create", undefined, "routine_create", undefined],
+  ["routine_run", "r0", "routine_run", "night"],
+  ["routine_run", "r99", "uncertain", undefined],
+  ["routine_run", "none", "uncertain", undefined],
+  ["journal", "r0", "journal", undefined],
+] as const)("routes %s with selection %s safely", async (intent, selection, status, routineId) => {
+  vi.stubGlobal(
+    "fetch",
+    vi.fn().mockResolvedValue(
+      Response.json({
+        model: "jev",
+        answers: {
+          intent: { type: "choice", choice: intent, confidence: 1 },
+          ...(selection ? { routine: { type: "choice", choice: selection, confidence: 1 } } : {}),
+        },
+      }),
+    ),
+  );
+  const result = await interpretTaskInput(
+    { text: "夜のルーティン", today: "2026-10-18" },
+    {
+      apiKey: "test",
+      routines: [{ id: "night", name: "Evening", aliases: ["夜"], description: "Bedtime routine" }],
+    },
+  );
+  expect(result.status).toBe(status);
+  expect(result.routineId).toBe(routineId);
+  expect(result.tasks).toEqual([]);
+});

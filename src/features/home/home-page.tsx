@@ -1,6 +1,12 @@
 import { Link, useNavigate, useRouteContext } from "@tanstack/react-router";
 import { ArrowUpRight, Plus, X } from "lucide-react";
 import { useRef, useState } from "react";
+import { useQuery, useQueryClient } from "@tanstack/react-query";
+import { RoutineBuilderSheet } from "#/features/routines/routine-builder-sheet";
+import { RoutineRunSheet } from "#/features/routines/routine-run-sheet";
+import { listRoutines, loadRoutineRuns } from "#/features/routines/routine-functions";
+import { isRoutineDay, routineDay, scheduleLabel } from "#/features/routines/routine-schedule";
+import type { RoutineDefinition } from "#/features/routines/routine-model";
 import { Dialog } from "#/components/dialog";
 import { Button } from "#/components/ui/button";
 import { SidebarInset, SidebarProvider } from "#/components/ui/sidebar";
@@ -24,6 +30,18 @@ export function HomePage() {
   const navigate = useNavigate();
   const input = useRef<HTMLTextAreaElement>(null);
   const [prompt, setPrompt] = useState("");
+  const queryClient = useQueryClient();
+  const routines = useQuery({ queryKey: ["routines"], queryFn: () => listRoutines() });
+  const routineRuns = useQuery({ queryKey: ["routine-runs"], queryFn: () => loadRoutineRuns() });
+  const [builder, setBuilder] = useState<{ prompt: string; routine?: RoutineDefinition } | null>(
+    null,
+  );
+  const [running, setRunning] = useState<RoutineDefinition | null>(null);
+  function openBuilder(text: string, routine?: RoutineDefinition) {
+    setProposal(null);
+    setRunning(null);
+    setBuilder({ prompt: text, routine });
+  }
   const [proposal, setProposal] = useState<{
     action: HomeAction;
     label: string;
@@ -71,26 +89,18 @@ export function HomePage() {
   async function apply(action: HomeAction) {
     switch (action.type) {
       case "add-task":
-        if (action.section !== "routine") {
-          if (
-            !(await create({
-              title: action.title,
-              nextAction: action.title,
-              section: action.section,
-            }))
-          )
-            return;
-          break;
+        if (action.section === "routine") {
+          openBuilder(prompt);
+          return;
         }
-        setTasks((current) => [
-          ...current,
-          {
-            id: crypto.randomUUID(),
+        if (
+          !(await create({
             title: action.title,
+            nextAction: action.title,
             section: action.section,
-            status: "todo",
-          },
-        ]);
+          }))
+        )
+          return;
         break;
       case "task-status":
         if (activities.some((item) => item.id === action.id)) {
@@ -192,6 +202,12 @@ export function HomePage() {
                 <DailyBrief onOpenContact={openContact} />
               </header>
               <TaskComposer
+                routines={routines.data ?? []}
+                onCreateRoutine={(text) => openBuilder(text)}
+                onRunRoutine={(id) => {
+                  const routine = routines.data?.find((item) => item.id === id);
+                  if (routine) setRunning(routine);
+                }}
                 text={prompt}
                 onTextChange={(value) => {
                   setPrompt(value);
@@ -217,9 +233,7 @@ export function HomePage() {
                   );
                   return (
                     "action" in result &&
-                    (result.action.type !== "add-task" ||
-                      result.action.section === "routine" ||
-                      result.action.section === "optional")
+                    (result.action.type !== "add-task" || result.action.section === "optional")
                   );
                 })()}
                 onPreviewAction={interpret}
@@ -258,6 +272,53 @@ export function HomePage() {
               </p>
               <div className="mt-px-24 grid grid-cols-[minmax(0,2.5fr)_minmax(190px,1fr)] gap-px-40 max-[1000px]:gap-px-32 max-md:grid-cols-1 max-md:gap-px-24">
                 <ExecutionWorkbench
+                  routines={
+                    <>
+                      {routines.error && (
+                        <p role="alert" className="text-sm text-destructive">
+                          Couldn’t load routines.{" "}
+                          <Button variant="ghost" onClick={() => void routines.refetch()}>
+                            Retry
+                          </Button>
+                        </p>
+                      )}
+                      {routines.data?.map((routine) => {
+                        const today = routineDay(new Date(), routine.schedule.timeZone);
+                        const recorded = routineRuns.data?.some(
+                          (run) =>
+                            run.routineId === routine.id &&
+                            routineDay(new Date(run.occurredAt), routine.schedule.timeZone) ===
+                              today,
+                        );
+                        return (
+                          <button
+                            key={routine.id}
+                            onClick={() => setRunning(routine)}
+                            className="flex min-h-16 w-full flex-col gap-1 rounded-xl border border-border bg-muted px-4 py-3 text-left hover:bg-accent focus-visible:outline-2 focus-visible:outline-ring"
+                          >
+                            <span className="text-sm font-medium wrap-anywhere">
+                              {routine.name}
+                            </span>
+                            <span className="text-xs text-muted-foreground">
+                              {recorded
+                                ? "Recorded today"
+                                : isRoutineDay(routine.schedule, new Date())
+                                  ? "Today"
+                                  : "On demand"}{" "}
+                              · {scheduleLabel(routine.schedule)}
+                            </span>
+                          </button>
+                        );
+                      })}
+                      <Button
+                        variant="ghost"
+                        className="justify-start"
+                        onClick={() => openBuilder("")}
+                      >
+                        New routine
+                      </Button>
+                    </>
+                  }
                   selectedId={search.activity}
                   onSelect={(id) => updateSearch({ activity: id || undefined })}
                 />
@@ -353,6 +414,30 @@ export function HomePage() {
           </Dialog>
         )}
       </SidebarProvider>
+      {builder && (
+        <RoutineBuilderSheet
+          prompt={builder.prompt}
+          routine={builder.routine}
+          onClose={() => setBuilder(null)}
+          onSaved={() => {
+            void queryClient.invalidateQueries({ queryKey: ["routines"] });
+            setBuilder(null);
+            setPrompt("");
+            setNotice("Routine saved.");
+          }}
+        />
+      )}
+      {running && (
+        <RoutineRunSheet
+          routine={running}
+          onClose={() => setRunning(null)}
+          onEdit={() => openBuilder("", running)}
+          onSaved={() => {
+            void queryClient.invalidateQueries({ queryKey: ["routine-runs"] });
+            void queryClient.invalidateQueries({ queryKey: ["routine-history"] });
+          }}
+        />
+      )}
     </TooltipProvider>
   );
 }

@@ -1,6 +1,7 @@
 // Adapted from anishfn/shapeshift IntentPalette.tsx (MIT).
-import { BookOpen, CheckSquare, Clock, ListTodo } from "lucide-react";
+import { Repeat, BookOpen, CheckSquare, Clock, ListTodo } from "lucide-react";
 import { useState } from "react";
+import type { RoutineCandidate } from "./task-intent";
 import { Dialog } from "#/components/dialog";
 export type TaskCardMode = "task" | "list" | "deadline" | "journal";
 const choices = [
@@ -27,13 +28,42 @@ const choices = [
 export function IntentPalette({
   onClose,
   onPick,
+  routines = [],
+  onCreateRoutine,
+  onRunRoutine,
 }: {
   onClose: () => void;
   onPick: (mode: TaskCardMode) => void;
+  routines?: RoutineCandidate[];
+  onCreateRoutine?: () => void;
+  onRunRoutine?: (id: string) => void;
 }) {
   const [query, setQuery] = useState("");
   const [active, setActive] = useState(0);
-  const filtered = choices.filter((choice) =>
+  const commands = [
+    ...choices.map((choice) => ({ ...choice, select: () => onPick(choice.mode) })),
+    ...(onCreateRoutine
+      ? [
+          {
+            mode: "routine-create",
+            label: "New routine",
+            icon: Repeat,
+            keywords: "routine create habit",
+            select: onCreateRoutine,
+          },
+        ]
+      : []),
+    ...(onRunRoutine
+      ? routines.map((routine) => ({
+          mode: `routine-${routine.id}`,
+          label: routine.name,
+          icon: Repeat,
+          keywords: `routine ${routine.aliases.join(" ")} ${routine.description}`,
+          select: () => onRunRoutine(routine.id),
+        }))
+      : []),
+  ];
+  const filtered = commands.filter((choice) =>
     `${choice.label} ${choice.keywords}`.toLowerCase().includes(query.toLowerCase()),
   );
   return (
@@ -65,7 +95,7 @@ export function IntentPalette({
           }
           if (event.key === "Enter" && filtered[active]) {
             event.preventDefault();
-            onPick(filtered[active].mode);
+            filtered[active].select();
           }
         }}
       />
@@ -73,7 +103,7 @@ export function IntentPalette({
         id="home-card-options"
         role="listbox"
         aria-label="Commands"
-        className="max-h-[420px] overscroll-contain"
+        className="max-h-[420px] overflow-y-auto overscroll-contain"
       >
         {!filtered.length && (
           <p className="p-3 text-sm text-muted-foreground">No commands found.</p>
@@ -87,7 +117,7 @@ export function IntentPalette({
             type="button"
             className="flex min-h-12 w-full items-center gap-3 rounded-lg px-2 text-left aria-selected:bg-muted"
             onMouseEnter={() => setActive(index)}
-            onClick={() => onPick(choice.mode)}
+            onClick={choice.select}
           >
             <span className="grid size-8 shrink-0 place-items-center rounded-lg bg-muted text-foreground">
               <choice.icon className="size-[18px]" aria-hidden />

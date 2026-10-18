@@ -6,11 +6,20 @@ WORKSPACE_RUNTIME_HOST (IP address; default 127.0.0.1), WORKSPACE_RUNTIME_PORT,
 WORKSPACE_RUNTIME_ROOT, WORKSPACE_RUNTIME_CONCURRENCY
 (default 2), WORKSPACE_CODEX_PATH configure deployment.
 
-POST /runs accepts {id,prompt,activityId?,cwd?,threadId?,config?:{model,developerInstructions,mcpServers}}.
+POST /runs accepts {id,prompt,activityId?,cwd?,threadId?,config?:{model,developerInstructions,mcpServers,outputSchema?,readOnly?}}.
 GET /runs and /runs/:id return snapshots. GET /runs/:id/events streams SSE snapshot
 events and starts with current state on reconnect. POST /runs/:id/messages accepts
 {requestId,text,config?}; POST /runs/:id/stop cancels; POST /runs/:id/answers accepts
 {requestId,answers}. Adjacent assistant message chunks should be concatenated.
+
+`config.outputSchema` is a JSON Schema forwarded to Codex `turn/start`. Snapshots
+expose `finalOutput` from the authoritative completed assistant message, separate
+from streamed commentary; callers parse and validate it only after `status: review`.
+Follow-ups clear the previous final output. `config.readOnly: true` uses the
+read-only sandbox, disables shell, app, browser, computer and code-mode tools, and
+ignores supplied MCP servers. The routine builder uses this mode with an isolated
+default working directory and a bounded conversation supplied in each request.
+Protocol reference: https://learn.chatgpt.com/docs/app-server.
 
 A single GenServer serializes DETS writes and syncs before acknowledgement. Active
 runs become interrupted on restart; explicit followup resumes the saved Codex

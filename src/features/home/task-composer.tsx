@@ -1,5 +1,5 @@
-import { BookOpen, Check, CornerDownLeft, ListTodo, Plus, X } from "lucide-react";
-import { useEffect, useId, useRef, useState, type RefObject } from "react";
+import { Repeat, BookOpen, Check, CornerDownLeft, ListTodo, Plus, X } from "lucide-react";
+import { useEffect, useId, useRef, useState, useSyncExternalStore, type RefObject } from "react";
 import { DueDatePicker } from "#/features/activities/due-date-picker";
 import { Button } from "#/components/ui/button";
 import { Textarea } from "#/components/ui/textarea";
@@ -8,7 +8,16 @@ import { IntentPalette, type TaskCardMode } from "./intent-palette";
 import { MorphContainer } from "./morph-container";
 import { spring, tween } from "./composer-motion";
 import { classifyHomeTasks } from "./task-intent-functions";
-import { MAX_TASK_INPUT_LENGTH, MAX_TASKS, type TaskDraft } from "./task-intent";
+import {
+  MAX_TASK_INPUT_LENGTH,
+  MAX_TASKS,
+  type TaskDraft,
+  type RoutineCandidate,
+} from "./task-intent";
+
+const subscribeToHydration = () => () => {};
+const clientHydrated = () => true;
+const serverHydrated = () => false;
 
 export function TaskComposer({
   text,
@@ -19,6 +28,9 @@ export function TaskComposer({
   createJournal,
   disabled,
   isLegacyAction,
+  routines = [],
+  onCreateRoutine,
+  onRunRoutine,
 }: {
   text: string;
   onTextChange: (text: string) => void;
@@ -28,8 +40,12 @@ export function TaskComposer({
   createJournal: (text: string) => Promise<boolean>;
   disabled: boolean;
   isLegacyAction: boolean;
+  routines?: RoutineCandidate[];
+  onCreateRoutine?: (text: string) => void;
+  onRunRoutine?: (id: string) => void;
 }) {
   const layoutScope = useId();
+  const hydrated = useSyncExternalStore(subscribeToHydration, clientHydrated, serverHydrated);
   const [draftId, setDraftId] = useState(0);
   const [receipt, setReceipt] = useState<{
     id: number;
@@ -41,6 +57,9 @@ export function TaskComposer({
   const legacyAction = isLegacyAction && !forcedMode;
   const observedText = useRef(text);
   const [journalDraft, setJournalDraft] = useState<string | null>(null);
+  const [routineDraft, setRoutineDraft] = useState<
+    { kind: "create" } | { kind: "run"; id: string } | null
+  >(null);
   const [drafts, setDrafts] = useState<TaskDraft[]>([]);
   const [notice, setNotice] = useState("");
   const [checking, setChecking] = useState(false);
@@ -52,8 +71,8 @@ export function TaskComposer({
   const reduce = useReducedMotion();
   const readiness = useSpring(0, spring.number);
   useEffect(() => {
-    readiness.set(drafts.length || journalDraft !== null ? 1 : 0);
-  }, [drafts.length, journalDraft, readiness]);
+    readiness.set(drafts.length || journalDraft !== null || routineDraft !== null ? 1 : 0);
+  }, [drafts.length, journalDraft, routineDraft, readiness]);
   const revision = useRef(0);
   const saveInFlight = useRef(false);
 
@@ -64,6 +83,7 @@ export function TaskComposer({
       setForcedMode(null);
       setDrafts([]);
       setJournalDraft(null);
+      setRoutineDraft(null);
       setNotice("");
     }
   }, [text]);
@@ -80,6 +100,13 @@ export function TaskComposer({
         const today = `${now.getFullYear()}-${String(now.getMonth() + 1).padStart(2, "0")}-${String(now.getDate()).padStart(2, "0")}`;
         const result = await classifyHomeTasks({ data: { text, today } });
         if (cancelled || revision.current !== current) return;
+        setRoutineDraft(
+          result.status === "routine_create"
+            ? { kind: "create" }
+            : result.status === "routine_run" && result.routineId
+              ? { kind: "run", id: result.routineId }
+              : null,
+        );
         setDrafts(result.tasks);
         setJournalDraft(result.status === "journal" ? text.trim() : null);
         setNotice(result.notice ?? "");
@@ -87,6 +114,7 @@ export function TaskComposer({
         if (cancelled || revision.current !== current) return;
         setDrafts([]);
         setJournalDraft(null);
+        setRoutineDraft(null);
         setNotice("Preview unavailable.");
       } finally {
         if (revision.current === current) setChecking(false);
@@ -104,8 +132,10 @@ export function TaskComposer({
     setLocked(true);
     setDrafts(next);
     setJournalDraft(null);
+    setRoutineDraft(null);
   }
   function changeText(value: string) {
+    setRoutineDraft(null);
     revision.current++;
     observedText.current = value;
     setChecking(!forcedMode && Boolean(value.trim()));
@@ -153,6 +183,7 @@ export function TaskComposer({
         setForcedMode(null);
         changeText("");
         setJournalDraft(null);
+        setRoutineDraft(null);
       } else setNotice("Couldn’t save. Try again.");
     } catch {
       setNotice("Couldn’t save. Try again.");
@@ -169,6 +200,23 @@ export function TaskComposer({
             setPaletteOpen(false);
             inputRef.current?.focus();
           }}
+          routines={routines}
+          onCreateRoutine={
+            onCreateRoutine
+              ? () => {
+                  setPaletteOpen(false);
+                  onCreateRoutine(text);
+                }
+              : undefined
+          }
+          onRunRoutine={
+            onRunRoutine
+              ? (id) => {
+                  setPaletteOpen(false);
+                  onRunRoutine(id);
+                }
+              : undefined
+          }
           onPick={(mode) => {
             setForcedMode(mode);
             setPaletteOpen(false);
@@ -199,7 +247,7 @@ export function TaskComposer({
             enterKeyHint={legacyAction ? "go" : "enter"}
             maxLength={MAX_TASK_INPUT_LENGTH}
             value={text}
-            disabled={saving}
+            disabled={saving || !hydrated}
             onChange={(event) => changeText(event.target.value)}
             onCompositionStart={() => {
               revision.current++;
@@ -218,6 +266,7 @@ export function TaskComposer({
                 setForcedMode(null);
                 changeText("");
                 setJournalDraft(null);
+                setRoutineDraft(null);
                 return;
               }
               if (event.key === "Tab" && drafts.length && !locked) {
@@ -237,7 +286,11 @@ export function TaskComposer({
             }}
           />
           <div className="flex flex-wrap items-center justify-end gap-2">
-            {!legacyAction && journalDraft === null && text.trim() && !drafts.length ? (
+            {!legacyAction &&
+            !routineDraft &&
+            journalDraft === null &&
+            text.trim() &&
+            !drafts.length ? (
               <Button
                 variant="ghost"
                 disabled={saving || composing}
@@ -256,6 +309,42 @@ export function TaskComposer({
           </p>
         </div>
         <AnimatePresence initial={false}>
+          {routineDraft && !legacyAction && (
+            <motion.section
+              key="routine-preview"
+              aria-label="Routine preview"
+              initial={{ opacity: 0 }}
+              animate={{ opacity: 1 }}
+              exit={{ opacity: 0 }}
+              className="flex items-center justify-between gap-3 px-4 pt-1 pb-4"
+            >
+              <span className="flex min-w-0 items-center gap-3 text-ui-15 font-medium">
+                <Repeat className="size-5 shrink-0" aria-hidden />
+                <span className="truncate">
+                  {routineDraft.kind === "create"
+                    ? "New routine"
+                    : (routines.find((routine) => routine.id === routineDraft.id)?.name ??
+                      "Routine")}
+                </span>
+              </span>
+              <Button
+                disabled={
+                  disabled ||
+                  checking ||
+                  composing ||
+                  (routineDraft.kind === "create"
+                    ? !onCreateRoutine
+                    : !onRunRoutine || !routines.some((routine) => routine.id === routineDraft.id))
+                }
+                onClick={() => {
+                  if (routineDraft.kind === "create") onCreateRoutine?.(text);
+                  else onRunRoutine?.(routineDraft.id);
+                }}
+              >
+                {routineDraft.kind === "create" ? "Create routine" : "Run routine"}
+              </Button>
+            </motion.section>
+          )}
           {journalDraft !== null && !legacyAction && (
             <motion.section
               key={`journal-card-${draftId}`}

@@ -60,6 +60,14 @@ defmodule WorkspaceRuntime.Store do
       not is_nil(p["config"]) and not is_map(p["config"]) ->
         {:reply, {:error, "config must be an object"}, s}
 
+      not is_nil(get_in(p, ["config", "outputSchema"])) and
+          not is_map(get_in(p, ["config", "outputSchema"])) ->
+        {:reply, {:error, "outputSchema must be an object"}, s}
+
+      not is_nil(get_in(p, ["config", "readOnly"])) and
+          not is_boolean(get_in(p, ["config", "readOnly"])) ->
+        {:reply, {:error, "readOnly must be a boolean"}, s}
+
       fetch(s, id) != nil ->
         r = fetch(s, id)
 
@@ -131,6 +139,7 @@ defmodule WorkspaceRuntime.Store do
           |> Map.put("status", "queued")
           |> Map.put("error", nil)
           |> Map.put("pendingInput", nil)
+          |> Map.put("finalOutput", nil)
           |> Map.put("requests", Map.put(r["requests"], p["requestId"], p))
           |> Map.update!("messages", &(&1 ++ [message("user", p["text"])]))
           |> bump()

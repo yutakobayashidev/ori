@@ -130,6 +130,7 @@ export const test = base.extend<{
       database.exec("DELETE FROM decks; DELETE FROM legacy_imports;");
       database.close();
       rmSync(join(dirname(path), "journal"), { recursive: true, force: true });
+      rmSync(join(dirname(path), "routines"), { recursive: true, force: true });
       await use(undefined);
     },
     { auto: true },

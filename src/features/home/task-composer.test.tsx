@@ -17,11 +17,15 @@ function Composer({
   journal = vi.fn<(text: string) => Promise<boolean>>().mockResolvedValue(true),
   legacy = false,
   preview = vi.fn<() => void>(),
+  onCreateRoutine,
+  onRunRoutine,
 }: {
   save?: (tasks: unknown[]) => Promise<boolean>;
   journal?: (text: string) => Promise<boolean>;
   legacy?: boolean;
   preview?: () => void;
+  onCreateRoutine?: (text: string) => void;
+  onRunRoutine?: (id: string) => void;
 }) {
   const [text, setText] = useState("");
   return (
@@ -34,6 +38,9 @@ function Composer({
       onPreviewAction={preview}
       createTasks={save}
       createJournal={journal}
+      onCreateRoutine={onCreateRoutine}
+      onRunRoutine={onRunRoutine}
+      routines={[{ id: "night", name: "Evening", aliases: ["夜"], description: "Bedtime routine" }]}
     />
   );
 }
@@ -213,4 +220,52 @@ describe("TaskComposer", () => {
     fireEvent.keyDown(screen.getByRole("textbox", { name: "Home input" }), { key: "Enter" });
     expect(preview).toHaveBeenCalledTimes(2);
   });
+});
+
+it("opens routine creation only after confirmation", async () => {
+  const create = vi.fn<(text: string) => void>();
+  classify.mockResolvedValue({ status: "routine_create", tasks: [], notice: null });
+  render(<Composer onCreateRoutine={create} />);
+  await type("毎晩のルーティンを作りたい");
+  expect(create).not.toHaveBeenCalled();
+  fireEvent.click(screen.getByRole("button", { name: "Create routine" }));
+  expect(create).toHaveBeenCalledExactlyOnceWith("毎晩のルーティンを作りたい");
+});
+it("runs the selected registered routine after confirmation", async () => {
+  const run = vi.fn<(id: string) => void>();
+  classify.mockResolvedValue({
+    status: "routine_run",
+    routineId: "night",
+    tasks: [],
+    notice: null,
+  });
+  render(<Composer onRunRoutine={run} />);
+  await type("夜のルーティンやる");
+  expect(screen.getByRole("region", { name: "Routine preview" })).toHaveTextContent("Evening");
+  expect(run).not.toHaveBeenCalled();
+  fireEvent.click(screen.getByRole("button", { name: "Run routine" }));
+  expect(run).toHaveBeenCalledExactlyOnceWith("night");
+});
+it("offers saved routines in the slash palette", () => {
+  const run = vi.fn<(id: string) => void>();
+  render(<Composer onRunRoutine={run} />);
+  fireEvent.keyDown(screen.getByRole("textbox", { name: "Home input" }), { key: "/" });
+  fireEvent.click(screen.getByRole("option", { name: "Evening" }));
+  expect(run).toHaveBeenCalledExactlyOnceWith("night");
+});
+it("ignores a stale routine classification after the input changes", async () => {
+  let resolve!: (result: TaskIntentResult) => void;
+  classify.mockImplementationOnce(
+    () =>
+      new Promise((done) => {
+        resolve = done;
+      }),
+  );
+  render(<Composer onCreateRoutine={vi.fn<(text: string) => void>()} />);
+  await type("ルーティンを作りたい");
+  fireEvent.change(screen.getByRole("textbox", { name: "Home input" }), {
+    target: { value: "薬を飲んだ" },
+  });
+  await act(async () => resolve({ status: "routine_create", tasks: [], notice: null }));
+  expect(screen.queryByRole("button", { name: "Create routine" })).not.toBeInTheDocument();
 });
