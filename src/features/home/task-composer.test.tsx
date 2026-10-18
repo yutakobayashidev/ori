@@ -63,10 +63,10 @@ describe("TaskComposer", () => {
     render(<Composer save={save} />);
     await type("明日までに見積書を送る、牛乳を買う");
     expect(save).not.toHaveBeenCalled();
-    expect(screen.getByLabelText("期限 1")).toHaveValue("2026-10-19");
-    fireEvent.change(screen.getByLabelText("タスク 2"), { target: { value: "卵を買う" } });
-    fireEvent.change(screen.getByLabelText("期限 2"), { target: { value: "2026-10-20" } });
-    await act(async () => fireEvent.click(screen.getByRole("button", { name: "2件を追加" })));
+    expect(screen.getByLabelText("Due date 1")).toHaveValue("2026-10-19");
+    fireEvent.change(screen.getByLabelText("Task 2"), { target: { value: "卵を買う" } });
+    fireEvent.change(screen.getByLabelText("Due date 2"), { target: { value: "2026-10-20" } });
+    await act(async () => fireEvent.click(screen.getByRole("button", { name: "Add 2 tasks" })));
     expect(save).toHaveBeenCalledExactlyOnceWith([
       { title: "見積書を送る", dueDate: "2026-10-19" },
       { title: "卵を買う", dueDate: "2026-10-20" },
@@ -78,9 +78,9 @@ describe("TaskComposer", () => {
       <Composer save={vi.fn<(tasks: unknown[]) => Promise<boolean>>().mockResolvedValue(false)} />,
     );
     await type("見積書を送る、牛乳を買う");
-    await act(async () => fireEvent.click(screen.getByRole("button", { name: "2件を追加" })));
-    expect(screen.getByText(/保存できませんでした/)).toBeInTheDocument();
-    expect(screen.getByLabelText("タスク 1")).toHaveValue("見積書を送る");
+    await act(async () => fireEvent.click(screen.getByRole("button", { name: "Add 2 tasks" })));
+    expect(screen.getByText(/Couldn’t save/)).toBeInTheDocument();
+    expect(screen.getByLabelText("Task 1")).toHaveValue("見積書を送る");
   });
   it("does not request classification during Japanese composition", async () => {
     render(<Composer />);
@@ -104,57 +104,55 @@ describe("TaskComposer", () => {
     );
     render(<Composer />);
     await type("新しいタスク");
-    fireEvent.click(screen.getByRole("button", { name: "手動でタスクにする" }));
-    fireEvent.change(screen.getByLabelText("タスク 1"), { target: { value: "手動の編集" } });
+    fireEvent.click(screen.getByRole("button", { name: "Add manually" }));
+    fireEvent.change(screen.getByLabelText("Task 1"), { target: { value: "手動の編集" } });
     await act(async () =>
       resolve({ status: "task", tasks: [{ title: "古い結果", dueDate: null }], notice: null }),
     );
-    expect(screen.getByLabelText("タスク 1")).toHaveValue("手動の編集");
+    expect(screen.getByLabelText("Task 1")).toHaveValue("手動の編集");
   });
   it("opens the slash palette and keeps an explicit card selection", async () => {
     render(<Composer />);
     fireEvent.keyDown(screen.getByRole("textbox", { name: "Home input" }), { key: "/" });
-    const search = screen.getByRole("combobox", { name: "カードの種類を検索" });
+    const search = screen.getByRole("combobox", { name: "Search commands" });
     fireEvent.change(search, { target: { value: "deadline" } });
     fireEvent.keyDown(search, { key: "Enter" });
-    expect(screen.getByText("期限つきタスク")).toBeInTheDocument();
+    expect(screen.getByText("Task with deadline")).toBeInTheDocument();
     await type("書類を提出");
     expect(classify).not.toHaveBeenCalled();
-    expect(screen.getByLabelText("タスク 1")).toHaveValue("書類を提出");
+    expect(screen.getByLabelText("Task 1")).toHaveValue("書類を提出");
   });
   it("shows unavailable service and permits explicit manual creation", async () => {
     classify.mockResolvedValue({
       status: "unavailable",
       tasks: [],
-      notice: "自動判定を利用できません。",
+      notice: "Preview unavailable. Add tasks manually.",
     });
     render(<Composer />);
     await type("洗濯する");
-    expect(screen.getByText("自動判定を利用できません。")).toBeInTheDocument();
-    fireEvent.click(screen.getByRole("button", { name: "手動でタスクにする" }));
-    expect(screen.getByLabelText("タスク 1")).toHaveValue("洗濯する");
+    expect(screen.getByText("Preview unavailable. Add tasks manually.")).toBeInTheDocument();
+    fireEvent.click(screen.getByRole("button", { name: "Add manually" }));
+    expect(screen.getByLabelText("Task 1")).toHaveValue("洗濯する");
   });
   it("keeps all manual list entries and blocks saving an oversized batch", async () => {
     render(<Composer />);
     fireEvent.keyDown(screen.getByRole("textbox", { name: "Home input" }), { key: "/" });
-    const search = screen.getByRole("combobox", { name: "カードの種類を検索" });
+    const search = screen.getByRole("combobox", { name: "Search commands" });
     fireEvent.change(search, { target: { value: "list" } });
     fireEvent.keyDown(search, { key: "Enter" });
     await type(Array.from({ length: 9 }, (_, i) => `用事${i + 1}`).join("\n"));
-    expect(screen.getByLabelText("タスク 9")).toHaveValue("用事9");
-    expect(screen.getByRole("button", { name: "9件を追加" })).toBeDisabled();
-    expect(
-      screen.getByText("一度に追加できるのは8件までです。入力を分けてください。"),
-    ).toBeVisible();
+    expect(screen.getByLabelText("Task 9")).toHaveValue("用事9");
+    expect(screen.getByRole("button", { name: "Add 9 tasks" })).toBeDisabled();
+    expect(screen.getByText("Add up to 8 tasks at a time.")).toBeVisible();
   });
   it("keeps a chosen task card even when its title resembles a legacy command", async () => {
     render(<Composer legacy />);
     fireEvent.keyDown(screen.getByRole("textbox", { name: "Home input" }), { key: "/" });
-    fireEvent.keyDown(screen.getByRole("combobox", { name: "カードの種類を検索" }), {
+    fireEvent.keyDown(screen.getByRole("combobox", { name: "Search commands" }), {
       key: "Enter",
     });
     await type("Note: 書類を提出");
-    expect(screen.getByLabelText("タスク 1")).toHaveValue("Note: 書類を提出");
+    expect(screen.getByLabelText("Task 1")).toHaveValue("Note: 書類を提出");
     expect(classify).not.toHaveBeenCalled();
   });
   it("preserves explicit legacy command preview", async () => {

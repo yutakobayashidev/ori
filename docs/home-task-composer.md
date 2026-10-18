@@ -1,6 +1,6 @@
 # Home task composer
 
-Home's input previews Japanese tasks while typing. Review the extracted titles and
+Home's input previews Japanese tasks while typing. Interface labels stay in English. Review the extracted titles and
 date-only deadlines, edit or remove rows, then confirm to save the selected tasks
 as Activities. Saving a list is atomic: the whole list succeeds or none is saved.
 Tasks and deadlines survive reload and appear in the shared task views.
@@ -38,6 +38,9 @@ TWITTER_LITE_JEV_LIVE=1 node --env-file=.env node_modules/@playwright/test/cli.j
 Use the project's Nix development shell and `PLAYWRIGHT_CHROMIUM_EXECUTABLE` as
 for the existing E2E suite. Ordinary composer E2E cases use the manual palette;
 unit tests exercise automatic preview with controlled service responses.
+
+The composer uses Ori's 12px panel corners, standard buttons, and 16px input text.
+The upstream motion is retained without the colored edge or persistent shortcut copy.
 
 ## Upstream
 

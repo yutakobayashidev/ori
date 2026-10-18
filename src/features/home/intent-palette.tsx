@@ -6,22 +6,19 @@ export type TaskCardMode = "task" | "list" | "deadline";
 const choices = [
   {
     mode: "task",
-    label: "タスク",
-    example: "見積書を送る",
+    label: "Task",
     icon: CheckSquare,
     keywords: "task todo",
   },
   {
     mode: "list",
-    label: "タスクリスト",
-    example: "牛乳を買う、洗濯する",
+    label: "Task list",
     icon: ListTodo,
     keywords: "list checklist",
   },
   {
     mode: "deadline",
-    label: "期限つき",
-    example: "明日までに書類を提出",
+    label: "Task with deadline",
     icon: Clock,
     keywords: "deadline reminder",
   },
@@ -36,20 +33,20 @@ export function IntentPalette({
   const [query, setQuery] = useState("");
   const [active, setActive] = useState(0);
   const filtered = choices.filter((choice) =>
-    `${choice.label} ${choice.example} ${choice.keywords}`.includes(query.toLowerCase()),
+    `${choice.label} ${choice.keywords}`.toLowerCase().includes(query.toLowerCase()),
   );
   return (
-    <Dialog title="カードを選ぶ" onClose={onClose} variant="palette" className="sm:max-w-[480px]">
+    <Dialog title="Commands" onClose={onClose} variant="palette" className="sm:max-w-[480px]">
       <input
         role="combobox"
-        aria-label="カードの種類を検索"
+        aria-label="Search commands"
         aria-expanded="true"
         aria-controls="home-card-options"
         aria-activedescendant={
           filtered[active] ? `card-option-${filtered[active].mode}` : undefined
         }
         className="w-full border-b border-border bg-transparent py-3 text-base outline-none"
-        placeholder="表示するカード…"
+        placeholder="Search commands…"
         value={query}
         onChange={(event) => {
           setQuery(event.target.value);
@@ -74,11 +71,11 @@ export function IntentPalette({
       <div
         id="home-card-options"
         role="listbox"
-        aria-label="カードの種類"
+        aria-label="Commands"
         className="max-h-[420px] overscroll-contain"
       >
         {!filtered.length && (
-          <p className="p-3 text-sm text-muted-foreground">一致するカードがありません。</p>
+          <p className="p-3 text-sm text-muted-foreground">No commands found.</p>
         )}
         {filtered.map((choice, index) => (
           <button
@@ -94,10 +91,7 @@ export function IntentPalette({
             <span className="grid size-8 shrink-0 place-items-center rounded-lg bg-muted text-foreground">
               <choice.icon className="size-[18px]" aria-hidden />
             </span>
-            <span className="w-24 shrink-0 text-ui-14 font-medium">{choice.label}</span>
-            <span className="min-w-0 text-ui-13 text-pretty text-muted-foreground">
-              {choice.example}
-            </span>
+            <span className="text-ui-14 font-medium">{choice.label}</span>
           </button>
         ))}
       </div>

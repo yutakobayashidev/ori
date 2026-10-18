@@ -8,18 +8,18 @@ test("live Japanese preview creates tasks with correctly associated deadlines", 
   test.skip(process.env.TWITTER_LITE_JEV_LIVE !== "1", "Opt-in real TypeSafe API test");
   await homePage.goTo();
   await homePage.input.fill("2026年11月2日までに見積書を送る、2026年11月3日までに請求書を確認する");
-  const preview = page.getByRole("region", { name: "追加するタスク" });
+  const preview = page.getByRole("region", { name: "Task preview" });
   await expect(preview).toBeVisible({ timeout: 20000 });
-  await expect(preview.getByRole("textbox", { name: "タスク 1", exact: true })).toHaveValue(
+  await expect(preview.getByRole("textbox", { name: "Task 1", exact: true })).toHaveValue(
     "見積書を送る",
   );
-  await expect(preview.getByLabel("期限 1", { exact: true })).toHaveValue("2026-11-02");
-  await expect(preview.getByRole("textbox", { name: "タスク 2", exact: true })).toHaveValue(
+  await expect(preview.getByLabel("Due date 1", { exact: true })).toHaveValue("2026-11-02");
+  await expect(preview.getByRole("textbox", { name: "Task 2", exact: true })).toHaveValue(
     "請求書を確認する",
   );
-  await expect(preview.getByLabel("期限 2", { exact: true })).toHaveValue("2026-11-03");
+  await expect(preview.getByLabel("Due date 2", { exact: true })).toHaveValue("2026-11-03");
   await page.screenshot({ path: testInfo.outputPath("japanese-live-preview.png") });
-  await preview.getByRole("button", { name: "2件を追加" }).click();
+  await preview.getByRole("button", { name: "Add 2 tasks" }).click();
   await expect(preview).toHaveCount(0);
   await page.reload();
   await expect(page.locator('time[datetime="2026-11-02"]').first()).toBeVisible();
@@ -38,17 +38,17 @@ test("slash palette creates a reviewed batch with deadlines that survive reload"
 }, testInfo) => {
   await homePage.goTo();
   await homePage.input.press("/");
-  const palette = page.getByRole("dialog", { name: "カードを選ぶ" });
+  const palette = page.getByRole("dialog", { name: "Commands" });
   await expect(palette).toBeVisible();
   expect((await a11y().analyze()).violations).toEqual([]);
-  await page.getByRole("combobox", { name: "カードの種類を検索" }).fill("list");
-  await page.getByRole("combobox", { name: "カードの種類を検索" }).press("Enter");
-  const preview = page.getByRole("region", { name: "追加するタスク" });
+  await page.getByRole("combobox", { name: "Search commands" }).fill("list");
+  await page.getByRole("combobox", { name: "Search commands" }).press("Enter");
+  const preview = page.getByRole("region", { name: "Task preview" });
   await expect(preview).toBeVisible();
-  await preview.getByRole("textbox", { name: "タスク 1", exact: true }).fill("見積書を送る");
-  await preview.getByLabel("期限 1", { exact: true }).fill("2026-11-02");
-  await preview.getByRole("textbox", { name: "タスク 2", exact: true }).fill("請求書を確認する");
-  await preview.getByLabel("期限 2", { exact: true }).fill("2026-11-03");
+  await preview.getByRole("textbox", { name: "Task 1", exact: true }).fill("見積書を送る");
+  await preview.getByLabel("Due date 1", { exact: true }).fill("2026-11-02");
+  await preview.getByRole("textbox", { name: "Task 2", exact: true }).fill("請求書を確認する");
+  await preview.getByLabel("Due date 2", { exact: true }).fill("2026-11-03");
   expect(
     (await activityMcp.context()).activities.some(
       (item) => item.effective.title === "見積書を送る",
@@ -56,8 +56,19 @@ test("slash palette creates a reviewed batch with deadlines that survive reload"
   ).toBe(false);
   await expect(preview).toHaveCSS("filter", "blur(0px)");
   await page.screenshot({ path: testInfo.outputPath("task-preview.png") });
+  if (testInfo.project.name === "desktop") {
+    const viewport = page.viewportSize()!;
+    for (const width of [320, 375, 414, 768]) {
+      await page.setViewportSize({ width, height: 900 });
+      await expect(preview).toBeVisible();
+      expect(await page.evaluate(() => document.documentElement.scrollWidth <= innerWidth)).toBe(
+        true,
+      );
+    }
+    await page.setViewportSize(viewport);
+  }
   expect((await a11y().analyze()).violations).toEqual([]);
-  await preview.getByRole("button", { name: "2件を追加" }).click();
+  await preview.getByRole("button", { name: "Add 2 tasks" }).click();
   await expect(preview).toHaveCount(0);
   await expect
     .poll(async () =>
@@ -82,7 +93,7 @@ test("slash palette creates a reviewed batch with deadlines that survive reload"
   const card = page.locator("[data-activity-id]").filter({ hasText: "見積書を送る" });
   await card.locator("button[aria-expanded]").click();
   await card.getByRole("button", { name: "Edit activity", exact: true }).click();
-  await card.getByLabel("期限", { exact: true }).fill("");
+  await card.getByLabel("Due date", { exact: true }).fill("");
   await card.getByRole("button", { name: "Save activity", exact: true }).click();
   await expect
     .poll(
@@ -100,9 +111,9 @@ test("slash palette creates a reviewed batch with deadlines that survive reload"
 test("slash palette closes with Escape without changing the input", async ({ page, homePage }) => {
   await homePage.goTo();
   await homePage.input.press("/");
-  await expect(page.getByRole("dialog", { name: "カードを選ぶ" })).toBeVisible();
+  await expect(page.getByRole("dialog", { name: "Commands" })).toBeVisible();
   await page.keyboard.press("Escape");
-  await expect(page.getByRole("dialog", { name: "カードを選ぶ" })).toHaveCount(0);
+  await expect(page.getByRole("dialog", { name: "Commands" })).toHaveCount(0);
   await expect(homePage.input).toHaveValue("");
   await expect(homePage.input).toBeFocused();
 });

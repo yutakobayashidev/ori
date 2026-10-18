@@ -72,15 +72,10 @@ export function TaskComposer({
         const result = await classifyHomeTasks({ data: { text, today } });
         if (cancelled || revision.current !== current) return;
         setDrafts(result.tasks);
-        setNotice(
-          result.notice ??
-            (result.status === "none"
-              ? "タスクとして追加する場合は、手動で確認してください。"
-              : ""),
-        );
+        setNotice(result.notice ?? "");
       } catch {
         if (cancelled || revision.current !== current) return;
-        setNotice("自動判定を利用できません。手動でタスクを追加できます。");
+        setNotice("Preview unavailable. Add tasks manually.");
       } finally {
         if (revision.current === current) setChecking(false);
       }
@@ -128,15 +123,13 @@ export function TaskComposer({
     setSaving(true);
     try {
       if (await createTasks(drafts.map((task) => ({ ...task, title: task.title.trim() })))) {
-        const count = drafts.length;
         setReceipt({ id: draftId, tasks: drafts });
         setDraftId((id) => id + 1);
         setForcedMode(null);
         changeText("");
-        setNotice(`${count}件のタスクを追加しました。`);
-      } else setNotice("保存できませんでした。内容を残しています。もう一度追加してください。");
+      } else setNotice("Couldn’t save. Try again.");
     } catch {
-      setNotice("保存できませんでした。内容を残しています。もう一度追加してください。");
+      setNotice("Couldn’t save. Try again.");
     } finally {
       saveInFlight.current = false;
       setSaving(false);
@@ -165,15 +158,15 @@ export function TaskComposer({
           }}
         />
       )}
-      <MorphContainer readiness={readiness} edge={drafts.length ? "#3b5bdb" : null}>
-        <div className="p-5">
+      <MorphContainer readiness={readiness}>
+        <div className="p-4">
           <Textarea
             variant="morphComposer"
             rows={1}
             className="max-h-48"
             ref={inputRef}
             aria-label="Home input"
-            placeholder="What’s on your mind?"
+            placeholder="Add a task…"
             maxLength={MAX_TASK_INPUT_LENGTH}
             value={text}
             disabled={saving}
@@ -228,16 +221,12 @@ export function TaskComposer({
                 disabled={saving || composing}
                 onClick={() => editDrafts([{ title: text.trim(), dueDate: null }])}
               >
-                手動でタスクにする
+                Add manually
               </Button>
             ) : null}
           </div>
           <p role="status" className="px-px-8 text-ui-12 text-muted-foreground" aria-live="polite">
-            {tooManyTasks
-              ? "一度に追加できるのは8件までです。入力を分けてください。"
-              : checking
-                ? "入力を確認しています…"
-                : notice}
+            {tooManyTasks ? "Add up to 8 tasks at a time." : checking ? "Checking…" : notice}
           </p>
         </div>
         <AnimatePresence initial={false}>
@@ -245,7 +234,7 @@ export function TaskComposer({
             <motion.section
               key={`task-card-${draftId}`}
               layoutId={reduce ? undefined : `draft-${draftId}`}
-              aria-label="追加するタスク"
+              aria-label="Task preview"
               layout="position"
               initial={reduce ? { opacity: 0 } : { opacity: 0, y: 6, filter: "blur(4px)" }}
               animate={{ opacity: 1, y: 0, filter: "blur(0px)" }}
@@ -255,13 +244,13 @@ export function TaskComposer({
                   : { opacity: 0, scale: 0.98, filter: "blur(4px)", transition: tween.exit }
               }
               transition={reduce ? tween.fade : { ...spring.settle, delay: 0.04 }}
-              className="flex flex-col gap-4 px-5 pt-1 pb-5"
+              className="flex flex-col gap-4 px-4 pt-1 pb-4"
             >
               <motion.div
                 layout="position"
                 className="flex min-h-11 items-center gap-3 text-muted-foreground"
               >
-                <span className="flex size-11 shrink-0 items-center justify-center rounded-xl bg-muted text-foreground">
+                <span className="flex size-11 shrink-0 items-center justify-center rounded-lg bg-muted text-foreground">
                   <ListTodo className="size-6" />
                 </span>
                 <span className="relative h-[22px] overflow-hidden text-ui-15 leading-5.5 font-medium text-foreground">
@@ -275,16 +264,14 @@ export function TaskComposer({
                       transition={reduce ? tween.fade : spring.snappy}
                     >
                       {forcedMode === "deadline"
-                        ? "期限つきタスク"
+                        ? "Task with deadline"
                         : forcedMode === "list" || drafts.length > 1
-                          ? "タスクリスト"
-                          : "タスク"}
+                          ? "Task list"
+                          : "Task"}
                     </motion.span>
                   </AnimatePresence>
                 </span>
-                <span className="ms-auto rounded-full border border-border px-2 py-1 text-ui-12">
-                  {drafts.length}件
-                </span>
+                <span className="ms-auto text-muted-foreground text-ui-12">{drafts.length}</span>
               </motion.div>
               <ul className="flex flex-col">
                 <AnimatePresence initial={false}>
@@ -307,7 +294,7 @@ export function TaskComposer({
                         <Check className="size-2.5 opacity-30" />
                       </span>
                       <input
-                        aria-label={`タスク ${index + 1}`}
+                        aria-label={`Task ${index + 1}`}
                         className="min-w-[120px] flex-1 rounded-md bg-transparent px-1 py-1.5 text-ui-15 leading-5.5 focus-visible:outline-2 focus-visible:outline-ring"
                         value={task.title}
                         maxLength={300}
@@ -320,12 +307,12 @@ export function TaskComposer({
                           )
                         }
                       />
-                      <label className="flex min-w-0 shrink-0 items-center gap-1.5 rounded-full border border-border bg-muted/50 px-2.5 py-1 text-ui-12 text-muted-foreground">
+                      <label className="flex min-w-0 shrink-0 items-center gap-1.5 rounded-lg border border-border bg-muted/50 px-2.5 py-1 text-ui-12 text-muted-foreground">
                         <Clock className="size-3.5" aria-hidden />
-                        <span className="sr-only">期限</span>
+                        <span className="sr-only">Due date</span>
                         <input
                           type="date"
-                          aria-label={`期限 ${index + 1}`}
+                          aria-label={`Due date ${index + 1}`}
                           className="min-w-0 max-w-[130px] bg-transparent text-foreground focus-visible:outline-2 focus-visible:outline-ring"
                           value={task.dueDate ?? ""}
                           disabled={saving || checking}
@@ -341,8 +328,8 @@ export function TaskComposer({
                       <Button
                         variant="ghost"
                         size="icon-sm"
-                        shape="pill"
-                        aria-label={`タスク ${index + 1} を削除`}
+
+                        aria-label={`Remove task ${index + 1}`}
                         disabled={saving || checking}
                         onClick={() => editDrafts(drafts.filter((_, i) => i !== index))}
                       >
@@ -354,7 +341,7 @@ export function TaskComposer({
               </ul>
               {drafts.some((task) => task.title.trim().length > 300) && (
                 <p role="alert" className="text-sm text-destructive">
-                  タスク名を300文字以内に編集してください。
+                  Keep task titles under 300 characters.
                 </p>
               )}
               <motion.div
@@ -363,21 +350,22 @@ export function TaskComposer({
               >
                 <Button
                   variant="ghost"
-                  shape="pill"
+
                   disabled={saving || checking || drafts.length >= MAX_TASKS}
                   onClick={() => editDrafts([...drafts, { title: "", dueDate: null }])}
                 >
                   <Plus className="size-3.5" />
-                  もう1件
+                  Add row
                 </Button>
                 <Button
-                  shape="pill"
                   disabled={
                     disabled || saving || composing || invalidTitle || tooManyTasks || checking
                   }
                   onClick={() => void save()}
                 >
-                  {saving ? "追加しています…" : `${drafts.length}件を追加`}
+                  {saving
+                    ? "Adding…"
+                    : `Add ${drafts.length === 1 ? "task" : `${drafts.length} tasks`}`}
                   <CornerDownLeft className="size-3.5 opacity-60" aria-hidden />
                 </Button>
               </motion.div>
@@ -385,37 +373,34 @@ export function TaskComposer({
           )}
         </AnimatePresence>
       </MorphContainer>
-      <p className="mt-2 px-5 text-ui-12 text-muted-foreground">
-        / でカードを選択 · Tab で提案を固定 · Esc でクリア
-      </p>
       <AnimatePresence initial={false}>
         {receipt && (
           <motion.section
             key={receipt.id}
-            aria-label="追加完了"
+            aria-label="Tasks added"
             layout="position"
             layoutId={reduce ? undefined : "draft-" + receipt.id}
             initial={false}
             animate={{ opacity: 1, y: 0, filter: "blur(0px)" }}
             exit={{ opacity: 0, transition: tween.exit }}
             transition={reduce ? tween.fade : spring.morph}
-            className="mt-4 flex items-center gap-3 rounded-ui-20 border border-border bg-background p-3 shadow-sm"
+            className="mt-4 flex items-center gap-3 rounded-ui-12 border border-border bg-background p-3 shadow-sm"
           >
-            <span className="grid size-10 shrink-0 place-items-center rounded-xl bg-muted">
+            <span className="grid size-10 shrink-0 place-items-center rounded-lg bg-muted">
               <Check className="size-5" />
             </span>
             <div className="min-w-0 flex-1">
               <p className="text-ui-13 text-muted-foreground">
-                {receipt.tasks.length}件を追加しました
+                {receipt.tasks.length === 1 ? "Task added" : `${receipt.tasks.length} tasks added`}
               </p>
               <p className="truncate text-ui-15 leading-5.5">
-                {receipt.tasks.map((task) => task.title).join("、")}
+                {receipt.tasks.map((task) => task.title).join(", ")}
               </p>
             </div>
             <Button
               variant="ghost"
               size="icon"
-              aria-label="追加完了を閉じる"
+              aria-label="Dismiss confirmation"
               onClick={() => setReceipt(null)}
             >
               <X />

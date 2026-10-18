@@ -176,7 +176,7 @@ export function ActivityEditor({ activity }: { activity: Activity }) {
       ))}
       {activity.effective.kind === "task" && (
         <label className="grid gap-1 text-xs" htmlFor={`activity-due-${activity.id}`}>
-          期限
+          Due date
           <Input
             id={`activity-due-${activity.id}`}
             type="date"

@@ -26,7 +26,7 @@ export const classifyHomeTasks = createServerFn({ method: "POST" })
       return {
         status: "unavailable",
         tasks: [],
-        notice: "自動解析を利用できません。タスク名と期限を入力して追加できます。",
+        notice: "Preview unavailable. Add tasks manually.",
       };
     }
   });

@@ -42,7 +42,7 @@ export async function evaluateTaskInput(
     };
   if (candidates.length > MAX_TASKS || dates.length > 12)
     return {
-      result: review("一度に追加できるのは8件までです。入力を分けてください。"),
+      result: review("Add up to 8 tasks at a time."),
       diagnostics: null,
     };
   const questions: Record<string, Question> = {
@@ -134,7 +134,7 @@ export async function evaluateTaskInput(
       result: {
         status: "none",
         tasks: [],
-        notice: "追加するタスクを入力してください。",
+        notice: null,
       } as TaskIntentResult,
       diagnostics,
     };
@@ -144,7 +144,7 @@ export async function evaluateTaskInput(
     data.answers.coverage?.choice !== "complete"
   )
     return {
-      result: review("内容を読み取りきれませんでした。タスクを1行ずつ書いてください。"),
+      result: review("Enter one task per line."),
       diagnostics,
     };
   const tasks: TaskIntentResult["tasks"] = [];
@@ -172,16 +172,14 @@ export async function evaluateTaskInput(
   }
   if (!tasks.length)
     return {
-      result: review("追加する内容を確認できませんでした。タスク名と期限を書き直してください。"),
+      result: review("Check the task titles and dates."),
       diagnostics,
     };
   return {
     result: {
       status: "task",
       tasks,
-      notice: needsReview
-        ? "内容・期限を確認してください。曖昧な期限や時刻・繰り返しは自動設定していません。"
-        : null,
+      notice: needsReview ? "Check dates. Times and repeats aren’t supported." : null,
     } as TaskIntentResult,
     diagnostics,
   };
