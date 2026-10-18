@@ -42,7 +42,7 @@ async function type(text: string) {
     target: { value: text },
   });
   await act(async () => {
-    await vi.advanceTimersByTimeAsync(360);
+    await vi.advanceTimersByTimeAsync(710);
   });
 }
 beforeEach(() => {
@@ -134,7 +134,7 @@ describe("TaskComposer", () => {
     expect(classify).not.toHaveBeenCalled();
     fireEvent.compositionEnd(input);
     await act(async () => {
-      await vi.advanceTimersByTimeAsync(360);
+      await vi.advanceTimersByTimeAsync(710);
     });
     expect(classify).toHaveBeenCalledOnce();
   });

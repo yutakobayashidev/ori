@@ -91,7 +91,7 @@ export function TaskComposer({
       } finally {
         if (revision.current === current) setChecking(false);
       }
-    }, 350);
+    }, 700);
     return () => {
       clearTimeout(timer);
       cancelled = true;
