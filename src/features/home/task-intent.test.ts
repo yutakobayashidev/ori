@@ -107,5 +107,5 @@ it("keeps source wording and leaves a low-confidence deadline unset", async () =
     { apiKey: "private-key" },
   );
   expect(result.tasks).toEqual([{ title: "10月1日に届いた資料を読む", dueDate: null }]);
-  expect(result.notice).toBeTruthy();
+  expect(result.notice).toBeNull();
 });

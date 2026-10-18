@@ -148,7 +148,6 @@ export async function evaluateTaskInput(
       diagnostics,
     };
   const tasks: TaskIntentResult["tasks"] = [];
-  let needsReview = false;
   for (const [index, candidate] of candidates.entries()) {
     const selected = data.answers[`task_${index}`];
     if (selected?.choice !== "include") continue;
@@ -158,11 +157,6 @@ export async function evaluateTaskInput(
       due.choice.startsWith("d") && due.confidence >= 0.5
         ? (dates[Number(due.choice.slice(1))]?.date ?? null)
         : null;
-    needsReview ||=
-      selected.confidence < 0.5 ||
-      due.confidence < 0.5 ||
-      due.choice === "unsupported" ||
-      (due.choice.startsWith("d") && !date);
     const deadline = dates[Number(due.choice.slice(1))];
     tasks.push({
       title:
@@ -179,7 +173,7 @@ export async function evaluateTaskInput(
     result: {
       status: "task",
       tasks,
-      notice: needsReview ? "Check dates. Times and repeats aren’t supported." : null,
+      notice: null,
     } as TaskIntentResult,
     diagnostics,
   };
