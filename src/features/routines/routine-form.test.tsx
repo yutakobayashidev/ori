@@ -63,14 +63,22 @@ const draft: RoutineDraft = {
 function Harness({
   definition = draft,
   disabled = false,
+  recordedFor,
 }: {
   definition?: RoutineDraft;
   disabled?: boolean;
+  recordedFor?: string;
 }) {
   const [value, setValue] = useState<RoutineValues>({});
   return (
     <>
-      <RoutineForm draft={definition} value={value} onChange={setValue} disabled={disabled} />
+      <RoutineForm
+        draft={definition}
+        value={value}
+        onChange={setValue}
+        disabled={disabled}
+        recordedFor={recordedFor}
+      />
       <output data-testid="values">{JSON.stringify(value)}</output>
     </>
   );
@@ -79,6 +87,18 @@ function values(): RoutineValues {
   return JSON.parse(screen.getByTestId("values").textContent ?? "{}");
 }
 describe("dynamic routine forms", () => {
+  it("allows an explicit measurement time without marking an untouched step complete", () => {
+    render(<Harness recordedFor="2026-10-19T21:00" />);
+    fireEvent.change(screen.getByLabelText("Blood pressure time"), {
+      target: { value: "2026-10-19T08:30" },
+    });
+    expect(values().bp?.done).toBe(false);
+    expect(values().bp?.occurredAt).toBe("2026-10-19T08:30");
+    fireEvent.change(screen.getByLabelText("Systolic (mmHg)"), { target: { value: "120" } });
+    expect(values().bp?.done).toBe(true);
+    expect(values().bp?.occurredAt).toBe("2026-10-19T08:30");
+    expect(values().context).toBeUndefined();
+  });
   it("records Done-only steps without touching measurement fields", () => {
     render(<Harness />);
     fireEvent.click(

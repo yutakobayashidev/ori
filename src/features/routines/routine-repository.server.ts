@@ -10,6 +10,7 @@ import {
   saveRoutineInputSchema,
   validateRoutineRun,
   type RoutineDefinition,
+  type RoutineMetric,
   type RoutineRun,
 } from "./routine-model";
 
@@ -87,6 +88,33 @@ export function listRoutines(): Promise<RoutineDefinition[]> {
     return [...latest.values()];
   });
 }
+function metricCatalogue(definitions: RoutineDefinition[]): RoutineMetric[] {
+  const metrics = new Map<string, RoutineMetric>();
+  for (const definition of definitions) {
+    for (const step of definition.steps) {
+      for (const field of step.fields) {
+        if (!field.metric) continue;
+        const metric = { ...field.metric, unit: field.unit };
+        const existing = metrics.get(metric.id);
+        if (
+          existing &&
+          (existing.unit !== metric.unit ||
+            existing.label !== metric.label ||
+            existing.group !== metric.group)
+        )
+          throw new Error(`Metric ${metric.id} must keep its label, group and unit.`);
+        metrics.set(metric.id, metric);
+      }
+    }
+  }
+  return [...metrics.values()];
+}
+export function listRoutineMetrics(): Promise<RoutineMetric[]> {
+  const dir = directory();
+  return serialized(dir, async () =>
+    metricCatalogue((await definitions(dir)).map((record) => record.definition)),
+  );
+}
 export function saveRoutine(input: unknown): Promise<RoutineDefinition> {
   const parsed = saveRoutineInputSchema.parse(input);
   const dir = directory();
@@ -115,6 +143,8 @@ export function saveRoutine(input: unknown): Promise<RoutineDefinition> {
         const oldStep = record.definition.steps.find((candidate) => candidate.id === step.id);
         for (const field of step.fields) {
           const oldField = oldStep?.fields.find((candidate) => candidate.id === field.id);
+          if (oldField?.metric && oldField.metric.id !== field.metric?.id)
+            throw new Error("Changing a field metric requires a new field ID.");
           if (oldField && (oldField.type !== field.type || oldField.unit !== field.unit))
             throw new Error("Changing a field type or unit requires a new field ID.");
         }
@@ -126,6 +156,7 @@ export function saveRoutine(input: unknown): Promise<RoutineDefinition> {
       version: (previous?.version ?? 0) + 1,
       createdAt: new Date().toISOString(),
     });
+    metricCatalogue([...records.map((record) => record.definition), definition]);
     await append(dir, "definitions.jsonl", { requestId: parsed.requestId, definition });
     return definition;
   });

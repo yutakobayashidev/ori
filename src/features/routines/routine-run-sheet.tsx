@@ -10,7 +10,8 @@ import {
   SheetTitle,
 } from "#/components/ui/sheet";
 import { RoutineForm, type RoutineValues } from "./routine-form";
-import { loadRoutineHistory, recordRoutineRun } from "./routine-functions";
+import { listRoutines, loadRoutineHistory, recordRoutineRun } from "./routine-functions";
+import { RoutineTrends } from "./routine-trends";
 import {
   validateRoutineRun,
   type RoutineDefinition,
@@ -41,19 +42,27 @@ export function RoutineRunSheet({
   const pending = useRef<{ key: string; id: string } | null>(null);
   const saving = useRef(false);
   const history = useQuery({ queryKey: ["routine-history"], queryFn: () => loadRoutineHistory() });
+  const routines = useQuery({ queryKey: ["routines"], queryFn: () => listRoutines() });
   async function submit() {
     if (saving.current) return;
     setError("");
     try {
       const date = new Date(when);
       if (!Number.isFinite(date.getTime())) throw new Error("Choose a valid date and time.");
-      const steps = routine.steps.map((step) => ({
-        stepId: step.id,
-        done: value[step.id]?.done ?? false,
-        entries: step.fields.length
-          ? (value[step.id]?.entries ?? []).filter((entry) => Object.keys(entry).length > 0)
-          : [],
-      }));
+      const steps = routine.steps.map((step) => {
+        const state = value[step.id];
+        const measuredAt = state?.occurredAt ? new Date(state.occurredAt) : null;
+        if (measuredAt && !Number.isFinite(measuredAt.getTime()))
+          throw new Error(`Choose a valid time for ${step.label}.`);
+        return {
+          stepId: step.id,
+          done: state?.done ?? false,
+          ...(measuredAt ? { occurredAt: measuredAt.toISOString() } : {}),
+          entries: step.fields.length
+            ? (state?.entries ?? []).filter((entry) => Object.keys(entry).length > 0)
+            : [],
+        };
+      });
       if (!steps.some((step) => step.done || step.entries.length))
         throw new Error("Complete a step or add a measurement.");
       const key = JSON.stringify({ when, steps });
@@ -124,8 +133,17 @@ export function RoutineRunSheet({
                   onChange={(event) => setWhen(event.target.value)}
                 />
               </div>
-              <RoutineForm draft={routine} value={value} onChange={setValue} disabled={busy} />
+              <RoutineForm
+                draft={routine}
+                value={value}
+                onChange={setValue}
+                disabled={busy}
+                recordedFor={when}
+              />
             </>
+          )}
+          {history.data && routines.data && (
+            <RoutineTrends history={history.data} routines={routines.data} routine={routine} />
           )}
           <section aria-label="Routine history" className="mt-6 border-t border-border pt-4">
             <h3 className="mb-3 text-sm font-medium">History</h3>
@@ -197,6 +215,11 @@ function RoutineHistoryEntry({
                 {step.label}
                 {!step.fields.length && result.done ? " · Done" : ""}
               </p>
+              {result.occurredAt && (
+                <time dateTime={result.occurredAt} className="text-xs text-muted-foreground">
+                  {new Date(result.occurredAt).toLocaleString()}
+                </time>
+              )}
               {result.entries.map((entry, index) => (
                 <p key={index} className="text-muted-foreground wrap-anywhere">
                   {step.fields

@@ -140,6 +140,6 @@ Homeの入力欄は、TypeSafe Jevで自然な日本語をタスク・日記に�
 
 Home は今日の完了を元の位置にコンパクトに残し、過去分は検索できる完了履歴から確認・復元できます。Board の Done 列は今日の完了を初期表示し、過去分も開けます。当日の判定には端末のローカル日付を使います。
 
-タスク・返信 Activity、owner ログイン、Board、Focus、Journal は永続化されています。ルーティンはHomeからCodexとの対話で作成し、動的フォームと実行記録を永続化します。[ルーティン作成](docs/routine-builder.md)を参照してください。Reader、Vitalsにはプロトタイプの制限があります。カレンダー同期や life / Rensheng との自動連携は未実装です。[機能別の状況](docs/technical-reference.md#workspaces-and-current-status)を確認してください。
+タスク・返信 Activity、owner ログイン、Board、Focus、Journal は永続化されています。ルーティンはHomeからCodexとの対話で作成し、動的フォームと実行記録を永続化します。血圧や体重などは共通の指標へ紐づけ、朝・夜や別ルーティンの測定値を同じ時系列グラフで確認できます。[ルーティン作成](docs/routine-builder.md)を参照してください。Reader、Vitalsにはプロトタイプの制限があります。カレンダー同期や life / Rensheng との自動連携は未実装です。[機能別の状況](docs/technical-reference.md#workspaces-and-current-status)を確認してください。
 
 この導線は公開ドキュメントとコードを静的照合したものです。新規環境でのインストール、認証、トンネル登録、実イベント配送を通した動作試験は未実施です。各段階の確認を省略せず、自分の環境で手順 6 まで確かめてください。

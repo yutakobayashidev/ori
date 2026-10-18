@@ -1,12 +1,13 @@
 import { afterEach, expect, it, vi } from "vitest";
 import { z } from "zod";
-import {
-  canSaveRoutine,
-  routineBuilderReplySchema,
-  type RoutineBuilderReply,
-} from "./routine-builder";
+import { canSaveRoutine, type RoutineBuilderReply } from "./routine-builder";
 import { buildRoutineReply } from "./routine-builder.server";
 import { generateRoutineDraft } from "./routine-builder-provider.server";
+import { listRoutineMetrics } from "./routine-repository.server";
+
+vi.mock("./routine-repository.server", () => ({
+  listRoutineMetrics: vi.fn<typeof listRoutineMetrics>(async () => []),
+}));
 
 vi.mock("./routine-builder-provider.server", () => ({
   generateRoutineDraft: vi.fn<typeof generateRoutineDraft>(),
@@ -76,9 +77,32 @@ it("passes the full conversation, current definition, and exact response schema 
   await expect(buildRoutineReply(input)).resolves.toEqual(reply);
   expect(generate).toHaveBeenCalledExactlyOnceWith({
     ...input,
-    outputSchema: z.toJSONSchema(routineBuilderReplySchema, { target: "draft-7" }),
+    outputSchema: expect.any(Object),
     instructions: expect.any(String),
   });
+});
+
+it("supplies existing shared metrics and requires explicit nullable metric bindings in AI output", async () => {
+  const metric = { id: "body_weight", label: "Weight", group: "body_weight", unit: "kg" };
+  vi.mocked(listRoutineMetrics).mockResolvedValue([metric]);
+  generate.mockResolvedValue(readyReply());
+  await buildRoutineReply({
+    messages: [{ role: "user", text: "Track my weight daily" }],
+    currentDraft: null,
+  });
+  const args = generate.mock.calls[0]?.[0];
+  expect(args?.instructions).toContain(JSON.stringify([metric]));
+  const fieldSchemas: Array<Record<string, unknown>> = [];
+  function visit(value: unknown) {
+    if (!value || typeof value !== "object") return;
+    const schema = value as Record<string, unknown>;
+    if ((schema.properties as Record<string, unknown> | undefined)?.metric)
+      fieldSchemas.push(schema);
+    Object.values(schema).forEach(visit);
+  }
+  visit(args?.outputSchema);
+  expect(fieldSchemas.length).toBeGreaterThan(0);
+  for (const schema of fieldSchemas) expect(schema.required).toContain("metric");
 });
 
 it("returns necessary questions without requiring an initial draft", async () => {

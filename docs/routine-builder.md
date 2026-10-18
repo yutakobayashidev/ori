@@ -25,6 +25,24 @@ Saved definitions have immutable versions. A run records the version, occurrence
 and recording timestamps, explicit Done actions and typed input values. Missing input
 is not a negative observation. Changes to a routine never rewrite its past runs.
 
+Numeric fields can bind to shared metrics, independently of their form field IDs.
+For example, morning and night systolic readings both use
+`blood_pressure.systolic`; diastolic readings use `blood_pressure.diastolic` in the
+same `blood_pressure` group. Custom metrics are supported. Codex receives the
+existing metric catalogue when designing or editing a form and reuses matching
+identities. A metric's unit and identity are validated on save.
+
+The run sheet's Trends section combines matching metrics from all routines. Each
+group and unit has a separate time-series chart; repeated readings stay separate,
+with their paired-entry identity and source step preserved. Selecting a point shows
+its value, timestamp, routine, and step. Medication selections and Done actions
+remain events in History rather than numeric graph series.
+
+For a routine created before metric bindings existed, edit it and ask Codex to link
+its measurement fields to shared metrics. The chart then includes older records
+with the same stable field IDs and units, without modifying stored observations.
+Labels alone never trigger a merge. Unmapped values remain available in History.
+
 ## Implementation research
 
 - [Codex app-server](https://learn.chatgpt.com/docs/app-server): `turn/start.outputSchema`
@@ -63,7 +81,10 @@ Home shows today's schedule and lets the owner invoke any routine on demand.
 This release does not send notifications. A routine can be partly recorded; no
 record is inferred for untouched steps. Done-only actions record completion time;
 measurement steps preserve false and zero separately from missing input. The
-execution timestamp can be adjusted for earlier observations.
+execution timestamp can be adjusted for earlier observations. Each step's Time
+disclosure can override that timestamp when morning and evening observations are
+entered together. The app never invents a clock time from the step's name; without
+an override, the execution timestamp applies to that step's entries.
 
 Routine creation/editing calls the existing authenticated Elixir runtime through
 `WORKSPACE_RUNTIME_URL` and `WORKSPACE_RUNTIME_TOKEN[_FILE]`. That runtime's Codex

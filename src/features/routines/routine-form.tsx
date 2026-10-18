@@ -6,7 +6,11 @@ import type { RoutineDraft, RoutineField } from "./routine-model";
 
 export type RoutineValues = Record<
   string,
-  { done: boolean; entries: Record<string, string | number | boolean | string[]>[] }
+  {
+    done: boolean;
+    occurredAt?: string;
+    entries: Record<string, string | number | boolean | string[]>[];
+  }
 >;
 
 export function RoutineForm({
@@ -14,17 +18,19 @@ export function RoutineForm({
   value,
   onChange,
   disabled = false,
+  recordedFor,
 }: {
   draft: RoutineDraft;
   value: RoutineValues;
   onChange: (value: RoutineValues) => void;
   disabled?: boolean;
+  recordedFor?: string;
 }) {
   const scope = useId();
   return (
     <div className="space-y-5">
       {draft.steps.map((step) => {
-        const state = value[step.id] ?? { done: false, entries: [{}] };
+        const state: RoutineValues[string] = value[step.id] ?? { done: false, entries: [{}] };
         const update = (next: typeof state) =>
           onChange({
             ...value,
@@ -42,6 +48,18 @@ export function RoutineForm({
             className="min-w-0 space-y-3 border-b border-border pb-5 last:border-0"
           >
             <legend className="mb-2 text-sm font-medium">{step.label}</legend>
+            {recordedFor !== undefined && (
+              <details className="text-xs text-muted-foreground">
+                <summary className="cursor-pointer">Time</summary>
+                <Input
+                  aria-label={`${step.label} time`}
+                  type="datetime-local"
+                  className="mt-2"
+                  value={state.occurredAt ?? recordedFor}
+                  onChange={(event) => update({ ...state, occurredAt: event.target.value })}
+                />
+              </details>
+            )}
             {!step.fields.length ? (
               <label className="flex min-h-10 cursor-pointer items-center gap-3 text-sm">
                 <input

@@ -6,6 +6,7 @@ import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import { routineDraftSchema, type RoutineDraft } from "./routine-model";
 import {
   listRoutines,
+  listRoutineMetrics,
   loadRoutineHistory,
   loadRoutineRuns,
   recordRoutineRun,
@@ -54,6 +55,16 @@ const draft: RoutineDraft = {
     },
   ],
 };
+function fixtureStep(value: RoutineDraft) {
+  const step = value.steps[1];
+  if (!step) throw new Error("Missing fixture step");
+  return step;
+}
+function fixtureField(value: RoutineDraft, index = 0) {
+  const field = fixtureStep(value).fields[index];
+  if (!field) throw new Error("Missing fixture field");
+  return field;
+}
 let dir: string;
 beforeEach(async () => {
   dir = await mkdtemp(join(tmpdir(), "ori-routines-"));
@@ -69,6 +80,96 @@ afterEach(async () => {
 const create = () =>
   saveRoutine({ requestId: randomUUID(), routineId: null, baseVersion: null, draft });
 describe("routine persistence", () => {
+  it("shares one metric across routines and rejects conflicting units, labels and groups", async () => {
+    const mapped = structuredClone(draft);
+    fixtureField(mapped, 0).metric = {
+      id: "body_weight",
+      label: "Weight",
+      group: "body_weight",
+    };
+    await saveRoutine({
+      requestId: randomUUID(),
+      routineId: null,
+      baseVersion: null,
+      draft: mapped,
+    });
+    await saveRoutine({
+      requestId: randomUUID(),
+      routineId: null,
+      baseVersion: null,
+      draft: { ...mapped, name: "Morning" },
+    });
+    expect(await listRoutineMetrics()).toEqual([
+      { id: "body_weight", label: "Weight", group: "body_weight", unit: "kg" },
+    ]);
+    for (const change of [
+      { unit: "lb" },
+      { metric: { id: "body_weight", label: "Other", group: "body_weight" } },
+      { metric: { id: "body_weight", label: "Weight", group: "other" } },
+    ]) {
+      const conflict = structuredClone(mapped);
+      Object.assign(fixtureField(conflict, 0), change);
+      await expect(
+        saveRoutine({
+          requestId: randomUUID(),
+          routineId: null,
+          baseVersion: null,
+          draft: conflict,
+        }),
+      ).rejects.toThrow("must keep its label, group and unit");
+    }
+  });
+  it("binds an old field explicitly without rewriting history and requires a new ID to change its metric", async () => {
+    const first = await create();
+    const mapped = structuredClone(draft);
+    fixtureField(mapped, 0).metric = {
+      id: "body_weight",
+      label: "Weight",
+      group: "body_weight",
+    };
+    await saveRoutine({
+      requestId: randomUUID(),
+      routineId: first.id,
+      baseVersion: 1,
+      draft: mapped,
+    });
+    const records = (await readFile(join(dir, "definitions.jsonl"), "utf8"))
+      .trim()
+      .split("\n")
+      .map((line) => JSON.parse(line));
+    expect(records[0].definition.steps[1].fields[0].metric).toBeUndefined();
+    for (const metric of [null, { id: "other", label: "Other", group: "other" }]) {
+      const changed = structuredClone(mapped);
+      fixtureField(changed, 0).metric = metric;
+      await expect(
+        saveRoutine({
+          requestId: randomUUID(),
+          routineId: first.id,
+          baseVersion: 2,
+          draft: changed,
+        }),
+      ).rejects.toThrow("new field ID");
+    }
+  });
+  it("rejects nonnumeric metric bindings and inconsistent bindings within one definition", async () => {
+    const invalid = structuredClone(draft);
+    fixtureField(invalid, 1).metric = { id: "context", label: "Context", group: "context" };
+    expect(routineDraftSchema.safeParse(invalid).success).toBe(false);
+    const mapped = structuredClone(draft);
+    const field = fixtureField(mapped, 0);
+    field.metric = { id: "body_weight", label: "Weight", group: "body_weight" };
+    mapped.steps.push({
+      ...fixtureStep(mapped),
+      id: "second",
+      fields: [{ ...field, id: "different", unit: "lb" }],
+    });
+    await expect(
+      saveRoutine({ requestId: randomUUID(), routineId: null, baseVersion: null, draft: mapped }),
+    ).rejects.toThrow("must keep");
+    mapped.steps.pop();
+    fixtureStep(mapped).fields.push({ ...field, id: "duplicate" });
+    expect(routineDraftSchema.safeParse(mapped).success).toBe(false);
+  });
   it("requires new field IDs when types or units change, including reintroduced fields", async () => {
     const first = await create();
     const changed = structuredClone(draft);
@@ -123,6 +224,34 @@ describe("routine persistence", () => {
     });
     expect(recorded.steps[1]?.entries[0]?.value).toBe(0);
     expect(recorded.steps[0]?.done).toBe(false);
+  });
+  it("preserves an explicit measurement time independently from the routine recording time", async () => {
+    const definition = await create();
+    const measurementTime = "2026-10-18T08:00:00+09:00";
+    const run = await recordRoutineRun({
+      id: randomUUID(),
+      routineId: definition.id,
+      routineVersion: 1,
+      occurredAt: "2026-10-18T14:00:00Z",
+      steps: [
+        { stepId: "brush", done: false, entries: [] },
+        { stepId: "measure", done: true, occurredAt: measurementTime, entries: [{ value: 65 }] },
+      ],
+    });
+    expect(run.steps[1]?.occurredAt).toBe(measurementTime);
+    expect((await loadRoutineRuns())[0]?.steps[1]?.occurredAt).toBe(measurementTime);
+    expect(run.occurredAt).toBe("2026-10-18T14:00:00Z");
+    for (const occurredAt of ["yesterday", "2026-10-18T08:00:00", "2026-02-30T08:00:00Z"]) {
+      expect(() =>
+        recordRoutineRun({
+          id: randomUUID(),
+          routineId: run.routineId,
+          routineVersion: run.routineVersion,
+          occurredAt: run.occurredAt,
+          steps: run.steps.map((step) => ({ ...step, occurredAt })),
+        }),
+      ).toThrow("Invalid ISO datetime");
+    }
   });
   it("keeps immutable versions and rejects stale edits", async () => {
     const first = await create();

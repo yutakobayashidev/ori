@@ -2,6 +2,13 @@ import { z } from "zod";
 
 const label = z.string().trim().min(1).max(200);
 const identifier = z.string().regex(/^[a-zA-Z][a-zA-Z0-9_-]{0,63}$/);
+export const routineMetricSchema = z.strictObject({
+  id: z.string().regex(/^[a-z][a-z0-9_.-]{0,99}$/),
+  label,
+  group: z.string().regex(/^[a-z][a-z0-9_.-]{0,99}$/),
+});
+export type RoutineMetric = z.infer<typeof routineMetricSchema> & { unit: string | null };
+
 export const routineFieldSchema = z
   .strictObject({
     id: identifier,
@@ -9,6 +16,7 @@ export const routineFieldSchema = z
     type: z.enum(["number", "text", "boolean", "choice", "multiChoice"]),
     required: z.boolean(),
     unit: label.nullable(),
+    metric: routineMetricSchema.nullable().optional(),
     options: z.array(z.strictObject({ value: identifier, label })).max(100),
     min: z.number().finite().nullable(),
     max: z.number().finite().nullable(),
@@ -22,6 +30,8 @@ export const routineFieldSchema = z
       (field.min !== null || field.max !== null || field.unit !== null)
     )
       issue("Only number fields support bounds and units.");
+    if (field.metric && field.type !== "number")
+      issue("Only number fields support shared metrics.");
     const choice = field.type === "choice" || field.type === "multiChoice";
     if (choice !== field.options.length > 0)
       issue("Choice fields require options; other fields must not have options.");
@@ -39,6 +49,9 @@ export const routineStepSchema = z
   .superRefine((step, ctx) => {
     if (new Set(step.fields.map((field) => field.id)).size !== step.fields.length)
       ctx.addIssue({ code: "custom", message: "Duplicate field IDs." });
+    const metrics = step.fields.flatMap((field) => (field.metric ? [field.metric.id] : []));
+    if (new Set(metrics).size !== metrics.length)
+      ctx.addIssue({ code: "custom", message: "Duplicate metrics in a step." });
   });
 export const routineDraftShapeSchema = z.strictObject({
   name: label,
@@ -107,6 +120,7 @@ export const routineRunInputSchema = z.strictObject({
     .array(
       z.strictObject({
         stepId: identifier,
+        occurredAt: z.iso.datetime({ offset: true }).optional(),
         done: z.boolean(),
         entries: z.array(z.record(identifier, routineValueSchema)).max(100),
       }),

@@ -6,6 +6,11 @@ const number = (id, label, unit) => ({
   type: "number",
   required: true,
   unit,
+  metric: {
+    id: id === "weight" ? "body_weight" : `blood_pressure.${id}`,
+    label: id === "weight" ? "Weight" : id === "systolic" ? "Systolic" : "Diastolic",
+    group: id === "weight" ? "body_weight" : "blood_pressure",
+  },
   options: [],
   min: null,
   max: null,
@@ -34,6 +39,7 @@ const draft = {
           type: "multiChoice",
           required: true,
           unit: null,
+          metric: null,
           min: null,
           max: null,
           options: [
@@ -56,6 +62,16 @@ const draft = {
       repeatable: true,
       layout: "inline",
       fields: [number("systolic", "Systolic", "mmHg"), number("diastolic", "Diastolic", "mmHg")],
+    },
+    {
+      id: "night_pressure",
+      label: "Night blood pressure",
+      repeatable: false,
+      layout: "inline",
+      fields: [
+        number("systolic", "Night systolic", "mmHg"),
+        number("diastolic", "Night diastolic", "mmHg"),
+      ],
     },
   ],
 };
