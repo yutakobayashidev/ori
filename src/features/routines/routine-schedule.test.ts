@@ -1,6 +1,12 @@
 import { describe, expect, it } from "vitest";
 import type { RoutineDraft } from "./routine-model";
-import { isRoutineDay, isScheduleRecorded, routineDay, scheduleLabel } from "./routine-schedule";
+import {
+  inferRoutineSchedule,
+  isRoutineDay,
+  isScheduleRecorded,
+  routineDay,
+  scheduleLabel,
+} from "./routine-schedule";
 const schedule: RoutineDraft["schedules"][number] = {
   id: "bedtime",
   weekdays: [1],
@@ -56,4 +62,25 @@ it("tracks morning and night separately using each schedule's local recording da
   expect(isScheduleRecorded("blood-pressure", morning, [{ ...run, scheduleId: null }], today)).toBe(
     false,
   );
+});
+
+it.each([
+  ["2026-10-18T23:00:00Z", "morning"],
+  ["2026-10-19T13:00:00Z", "bedtime"],
+])("infers the local slot at %s", (instant, expected) => {
+  expect(
+    inferRoutineSchedule(
+      [{ ...schedule, id: "morning", timeOfDay: "morning" }, schedule],
+      new Date(instant),
+    ),
+  ).toBe(expected);
+});
+it("uses exact times before daypart hints and leaves unscheduled days unassigned", () => {
+  const schedules = [
+    { ...schedule, id: "early", time: "06:00", timeOfDay: "morning" as const },
+    { ...schedule, id: "late", time: "11:00", timeOfDay: "morning" as const },
+  ];
+  expect(inferRoutineSchedule(schedules, new Date("2026-10-19T01:30:00Z"))).toBe("late");
+  expect(inferRoutineSchedule(schedules, new Date("2026-10-20T01:30:00Z"))).toBeNull();
+  expect(inferRoutineSchedule([], new Date("2026-10-19T01:30:00Z"))).toBeNull();
 });

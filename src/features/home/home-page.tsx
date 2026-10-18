@@ -1,9 +1,9 @@
 import { Link, useNavigate, useRouteContext } from "@tanstack/react-router";
-import { ArrowUpRight, Plus, X } from "lucide-react";
+import { ArrowUpRight, Check, ChevronDown, Circle, Plus, X } from "lucide-react";
 import { useRef, useState } from "react";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { RoutineBuilderSheet } from "#/features/routines/routine-builder-sheet";
-import { RoutineRunSheet } from "#/features/routines/routine-run-sheet";
+import { RoutineRecorder, RoutineQuickDone } from "#/features/routines/routine-recorder";
 import { listRoutines, loadRoutineRuns } from "#/features/routines/routine-functions";
 import {
   isRoutineDay,
@@ -43,11 +43,29 @@ export function HomePage() {
   const [running, setRunning] = useState<{
     routine: RoutineDefinition;
     scheduleId?: string;
+    source: "composer" | "row";
   } | null>(null);
   function openBuilder(text: string, routine?: RoutineDefinition) {
     setProposal(null);
     setRunning(null);
     setBuilder({ prompt: text, routine });
+  }
+  function refreshRoutineRecords() {
+    void queryClient.invalidateQueries({ queryKey: ["routine-runs"] });
+    void queryClient.invalidateQueries({ queryKey: ["routine-history"] });
+  }
+  function renderRecorder() {
+    if (!running) return null;
+    return (
+      <RoutineRecorder
+        key={`${running.source}:${running.routine.id}:${running.routine.version}:${running.scheduleId ?? "any"}`}
+        routine={running.routine}
+        scheduleId={running.scheduleId}
+        onClose={() => setRunning(null)}
+        onEdit={() => openBuilder("", running.routine)}
+        onSaved={refreshRoutineRecords}
+      />
+    );
   }
   const [proposal, setProposal] = useState<{
     action: HomeAction;
@@ -213,7 +231,12 @@ export function HomePage() {
                 onCreateRoutine={(text) => openBuilder(text)}
                 onRunRoutine={(id) => {
                   const routine = routines.data?.find((item) => item.id === id);
-                  if (routine) setRunning({ routine });
+                  if (routine) {
+                    setRunning({ routine, source: "composer" });
+                    setPrompt("");
+                    setProposal(null);
+                    setNotice("");
+                  }
                 }}
                 text={prompt}
                 onTextChange={(value) => {
@@ -258,6 +281,7 @@ export function HomePage() {
                   )
                 }
               />
+              {running?.source === "composer" && <div className="mt-px-16">{renderRecorder()}</div>}
               {proposal && (
                 <div className="mt-px-20 flex flex-wrap items-center gap-px-12 rounded-ui-12 border border-border p-px-16">
                   <p className="min-w-[140px] flex-1 text-ui-14">{proposal.label}</p>
@@ -297,26 +321,75 @@ export function HomePage() {
                             routineRuns.data ?? [],
                             new Date(),
                           );
+                          const expanded =
+                            running?.source === "row" &&
+                            running.routine.id === routine.id &&
+                            running.scheduleId === schedule.id;
+                          const doneOnly = routine.steps.every((step) => step.fields.length === 0);
                           return (
-                            <button
-                              key={`${routine.id}:${schedule.id}`}
-                              aria-label={`${routine.name} · ${scheduleLabel(schedule)}`}
-                              onClick={() => setRunning({ routine, scheduleId: schedule.id })}
-                              className="flex min-h-16 w-full flex-col gap-1 rounded-xl border border-border bg-muted px-4 py-3 text-left hover:bg-accent focus-visible:outline-2 focus-visible:outline-ring"
+                            <div
+                              key={`${routine.id}:${routine.version}:${schedule.id}`}
+                              data-status={recorded ? "done" : "available"}
+                              data-expanded={expanded}
+                              className="group/flow overflow-hidden rounded-ui-16 border border-border bg-muted data-[expanded=true]:border-activity-expanded data-[status=done]:bg-background"
                             >
-                              <span className="text-sm font-medium wrap-anywhere">
-                                {routine.name}
-                              </span>
-                              <span className="text-xs text-muted-foreground">
-                                {recorded
-                                  ? "Recorded today"
-                                  : isRoutineDay(schedule, new Date())
-                                    ? "Today"
-                                    : "On demand"}
-                                {" · "}
-                                {scheduleLabel(schedule)}
-                              </span>
-                            </button>
+                              <div className="flex items-center gap-px-13 px-px-18 py-px-16 group-data-[status=done]/flow:py-2 max-md:gap-px-10 max-md:px-px-14 max-md:py-px-15 max-md:group-data-[status=done]/flow:py-2">
+                                {doneOnly ? (
+                                  <RoutineQuickDone
+                                    routine={routine}
+                                    scheduleId={schedule.id}
+                                    recorded={recorded}
+                                    onSaved={refreshRoutineRecords}
+                                  />
+                                ) : (
+                                  <span
+                                    className="flex size-8 shrink-0 items-center justify-center text-muted-foreground group-data-[status=done]/flow:text-success"
+                                    aria-hidden="true"
+                                  >
+                                    {recorded ? (
+                                      <Check className="size-5" />
+                                    ) : (
+                                      <Circle className="size-5" />
+                                    )}
+                                  </span>
+                                )}
+                                <button
+                                  type="button"
+                                  aria-label={`${routine.name} · ${scheduleLabel(schedule)}`}
+                                  aria-expanded={expanded}
+                                  onClick={() =>
+                                    setRunning(
+                                      expanded
+                                        ? null
+                                        : { routine, scheduleId: schedule.id, source: "row" },
+                                    )
+                                  }
+                                  className="flex min-w-0 flex-1 cursor-pointer flex-col gap-px-5 text-left focus-visible:outline-2 focus-visible:outline-ring"
+                                >
+                                  <span className="text-ui-14 font-medium wrap-anywhere">
+                                    {routine.name}
+                                  </span>
+                                  <span className="text-ui-12 text-muted-foreground">
+                                    {recorded
+                                      ? "Recorded today"
+                                      : isRoutineDay(schedule, new Date())
+                                        ? "Today"
+                                        : "On demand"}
+                                    {" · "}
+                                    {scheduleLabel(schedule)}
+                                  </span>
+                                </button>
+                                <ChevronDown
+                                  aria-hidden="true"
+                                  className="size-4 shrink-0 text-muted-foreground group-data-[expanded=true]/flow:rotate-180"
+                                />
+                              </div>
+                              {expanded && (
+                                <div className="px-px-22 pb-px-24 pl-px-55 max-md:px-px-18">
+                                  {renderRecorder()}
+                                </div>
+                              )}
+                            </div>
                           );
                         }),
                       )}
@@ -434,18 +507,6 @@ export function HomePage() {
             setBuilder(null);
             setPrompt("");
             setNotice(definitions.length === 1 ? "Routine saved." : "Routines saved.");
-          }}
-        />
-      )}
-      {running && (
-        <RoutineRunSheet
-          routine={running.routine}
-          scheduleId={running.scheduleId}
-          onClose={() => setRunning(null)}
-          onEdit={() => openBuilder("", running.routine)}
-          onSaved={() => {
-            void queryClient.invalidateQueries({ queryKey: ["routine-runs"] });
-            void queryClient.invalidateQueries({ queryKey: ["routine-history"] });
           }}
         />
       )}

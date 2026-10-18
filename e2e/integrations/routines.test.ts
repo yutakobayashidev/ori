@@ -62,7 +62,8 @@ test("creates independent routines in one conversation and records morning and n
     await homePage.input.fill("");
     await homePage.input.press("/");
     await page.getByRole("option", { name, exact: true }).click();
-    return page.getByRole("dialog", { name, exact: true });
+    await expect(page.getByRole("dialog")).toHaveCount(0);
+    return page.getByRole("region", { name: `Record ${name}`, exact: true });
   }
   let execution = await openRoutine("Blood pressure");
   await execution.getByText("Timing", { exact: true }).click();
@@ -81,7 +82,7 @@ test("creates independent routines in one conversation and records morning and n
     .fill("78");
   await execution.getByRole("button", { name: "Save entry", exact: true }).click();
   await expect(execution.getByRole("status")).toHaveText("Entry saved.");
-  await execution.getByRole("button", { name: "Done", exact: true }).click();
+  await execution.getByRole("button", { name: "Dismiss", exact: true }).click();
   execution = await openRoutine("Blood pressure");
   await execution.getByText("Timing", { exact: true }).click();
   await execution.getByRole("combobox", { name: "Schedule", exact: true }).selectOption("night");
@@ -90,6 +91,7 @@ test("creates independent routines in one conversation and records morning and n
   await execution.getByRole("spinbutton", { name: "Diastolic (mmHg)", exact: true }).fill("82");
   await execution.getByRole("button", { name: "Save entry", exact: true }).click();
   await expect(execution.getByRole("status")).toHaveText("Entry saved.");
+  await execution.getByText("History", { exact: true }).click();
   const trends = execution.getByRole("region", { name: "Measurement trends" });
   const pressure = trends.getByRole("figure", { name: /^Blood pressure · mmHg/ });
   await expect(pressure.getByRole("button")).toHaveCount(6);
@@ -100,24 +102,32 @@ test("creates independent routines in one conversation and records morning and n
   );
   expect((await a11y().analyze()).violations).toEqual([]);
   await page.screenshot({ path: testInfo.outputPath("routine-trends.png") });
-  await execution.getByRole("button", { name: "Done", exact: true }).click();
+  await execution.getByRole("button", { name: "Dismiss", exact: true }).click();
 
-  execution = await openRoutine("Weight");
+  await page.getByRole("button", { name: "Weight · Every day · Morning", exact: true }).click();
+  execution = page.getByRole("region", { name: "Record Weight", exact: true });
+  await expect(
+    page
+      .getByRole("region", { name: "Today’s plan" })
+      .getByRole("region", { name: "Record Weight", exact: true }),
+  ).toBeVisible();
+  await expect(page.getByRole("dialog")).toHaveCount(0);
+  await page.screenshot({ path: testInfo.outputPath("inline-routine.png") });
   await expect(execution.getByRole("spinbutton")).toHaveCount(1);
   await execution.getByRole("spinbutton", { name: "Weight (kg)", exact: true }).fill("65.2");
   await execution.getByRole("button", { name: "Save entry", exact: true }).click();
   await expect(execution.getByRole("status")).toHaveText("Entry saved.");
-  await execution.getByRole("button", { name: "Done", exact: true }).click();
+  await execution.getByRole("button", { name: "Dismiss", exact: true }).click();
   execution = await openRoutine("Medication");
   await execution.getByRole("checkbox", { name: "Medicine A", exact: true }).check();
   await execution.getByRole("button", { name: "Save entry", exact: true }).click();
   await expect(execution.getByRole("status")).toHaveText("Entry saved.");
-  await execution.getByRole("button", { name: "Done", exact: true }).click();
-  execution = await openRoutine("Bath");
-  await execution.getByRole("checkbox", { name: "Done", exact: true }).check();
-  await execution.getByRole("button", { name: "Save entry", exact: true }).click();
-  await expect(execution.getByRole("status")).toHaveText("Entry saved.");
-  await execution.getByRole("button", { name: "Done", exact: true }).click();
+  await execution.getByRole("button", { name: "Dismiss", exact: true }).click();
+  await page.getByRole("button", { name: "Mark Bath done", exact: true }).click();
+  await expect(page.getByRole("button", { name: "Mark Bath done", exact: true })).toBeDisabled();
+  await expect(page.getByRole("dialog")).toHaveCount(0);
+  await expect(page.getByRole("region", { name: "Record Bath", exact: true })).toHaveCount(0);
+  await expect.poll(routineFiles).toContain('"stepId":"bath","done":true');
   const original = await routineFiles();
   expect(original).toContain('"scheduleId":"morning"');
   expect(original).toContain('"scheduleId":"night"');
@@ -139,7 +149,8 @@ test("creates independent routines in one conversation and records morning and n
   await expect(editor).toHaveCount(0);
   await page.reload();
   execution = await openRoutine("Measure pressure");
-  await expect(execution.getByRole("region", { name: "Routine history" })).toContainText(
+  await execution.getByText("History", { exact: true }).click();
+  await expect(execution.getByRole("article").filter({ hasText: "120 mmHg" })).toContainText(
     "120 mmHg",
   );
   expect(await routineFiles()).toContain('"version":2');

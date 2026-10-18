@@ -5,7 +5,15 @@ Implemented on 2026-10-18.
 ## Behavior
 
 Home's natural-language input offers routine creation or a saved routine invocation.
-The owner explicitly opens a right-hand sheet; typing never opens it automatically.
+Creation and editing explicitly open a right-hand sheet; typing never opens it automatically.
+Routine execution stays in Home: a row expands an inline form, while invoking a
+routine from the composer opens the same form directly below the input. Done-only
+rows record in one click. History and graphs open only when requested.
+Cards use the task-card completion indicators: an empty circle before recording
+and a green check after recording for that day and schedule. Composer invocation
+initially selects the nearest schedule from the current time in its timezone;
+users can change it or choose Unscheduled. Explicit row invocation keeps that
+row's schedule. Selection is computed locally without an AI request.
 `/` provides the same creation and saved-routine entry points.
 
 Codex app-server builds one or more independent routines through a single conversation.
@@ -47,7 +55,7 @@ same `blood_pressure` group. Custom metrics are supported. Codex receives the
 existing metric catalogue when designing or editing a form and reuses matching
 identities. A metric's unit and identity are validated on save.
 
-The run sheet's Trends section combines matching metrics from all routines. Each
+The Trends section inside the inline recorder's History disclosure combines matching metrics from all routines. Each
 group and unit has a separate time-series chart; repeated readings stay separate,
 with their paired-entry identity and source step preserved. Selecting a point shows
 its value, timestamp, routine, and step. Medication selections and Done actions
@@ -143,3 +151,6 @@ creation, morning/night recording, shared charts, immediate Done/medication/weig
 entry and history-preserving edits, including axe checks. A second live Codex check
 created toothbrushing and bathing without asking for dates or times. Typecheck,
 lint and production build passed.
+
+Inline recording verification: 77 routine tests, desktop/mobile E2E including
+accessibility checks, typecheck, lint and production build passed.
