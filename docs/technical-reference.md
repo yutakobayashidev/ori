@@ -56,6 +56,9 @@ Home's greeting follows the device's local time: morning from 05:00, afternoon
 from 12:00, and evening from 18:00 until 05:00. It refreshes while the page is
 open and when returning to the app.
 
+Beside Today, Home displays the device's local time in 24-hour format with seconds.
+The clock updates every second and refreshes when returning to the tab.
+
 Home also shows Codex account usage above the greeting. The compact row reports
 the percentage used for each available limit window; expand it for reset and
 last-update times in the device's timezone. These are account-wide subscription

@@ -27,6 +27,7 @@ import { TaskComposer } from "./task-composer";
 import { DailyBrief } from "./daily-brief";
 import { ExecutionWorkbench } from "./execution-workbench";
 import { Greeting } from "./greeting";
+import { HomeClock } from "./home-clock";
 import { type HomeAction, interpretAction } from "./interpret-action";
 
 export function HomePage() {
@@ -233,7 +234,10 @@ export function HomePage() {
             <div className="mx-auto max-w-[1200px] px-px-48 pt-px-40 pb-px-80 max-[1000px]:px-px-28 max-[1000px]:pb-px-40 max-md:px-px-20 max-md:py-px-32">
               <header className="mb-px-32">
                 <CodexUsage />
-                <p className="text-sm text-muted-foreground">Today</p>
+                <div className="flex items-center justify-between gap-px-16">
+                  <p className="text-sm text-muted-foreground">Today</p>
+                  <HomeClock />
+                </div>
                 <h1 className="mt-px-12 text-home-greeting font-book tracking-home leading-normal max-md:text-ui-25">
                   <Greeting name={auth.owner?.name} />
                 </h1>
