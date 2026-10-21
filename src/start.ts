@@ -36,6 +36,14 @@ const ownTracks = createMiddleware().server(async ({ request, next }) => {
   return handleOwnTracksRequest(request);
 });
 
+// The collector authenticates only this exact path with its dedicated token.
+const xiaomiScale = createMiddleware().server(async ({ request, next }) => {
+  if (new URL(request.url).pathname !== "/api/collect/xiaomi-scale") return next();
+  const { handleXiaomiScaleRequest } =
+    await import("./features/telemetry/xiaomi-scale/http.server");
+  return handleXiaomiScaleRequest(request);
+});
+
 const csrf = createCsrfMiddleware({
   filter: (context) => context.handlerType === "serverFn",
 });
@@ -54,5 +62,5 @@ const storage = createMiddleware().server(async ({ next }) => {
 });
 
 export const startInstance = createStart(() => ({
-  requestMiddleware: [health, mcp, ownTracks, ownerAccess, csrf, storage, appSession],
+  requestMiddleware: [health, mcp, ownTracks, xiaomiScale, ownerAccess, csrf, storage, appSession],
 }));

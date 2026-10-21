@@ -61,8 +61,21 @@
           pkgs = import nixpkgs { inherit system; };
           twitter-lite = mkTwitterLite pkgs;
           workspace-runtime = pkgs.callPackage ./runtime/package.nix { };
+          xiaomi-s200 = pkgs.python3Packages.buildPythonApplication {
+            pname = "ori-xiaomi-s200";
+            version = "0.1.0";
+            src = ./collectors/xiaomi-s200;
+            pyproject = true;
+            build-system = [ pkgs.python3Packages.setuptools ];
+            dependencies = with pkgs.python3Packages; [ bleak cryptography ];
+            checkPhase = ''
+              python -m unittest discover -v
+            '';
+            pythonImportsCheck = [ "collector" ];
+            meta.mainProgram = "ori-xiaomi-s200";
+          };
         in {
-          inherit twitter-lite workspace-runtime;
+          inherit twitter-lite workspace-runtime xiaomi-s200;
           default = twitter-lite;
         });
 

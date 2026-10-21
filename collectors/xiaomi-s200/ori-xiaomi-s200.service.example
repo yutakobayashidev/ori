@@ -1,0 +1,16 @@
+[Unit]
+Description=Ori Xiaomi S200 collector
+After=bluetooth.target network-online.target
+
+[Service]
+Type=simple
+Environment=SSL_CERT_FILE=/etc/ssl/certs/ca-certificates.crt
+# Replace these paths. Install as a user service with access to BlueZ/D-Bus.
+ExecStart=/absolute/path/to/ori/collectors/xiaomi-s200/.venv/bin/ori-xiaomi-s200 run --config /absolute/private/path/s200/collector.json
+Restart=on-failure
+RestartSec=10
+UMask=0077
+NoNewPrivileges=true
+
+[Install]
+WantedBy=default.target

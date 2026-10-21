@@ -154,6 +154,22 @@ normalization or analysis. Configure a private archive directory and credential
 file to enable it; no browser session is required for this exact endpoint.
 See [OwnTracks collector setup and limits](owntracks-collector-design.md).
 
+## Xiaomi S200 collector
+
+`collectors/xiaomi-s200` runs on a Linux Bluetooth host and stores authenticated
+S200 measurements in a durable SQLite outbox before sending them to
+`POST /api/collect/xiaomi-scale`. The endpoint uses a dedicated Bearer credential,
+checks the configured device and profile, archives the original measurement, and
+projects its weight into an explicitly configured `body_weight` routine field.
+Retries reuse the measurement ID and do not duplicate routine records.
+The measurement timestamp selects its routine schedule: a daily morning weight
+slot is also recorded by an afternoon measurement. Delayed uploads retain their
+measurement date; repeated weigh-ins remain separate history within the same slot.
+
+The endpoint is disabled unless `WORKSPACE_XIAOMI_SCALE_ARCHIVE_DIR` and
+`WORKSPACE_XIAOMI_SCALE_CREDENTIAL_FILE` are configured. See
+[S200 setup, service example, and hardware verification](xiaomi-s200-collector.md).
+
 ## Research capabilities
 
 - Multiple named decks with no column-count limit
