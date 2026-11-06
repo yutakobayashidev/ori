@@ -1,7 +1,7 @@
 // @vitest-environment node
 import { afterEach, beforeEach, expect, it, vi } from "vitest";
 import { openDatabase, type AppDatabase } from "../storage/database.server";
-import { mcpEventOutbox, mcpEventSubscriptions } from "../storage/schema";
+import { activityAudit, mcpEventOutbox, mcpEventSubscriptions } from "../storage/schema";
 import { createUserActivity, updateActivityUser } from "../activities/repository.server";
 import { deliverMcpEvents } from "../mcp-events/events.server";
 import { handleMcpRequest, registerResearchTools } from "./http.server";
@@ -45,6 +45,7 @@ async function rpc(method: string, params: Record<string, unknown> = {}, query =
         "Content-Type": "application/json",
         Authorization: `Bearer ${token}`,
         Accept: "application/json",
+        "MCP-Protocol-Version": "2026-07-28",
         "Mcp-Method": method,
         ...(method === "tools/call" && typeof params.name === "string"
           ? { "Mcp-Name": params.name }
@@ -231,7 +232,7 @@ it("subscribes to outgoing observations independently through MCP HTTP", async (
   expect(database.select().from(mcpEventSubscriptions).get()?.name).toBe("beeper.message.received");
 });
 
-it("logs writes and failed writes while omitting read tools", async () => {
+it("keeps activity audit without storing MCP read or write communication", async () => {
   const proposal = {
     id: "logged-task",
     kind: "task",
@@ -251,43 +252,20 @@ it("logs writes and failed writes while omitting read tools", async () => {
     arguments: { ...args, requestId: "stale" },
   });
   await rpc("tools/call", { name: "get_activity_context", arguments: {} });
-  expect(getCommunicationLogs({ activityId: "logged-task" }, database).entries).toMatchObject([
-    { name: "publish_activities", outcome: "error", requestId: "stale" },
-    { name: "publish_activities", outcome: "success", requestId: "logged-request" },
-    {
-      name: "publish_activities",
-      outcome: "success",
-      requestId: "logged-request",
-      request: { activities: [{ title: "Visible title" }] },
-    },
-  ]);
-  expect(getCommunicationLogs({}, database).entries).toHaveLength(3);
+  expect(getCommunicationLogs({}, database).entries).toHaveLength(0);
+  expect(database.select().from(activityAudit).all()).toHaveLength(1);
 });
 
-it("logs subscriptions, verification, and unsubscribe without retaining secrets", async () => {
+it("does not store subscription or callback communication", async () => {
   const created = await rpc("events/subscribe", subscription);
+  expect(created.error).toBeUndefined();
   await rpc("events/unsubscribe", subscription);
-  const logs = getCommunicationLogs({}, database).entries;
-  expect(logs).toMatchObject([
-    { name: "events/unsubscribe", outcome: "success" },
-    { name: "events/subscribe", outcome: "success", subscriptionId: created.result.id },
-    {
-      name: "verification",
-      outcome: "success",
-      status: 200,
-      request: { challenge: "[redacted]" },
-      response: { challenge: "[redacted]" },
-    },
-  ]);
-  expect(JSON.stringify(logs)).not.toContain(subscription.delivery.secret);
+  expect(getCommunicationLogs({}, database).entries).toHaveLength(0);
 });
 
-it("logs a rejected verification as failure even when the callback responds HTTP 200", async () => {
+it("rejects invalid verification without storing callback communication", async () => {
   mocks.sender.mockResolvedValue({ status: 200, body: JSON.stringify({ challenge: "wrong" }) });
   const result = await rpc("events/subscribe", subscription);
   expect(result.error).toBeDefined();
-  expect(getCommunicationLogs({}, database).entries).toMatchObject([
-    { name: "events/subscribe", outcome: "error" },
-    { name: "verification", outcome: "error", status: 200, response: { challenge: "[redacted]" } },
-  ]);
+  expect(getCommunicationLogs({}, database).entries).toHaveLength(0);
 });

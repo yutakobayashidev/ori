@@ -19,7 +19,7 @@ Personal Workspaceに、Aurbodaの計測・区間分析とTimelinizeのアーカ
 
 **共通化するのは、時間・対象・来歴・検索の入口。原本の保存方式と意味は用途ごとに保持する。**
 
-既存auditを汎用センサー台帳へ変更せず、監査行を根拠に生活タイムライン用の派生データを作る。最初は既存SQLiteと小さな変換処理で始める。OpenTelemetry、別のメッセージブローカー、グラフDB、全面的なevent sourcingは初期構成に追加しない。
+既存auditを汎用センサー台帳へ変更せず、監査行を根拠に生活タイムライン用の派生データを作る。最初は既存SQLiteと小さな変換処理で始める。生活履歴のための別のメッセージブローカー、グラフDB、全面的なevent sourcingは初期構成に追加しない。MCPの運用診断には[OpenTelemetry](telemetry.md)を使い、生活履歴の原本とは分離する。
 
 目指す体験は「昨日どのアプリを使ったか」に加えて、「何をするつもりで、何が観測され、AIが何を提案し、本人がどう変更し、その後どうなったか」を一つの画面でたどれること。
 
@@ -34,7 +34,7 @@ Personal Workspaceに、Aurbodaの計測・区間分析とTimelinizeのアーカ
 | Aurbodaのraw保存   | 同一source/type/external IDの再取得では`data`を更新する                                                   | 「raw」という名前でも全改訂履歴ではない。こちらでは変更される記録の旧版を残す範囲を明示する |
 | Timelinize         | Item/Entity/Relationshipを共通の取り込みモデルにし、SQLiteとファイルへ保存                                | 時刻の不確実性、人物照合、関係・来歴の参照。全機能の移植はしない                            |
 | TimelinizeのAI     | SigLIP2による画像・文章の埋め込み、検索・分類                                                             | 検索用埋め込みと、行動を説明するVLM注釈を分ける                                             |
-| Personal Workspace | SQLite＋Drizzle、変更と同一transactionでaudit保存。MCP通信履歴は別表                                      | 実行の履歴を観測へ接続できる土台が既にある                                                  |
+| Personal Workspace | SQLite＋Drizzle、変更と同一transactionでaudit保存。MCP診断はOpenTelemetry                                 | 実行の履歴を観測へ接続できる土台が既にある                                                  |
 
 根拠: [AurbodaのAW変換][aw]、[区間化][spans]、[導出エンジン][deduction]、[raw更新][raw]、[Timelinizeモデル][graph]、[Python処理][ml]、[Workspace DB](../src/features/storage/database.server.ts)、[変更transaction](../src/features/activities/repository.server.ts)。
 
@@ -42,7 +42,7 @@ Personal Workspaceに、Aurbodaの計測・区間分析とTimelinizeのアーカ
 
 現在の`activity_audit`にはactor、channel、operation、request ID、revision、時刻、before/afterがある。`requestId + activityId`は一意で、状態が変化しなければauditを追加しない。snapshotはFocus・WorkLog・見積もり・本人の編集・assessmentも含む。[schema](../src/features/storage/schema.ts)、[audit処理](../src/features/activities/audit.server.ts)。
 
-`communication_logs`はMCP書き込みとMCP Eventsの通信試行を保存する。読み取り呼び出しを記録しないのは本人の選択であり維持する。通信ログは保存失敗があり得るbest effort、本文は秘匿化・長さ制限がある。全入力の完全な原本や、必ず届くイベントバスとして使わない。[通信処理](../src/features/activities/communication.server.ts)、[audit契約](activity-audit-and-numbers.md)。
+`communication_logs`は移行前のMCP通信履歴を参照するために残す。新しいMCP呼び出しは読み取りも含めて[OpenTelemetry](telemetry.md)で診断し、ツール引数・結果本文を保存しない。通信トレースはbest effortであり、全入力の原本や必ず届くイベントバスとして使わない。[audit契約](activity-audit-and-numbers.md)。
 
 MCP Eventsのoutboxも、購読ごとの配信対象を保持する仕組みであり、全変更の原本ではない。生活履歴の再構築はauditから行う。またVitals・Journalの身体記録とルーティンは現状prototypeであり、永続的な健康データ収集が既にあるとは扱わない。[イベント実装](../src/features/mcp-events/events.server.ts)、[現行機能](../README.md#workspaces-and-current-status)。
 

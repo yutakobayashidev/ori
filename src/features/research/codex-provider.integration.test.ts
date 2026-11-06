@@ -21,6 +21,7 @@ it("keeps scoped MCP tools available during remote execution and removes them af
               .httpHeaders,
             "Content-Type": "application/json",
             Accept: "application/json",
+            "MCP-Protocol-Version": "2026-07-28",
             "Mcp-Method": "tools/call",
             "Mcp-Name": "list_decks",
           },

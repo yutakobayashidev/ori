@@ -37,7 +37,7 @@ flowchart LR
 | -------------------------- | -------------------------------------------------- | ------------------------------------------------------------------------------------- |
 | `get_activity_context`     | 登録済みの行動、本人の判断・編集、出典を読む       | 任意の `activityIds`、`activityNumbers`、`conversation`、`states`、`cursor`、`limit`  |
 | `get_activity_audit`       | 行動の変更前後・操作主体・経路・日時を読む         | 任意の `activityId`、`beforeId`、`limit`                                              |
-| `get_communication_logs`   | MCP書き込み・MCP Eventsの通信履歴を読む            | 任意の `activityId`、`beforeId`、`limit`                                              |
+| `get_communication_logs`   | 移行前のMCP通信履歴を読む                          | 任意の `activityId`、`beforeId`、`limit`                                              |
 | `update_activity_progress` | 判断理由・根拠を記録し、状態や返信案を部分更新する | `requestId`、`expectedRevision`、`id`、任意の `state` / `draft`、`reason`、`evidence` |
 | `publish_activities`       | 行動を新規登録、または既存行動の提案内容を更新する | `requestId`、`expectedRevision`、`activities`                                         |
 

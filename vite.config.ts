@@ -6,5 +6,11 @@ import { defineConfig } from "vite";
 import { mcpApp } from "./scripts/mcp-app-plugin";
 
 export default defineConfig({
-  plugins: [mcpApp(), tailwindcss(), nitro(), tanstackStart(), viteReact()],
+  plugins: [
+    mcpApp(),
+    tailwindcss(),
+    nitro({ plugins: ["./src/features/observability/nitro-plugin.ts"] }),
+    tanstackStart(),
+    viteReact(),
+  ],
 });

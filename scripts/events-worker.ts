@@ -1,3 +1,4 @@
+import { startTelemetry, shutdownTelemetry } from "../src/features/observability/telemetry.server";
 import {
   processMessageSends,
   recoverInterruptedMessageSends,
@@ -7,6 +8,8 @@ import { startBeeperListener } from "../src/features/beeper/listener.server";
 import { createBeeperListenerStore } from "../src/features/beeper/repository.server";
 import { deliverMcpEvents, getBeeperWatchChats } from "../src/features/mcp-events/events.server";
 import { getDatabase } from "../src/features/storage/database.server";
+
+startTelemetry();
 
 const database = getDatabase();
 const sendingAdapter = createBeeperAdapter();
@@ -59,6 +62,7 @@ async function stop() {
   await delivery;
   await sending;
   database.$client.close();
+  await shutdownTelemetry();
 }
 process.once("SIGINT", () => {
   void stop();

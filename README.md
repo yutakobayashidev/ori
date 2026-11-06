@@ -130,6 +130,7 @@ docker compose up -d --build --wait
 - [Linux / Nix のバックアップと更新](docs/dots/native-event-setup.md#6-バックアップと更新) / [Docker のバックアップ](docs/dots/setup.md#9-バックアップと更新): 構成に合った方法で DB と鍵を保護する
 - [Ori 内の Codex 実行](docs/docker.md#add-ai-execution): 外部 dots とは別の任意機能。Home 上部でアカウントの利用枠とリセット時刻も確認できます
 - [HTTP MCP とアクセス境界](docs/http-mcp.md): ツール・接続・認証の詳細
+- [MCP telemetry](docs/telemetry.md): OpenTelemetry traces and metrics for Grafana
 - [Workspace MCP Events](docs/beeper-mcp-events.md): イベント、購読、配送の仕様
 - [開発コマンド](docs/technical-reference.md#commands) / [実装と運用の詳細](docs/technical-reference.md): 開発・SNS 連携・NixOS など
 

@@ -4,7 +4,7 @@ Proposed extension: [personal observability design](personal-observability-desig
 describes deriving a life timeline from this audit history. It is not implemented
 and does not change the contract below.
 
-Implemented contract, agreed with the owner on 2026-10-11:
+Implemented contract, updated for MCP telemetry on 2026-11-07:
 
 - Assign one persistent sequence of human-readable numbers (`#1`, `#2`, …)
   to tasks and replies, including existing activities. Preserve internal IDs.
@@ -13,17 +13,14 @@ Implemented contract, agreed with the owner on 2026-10-11:
   and before/after values, including text and reply drafts. Retain history without
   automatic deletion. Do not fabricate history from before deployment.
 - Provide history within activity details and a workspace-wide history page.
-- Include MCP write calls/responses and MCP Events communication, including failures
-  and delivery attempts. Exclude credentials, signatures, and authentication
-  headers. Omit read-only MCP calls; the owner considers these redundant.
-  Save request/response bodies, with an explicit truncated preview when a
-  sanitized payload exceeds 65,536 characters.
+- Record MCP requests (reads and writes) and event delivery attempts through
+  [OpenTelemetry](telemetry.md), without tool argument/result or callback payloads.
+  Preserve previously collected SQLite communication history as read-only data.
 - Keep activity history atomic with its mutation. Retrying a committed request
-  must not create another change entry; each communication attempt may have its
-  own communication log.
+  must not create another change entry.
 
 Verification covers migration of existing data, number stability, rollback and
-retries, actor attribution, communication redaction, history pagination, and the
+retries, actor attribution, telemetry without new communication rows, history pagination, and the
 browser paths for task and global history.
 
 ## Storage and scope
@@ -39,17 +36,14 @@ operation; this feature does not introduce one. Actor and entrypoint are separat
 the creation origin does not determine who made a later change. The app identifies
 browser owners and MCP/execution agents, not a verified external person's name.
 
-Communication records cover incoming MCP write tool calls and subscription changes,
-outgoing verification/delivery attempts, and their responses. The existing server
-publishes events; it does not expose an incoming external event-notification
-endpoint. Beeper received/sent messages are event sources, not inbound MCP webhooks.
-Each retry has its own attempt record. Request, event and subscription identifiers
-connect the records, and known activity IDs enable per-task filtering.
+Previously collected communication records cover incoming MCP writes and subscription
+changes, outgoing verification/delivery attempts, and their sanitized responses.
+They are retained for historical access. New protocol diagnostics live in the
+telemetry backend; retention there is managed by its operator.
 
-Communication log persistence failures are reported to server stderr without
-changing a successfully committed write or delivered event into a retry. Activity
-audit persistence failures instead roll back the activity transaction. Neither log
-is a tamper-proof external ledger. No history is backfilled from old receipts.
+Activity audit persistence failures roll back the activity transaction. Telemetry
+export failures do not change an operation's result. Neither is a tamper-proof
+external ledger. No history is backfilled from old receipts.
 
 ## Access
 

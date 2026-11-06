@@ -35,10 +35,10 @@ Journal entries persist in daily append-only Markdown files using Japan Standard
 Reply sending snapshots the saved draft into a durable operation; upstream send
 success does not automatically complete the task.
 Tasks and replies share permanent `#number` references, including existing records.
-History (`/history`) shows activity changes and MCP write/event communication;
+History (`/history`) shows activity changes and previously collected MCP communication;
 each activity also exposes its own history. Full activity text and drafts are
-retained without automatic expiry. Communication payloads redact credentials and
-explicitly truncate large bodies; read-only MCP calls are not logged.
+retained without automatic expiry. New MCP calls and event deliveries use
+[OpenTelemetry traces and metrics](telemetry.md), without storing payloads in SQLite.
 See [activity numbers and audit history](activity-audit-and-numbers.md).
 The headless Beeper listener can observe messages sent in the original chat apps;
 Dots can update task progress and reply proposals through shared MCP tools.

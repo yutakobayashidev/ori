@@ -1,7 +1,7 @@
 import { createHash, randomBytes, timingSafeEqual } from "node:crypto";
 import { and, eq, gt, inArray, isNull, lte } from "drizzle-orm";
 import { z } from "zod";
-import { logEventDelivery } from "../activities/communication.server";
+import { traceEventDelivery } from "./telemetry.server";
 import { decryptCredential, encryptCredential } from "../connections/credentials.server";
 import { getDatabase, type AppDatabase } from "../storage/database.server";
 import { mcpEventOutbox, mcpEventSubscriptions } from "../storage/schema";
@@ -170,14 +170,12 @@ export async function subscribeMcpEvent(
     const body = JSON.stringify({ type: "verification", challenge });
     const verificationId = `verify_${randomBytes(16).toString("hex")}`;
     try {
-      await logEventDelivery(
+      await traceEventDelivery(
         {
           name: "verification",
           eventId: verificationId,
           subscriptionId: id,
           attempt: 1,
-          body,
-          secrets: [params.delivery.secret, challenge],
         },
         () =>
           (options.sender ?? sendWebhook)(
@@ -185,7 +183,6 @@ export async function subscribeMcpEvent(
             body,
             webhookHeaders(verificationId, id, body, [params.delivery.secret], now),
           ),
-        database,
         (response) => {
           const returned = JSON.parse(response.body).challenge;
           if (
@@ -403,14 +400,12 @@ export async function deliverMcpEvents(
       const secrets = [decryptCredential(subscription.secretCiphertext, context)];
       if (subscription.previousSecretCiphertext && (subscription.rotationExpiresAt ?? 0) > now)
         secrets.push(decryptCredential(subscription.previousSecretCiphertext, context));
-      const response = await logEventDelivery(
+      const response = await traceEventDelivery(
         {
           name: subscription.name,
           eventId: event.eventId,
           subscriptionId: subscription.id,
           attempt: event.attempts + 1,
-          body: event.body,
-          secrets,
         },
         () =>
           (options.sender ?? sendWebhook)(
@@ -418,7 +413,6 @@ export async function deliverMcpEvents(
             event.body,
             webhookHeaders(event.eventId, subscription.id, event.body, secrets, Date.now()),
           ),
-        database,
       );
       status = response.status;
     } catch {
