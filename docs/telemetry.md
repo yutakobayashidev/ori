@@ -22,7 +22,12 @@ outages do not change MCP results or event retry decisions; telemetry is best ef
 The MCP SDK records reads and writes, including method, tool name, duration and
 error status. `tools/call` results with `isError: true` count as failures even when
 HTTP returns 200. The histogram `mcp.server.operation.duration` has units of seconds.
-Incoming W3C trace context in MCP `params._meta` links calls to instrumented clients.
+Each incoming MCP request starts a new trace. W3C context in `params._meta` is
+retained as a span link to the caller instead of making the request part of its
+trace. Long agent sessions can otherwise exceed Tempo's per-trace size limit and
+lose later MCP spans. This also keeps a caller's sampling decision from hiding
+server diagnostics. Child operations and callback verification stay in the
+request's trace; normal W3C injection propagates that new trace downstream.
 It does not expose the client's conversation or reasoning. Callback verification
 and each event delivery attempt get an outgoing span with event/subscription IDs,
 attempt number and HTTP status. Callback URLs, credentials and bodies are omitted.

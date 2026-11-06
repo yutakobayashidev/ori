@@ -1,8 +1,8 @@
 // @vitest-environment node
 import { afterAll, afterEach, beforeAll, expect, it, vi } from "vitest";
-import { SpanKind, SpanStatusCode } from "@opentelemetry/api";
-import { W3CTraceContextPropagator } from "@opentelemetry/core";
-import { InMemorySpanExporter, SimpleSpanProcessor } from "@opentelemetry/sdk-trace";
+import { SpanKind, SpanStatusCode, context, propagation } from "@opentelemetry/api";
+import { InMemorySpanExporter } from "@opentelemetry/sdk-trace";
+import { McpRequestSpanProcessor, mcpRequestPropagator } from "../observability/mcp-tracing.server";
 import {
   InMemoryMetricExporter,
   PeriodicExportingMetricReader,
@@ -14,12 +14,12 @@ import { traceEventDelivery } from "../mcp-events/telemetry.server";
 
 vi.mock("./oauth.server", () => ({ authorizeMcpRequest: async () => null }));
 const spans = new InMemorySpanExporter();
-const processor = new SimpleSpanProcessor({ exporter: spans });
+const processor = new McpRequestSpanProcessor({ exporter: spans });
 const metricExporter = new InMemoryMetricExporter(AggregationTemporality.CUMULATIVE);
 const reader = new PeriodicExportingMetricReader({ exporter: metricExporter });
 const sdk = new NodeSDK({
   autoDetectResources: false,
-  textMapPropagator: new W3CTraceContextPropagator(),
+  textMapPropagator: mcpRequestPropagator,
   spanProcessors: [processor],
   metricReaders: [reader],
   logRecordProcessors: [],
@@ -28,7 +28,10 @@ beforeAll(() => sdk.start());
 afterEach(() => spans.reset());
 afterAll(() => sdk.shutdown());
 
-async function callTool(run: () => Promise<unknown>) {
+async function callTool(
+  run: () => Promise<unknown>,
+  traceparent: string | null = "00-11111111111111111111111111111111-2222222222222222-00",
+) {
   const registration = registerResearchTools({
     definitions: [{ name: "test_tool", description: "Test", inputSchema: { type: "object" } }],
     execute: run,
@@ -55,7 +58,7 @@ async function callTool(run: () => Promise<unknown>) {
             _meta: {
               "io.modelcontextprotocol/protocolVersion": "2026-07-28",
               "io.modelcontextprotocol/clientCapabilities": {},
-              traceparent: "00-11111111111111111111111111111111-2222222222222222-01",
+              traceparent,
             },
           },
         }),
@@ -66,15 +69,24 @@ async function callTool(run: () => Promise<unknown>) {
   }
 }
 
-it("exports upstream MCP spans, duration metrics and remote parent context without payloads", async () => {
+it("exports MCP spans and metrics with a new trace linked to an unsampled caller", async () => {
   const response = await callTool(async () => ({ ok: true, text: "private result" }));
   expect(await response.json()).toMatchObject({ result: { isError: false } });
   await processor.forceFlush();
   await reader.forceFlush();
   const span = spans.getFinishedSpans().find((item) => item.name === "tools/call test_tool");
   expect(span?.kind).toBe(SpanKind.SERVER);
-  expect(span?.spanContext().traceId).toBe("11111111111111111111111111111111");
-  expect(span?.parentSpanContext?.spanId).toBe("2222222222222222");
+  expect(span?.spanContext().traceId).not.toBe("11111111111111111111111111111111");
+  expect(span?.parentSpanContext).toBeUndefined();
+  expect(span?.links).toEqual([
+    expect.objectContaining({
+      context: expect.objectContaining({
+        traceId: "11111111111111111111111111111111",
+        spanId: "2222222222222222",
+        traceFlags: 0,
+      }),
+    }),
+  ]);
   expect(span?.attributes).toMatchObject({
     "mcp.method.name": "tools/call",
     "gen_ai.tool.name": "test_tool",
@@ -94,6 +106,43 @@ it("exports upstream MCP spans, duration metrics and remote parent context witho
       }),
     ]),
   );
+});
+
+it("starts a separate trace per request while preserving downstream child context and injection", async () => {
+  const carrier: Record<string, string> = {};
+  const incoming = "00-11111111111111111111111111111111-2222222222222222-01";
+  const firstResponse = await callTool(async () => {
+    await traceEventDelivery(
+      { name: "activity.created", eventId: "event", subscriptionId: "sub", attempt: 1 },
+      async () => {
+        propagation.inject(context.active(), carrier);
+        return { status: 204, body: "" };
+      },
+    );
+    return { ok: true };
+  }, incoming);
+  expect(firstResponse.status).toBe(200);
+  expect((await callTool(async () => ({ ok: true }), incoming)).status).toBe(200);
+  await processor.forceFlush();
+  const requests = spans.getFinishedSpans().filter((span) => span.kind === SpanKind.SERVER);
+  expect(requests).toHaveLength(2);
+  expect(new Set(requests.map((span) => span.spanContext().traceId)).size).toBe(2);
+  expect(requests.every((span) => span.links.length === 1)).toBe(true);
+  const child = spans.getFinishedSpans().find((span) => span.name === "mcp.event activity.created");
+  expect(child?.spanContext().traceId).toBe(requests[0]?.spanContext().traceId);
+  expect(child?.parentSpanContext?.spanId).toBe(requests[0]?.spanContext().spanId);
+  expect(child?.links).toHaveLength(0);
+  expect(carrier.traceparent).toBe(
+    `00-${child?.spanContext().traceId}-${child?.spanContext().spanId}-01`,
+  );
+});
+
+it("creates an ordinary root without a link when the caller supplies no trace context", async () => {
+  await callTool(async () => ({ ok: true }), null);
+  await processor.forceFlush();
+  const [span] = spans.getFinishedSpans();
+  expect(span?.parentSpanContext).toBeUndefined();
+  expect(span?.links).toHaveLength(0);
 });
 
 it("marks a tool failure as an error even when HTTP succeeds", async () => {
