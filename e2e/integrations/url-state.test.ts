@@ -84,7 +84,7 @@ test("keeps a deep link through login", async ({ page, context, readerPage, auth
   await context.clearCookies();
   await readerPage.goTo("?q=browser");
   await expect(page).toHaveURL(/\/login\?returnTo=/);
-  await authPage.signIn("owner@workspace.invalid", "E2E-only-passphrase-2026");
+  await authPage.signIn();
   await expect(page).toHaveURL(/\/inbox\?q=browser$/);
   await expect(readerPage.searchInput).toHaveValue("browser");
 });

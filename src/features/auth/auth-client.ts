@@ -5,19 +5,9 @@ export type SafeOwner = {
   onboardingCompletedAt: number | null;
 };
 
-export type AuthState = { needsSetup: boolean; owner: SafeOwner | null };
+export type AuthState = { owner: SafeOwner | null };
 
-type AuthInput =
-  | { action: "login"; email: string; password: string }
-  | {
-      action: "setup";
-      email: string;
-      password: string;
-      name: string;
-      setupToken: string;
-    }
-  | { action: "logout" }
-  | { action: "onboard"; name: string };
+type AuthInput = { action: "logout" } | { action: "onboard"; name: string };
 
 export async function authRequest(input: AuthInput): Promise<AuthState> {
   const response = await fetch("/api/auth", {

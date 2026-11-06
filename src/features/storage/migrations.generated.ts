@@ -151,4 +151,14 @@ export const migrations = [
     folderMillis: 1792256937849,
     hash: "2e0b2dbe4b13fa35819d4a2ae621576f5d4c9bedc0c0aff853009864f0a9016f",
   },
+  {
+    sql: [
+      "CREATE TABLE `oidc_login_requests` (\n\t`token_hash` text PRIMARY KEY NOT NULL,\n\t`state` text NOT NULL,\n\t`nonce` text NOT NULL,\n\t`code_verifier` text NOT NULL,\n\t`return_to` text NOT NULL,\n\t`expires_at` integer NOT NULL\n);\n",
+      "\nDROP TABLE `auth_throttle`;",
+      "\nALTER TABLE `workspace_owner` DROP COLUMN `password_hash`;",
+    ],
+    bps: true,
+    folderMillis: 1793978180811,
+    hash: "8f6d48e23b3019dd9118fb58d39e8c3ea6cee838f82710abde6a4d3cfc097692",
+  },
 ];

@@ -16,6 +16,10 @@ const env = {
   ...process.env,
   ORI_PORT: String(port),
   ORI_ORIGIN: origin,
+  // Public fixture credential, not a production secret. Browser OIDC is covered by E2E.
+  ORI_OIDC_CLIENT_SECRET_FILE: fileURLToPath(
+    new URL("../e2e/fixtures/oidc-client-secret", import.meta.url),
+  ),
   TWITTER_RELAY_BASE_URL: "",
   RDT_GATEWAY_URL: "",
   TWITTER_LITE_MASTODON_ORIGINS: "",
@@ -61,7 +65,7 @@ async function state() {
 try {
   compose("up", "-d", "--no-build", "--wait", "--wait-timeout", "90");
   assert.equal(inWeb("id", "-u").trim(), "1000");
-  assert.equal((await state()).needsSetup, true);
+  assert.equal((await state()).owner, null);
   assert.equal(
     (
       await fetch(`${base}/board`, {
@@ -71,16 +75,26 @@ try {
     ).status,
     303,
   );
-  const setupToken = inWeb("node", ".output/server/tools/account-setup.js")
-    .trim()
-    .split("\n")
-    .at(-1);
-  const owner = { email: "smoke@example.invalid", password: "isolated-container-test-password" };
   assert.equal((await auth({ action: "setup" }, "https://untrusted.invalid")).status, 403);
-  assert.equal(
-    (await auth({ action: "setup", ...owner, name: "Ori smoke", setupToken })).status,
-    200,
-  );
+  assert.equal((await auth({ action: "setup" })).status, 400);
+  assert.equal((await auth({ action: "login" })).status, 400);
+  // Seed an isolated test session directly; no password or test bypass exists in the app.
+  const token = inWeb(
+    "node",
+    "--input-type=module",
+    "-e",
+    `
+    import Database from 'better-sqlite3';
+    import { randomBytes, createHash } from 'node:crypto';
+    const db = new Database('/data/workspace.sqlite');
+    const token = randomBytes(32).toString('base64url');
+    db.prepare('INSERT INTO workspace_owner (id,email,name,created_at) VALUES (1,?,?,?)').run('smoke@example.invalid','Ori smoke',Date.now());
+    db.prepare('INSERT INTO auth_sessions (token_hash,owner_id,expires_at) VALUES (?,1,?)').run(createHash('sha256').update(token).digest('hex'),Date.now()+3600000);
+    db.close();
+    console.log(token);
+  `,
+  ).trim();
+  cookie = `workspace_session=${token}`;
   assert.equal((await auth({ action: "onboard", name: "Ori smoke" })).status, 200);
   for (const path of ["/", "/board", "/support", "/browse", "/deck", "/history"]) {
     const response = await fetch(`${base}${path}`, {
@@ -95,10 +109,9 @@ try {
   assert.equal((await state()).owner.name, "Ori smoke", "session and owner survive recreation");
   assert.equal((await auth({ action: "logout" })).status, 200);
   assert.equal((await state()).owner, null);
-  assert.equal((await auth({ action: "login", ...owner })).status, 200);
-  assert.equal((await state()).needsSetup, false);
+  assert.equal((await auth({ action: "login" })).status, 400);
   console.log(
-    "Docker smoke passed: setup, login, origins, pages, backup, and persistent sessions.",
+    "Docker smoke passed: password login disabled, origins, pages, backup, and persistent sessions.",
   );
 } catch (error) {
   console.error(compose("logs", "--tail", "80", "web"));

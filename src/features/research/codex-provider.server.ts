@@ -75,6 +75,7 @@ export async function executeCodexResearch(input: CodexResearchInput): Promise<v
           mcpServers: {
             [`workspace_research_${id.replaceAll("-", "")}`]: {
               url: url.toString(),
+              httpHeaders: { Authorization: `Bearer ${registration.token}` },
               tools: input.tools.definitions.map((tool) => tool.name),
             },
           },

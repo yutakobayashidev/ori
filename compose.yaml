@@ -10,12 +10,22 @@ services:
       - "127.0.0.1:${ORI_PORT:-3000}:3000"
     environment:
       TWITTER_LITE_ORIGIN: ${ORI_ORIGIN:-http://localhost:${ORI_PORT:-3000}}
+      WORKSPACE_OIDC_ISSUER: ${WORKSPACE_OIDC_ISSUER:-}
+      WORKSPACE_OIDC_CLIENT_ID: ${WORKSPACE_OIDC_CLIENT_ID:-ori}
+      WORKSPACE_OIDC_OWNER_SUBJECT: ${WORKSPACE_OIDC_OWNER_SUBJECT:-}
+      WORKSPACE_OIDC_CLIENT_SECRET_FILE: /run/secrets/oidc-client-secret
       TWITTER_RELAY_BASE_URL: ${TWITTER_RELAY_BASE_URL:-}
       RDT_GATEWAY_URL: ${RDT_GATEWAY_URL:-}
       TWITTER_LITE_MASTODON_ORIGINS: ${TWITTER_LITE_MASTODON_ORIGINS:-}
       TWITTER_LITE_CREDENTIAL_KEY_FILE: ${TWITTER_LITE_CREDENTIAL_KEY_FILE:-}
+    secrets:
+      - oidc-client-secret
     volumes:
       - workspace:/data
+
+secrets:
+  oidc-client-secret:
+    file: ${ORI_OIDC_CLIENT_SECRET_FILE:?Set the host path of the OIDC client secret file}
 
 volumes:
   workspace:

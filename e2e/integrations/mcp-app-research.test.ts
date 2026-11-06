@@ -1,3 +1,4 @@
+import { mcpAuthorization } from "../mcp-auth";
 import { expect, test } from "../fixtures";
 
 test("MCP Apps standard bridge renders shared research columns, paginates and refreshes", async ({
@@ -9,7 +10,10 @@ test("MCP Apps standard bridge renders shared research columns, paginates and re
   page.on("pageerror", (error) => errors.push(error.message));
   async function rpc(method: string, params: unknown = {}) {
     const response = await request.post("/mcp", {
-      headers: { Accept: "application/json, text/event-stream" },
+      headers: {
+        Accept: "application/json, text/event-stream",
+        Authorization: await mcpAuthorization(request),
+      },
       data: { jsonrpc: "2.0", id: 1, method, params },
     });
     expect(response.status()).toBe(200);

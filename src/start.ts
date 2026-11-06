@@ -7,17 +7,20 @@ const health = createMiddleware().server(({ request, next }) => {
   return next();
 });
 
-// Private MCP clients do not carry browser sessions.
+// MCP clients authenticate independently of browser sessions.
 // Handle only these exact endpoints ahead of browser-only access checks.
 const mcp = createMiddleware().server(async ({ request, next }) => {
   const path = new URL(request.url).pathname;
-  // Explicitly report that this private endpoint does not advertise OAuth.
   if (
     ["/.well-known/oauth-protected-resource", "/.well-known/oauth-protected-resource/mcp"].includes(
       path,
     )
-  )
-    return new Response(null, { status: 404 });
+  ) {
+    const { protectedResourceMetadata } = await import("./features/mcp/oauth.server");
+    return request.method === "GET"
+      ? protectedResourceMetadata()
+      : new Response(null, { status: 405, headers: { Allow: "GET" } });
+  }
   if (path !== "/mcp") return next();
   const { handleMcpRequest } = await import("./features/mcp/http.server");
   return handleMcpRequest(request);

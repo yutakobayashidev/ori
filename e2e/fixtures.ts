@@ -2,12 +2,7 @@ import { rmSync } from "node:fs";
 import { basename, dirname, isAbsolute, join } from "node:path";
 import AxeBuilder from "@axe-core/playwright";
 import { test as base } from "@playwright/test";
-import {
-  completeOnboarding,
-  createOwner,
-  readAuthState,
-  signIn,
-} from "../src/features/auth/auth.server";
+import { completeOnboarding, signInWithOidc } from "../src/features/auth/auth.server";
 import { openDatabase } from "../src/features/storage/database.server";
 
 import { WorkspacePage } from "./models/WorkspacePage";
@@ -77,21 +72,17 @@ export const test = base.extend<{
     if (!path || !basename(dirname(path)).startsWith("twitter-lite-e2e-"))
       throw new Error("Isolated E2E database is required.");
     const database = openDatabase(path);
-    const credentials = {
-      email: "owner@workspace.invalid",
-      password: "E2E-only-passphrase-2026",
-    };
-    process.env.WORKSPACE_SETUP_TOKEN = "isolated-e2e-setup-token-not-for-production";
-    const result = readAuthState(database).needsSetup
-      ? await createOwner(
-          {
-            ...credentials,
-            name: "Yuta",
-            setupToken: process.env.WORKSPACE_SETUP_TOKEN,
-          },
-          database,
-        )
-      : await signIn(credentials, database);
+    process.env.WORKSPACE_OIDC_ISSUER = "https://127.0.0.1:6913";
+    process.env.WORKSPACE_OIDC_OWNER_SUBJECT = "e2e-owner";
+    const result = signInWithOidc(
+      {
+        issuer: process.env.WORKSPACE_OIDC_ISSUER,
+        subject: process.env.WORKSPACE_OIDC_OWNER_SUBJECT,
+        email: "owner@workspace.invalid",
+        name: "Yuta",
+      },
+      database,
+    );
     if (!result.owner.onboardingCompletedAt)
       completeOnboarding(result.sessionToken, { name: "Yuta" }, database);
     database.$client.close();

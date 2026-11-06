@@ -200,10 +200,10 @@ inside the app. Bluesky, Threads, and Nostr connectors are not implemented.
 
 ## Login and onboarding
 
-The workspace requires a single owner account with email and password. First
-use opens account setup, followed by a short onboarding. Run
-`nix develop -c pnpm account:setup` on the server to obtain the private setup
-code. See [owner login](login.md) for configuration, sessions, and limits.
+The workspace signs in through Pocket ID using a fixed OIDC client. Access
+is pinned to one issuer and subject. The first successful owner login on a
+fresh database opens onboarding; existing owner data is retained. See
+[owner login](login.md) for configuration, migration, and sessions.
 
 `GET /health` returns `{"status":"ok"}` without authentication or database access.
 
@@ -278,7 +278,6 @@ nix develop -c pnpm test:docker # Build the Docker image first; see docs/docker.
 nix develop -c pnpm test:live
 nix develop -c pnpm build
 nix develop -c pnpm start
-nix develop -c pnpm account:setup
 nix develop -c pnpm db:generate
 ```
 

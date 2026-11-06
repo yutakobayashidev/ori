@@ -28,7 +28,7 @@ test("opens a Firefox search URL through login with quoted Japanese terms", asyn
   await context.clearCookies();
   await page.goto(`/browse?${parameters}`);
   await expect(page).toHaveURL(/\/login\?returnTo=/);
-  await authPage.signIn("owner@workspace.invalid", "E2E-only-passphrase-2026");
+  await authPage.signIn();
   await expect(page.getByRole("textbox", { name: "Search posts", exact: true })).toHaveValue(query);
   await expect(page.getByText(/^(?:alternate · )?Latest · follows page 1$/)).toBeVisible();
   const canonical = new URL(page.url()).searchParams;
@@ -71,7 +71,7 @@ test("preserves a submitted Browse deep link through login", async ({
   await context.clearCookies();
   await page.goto(deepLink);
   await expect(page).toHaveURL(/\/login\?returnTo=/);
-  await authPage.signIn("owner@workspace.invalid", "E2E-only-passphrase-2026");
+  await authPage.signIn();
   await expect(page).toHaveURL(deepLink);
   await expect(input).toHaveValue("京都 lang:ja");
   await expect(page.getByText("alternate · Top · follows page 1", { exact: true })).toBeVisible();

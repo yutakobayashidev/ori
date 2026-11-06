@@ -1,6 +1,6 @@
 import { build } from "vite";
 
-for (const entry of ["backup-database", "account-setup", "events-worker"]) {
+for (const entry of ["backup-database", "events-worker"]) {
   await build({
     configFile: false,
     ssr: { noExternal: true, external: ["better-sqlite3"] },

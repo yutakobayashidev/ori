@@ -2,7 +2,10 @@
 import { afterEach, beforeEach, expect, it, vi } from "vitest";
 import { type CodexResearchInput, executeCodexResearch } from "./codex-provider.server";
 const fake = vi.hoisted(() => ({
-  register: vi.fn<(tools: CodexResearchInput["tools"]) => { id: string; dispose: () => void }>(),
+  register:
+    vi.fn<
+      (tools: CodexResearchInput["tools"]) => { id: string; token: string; dispose: () => void }
+    >(),
   dispose: vi.fn<() => void>(),
 }));
 vi.mock("../mcp/http.server", () => ({ registerResearchTools: fake.register }));
@@ -33,7 +36,7 @@ beforeEach(() => {
   vi.stubEnv("WORKSPACE_RUNTIME_TOKEN", "test-token");
   vi.stubEnv("WORKSPACE_RUNTIME_URL", "http://runtime.invalid");
   vi.stubGlobal("fetch", fetcher);
-  fake.register.mockReturnValue({ id: "scope", dispose: fake.dispose });
+  fake.register.mockReturnValue({ id: "scope", token: "research-token", dispose: fake.dispose });
 });
 afterEach(() => {
   vi.unstubAllEnvs();
@@ -60,7 +63,11 @@ it("resumes the thread and emits only newly appended text across snapshots", asy
     config: { developerInstructions: request.instructions },
   });
   expect(Object.values(body.config.mcpServers)).toEqual([
-    { url: "http://127.0.0.1:3000/mcp?research=scope", tools: [] },
+    {
+      url: "http://127.0.0.1:3000/mcp?research=scope",
+      httpHeaders: { Authorization: "Bearer research-token" },
+      tools: [],
+    },
   ]);
   expect(request.onThread).toHaveBeenCalledExactlyOnceWith("resumed");
   expect(vi.mocked(request.onText).mock.calls.map((call) => call[1])).toEqual(["こん", "にちは"]);

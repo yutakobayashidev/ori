@@ -36,6 +36,32 @@ defmodule WorkspaceRuntime.CodexTest do
     assert List.last(run["messages"])["text"] == "Let me think. "
   end
 
+  test "scoped MCP credentials reach Codex as HTTP headers" do
+    System.put_env("WORKSPACE_CODEX_PATH", Path.expand("test/fixtures/codex-auth"))
+    id = "mcp-auth-#{System.unique_integer([:positive])}"
+
+    WorkspaceRuntime.Store.call(
+      {:create,
+       %{
+         "id" => id,
+         "prompt" => "Research with scoped tools",
+         "config" => %{
+           "mcpServers" => %{
+             "research" => %{
+               "url" => "http://127.0.0.1:3000/mcp?research=test-scope",
+               "httpHeaders" => %{"Authorization" => "Bearer scoped-research-token"},
+               "tools" => ["list_decks"]
+             }
+           }
+         }
+       }}
+    )
+
+    run = await(id, 100)
+    assert run["status"] == "review", inspect(run["error"])
+    assert List.last(run["messages"])["text"] == "Hello world"
+  end
+
   test "malformed structured-output configuration is rejected before starting a run" do
     for config <- [%{"outputSchema" => "bad"}, %{"readOnly" => "true"}] do
       assert {:error, _} =

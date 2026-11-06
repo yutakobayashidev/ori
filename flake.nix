@@ -22,7 +22,7 @@
             inherit (finalAttrs) pname version src;
             pnpm = pkgs.pnpm_11;
             fetcherVersion = 4;
-            hash = "sha256-TWspmRonRjDqvwBhxfEDyjLBeiLxy8x1/80D0BvWdHk=";
+            hash = "sha256-ceZH7S9l7dfXUapiSrpFhsY2hLm6x239jVR6LHN31Zc=";
           };
 
           nativeBuildInputs = with pkgs; [
@@ -46,8 +46,6 @@
               --add-flags "$out/lib/twitter-lite/server/index.mjs"
             makeWrapper ${nixpkgs.lib.getExe pkgs.nodejs_22} $out/bin/twitter-lite-backup \
               --add-flags "$out/lib/twitter-lite/server/tools/backup-database.js"
-            makeWrapper ${nixpkgs.lib.getExe pkgs.nodejs_22} $out/bin/twitter-lite-setup \
-              --add-flags "$out/lib/twitter-lite/server/tools/account-setup.js"
             makeWrapper ${nixpkgs.lib.getExe pkgs.nodejs_22} $out/bin/twitter-lite-events-worker \
               --add-flags "$out/lib/twitter-lite/server/tools/events-worker.js"
             runHook postInstall
@@ -103,7 +101,7 @@
             }) agentLib.defaultLocalTargets;
         in {
           default = pkgs.mkShell {
-            packages = with pkgs; [ nodejs_22 pnpm chromium elixir ];
+            packages = with pkgs; [ nodejs_22 pnpm chromium elixir openssl ];
             shellHook = agentLib.mkShellHook {
               inherit pkgs bundle;
               targets = localTargets;

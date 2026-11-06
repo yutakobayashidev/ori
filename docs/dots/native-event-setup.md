@@ -98,16 +98,7 @@ ENV
 
 ここへトークン本文は入れません。Beeper の認証はこのユーザーの既存 CLI 設定で管理します。`BEEPER_CLI_CONFIG_DIR` を変更して認証した場合は、同じ変数と絶対ディレクトリを `runtime.env` にも追加してください。ブラウザの origin を変更する場合は `TWITTER_LITE_ORIGIN` も一致させます。Docker 用の `ORI_ORIGIN` とは変数名が違います。
 
-設定を読み込んだ同じ shell で owner setup を実行します。web と worker もこの同じファイルを使うため、DB と鍵の不一致を避けられます。
-
-```sh
-set -a
-. "$HOME/.config/ori/runtime.env"
-set +a
-"$ORI_PACKAGE/bin/twitter-lite-setup"
-```
-
-表示されたセットアップコードは次のログインに使います。チャットやサービスログへ貼らないでください。既存 owner がある DB では作り直しません。
+[OIDC ログイン設定](../login.md) の issuer、client ID、secret file、owner subject を同じ `runtime.env` に追加します。client secret は永続ディレクトリ内の権限を絞ったファイルに保存し、そのパスだけを環境変数に設定してください。web 起動後に Pocket ID でログインします。既存 owner のデータは維持されます。
 
 ## 3. web と worker を別サービスで動かす
 

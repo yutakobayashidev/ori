@@ -1,4 +1,4 @@
-import { randomUUID } from "node:crypto";
+import { randomBytes, randomUUID, timingSafeEqual } from "node:crypto";
 import {
   createMcpHandler,
   ProtocolError,
@@ -6,6 +6,7 @@ import {
   type ToolAnnotations,
 } from "@modelcontextprotocol/server";
 import { z } from "zod";
+import { authorizeMcpRequest } from "./oauth.server";
 import appHtml from "virtual:workspace-mcp-app";
 import { workspaceAppResource, workspaceAppToolMeta, workspaceAppResultMeta } from "./app-resource";
 import {
@@ -31,14 +32,18 @@ type Tools = {
 
 // The provider and request handler must see the same registrations across Vite HMR.
 const state = globalThis as typeof globalThis & {
-  workspaceMcpResearch?: Map<string, Tools>;
+  workspaceMcpResearch?: Map<string, { tools: Tools; token: string }>;
 };
-const research = (state.workspaceMcpResearch ??= new Map<string, Tools>());
+const research = (state.workspaceMcpResearch ??= new Map<
+  string,
+  { tools: Tools; token: string }
+>());
 
 export function registerResearchTools(tools: Tools) {
   const id = randomUUID();
-  research.set(id, tools);
-  return { id, dispose: () => research.delete(id) };
+  const token = randomBytes(32).toString("base64url");
+  research.set(id, { tools, token });
+  return { id, token, dispose: () => research.delete(id) };
 }
 
 function serverFor(tools: Tools, workspace: boolean, execution: boolean) {
@@ -119,7 +124,11 @@ export async function handleMcpRequest(request: Request): Promise<Response> {
   const url = new URL(request.url);
   const id = url.searchParams.get("research");
   const execution = url.searchParams.get("execution");
-  if (id !== null && execution !== null) return new Response(null, { status: 400 });
+  if (
+    (id !== null && execution !== null) ||
+    ["research", "execution", "proof"].some((key) => url.searchParams.getAll(key).length > 1)
+  )
+    return new Response(null, { status: 400 });
   let tools: Tools | undefined;
   if (execution !== null) {
     try {
@@ -128,7 +137,19 @@ export async function handleMcpRequest(request: Request): Promise<Response> {
     } catch {
       return new Response("Execution runtime unavailable.", { status: 503 });
     }
-  } else tools = id === null ? createWorkspaceTools() : research.get(id);
+  } else if (id !== null) {
+    const entry = research.get(id);
+    if (!entry) return new Response("Research turn is no longer available.", { status: 404 });
+    const supplied = Buffer.from(request.headers.get("authorization") || "");
+    const expected = Buffer.from(`Bearer ${entry.token}`);
+    if (supplied.length !== expected.length || !timingSafeEqual(supplied, expected))
+      return new Response(null, { status: 401 });
+    tools = entry.tools;
+  } else {
+    const denied = await authorizeMcpRequest(request);
+    if (denied) return denied;
+    tools = createWorkspaceTools();
+  }
   if (!tools) return new Response("Research turn is no longer available.", { status: 404 });
   const handler = createMcpHandler(() =>
     serverFor(tools, id === null && execution === null, execution !== null),

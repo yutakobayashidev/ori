@@ -7,6 +7,8 @@ import { deliverMcpEvents } from "../mcp-events/events.server";
 import { handleMcpRequest, registerResearchTools } from "./http.server";
 import { getCommunicationLogs } from "../activities/communication.server";
 
+vi.mock("./oauth.server", () => ({ authorizeMcpRequest: async () => null }));
+
 const mocks = vi.hoisted(() => ({
   database: vi.fn<() => AppDatabase>(),
   sender: vi.fn<typeof import("../mcp-events/webhook.server").sendWebhook>(),
@@ -35,12 +37,13 @@ beforeEach(() => {
 });
 afterEach(() => database.$client.close());
 
-async function rpc(method: string, params: Record<string, unknown> = {}, query = "") {
+async function rpc(method: string, params: Record<string, unknown> = {}, query = "", token = "") {
   const response = await handleMcpRequest(
     new Request(`http://workspace.invalid/mcp${query}`, {
       method: "POST",
       headers: {
         "Content-Type": "application/json",
+        Authorization: `Bearer ${token}`,
         Accept: "application/json",
         "Mcp-Method": method,
         ...(method === "tools/call" && typeof params.name === "string"
@@ -200,9 +203,16 @@ it("does not offer workspace event subscriptions to internal research callers", 
     execute: async () => ({ ok: true }),
   });
   try {
-    const discovery = await rpc("server/discover", {}, `?research=${registration.id}`);
+    const discovery = await rpc(
+      "server/discover",
+      {},
+      `?research=${registration.id}`,
+      registration.token,
+    );
     expect(discovery.result.capabilities.events).toBeUndefined();
-    expect(await rpc("events/list", {}, `?research=${registration.id}`)).toMatchObject({
+    expect(
+      await rpc("events/list", {}, `?research=${registration.id}`, registration.token),
+    ).toMatchObject({
       error: { code: -32601 },
     });
   } finally {

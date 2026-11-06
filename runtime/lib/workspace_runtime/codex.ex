@@ -45,6 +45,7 @@ defmodule WorkspaceRuntime.Codex do
           a
           |> Map.put("mcp_servers.#{name}.enabled", true)
           |> Map.put("mcp_servers.#{name}.url", server["url"])
+          |> Map.put("mcp_servers.#{name}.http_headers", server["httpHeaders"] || %{})
         end
       )
 

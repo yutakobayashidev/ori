@@ -1,11 +1,8 @@
 import {
   AuthError,
   completeOnboarding,
-  createOwner,
   getSession,
-  readAuthState,
   SESSION_MAX_AGE_SECONDS,
-  signIn,
   signOut,
 } from "./auth.server";
 
@@ -21,10 +18,10 @@ export function sessionToken(request: Request) {
 }
 
 export function authState(request: Request) {
-  return { ...readAuthState(), owner: getSession(sessionToken(request)) };
+  return { owner: getSession(sessionToken(request)) };
 }
 
-function cookie(token: string, clear = false) {
+export function sessionCookie(token: string, clear = false) {
   const secure = process.env.TWITTER_LITE_ORIGIN?.startsWith("https:");
   return `${SESSION_COOKIE}=${token}; Path=/; HttpOnly; SameSite=Lax; Max-Age=${clear ? 0 : SESSION_MAX_AGE_SECONDS}${secure ? "; Secure" : ""}`;
 }
@@ -54,29 +51,14 @@ export async function authEndpoint(request: Request) {
     const text = (key: string) => (typeof data[key] === "string" ? data[key] : "");
     const oldToken = sessionToken(request);
     switch (data.action) {
-      case "setup":
-      case "login": {
-        const result =
-          data.action === "setup"
-            ? await createOwner({
-                email: text("email"),
-                password: text("password"),
-                name: text("name"),
-                setupToken: text("setupToken"),
-              })
-            : await signIn({ email: text("email"), password: text("password") });
-        signOut(oldToken);
-        headers.set("set-cookie", cookie(result.sessionToken));
-        return Response.json({ needsSetup: false, owner: result.owner }, { headers });
-      }
       case "onboard": {
         const owner = completeOnboarding(oldToken ?? "", { name: text("name") });
-        return Response.json({ needsSetup: false, owner }, { headers });
+        return Response.json({ owner }, { headers });
       }
       case "logout":
         signOut(oldToken);
-        headers.set("set-cookie", cookie("", true));
-        return Response.json({ needsSetup: readAuthState().needsSetup, owner: null }, { headers });
+        headers.set("set-cookie", sessionCookie("", true));
+        return Response.json({ owner: null }, { headers });
       default:
         throw new AuthError(400, "Unknown action.");
     }

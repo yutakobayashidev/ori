@@ -28,21 +28,24 @@ adapters, not prerequisites for starting the app.
 
 ## Start the core workspace
 
-Install Docker Engine/Desktop with Docker Compose, then run from this repository:
+Install Docker Engine/Desktop with Docker Compose, configure OIDC as below, then run from this repository:
 
 ```sh
 docker compose up -d --build --wait
-docker compose exec web node .output/server/tools/account-setup.js
 ```
 
-Open **http://localhost:3000**, enter the setup code, and create your owner
-account. No host Node.js, pnpm, Nix, Elixir, or external account is required.
-The setup code is only printed by the explicit setup command, never by the
-public API or ordinary container logs. It cannot create a second owner.
+Before starting, register the OIDC client and owner described in
+[owner login](login.md). Set `WORKSPACE_OIDC_ISSUER`,
+`WORKSPACE_OIDC_CLIENT_ID`, and `WORKSPACE_OIDC_OWNER_SUBJECT` in the Compose
+`.env` file. Set `ORI_OIDC_CLIENT_SECRET_FILE` to a persistent host file
+containing the client secret, readable by the container's UID 1000. Compose
+mounts it as `/run/secrets/oidc-client-secret`. For the default origin, register
+`http://localhost:3000/api/auth/callback` as the exact callback.
 
-The image runs as UID/GID 1000. The named volume stores SQLite, its WAL, and the
-setup token. `docker compose down` preserves this data. `down --volumes` deletes
-it. Account setup is needed only for a new volume.
+Open **http://localhost:3000** and choose **Sign in with Pocket ID**. The
+configured owner can complete onboarding; other identities are rejected.
+The image runs as UID/GID 1000. The named volume stores SQLite and its WAL.
+`docker compose down` preserves this data; `down --volumes` deletes it.
 
 The image is built locally as `ori:local`; no prebuilt registry release is
 published by this change. The build installs locked dependencies, including
@@ -71,7 +74,7 @@ to that port, or join a containerized proxy to the Compose network. Tailscale is
 optional. The container explicitly disables only the outer Tailscale identity
 gate; owner authentication and mutation-origin checks remain enforced.
 
-The existing `/mcp` endpoint is for trusted agents and bypasses browser login.
+The `/mcp` endpoint uses OAuth access tokens independently of browser sessions; see [MCP authorization](http-mcp.md).
 Keep it on a private network or block it at the public reverse proxy; do not
 publish it anonymously with the browser routes. The internal AI runtime uses
 the Compose network, so blocking public `/mcp` does not prevent that integration.
@@ -127,7 +130,7 @@ liveness endpoint. Back up integration encryption keys and optional AI volumes
 alongside the database if you use those features; see [storage](storage-and-oauth.md).
 
 The Docker smoke test uses an isolated Compose project and fresh volume to
-verify setup, login, origin enforcement, workspace pages, and persistence across
+verify disabled password/setup endpoints, origin enforcement, workspace pages, and persistence across
 container recreation. It removes only that temporary project after the test.
 
 ```sh

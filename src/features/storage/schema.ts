@@ -129,7 +129,6 @@ export const workspaceOwner = sqliteTable(
     id: integer("id").primaryKey(),
     email: text("email").notNull(),
     name: text("name").notNull(),
-    passwordHash: text("password_hash").notNull(),
     onboardingCompletedAt: integer("onboarding_completed_at"),
     createdAt: integer("created_at").notNull(),
   },
@@ -144,15 +143,14 @@ export const authSessions = sqliteTable("auth_sessions", {
   expiresAt: integer("expires_at").notNull(),
 });
 
-export const authThrottle = sqliteTable(
-  "auth_throttle",
-  {
-    id: integer("id").primaryKey(),
-    attempts: integer("attempts").notNull(),
-    resetAt: integer("reset_at").notNull(),
-  },
-  (table) => [check("auth_throttle_singleton", sql`${table.id} = 1`)],
-);
+export const oidcLoginRequests = sqliteTable("oidc_login_requests", {
+  tokenHash: text("token_hash").primaryKey(),
+  state: text("state").notNull(),
+  nonce: text("nonce").notNull(),
+  codeVerifier: text("code_verifier").notNull(),
+  returnTo: text("return_to").notNull(),
+  expiresAt: integer("expires_at").notNull(),
+});
 
 export const activities = sqliteTable("activities", {
   id: text("id").primaryKey(),

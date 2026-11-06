@@ -1,0 +1,14 @@
+#!/bin/sh
+if [ "$1" = mcp ]; then
+  echo '[]'
+  exit 0
+fi
+case "$*" in
+  *'mcp_servers.research.http_headers={"Authorization":"Bearer scoped-research-token"}'*) ;;
+  *) echo '{"error":{"message":"missing scoped MCP authorization header"}}'; exit 1;;
+esac
+case "$*" in
+  *'mcp_servers.research.url="http://127.0.0.1:3000/mcp?research=test-scope"'*) ;;
+  *) echo '{"error":{"message":"missing research MCP URL"}}'; exit 1;;
+esac
+exec "$(dirname "$0")/codex" "$@"

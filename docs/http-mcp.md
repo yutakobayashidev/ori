@@ -1,4 +1,4 @@
-# HTTP MCP and Secure MCP Tunnel
+# HTTP MCP authorization
 
 The web app handles Streamable HTTP at `/mcp` on its existing listening port.
 It uses the MCP server SDK with a fresh server per HTTP request. Tools use the
@@ -67,7 +67,7 @@ are never automatically resent. See [Beeper messaging](beeper-messaging-design.m
 ## MCP Apps UI
 
 The workspace endpoint also serves an embedded MCP Apps resource. ChatGPT can
-render it through the existing Secure MCP Tunnel; no additional listener, public
+render it through an OAuth-authenticated MCP connection; no additional listener, public
 asset host, or browser session is needed. Restart/deploy the app, refresh the
 custom MCP connection in ChatGPT, and invoke one of these tools:
 
@@ -96,8 +96,8 @@ rules as the web UI. Exact retries are idempotent and stale edits are rejected.
 The owner can complete tasks and replies already handled in other apps without
 an in-app send or a delivery receipt. Automated reconciliation uses the separate
 evidence-backed `update_activity_progress` tool. App
-visibility is a host discovery hint, not an authentication boundary; the private
-network/tunnel access boundary remains essential. Draft saves never send messages.
+visibility is a host discovery hint, not an authentication boundary; every external
+MCP request requires an authorized access token. Draft saves never send messages.
 
 `scripts/mcp-app-plugin.ts` builds the iframe as one HTML document and embeds it
 in the server bundle via `virtual:workspace-mcp-app`. Normal `pnpm dev` and
@@ -132,7 +132,8 @@ after deployment.
 ## Internal research
 
 The resident research chat connects Codex to `/mcp?research=<registration-id>`.
-Each turn registers its existing selected-account tools, temporary view,
+Each turn gets an independent random bearer credential, passed in the Authorization
+header through the execution runtime to Codex. It registers its selected-account tools, temporary view,
 pagination budget, citation capture, and SSE updates. The registration expires
 on completion, cancellation, or startup failure; expired IDs return 404.
 External calls to `/mcp` access the persistent workspace tool catalog instead.
@@ -144,34 +145,41 @@ The Codex app-server control connection remains stdio; MCP is HTTP.
 
 ## Access boundary
 
-MCP authentication is intentionally deferred. The exact `/mcp` endpoint bypasses
-browser owner/session checks; keep its listening address and reverse proxy
-private. Do not expose this unauthenticated endpoint on a public ingress.
-Browser pages and server functions retain their existing access checks.
-The two protected-resource discovery paths return 404 because OAuth is not
-configured. Unknown research IDs never fall through to workspace tools.
+The exact `/mcp` endpoint authenticates independently of browser sessions.
+External callers must send a Pocket ID access token in `Authorization: Bearer`.
+The server checks its signature through Pocket ID's JWKS, RFC 9068 `at+jwt`
+token type, issuer, audience, expiration, owner subject, and `ori:mcp` scope.
+An ID token, browser cookie, or another Pocket ID user's token does not grant access.
 
-## Secure MCP Tunnel
+Configure `WORKSPACE_OIDC_ISSUER`, `WORKSPACE_OIDC_OWNER_SUBJECT`, and
+`TWITTER_LITE_ORIGIN`. The API resource is the origin's `/mcp` URL; set
+`WORKSPACE_MCP_RESOURCE` only when its canonical public URL differs.
+Missing configuration fails closed. Pocket ID must have an API with that exact
+resource, an `ori:mcp` permission, and a user-delegated API grant for allowed CIMD
+clients. Configure Pocket ID's metadata URL allowlist separately; ori does not
+register clients or provide DCR.
 
-Create a dedicated tunnel in [Platform tunnel settings](https://platform.openai.com/settings/organization/tunnels).
-Use an installed `tunnel-client` or the [latest official release](https://github.com/openai/tunnel-client/releases/latest).
-Configure an HTTP target, then supervise the client with systemd. The
-[OpenAI guide](https://developers.openai.com/api/docs/guides/secure-mcp-tunnels)
-describes runtime key permissions and ChatGPT workspace associations.
+Both `/.well-known/oauth-protected-resource` and
+`/.well-known/oauth-protected-resource/mcp` advertise the resource and issuer.
+Anonymous calls receive 401 with a discovery challenge. Invalid tokens receive
+401; insufficient scope or a different user receives 403. Make these exact
+metadata paths and `/mcp` reachable through the chosen connection while retaining
+browser access controls. A Secure MCP Tunnel can carry the OAuth-authenticated
+connection; public ingress is not required.
 
-```sh
-tunnel-client init --sample sample_mcp_remote_no_auth \
-  --profile personal-workspace --tunnel-id tunnel_YOUR_ID \
-  --mcp-server-url http://127.0.0.1:3000/mcp
-tunnel-client doctor --profile personal-workspace --explain
-tunnel-client run --profile personal-workspace
-```
+Internal Research credentials authorize only their registered temporary tools
+and expire on disposal. Activity executions retain their per-run HMAC proof and
+active-run checks; neither credential authorizes the general workspace catalog.
+Unknown Research IDs never fall through to workspace tools.
 
-Keep the runtime key in a private runtime file or environment, outside Git and
-the Nix store. Point the tunnel at the actual app bind address and port. The
-tunnel client has separate local health/readiness endpoints. Check readiness
-after restarting the app, then select the dedicated tunnel when adding a custom
-MCP server in ChatGPT. Authentication is None for this prototype.
+## Connecting clients
+
+Use the canonical HTTPS `/mcp` URL with OAuth authentication in compatible MCP
+clients. Pocket ID resolves only explicitly allowed CIMD metadata URLs and asks
+the owner to authorize the API permission. Existing connections configured with
+Authentication None must be recreated or updated to OAuth; a private tunnel does
+not bypass the access-token check. Never forward a browser ID token as an MCP
+access token.
 
 For event-triggered task proposals and inbox monitoring, see
 [Workspace MCP Events](beeper-mcp-events.md).
@@ -183,14 +191,9 @@ requires explicit chat IDs. `activity.created` and `activity.status_changed`
 monitor the shared task/reply inbox, optionally filtered by activity IDs and
 operation origins (`user` by default; opt in to `agent` for MCP publications).
 
-On UM790-Pro, dotnix declares the system service
-`tunnel-client-personal-workspace.service` in
-`systems/nixos/UM790-Pro/personal-workspace-tunnel.nix`. It forwards to the
-existing app at `http://100.91.91.87:3006/mcp`, reads its runtime API key through
-systemd `LoadCredential` from the existing sops secret, and serves local health
-checks on port 18791. The separate `tunnel-client-local-mcp.service` remains
-unchanged. The app's package revision and internal MCP URL are managed by
-dotnix's flake input and `homes/nixos/UM790-Pro/twitter-lite.nix`.
+Deployment settings and the pinned application version live in dotnix's
+`homes/nixos/UM790-Pro/twitter-lite.nix`; Pocket ID clients and API grants are
+managed alongside its infrastructure configuration.
 
 ## Verification
 
@@ -210,7 +213,7 @@ nix develop -c pnpm test:e2e e2e/integrations/activities.test.ts
 ```
 
 The HTTP E2E uses the actual app middleware, an isolated SQLite database, and
-mock SNS relay. It checks anonymous MCP initialization, real saved-deck changes
+mock SNS relay. It checks authenticated MCP initialization, real saved-deck changes
 visible in Research, pagination entry points, stale-revision rejection, and
 continued protection of browser routes. Provider integration tests exercise
 HTTP calls, conversation resume and interruption through the real SDK provider

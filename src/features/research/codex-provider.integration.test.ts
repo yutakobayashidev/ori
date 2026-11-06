@@ -17,6 +17,8 @@ it("keeps scoped MCP tools available during remote execution and removes them af
         new Request(scopeUrl, {
           method: "POST",
           headers: {
+            ...(Object.values(run.config.mcpServers)[0] as { httpHeaders: Record<string, string> })
+              .httpHeaders,
             "Content-Type": "application/json",
             Accept: "application/json",
             "Mcp-Method": "tools/call",

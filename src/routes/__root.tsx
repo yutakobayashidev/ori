@@ -20,17 +20,12 @@ export const Route = createRootRouteWithContext<RouterContext>()({
   beforeLoad: async ({ location }) => {
     const auth = await loadAuthState();
     const path = location.pathname;
-    const entry = path === "/login" || path === "/setup";
-    if (!auth.owner && auth.needsSetup && path === "/login") throw redirect({ to: "/setup" });
+    const entry = path === "/login";
     if (!auth.owner && !entry)
       throw redirect({
-        to: auth.needsSetup ? "/setup" : "/login",
-        search:
-          !auth.needsSetup && location.href !== "/"
-            ? { returnTo: safeReturnTo(location.href) }
-            : {},
+        to: "/login",
+        search: location.href !== "/" ? { returnTo: safeReturnTo(location.href) } : {},
       });
-    if (!auth.owner && path === "/setup" && !auth.needsSetup) throw redirect({ to: "/login" });
     if (auth.owner && !auth.owner.onboardingCompletedAt && path !== "/onboarding")
       throw redirect({ to: "/onboarding" });
     if (auth.owner?.onboardingCompletedAt && (entry || path === "/onboarding"))

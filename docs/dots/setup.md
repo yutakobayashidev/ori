@@ -38,32 +38,18 @@ Git がある場合:
 git clone https://github.com/yutakobayashidev/ori.git
 cd ori
 docker compose up -d --build --wait
-docker compose exec web node .output/server/tools/account-setup.js
 ```
 
-Git を使わない場合は GitHub からソースをダウンロード・展開し、そのディレクトリで後半の二つのコマンドを実行します。
+Git を使わない場合は GitHub からソースをダウンロード・展開し、そのディレクトリで`docker compose` コマンドを実行します。
+
+起動前に [OIDC ログイン](../login.md) と [Docker の認証設定](../docker.md) を設定します。
 
 1. `http://localhost:3000` をブラウザで開く。
-2. セットアップコマンドが表示したコードを入力する。
-3. owner の名前・メールアドレス・パスワードを設定し、onboarding を完了する。
+2. **Sign in with Pocket ID** から、設定した owner のアカウントでログインする。
+3. 初回は onboarding を完了する。
 4. Home と Board を開き、テスト用タスクを作成して再読み込み後も残ることを確認する。
 
-セットアップコードは秘密として扱い、チャット・Git・公開ログに貼らないでください。owner は一人です。既存 owner の再作成やパスワード再設定にこのコードは使えません。メールによるパスワード復旧も未実装です。[owner ログイン](https://github.com/yutakobayashidev/ori/blob/bf9587b7c25518209da8d26057bc0905cc304c58/docs/login.md)
-
-### ポートや URL を変える場合
-
-デフォルトでは環境ファイルは不要です。Compose の上書きはリポジトリ直下の `.env` に書きます。`.env.local` は開発用です。
-
-```dotenv
-ORI_PORT=3000
-ORI_ORIGIN=http://localhost:3000
-```
-
-`ORI_ORIGIN` は実際にブラウザで開く origin と完全一致させ、末尾の `/` は付けません。HTTPS リバースプロキシを使う場合はその HTTPS origin に変えます。標準のホスト公開先は `127.0.0.1` です。コンテナ内の `localhost` はコンテナ自身を指すため、外部サービスの URL にはそのコンテナから到達できるアドレスを指定してください。[compose.yaml](https://github.com/yutakobayashidev/ori/blob/bf9587b7c25518209da8d26057bc0905cc304c58/compose.yaml)
-
-### 公開範囲
-
-**`/mcp` はブラウザログインを迂回し、独自の MCP 認証は未実装です。公開インターネットへ匿名公開しないでください。** 信頼できる単一 owner のプライベートネットワーク／トンネル内に限定します。Web UI を公開する場合も公開プロキシで `/mcp` を遮断します。`TWITTER_LITE_AUTH_MODE=none` は外側の Tailscale identity check を無効にする設定で、ブラウザの owner ログインを省略する設定ではありません。[MCP のアクセス境界](https://github.com/yutakobayashidev/ori/blob/bf9587b7c25518209da8d26057bc0905cc304c58/docs/http-mcp.md#access-boundary)
+owner は issuer と subject で一人に限定します。ローカルのパスワードやセットアップコードは使いません。
 
 ## 3. Secure MCP Tunnel を用意し、ChatGPT に登録する
 

@@ -1,70 +1,80 @@
 # Owner login and onboarding
 
-This is a single-owner workspace. App login is mandatory for all workspace
-pages, server functions, and research streams. The existing Tailscale identity
-check is an optional outer boundary; `TWITTER_LITE_AUTH_MODE=none` disables only
-that outer check, not app login. Origin checks still protect mutations.
+Ori uses OpenID Connect authorization code login through Pocket ID. Local
+password login and setup codes are not supported. Pages, server functions,
+and research streams require a workspace session; MCP has its separate
+[OAuth access-token boundary](http-mcp.md).
 
-## First use
+## Configuration
 
-For Docker, run `docker compose exec web node .output/server/tools/account-setup.js`
-after starting the service, then open `http://localhost:3000`.
-See [Docker deployment](docker.md) for the complete setup.
+Register a confidential client with PKCE enabled in Pocket ID. Its exact
+callback URL is `<TWITTER_LITE_ORIGIN>/api/auth/callback`. Configure Ori with:
 
-Start the server with its usual database and public-origin configuration, then
-run this on the server using the same database:
-
-```bash
-nix develop -c pnpm account:setup
+```sh
+TWITTER_LITE_ORIGIN=https://home.example.com
+WORKSPACE_OIDC_ISSUER=https://id.example.com
+WORKSPACE_OIDC_CLIENT_ID=ori
+WORKSPACE_OIDC_CLIENT_SECRET_FILE=/run/secrets/ori-oidc-client-secret
+WORKSPACE_OIDC_OWNER_SUBJECT=<Pocket-ID-user-ID>
 ```
 
-The Nix package also provides `twitter-lite-setup`; run it with the service
-database path and filesystem permissions.
+The secret file must be readable only by the service and its administrator.
+For Docker, mount that file read-only at the configured container path and
+pass these variables to the web service. The issuer must use HTTPS. The app
+origin must use HTTPS, except for HTTP loopback during local development.
 
-The command loads `.env.local` when present. An exported `TWITTER_LITE_DB_PATH`
-takes precedence. It prints a setup code for `/setup`; keep that code private.
-The code is created in `<database path>.setup-token` with mode 0600, or supplied
-through `WORKSPACE_SETUP_TOKEN` (at least 32 characters). It is never returned
-by the app's public API. The owner account can be created only once, including
-when two setup requests arrive together. The code cannot register another
-account or reset an existing password after setup.
+Access is restricted to the configured issuer and subject. Email matching
+never links or authorizes an account. Registering another Pocket ID user does
+not grant access to Ori. On a fresh database, the first successful login by
+the configured owner creates the single local owner and opens onboarding.
+The owner's ID token must contain an email address. Complete onboarding to
+choose the display name and enter Home.
 
-Visit the app, enter the setup code, your name, email, and a password of 15–128
-characters. The email is a login identifier; this prototype does not verify it
-or send email. Choose your display name and finish the short onboarding to
-open Home. Onboarding completion and the name persist in SQLite. Home greets
-you by that name.
+## Migrating an existing workspace
 
-## Sessions
+Back up SQLite before deployment. The schema migration removes the old
+password hash and password-attempt table, keeping the existing owner ID,
+name, email, onboarding completion, data, and sessions. Set the issuer and
+subject to the intended existing owner's Pocket ID identity before starting
+the new version. That identity signs in to the existing owner; profile claims
+do not overwrite local profile data. There is no password fallback.
 
-Passwords use salted scrypt hashes (N=2^17, r=8, p=1). Session cookies are
-HttpOnly, SameSite=Lax, host-only, and Secure for an HTTPS public origin.
-Only token hashes are stored in SQLite; sessions expire after 30 days.
-Setup and login share a persistent limit of 10 attempts per 15 minutes;
-successful authentication clears that limit.
+Old `.setup-token` files are unused and may be removed. Reverting to the old
+password-based version requires restoring the pre-migration database backup.
 
-Open the avatar menu and choose **Sign out** to revoke the current session.
-Open research streams stop sending updates when the session is revoked or
-expires, with an idle check every 15 seconds. Other logged-in devices retain
-their own sessions. Authenticated responses are not cached.
+## Sessions and authorization flow
 
-Account registration is closed once the owner exists. Multiple users,
-email-based password recovery, and account management are not implemented.
-Back up the SQLite database as described in [storage](storage-and-oauth.md).
-Home tasks and reply activities persist in SQLite. Journal entries persist
-separately in daily Markdown files; include the [Journal directory](home-task-composer.md)
-in backups as well.
+The OIDC library validates issuer, audience, expiry, nonce, and ID-token
+signature. Every login uses PKCE S256 and a random state value. A short-lived
+HttpOnly cookie binds the browser to a one-use login transaction stored in
+SQLite, which expires after ten minutes. Callback URLs come from the fixed
+public-origin configuration; return destinations are limited to local app
+routes. Provider access/refresh tokens are not retained by browser login.
+
+Workspace session cookies are HttpOnly, SameSite=Lax, host-only, and Secure
+for an HTTPS public origin. Only session token hashes are stored in SQLite;
+sessions expire after 30 days. Signing in replaces the current browser's old
+session. **Sign out** revokes the current Ori session; it does not sign out
+of Pocket ID or other devices. Open research streams stop sending updates
+when the session is revoked or expires, with an idle check every 15 seconds.
+Authenticated responses are not cached.
+
+The optional Tailscale identity check remains an outer boundary;
+`TWITTER_LITE_AUTH_MODE=none` disables only that check, not app login.
+Origin checks still protect mutations.
+
+Back up the database and external Journal files as described in
+[storage](storage-and-oauth.md) and [Journal](home-task-composer.md).
 
 ## Implementation
 
-- `src/features/auth/auth.server.ts`: owner, password hashing, throttling, sessions.
-- `src/features/auth/gate.server.ts` and `src/start.ts`: request-level protection.
-- `/api/auth`: session state, setup, sign-in, onboarding, and sign-out.
-- Root route guard: client navigation and onboarding redirects.
-- `/setup`, `/login`, `/onboarding`: English forms using the existing UI system.
+- `src/features/auth/oidc.server.ts`: discovery, PKCE login, callback validation.
+- `src/features/auth/auth.server.ts`: pinned owner, sessions, onboarding.
+- `src/features/auth/gate.server.ts` and root route guard: request/navigation protection.
+- `/api/auth/login`, `/api/auth/callback`: OIDC redirect and callback.
+- `/api/auth`: session state, onboarding, sign-out.
+- `/login`, `/onboarding`: sign-in and onboarding pages.
 
-Password and session handling follow the relevant
-[OWASP password storage](https://cheatsheetseries.owasp.org/cheatsheets/Password_Storage_Cheat_Sheet.html)
-and [session management](https://cheatsheetseries.owasp.org/cheatsheets/Session_Management_Cheat_Sheet.html)
-guidance. Tests cover invalid credentials, bootstrap ownership, expiry,
-revocation, request protection, and onboarding persistence.
+Unit tests exercise signed tokens, rejected issuer/audience/nonce/signature,
+owner restriction, transaction expiry/replay, sessions, and migration.
+Browser tests use an isolated HTTPS test identity provider.

@@ -1,7 +1,7 @@
 import { openDatabase } from "../../src/features/storage/database.server";
 import { expect, test } from "../fixtures";
 
-test("creates the owner once and enters onboarding with a real session", async ({
+test("creates the pinned OIDC owner and enters onboarding with a real session", async ({
   page,
   context,
   a11y,
@@ -10,19 +10,14 @@ test("creates the owner once and enters onboarding with a real session", async (
   homePage,
 }) => {
   const db = openDatabase(process.env.TWITTER_LITE_E2E_DB_PATH ?? "");
-  db.$client.exec("DELETE FROM workspace_owner; DELETE FROM auth_throttle;");
+  db.$client.exec("DELETE FROM workspace_owner;");
   db.$client.close();
   await context.clearCookies();
   await homePage.goTo();
-  await expect(authPage.createAccountButton).toBeVisible();
-  await expect(page).toHaveURL(/\/setup$/);
+  await expect(authPage.signInButton).toBeVisible();
+  await expect(page).toHaveURL(/\/login$/);
   expect((await a11y().analyze()).violations).toEqual([]);
-  await authPage.createAccount({
-    name: "Yuta",
-    email: "owner@workspace.invalid",
-    password: "E2E-only-passphrase-2026",
-    setupCode: "isolated-e2e-setup-token-not-for-production",
-  });
+  await authPage.signIn();
   await expect(page).toHaveURL(/\/onboarding$/);
   await expect(onboardingPage.continueButton).toBeEnabled();
   await onboardingPage.complete();
@@ -65,10 +60,7 @@ test("signs in and revokes the session on sign out", async ({
   await context.clearCookies();
   await authPage.goTo();
   expect((await a11y().analyze()).violations).toEqual([]);
-  await authPage.signIn("owner@workspace.invalid", "Wrong-passphrase-2026");
-  await expect(authPage.error).toContainText("Invalid email or password.");
-  await authPage.password.fill("E2E-only-passphrase-2026");
-  await authPage.signInButton.click();
+  await authPage.signIn();
   await expect(page).toHaveURL("/");
   await expect(workspacePage.manageAccounts).toBeVisible();
   const token = (await context.cookies()).find((cookie) => cookie.name === "workspace_session");
@@ -121,7 +113,6 @@ test("rejects cross-origin login and further account registration", async ({
   request,
   page,
   context,
-  authPage,
   baseURL,
 }) => {
   expect(
@@ -142,8 +133,30 @@ test("rejects cross-origin login and further account registration", async ({
       setupToken: "arbitrary-token",
     },
   });
-  expect(result.status()).toBe(409);
+  expect(result.status()).toBe(400);
   await context.clearCookies();
-  await authPage.goTo("setup");
+  await page.goto("/setup");
   await expect(page).toHaveURL(/\/login(?:\?|$)/);
+});
+
+test("rejects another OIDC subject even when its email matches the owner", async ({
+  page,
+  context,
+}) => {
+  await context.clearCookies();
+  const login = await context.request.get("/api/auth/login", { maxRedirects: 0 });
+  expect(login.status()).toBe(303);
+  const authorization = new URL(login.headers().location ?? "");
+  authorization.searchParams.set("login_hint", "stranger");
+  const callback = page.waitForResponse(
+    (response) => new URL(response.url()).pathname === "/api/auth/callback",
+  );
+  await page.goto(authorization.href);
+  expect((await callback).status()).toBe(403);
+  const state = await context.request.get("/api/auth");
+  expect(state.ok()).toBe(true);
+  expect((await state.json()).owner).toBeNull();
+  expect((await context.cookies()).some((cookie) => cookie.name === "workspace_session")).toBe(
+    false,
+  );
 });

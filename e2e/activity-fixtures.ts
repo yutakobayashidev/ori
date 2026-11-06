@@ -1,3 +1,4 @@
+import { mcpAuthorization } from "./mcp-auth";
 import { randomUUID } from "node:crypto";
 import { basename, dirname, isAbsolute } from "node:path";
 import type { APIRequestContext } from "@playwright/test";
@@ -78,7 +79,10 @@ class ActivityMcp {
   constructor(readonly client: APIRequestContext) {}
   async tool<T = Record<string, unknown>>(name: string, args: unknown = {}): Promise<T> {
     const response = await this.client.post("/mcp", {
-      headers: { Accept: "application/json, text/event-stream" },
+      headers: {
+        Accept: "application/json, text/event-stream",
+        Authorization: await mcpAuthorization(this.client),
+      },
       data: {
         jsonrpc: "2.0",
         id: randomUUID(),

@@ -119,10 +119,9 @@ Docker Engine/Desktop と Docker Compose があれば、Web UI と永続タス�
 git clone https://github.com/yutakobayashidev/ori.git
 cd ori
 docker compose up -d --build --wait
-docker compose exec web node .output/server/tools/account-setup.js
 ```
 
-`http://localhost:3000` を開き、表示されたセットアップコードで owner を作成します。コードは秘密として扱ってください。
+起動前に [OIDC ログイン](docs/login.md) と [Docker の認証設定](docs/docker.md) を設定します。`http://localhost:3000` を開き、Pocket ID でログインしてください。許可した owner だけが利用できます。
 
 設定・更新・バックアップは [Docker ガイド](docs/docker.md)へ。手動で dots から読む場合は、上の手順 3 → 4 へ進めます。イベント自動化には手順 2 相当の追加配備が必要で、標準 Compose だけでは完了しません。Docker の既存データを Linux / Nix の新しい DB へ自動移行する手順ではありません。
 

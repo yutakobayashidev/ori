@@ -1,3 +1,4 @@
+import { mcpAuthorization } from "../mcp-auth";
 import { expect, test } from "../fixtures";
 
 test("HTTP MCP persists decks visible in Research without browser credentials", async ({
@@ -13,7 +14,10 @@ test("HTTP MCP persists decks visible in Research without browser credentials", 
   });
   async function rpc(method: string, params: unknown = {}) {
     const response = await client.post("/mcp", {
-      headers: { Accept: "application/json, text/event-stream" },
+      headers: {
+        Accept: "application/json, text/event-stream",
+        Authorization: await mcpAuthorization(client),
+      },
       data: { jsonrpc: "2.0", id: 1, method, params },
     });
     expect(response.status()).toBe(200);
@@ -31,6 +35,7 @@ test("HTTP MCP persists decks visible in Research without browser credentials", 
     return JSON.parse(result.content[0].text);
   }
   try {
+    expect((await client.post("/mcp", { data: {} })).status()).toBe(401);
     // Browser routes still require their existing owner identity and session.
     expect((await client.get("/deck", { maxRedirects: 0 })).status()).toBe(403);
     const initialized = await rpc("initialize", {
@@ -83,5 +88,38 @@ test("HTTP MCP persists decks visible in Research without browser credentials", 
     });
   } finally {
     await client.dispose();
+  }
+});
+
+test("MCP publishes discovery and refuses tokens outside the owner's API grant", async ({
+  request,
+}) => {
+  for (const path of [
+    "/.well-known/oauth-protected-resource",
+    "/.well-known/oauth-protected-resource/mcp",
+  ]) {
+    const metadata = await request.get(path);
+    expect(metadata.status()).toBe(200);
+    expect(await metadata.json()).toMatchObject({
+      resource: "https://ori.example.test/mcp",
+      authorization_servers: ["https://127.0.0.1:6913"],
+      scopes_supported: ["ori:mcp"],
+    });
+  }
+  for (const [claims, status] of [
+    [{ sub: "e2e-stranger" }, 403],
+    [{ scope: "openid" }, 403],
+    [{ aud: "https://different.example.test/mcp" }, 401],
+    [{ typ: "JWT" }, 401],
+  ] as const) {
+    const issued = await request.post("https://127.0.0.1:6913/test/access-token", {
+      ignoreHTTPSErrors: true,
+      data: claims,
+    });
+    const response = await request.post("/mcp", {
+      headers: { Authorization: `Bearer ${(await issued.json()).access_token}` },
+      data: { jsonrpc: "2.0", id: 1, method: "tools/list" },
+    });
+    expect(response.status()).toBe(status);
   }
 });

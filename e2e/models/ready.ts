@@ -7,8 +7,7 @@ export function waitForWorkspaceHydration(page: Page) {
     const path = new URL(response.url()).pathname;
     return (
       path === "/api/activities/events" ||
-      (response.request().isNavigationRequest() &&
-        ["/login", "/setup", "/onboarding"].includes(path))
+      (response.request().isNavigationRequest() && ["/login", "/onboarding"].includes(path))
     );
   });
 }

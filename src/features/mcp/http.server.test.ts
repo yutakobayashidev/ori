@@ -1,11 +1,17 @@
 // @vitest-environment node
-import { expect, it } from "vitest";
+import { expect, it, vi } from "vitest";
 import { handleMcpRequest, registerResearchTools } from "./http.server";
 
-function request(method: string, params: unknown = {}, query = "") {
+vi.mock("./oauth.server", () => ({ authorizeMcpRequest: async () => null }));
+
+function request(method: string, params: unknown = {}, query = "", token = "") {
   return new Request(`http://127.0.0.1:3000/mcp${query}`, {
     method: "POST",
-    headers: { "Content-Type": "application/json", Accept: "application/json, text/event-stream" },
+    headers: {
+      "Content-Type": "application/json",
+      Accept: "application/json, text/event-stream",
+      Authorization: `Bearer ${token}`,
+    },
     body: JSON.stringify({ jsonrpc: "2.0", id: 1, method, params }),
   });
 }
@@ -67,9 +73,9 @@ it("keeps simultaneous research callers isolated and expires their tools on disp
   });
   try {
     const responses = await Promise.all(
-      [first, second].map(({ id }) =>
+      [first, second].map(({ id, token }) =>
         handleMcpRequest(
-          request("tools/call", { name: "list_decks", arguments: {} }, `?research=${id}`),
+          request("tools/call", { name: "list_decks", arguments: {} }, `?research=${id}`, token),
         ).then(rpc),
       ),
     );
@@ -80,10 +86,12 @@ it("keeps simultaneous research callers isolated and expires their tools on disp
     });
     first.dispose();
     expect(
-      (await handleMcpRequest(request("tools/list", {}, `?research=${first.id}`))).status,
+      (await handleMcpRequest(request("tools/list", {}, `?research=${first.id}`, first.token)))
+        .status,
     ).toBe(404);
     expect(
-      (await handleMcpRequest(request("tools/list", {}, `?research=${second.id}`))).status,
+      (await handleMcpRequest(request("tools/list", {}, `?research=${second.id}`, second.token)))
+        .status,
     ).toBe(200);
   } finally {
     first.dispose();
@@ -136,14 +144,37 @@ it("advertises an embedded UI and structured results only for workspace tools", 
   });
   try {
     const tools = await rpc(
-      await handleMcpRequest(request("tools/list", {}, `?research=${research.id}`)),
+      await handleMcpRequest(request("tools/list", {}, `?research=${research.id}`, research.token)),
     );
     expect(tools.result.tools[0]).not.toHaveProperty("_meta");
     const scoped = await rpc(
-      await handleMcpRequest(request("resources/list", {}, `?research=${research.id}`)),
+      await handleMcpRequest(
+        request("resources/list", {}, `?research=${research.id}`, research.token),
+      ),
     );
     expect(scoped.error).toBeDefined();
   } finally {
     research.dispose();
+  }
+});
+
+it("rejects research requests without that registration's bearer credential", async () => {
+  const first = registerResearchTools({ definitions: [], execute: async () => ({ ok: true }) });
+  const second = registerResearchTools({ definitions: [], execute: async () => ({ ok: true }) });
+  try {
+    expect(
+      (await handleMcpRequest(request("tools/list", {}, `?research=${first.id}`))).status,
+    ).toBe(401);
+    expect(
+      (await handleMcpRequest(request("tools/list", {}, `?research=${first.id}`, second.token)))
+        .status,
+    ).toBe(401);
+    expect(
+      (await handleMcpRequest(request("tools/list", {}, `?research=${first.id}`, first.token)))
+        .status,
+    ).toBe(200);
+  } finally {
+    first.dispose();
+    second.dispose();
   }
 });

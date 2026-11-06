@@ -11,7 +11,6 @@
 import { Route as rootRouteImport } from './routes/__root'
 import { Route as VitalsRouteImport } from './routes/vitals'
 import { Route as SupportRouteImport } from './routes/support'
-import { Route as SetupRouteImport } from './routes/setup'
 import { Route as OnboardingRouteImport } from './routes/onboarding'
 import { Route as LoginRouteImport } from './routes/login'
 import { Route as JournalRouteImport } from './routes/journal'
@@ -27,6 +26,8 @@ import { Route as OauthMastodonCallbackRouteImport } from './routes/oauth/mastod
 import { Route as ApiResearchEventsRouteImport } from './routes/api/research/events'
 import { Route as ApiExecutionEventsRouteImport } from './routes/api/execution/events'
 import { Route as ApiExecutionArtifactsRouteImport } from './routes/api/execution/artifacts'
+import { Route as ApiAuthLoginRouteImport } from './routes/api/auth/login'
+import { Route as ApiAuthCallbackRouteImport } from './routes/api/auth/callback'
 import { Route as ApiActivitiesEventsRouteImport } from './routes/api/activities/events'
 
 const VitalsRoute = VitalsRouteImport.update({
@@ -37,11 +38,6 @@ const VitalsRoute = VitalsRouteImport.update({
 const SupportRoute = SupportRouteImport.update({
   id: '/support',
   path: '/support',
-  getParentRoute: () => rootRouteImport,
-} as any)
-const SetupRoute = SetupRouteImport.update({
-  id: '/setup',
-  path: '/setup',
   getParentRoute: () => rootRouteImport,
 } as any)
 const OnboardingRoute = OnboardingRouteImport.update({
@@ -119,6 +115,16 @@ const ApiExecutionArtifactsRoute = ApiExecutionArtifactsRouteImport.update({
   path: '/api/execution/artifacts',
   getParentRoute: () => rootRouteImport,
 } as any)
+const ApiAuthLoginRoute = ApiAuthLoginRouteImport.update({
+  id: '/login',
+  path: '/login',
+  getParentRoute: () => ApiAuthRoute,
+} as any)
+const ApiAuthCallbackRoute = ApiAuthCallbackRouteImport.update({
+  id: '/callback',
+  path: '/callback',
+  getParentRoute: () => ApiAuthRoute,
+} as any)
 const ApiActivitiesEventsRoute = ApiActivitiesEventsRouteImport.update({
   id: '/api/activities/events',
   path: '/api/activities/events',
@@ -135,12 +141,13 @@ export interface FileRoutesByFullPath {
   '/journal': typeof JournalRoute
   '/login': typeof LoginRoute
   '/onboarding': typeof OnboardingRoute
-  '/setup': typeof SetupRoute
   '/support': typeof SupportRoute
   '/vitals': typeof VitalsRoute
-  '/api/auth': typeof ApiAuthRoute
+  '/api/auth': typeof ApiAuthRouteWithChildren
   '/focus/$activityId': typeof FocusActivityIdRoute
   '/api/activities/events': typeof ApiActivitiesEventsRoute
+  '/api/auth/callback': typeof ApiAuthCallbackRoute
+  '/api/auth/login': typeof ApiAuthLoginRoute
   '/api/execution/artifacts': typeof ApiExecutionArtifactsRoute
   '/api/execution/events': typeof ApiExecutionEventsRoute
   '/api/research/events': typeof ApiResearchEventsRoute
@@ -156,12 +163,13 @@ export interface FileRoutesByTo {
   '/journal': typeof JournalRoute
   '/login': typeof LoginRoute
   '/onboarding': typeof OnboardingRoute
-  '/setup': typeof SetupRoute
   '/support': typeof SupportRoute
   '/vitals': typeof VitalsRoute
-  '/api/auth': typeof ApiAuthRoute
+  '/api/auth': typeof ApiAuthRouteWithChildren
   '/focus/$activityId': typeof FocusActivityIdRoute
   '/api/activities/events': typeof ApiActivitiesEventsRoute
+  '/api/auth/callback': typeof ApiAuthCallbackRoute
+  '/api/auth/login': typeof ApiAuthLoginRoute
   '/api/execution/artifacts': typeof ApiExecutionArtifactsRoute
   '/api/execution/events': typeof ApiExecutionEventsRoute
   '/api/research/events': typeof ApiResearchEventsRoute
@@ -178,12 +186,13 @@ export interface FileRoutesById {
   '/journal': typeof JournalRoute
   '/login': typeof LoginRoute
   '/onboarding': typeof OnboardingRoute
-  '/setup': typeof SetupRoute
   '/support': typeof SupportRoute
   '/vitals': typeof VitalsRoute
-  '/api/auth': typeof ApiAuthRoute
+  '/api/auth': typeof ApiAuthRouteWithChildren
   '/focus/$activityId': typeof FocusActivityIdRoute
   '/api/activities/events': typeof ApiActivitiesEventsRoute
+  '/api/auth/callback': typeof ApiAuthCallbackRoute
+  '/api/auth/login': typeof ApiAuthLoginRoute
   '/api/execution/artifacts': typeof ApiExecutionArtifactsRoute
   '/api/execution/events': typeof ApiExecutionEventsRoute
   '/api/research/events': typeof ApiResearchEventsRoute
@@ -201,12 +210,13 @@ export interface FileRouteTypes {
     | '/journal'
     | '/login'
     | '/onboarding'
-    | '/setup'
     | '/support'
     | '/vitals'
     | '/api/auth'
     | '/focus/$activityId'
     | '/api/activities/events'
+    | '/api/auth/callback'
+    | '/api/auth/login'
     | '/api/execution/artifacts'
     | '/api/execution/events'
     | '/api/research/events'
@@ -222,12 +232,13 @@ export interface FileRouteTypes {
     | '/journal'
     | '/login'
     | '/onboarding'
-    | '/setup'
     | '/support'
     | '/vitals'
     | '/api/auth'
     | '/focus/$activityId'
     | '/api/activities/events'
+    | '/api/auth/callback'
+    | '/api/auth/login'
     | '/api/execution/artifacts'
     | '/api/execution/events'
     | '/api/research/events'
@@ -243,12 +254,13 @@ export interface FileRouteTypes {
     | '/journal'
     | '/login'
     | '/onboarding'
-    | '/setup'
     | '/support'
     | '/vitals'
     | '/api/auth'
     | '/focus/$activityId'
     | '/api/activities/events'
+    | '/api/auth/callback'
+    | '/api/auth/login'
     | '/api/execution/artifacts'
     | '/api/execution/events'
     | '/api/research/events'
@@ -265,10 +277,9 @@ export interface RootRouteChildren {
   JournalRoute: typeof JournalRoute
   LoginRoute: typeof LoginRoute
   OnboardingRoute: typeof OnboardingRoute
-  SetupRoute: typeof SetupRoute
   SupportRoute: typeof SupportRoute
   VitalsRoute: typeof VitalsRoute
-  ApiAuthRoute: typeof ApiAuthRoute
+  ApiAuthRoute: typeof ApiAuthRouteWithChildren
   FocusActivityIdRoute: typeof FocusActivityIdRoute
   ApiActivitiesEventsRoute: typeof ApiActivitiesEventsRoute
   ApiExecutionArtifactsRoute: typeof ApiExecutionArtifactsRoute
@@ -291,13 +302,6 @@ declare module '@tanstack/react-router' {
       path: '/support'
       fullPath: '/support'
       preLoaderRoute: typeof SupportRouteImport
-      parentRoute: typeof rootRouteImport
-    }
-    '/setup': {
-      id: '/setup'
-      path: '/setup'
-      fullPath: '/setup'
-      preLoaderRoute: typeof SetupRouteImport
       parentRoute: typeof rootRouteImport
     }
     '/onboarding': {
@@ -405,6 +409,20 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof ApiExecutionArtifactsRouteImport
       parentRoute: typeof rootRouteImport
     }
+    '/api/auth/login': {
+      id: '/api/auth/login'
+      path: '/login'
+      fullPath: '/api/auth/login'
+      preLoaderRoute: typeof ApiAuthLoginRouteImport
+      parentRoute: typeof ApiAuthRoute
+    }
+    '/api/auth/callback': {
+      id: '/api/auth/callback'
+      path: '/callback'
+      fullPath: '/api/auth/callback'
+      preLoaderRoute: typeof ApiAuthCallbackRouteImport
+      parentRoute: typeof ApiAuthRoute
+    }
     '/api/activities/events': {
       id: '/api/activities/events'
       path: '/api/activities/events'
@@ -414,6 +432,19 @@ declare module '@tanstack/react-router' {
     }
   }
 }
+
+interface ApiAuthRouteChildren {
+  ApiAuthCallbackRoute: typeof ApiAuthCallbackRoute
+  ApiAuthLoginRoute: typeof ApiAuthLoginRoute
+}
+
+const ApiAuthRouteChildren: ApiAuthRouteChildren = {
+  ApiAuthCallbackRoute: ApiAuthCallbackRoute,
+  ApiAuthLoginRoute: ApiAuthLoginRoute,
+}
+
+const ApiAuthRouteWithChildren =
+  ApiAuthRoute._addFileChildren(ApiAuthRouteChildren)
 
 const rootRouteChildren: RootRouteChildren = {
   IndexRoute: IndexRoute,
@@ -425,10 +456,9 @@ const rootRouteChildren: RootRouteChildren = {
   JournalRoute: JournalRoute,
   LoginRoute: LoginRoute,
   OnboardingRoute: OnboardingRoute,
-  SetupRoute: SetupRoute,
   SupportRoute: SupportRoute,
   VitalsRoute: VitalsRoute,
-  ApiAuthRoute: ApiAuthRoute,
+  ApiAuthRoute: ApiAuthRouteWithChildren,
   FocusActivityIdRoute: FocusActivityIdRoute,
   ApiActivitiesEventsRoute: ApiActivitiesEventsRoute,
   ApiExecutionArtifactsRoute: ApiExecutionArtifactsRoute,

@@ -1,8 +1,8 @@
-import { getSession, readAuthState } from "./auth.server";
+import { getSession } from "./auth.server";
 import { sessionToken } from "./http.server";
 import { safeReturnTo } from "./return-to";
 
-const publicPaths = new Set(["/login", "/setup", "/api/auth"]);
+const publicPaths = new Set(["/login", "/api/auth", "/api/auth/login", "/api/auth/callback"]);
 
 export function checkSessionAccess(request: Request): Response | null {
   const url = new URL(request.url);
@@ -16,7 +16,7 @@ export function checkSessionAccess(request: Request): Response | null {
     !url.pathname.startsWith("/api/") &&
     !url.pathname.startsWith("/_serverFn/");
   if (document) {
-    const location = owner ? "/onboarding" : readAuthState().needsSetup ? "/setup" : "/login";
+    const location = owner ? "/onboarding" : "/login";
     return new Response(null, {
       status: 303,
       headers: {
