@@ -16,7 +16,7 @@ export function HistoryPage() {
           <header className="border-b px-6 py-5">
             <h1 className="text-xl font-semibold">History</h1>
             <p className="mt-2 text-sm text-muted-foreground">
-              Activity changes, MCP writes and event deliveries.
+              Activity changes made by you and your agents.
             </p>
           </header>
           <div className="mx-auto w-full max-w-4xl p-6">
@@ -38,11 +38,7 @@ export function HistoryPage() {
                 ))}
               </select>
             </label>
-            <HistoryPanel
-              activityId={search.activity}
-              tab={search.auditTab ?? "changes"}
-              onTabChange={(auditTab) => updateSearch({ auditTab })}
-            />
+            <HistoryPanel activityId={search.activity} />
           </div>
         </main>
       </SidebarProvider>

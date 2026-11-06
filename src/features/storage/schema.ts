@@ -195,6 +195,7 @@ export const activityReceipts = sqliteTable("activity_receipts", {
     .notNull(),
 });
 
+// Retain the historical table so future migrations preserve archived data. No runtime readers or writers.
 export const communicationLogs = sqliteTable(
   "communication_logs",
   {
@@ -211,12 +212,8 @@ export const communicationLogs = sqliteTable(
     subscriptionId: text("subscription_id"),
     attempt: integer("attempt"),
     activityIds: text("activity_ids", { mode: "json" }).$type<string[]>().notNull(),
-    request: text("request", { mode: "json" }).$type<
-      import("../activities/communication-model").CommunicationValue
-    >(),
-    response: text("response", { mode: "json" }).$type<
-      import("../activities/communication-model").CommunicationValue
-    >(),
+    request: text("request", { mode: "json" }),
+    response: text("response", { mode: "json" }),
   },
   (table) => [index("communication_logs_time").on(table.occurredAt)],
 );

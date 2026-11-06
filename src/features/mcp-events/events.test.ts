@@ -4,7 +4,7 @@ import { tmpdir } from "node:os";
 import { join } from "node:path";
 import { beforeEach, afterEach, describe, expect, it, vi } from "vitest";
 import { openDatabase, type AppDatabase } from "../storage/database.server";
-import { getCommunicationLogs } from "../activities/communication.server";
+import { communicationLogs } from "../storage/schema";
 import { mcpEventOutbox, mcpEventSubscriptions } from "../storage/schema";
 import {
   subscribeMcpEvent,
@@ -532,5 +532,5 @@ it("retries webhook delivery without saving communication payloads", async () =>
     deliveredAt: now + 10_000,
     lastError: null,
   });
-  expect(getCommunicationLogs({}, database).entries).toHaveLength(0);
+  expect(database.select().from(communicationLogs).all()).toHaveLength(0);
 });

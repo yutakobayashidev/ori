@@ -1,6 +1,5 @@
 import { createServerFn } from "@tanstack/react-start";
 import { getActivityAuditInput } from "./audit-model";
-import { getCommunicationLogsInput } from "./communication-model";
 import {
   createHomeActivityInput,
   createHomeActivitiesInput,
@@ -61,11 +60,4 @@ export const loadActivityAudit = createServerFn({ method: "GET" })
   .handler(async ({ data }) => {
     const { getActivityAudit } = await import("./audit.server");
     return run(() => getActivityAudit(data));
-  });
-
-export const loadCommunicationLogs = createServerFn({ method: "GET" })
-  .validator(getCommunicationLogsInput)
-  .handler(async ({ data }) => {
-    const { getCommunicationLogs } = await import("./communication.server");
-    return run(() => getCommunicationLogs(data));
   });

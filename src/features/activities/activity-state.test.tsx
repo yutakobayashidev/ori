@@ -11,7 +11,6 @@ const actions = vi.hoisted(() => ({
   create: vi.fn<typeof import("./server-functions").createHomeActivity>(),
   createMany: vi.fn<typeof import("./server-functions").createHomeActivities>(),
   history: vi.fn<typeof import("./server-functions").loadActivityAudit>(),
-  communications: vi.fn<typeof import("./server-functions").loadCommunicationLogs>(),
 }));
 vi.mock("./server-functions", () => ({
   loadActivities: actions.load,
@@ -19,7 +18,6 @@ vi.mock("./server-functions", () => ({
   createHomeActivity: actions.create,
   createHomeActivities: actions.createMany,
   loadActivityAudit: actions.history,
-  loadCommunicationLogs: actions.communications,
 }));
 const streams: EventTarget[] = [];
 beforeEach(() => {
@@ -47,7 +45,6 @@ beforeEach(() => {
 afterEach(() => vi.unstubAllGlobals());
 it("provides browser history transport to shared activity history", async () => {
   actions.history.mockResolvedValue({ ok: true, entries: [], nextBeforeId: null });
-  actions.communications.mockResolvedValue({ ok: true, entries: [], nextBeforeId: null });
   render(
     <ActivityStateProvider enabled>
       <HistoryPanel activityId="task" />
@@ -55,9 +52,7 @@ it("provides browser history transport to shared activity history", async () => 
   );
   expect(await screen.findByText(/No changes recorded yet/)).toBeVisible();
   expect(actions.history).toHaveBeenCalledWith({ data: { activityId: "task", limit: 25 } });
-  fireEvent.click(screen.getByRole("button", { name: "MCP & events" }));
-  expect(await screen.findByText(/No MCP writes or event deliveries/)).toBeVisible();
-  expect(actions.communications).toHaveBeenCalledWith({ data: { activityId: "task", limit: 25 } });
+  expect(screen.queryByRole("button", { name: "MCP & events" })).not.toBeInTheDocument();
 });
 function Composer() {
   const { create, busy, loading } = useActivities();

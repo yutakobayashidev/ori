@@ -132,7 +132,7 @@ live取得でも元JSONの`mapping`全体を保存する案とし、表示用に
 
 Workspace内のCodex実行は既にruntimeにthread IDと表示用messageを持つが、全端末の元会話を保存するサービスではない。hookで同じthreadを取り込んだ際はruntime実行IDとリンクし、別会話として二重登録しない。CLIで外から行った会話は、関連するrepo/taskの候補として結び、cwdや時間一致だけで確定しない。[runtime](../runtime/lib/workspace_runtime/codex.ex)、[Research連携](../src/features/research/codex-provider.server.ts)。
 
-会話の受領・解析失敗・再試行は収集状態で管理する。既存`communication_logs`は過去分の参照専用で、新しいMCP診断は[OpenTelemetry](telemetry.md)を使う。会話全体をどちらへも押し込まない。会話由来のActivity変更は従来どおりauditで記録し、message参照から原本までたどれるようにする。
+会話の受領・解析失敗・再試行は収集状態で管理する。既存`communication_logs`の過去データはDB内に残るが、UIやMCPからの参照機能は廃止し、新しいMCP診断は[OpenTelemetry](telemetry.md)を使う。会話全体をどちらへも押し込まない。会話由来のActivity変更は従来どおりauditで記録し、message参照から原本までたどれるようにする。
 
 ## Renshengから参考にできる実装
 

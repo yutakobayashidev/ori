@@ -8,7 +8,6 @@ const state = vi.hoisted(() => ({
   revision: 1,
   history: {
     changes: vi.fn<ActivityHistoryTransport["changes"]>(),
-    communications: vi.fn<ActivityHistoryTransport["communications"]>(),
   },
 }));
 vi.mock("./activity-store", () => ({ useActivityStore: () => state }));
@@ -40,7 +39,6 @@ beforeEach(() => {
   vi.resetAllMocks();
   state.revision = 1;
   state.history.changes.mockResolvedValue({ ok: true, entries: [entry(3)], nextBeforeId: null });
-  state.history.communications.mockResolvedValue({ ok: true, entries: [], nextBeforeId: null });
 });
 it("loads per-task history only when opened and shows before and after text", async () => {
   render(<ActivityHistory activityId="task" />);
@@ -93,38 +91,10 @@ it("refreshes changes when the activity revision changes", async () => {
   expect(await screen.findByText(/No changes recorded yet/)).toBeVisible();
   expect(state.history.changes).toHaveBeenCalledTimes(2);
 });
-it("shows failed event attempts and expandable request and response payloads", async () => {
-  state.history.communications.mockResolvedValue({
-    ok: true,
-    nextBeforeId: null,
-    entries: [
-      {
-        id: 1,
-        kind: "mcp-event",
-        direction: "outgoing",
-        name: "activity.changed",
-        occurredAt: Date.UTC(2026, 9, 11),
-        durationMs: 25,
-        outcome: "error",
-        status: 503,
-        requestId: "request-1",
-        eventId: "event-1",
-        subscriptionId: "subscriber",
-        attempt: 2,
-        activityIds: ["task"],
-        request: { title: "Review" },
-        response: { message: "Unavailable" },
-      },
-    ],
-  });
+it("shows activity changes without a communication history tab", async () => {
   render(<HistoryPanel activityId="task" />);
-  fireEvent.click(screen.getByRole("button", { name: "MCP & events" }));
-  const article = await screen.findByRole("article");
-  expect(article).toHaveTextContent("Outgoing MCP event · Error");
-  expect(article).toHaveTextContent("HTTP 503 · Attempt 2");
-  expect(article).toHaveTextContent("Event: event-1");
-  fireEvent.click(within(article).getByText("Request & response"));
-  expect(within(article).getByText(/"message": "Unavailable"/)).toBeVisible();
+  expect(await screen.findByText("The revised details")).toBeVisible();
+  expect(screen.queryByRole("button", { name: "MCP & events" })).not.toBeInTheDocument();
 });
 
 it("shows creation fields once when the proposal and effective values match", async () => {

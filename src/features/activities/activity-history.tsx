@@ -3,9 +3,6 @@ import { Button } from "#/components/ui/button";
 import { useActivityStore } from "./activity-store";
 import { stateLabels } from "./activity-controls";
 import type { ActivityAuditEntry, ActivityAuditSnapshot } from "./audit-model";
-import type { CommunicationLog } from "./communication-model";
-
-export type HistoryTab = "changes" | "communications";
 
 export function ActivityHistory({ activityId }: { activityId: string }) {
   const [open, setOpen] = useState(false);
@@ -21,20 +18,10 @@ export function ActivityHistory({ activityId }: { activityId: string }) {
   );
 }
 
-export function HistoryPanel({
-  activityId,
-  tab: controlledTab,
-  onTabChange,
-}: {
-  activityId?: string;
-  tab?: HistoryTab;
-  onTabChange?: (tab: HistoryTab) => void;
-}) {
+export function HistoryPanel({ activityId }: { activityId?: string }) {
   const store = useActivityStore();
   const transport = store.history;
-  const [localTab, setLocalTab] = useState<HistoryTab>("changes");
-  const tab = controlledTab ?? localTab;
-  const [entries, setEntries] = useState<(ActivityAuditEntry | CommunicationLog)[]>([]);
+  const [entries, setEntries] = useState<ActivityAuditEntry[]>([]);
   const [nextBeforeId, setNextBeforeId] = useState<number | null>(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState("");
@@ -47,7 +34,8 @@ export function HistoryPanel({
     setError("");
     setEntries([]);
     setNextBeforeId(null);
-    void transport[tab]({ activityId, limit: 25 })
+    void transport
+      .changes({ activityId, limit: 25 })
       .then((page) => {
         if (request !== generation.current) return;
         if (!page.ok) {
@@ -66,14 +54,14 @@ export function HistoryPanel({
     return () => {
       generation.current = request + 1;
     };
-  }, [activityId, tab, store.revision, transport, reload]);
+  }, [activityId, store.revision, transport, reload]);
   async function loadMore() {
     if (nextBeforeId === null || loading) return;
     const request = generation.current;
     setLoading(true);
     setError("");
     try {
-      const page = await transport[tab]({ activityId, beforeId: nextBeforeId, limit: 25 });
+      const page = await transport.changes({ activityId, beforeId: nextBeforeId, limit: 25 });
       if (request !== generation.current) return;
       if (!page.ok) {
         setError(page.error.message);
@@ -90,22 +78,7 @@ export function HistoryPanel({
   return (
     <section className="mt-4 grid min-w-0 gap-4" aria-label="Activity history">
       <div className="flex flex-wrap items-center gap-2">
-        <div role="group" aria-label="History type" className="flex gap-1">
-          {(["changes", "communications"] as const).map((value) => (
-            <Button
-              key={value}
-              size="sm"
-              variant={tab === value ? "secondary" : "ghost"}
-              aria-pressed={tab === value}
-              onClick={() => {
-                setLocalTab(value);
-                onTabChange?.(value);
-              }}
-            >
-              {value === "changes" ? "Activity changes" : "MCP & events"}
-            </Button>
-          ))}
-        </div>
+        <p className="text-sm font-medium">Activity changes</p>
         <Button
           className="ml-auto"
           size="sm"
@@ -139,19 +112,13 @@ export function HistoryPanel({
       )}
       {!loading && !error && entries.length === 0 && (
         <p className="text-sm text-muted-foreground">
-          {tab === "changes"
-            ? "No changes recorded yet. History starts when logging is enabled."
-            : "No MCP writes or event deliveries recorded yet."}
+          No changes recorded yet. History starts when logging is enabled.
         </p>
       )}
       <ol className="grid min-w-0 gap-4">
         {entries.map((entry) => (
           <li key={entry.id} className="min-w-0 rounded-lg border p-4">
-            {"operation" in entry ? (
-              <ChangeEntry entry={entry} />
-            ) : (
-              <CommunicationEntry entry={entry} />
-            )}
+            <ChangeEntry entry={entry} />
           </li>
         ))}
       </ol>
@@ -273,40 +240,6 @@ function ChangeEntry({ entry }: { entry: ActivityAuditEntry }) {
         </p>
         <pre className="mt-2 max-h-80 overflow-auto whitespace-pre-wrap break-all">
           {JSON.stringify({ before: entry.before, after: entry.after }, null, 2)}
-        </pre>
-      </details>
-    </article>
-  );
-}
-function CommunicationEntry({ entry }: { entry: CommunicationLog }) {
-  return (
-    <article className="grid min-w-0 gap-2 text-xs">
-      <p className="text-sm font-medium">{entry.name}</p>
-      <p className="text-muted-foreground">
-        {entry.direction === "outgoing"
-          ? "Outgoing MCP event"
-          : entry.kind === "mcp-event"
-            ? "Incoming MCP event request"
-            : "Incoming MCP write"}{" "}
-        · {entry.outcome === "success" ? "Success" : "Error"} ·{" "}
-        <Timestamp value={entry.occurredAt} />
-      </p>
-      <p className="text-muted-foreground">
-        {entry.durationMs} ms{entry.status !== null && ` · HTTP ${entry.status}`}
-        {entry.attempt !== null && ` · Attempt ${entry.attempt}`}
-      </p>
-      {entry.requestId && <p className="break-all">Request: {entry.requestId}</p>}
-      {entry.eventId && <p className="break-all">Event: {entry.eventId}</p>}
-      {entry.subscriptionId && <p className="break-all">Subscription: {entry.subscriptionId}</p>}
-      <details>
-        <summary className="cursor-pointer">Request & response</summary>
-        <p className="mt-3 font-medium">Request</p>
-        <pre className="mt-1 max-h-80 overflow-auto whitespace-pre-wrap break-all">
-          {display(entry.request)}
-        </pre>
-        <p className="mt-3 font-medium">Response</p>
-        <pre className="mt-1 max-h-80 overflow-auto whitespace-pre-wrap break-all">
-          {display(entry.response)}
         </pre>
       </details>
     </article>

@@ -42,7 +42,7 @@ Personal Workspaceに、Aurbodaの計測・区間分析とTimelinizeのアーカ
 
 現在の`activity_audit`にはactor、channel、operation、request ID、revision、時刻、before/afterがある。`requestId + activityId`は一意で、状態が変化しなければauditを追加しない。snapshotはFocus・WorkLog・見積もり・本人の編集・assessmentも含む。[schema](../src/features/storage/schema.ts)、[audit処理](../src/features/activities/audit.server.ts)。
 
-`communication_logs`は移行前のMCP通信履歴を参照するために残す。新しいMCP呼び出しは読み取りも含めて[OpenTelemetry](telemetry.md)で診断し、ツール引数・結果本文を保存しない。通信トレースはbest effortであり、全入力の原本や必ず届くイベントバスとして使わない。[audit契約](activity-audit-and-numbers.md)。
+`communication_logs`の移行前データはDB内に残すが、UIやMCPからの参照機能は廃止する。新しいMCP呼び出しは読み取りも含めて[OpenTelemetry](telemetry.md)で診断し、ツール引数・結果本文を保存しない。通信トレースはbest effortであり、全入力の原本や必ず届くイベントバスとして使わない。[audit契約](activity-audit-and-numbers.md)。
 
 MCP Eventsのoutboxも、購読ごとの配信対象を保持する仕組みであり、全変更の原本ではない。生活履歴の再構築はauditから行う。またVitals・Journalの身体記録とルーティンは現状prototypeであり、永続的な健康データ収集が既にあるとは扱わない。[イベント実装](../src/features/mcp-events/events.server.ts)、[現行機能](../README.md#workspaces-and-current-status)。
 

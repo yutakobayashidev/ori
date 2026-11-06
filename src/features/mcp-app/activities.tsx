@@ -54,10 +54,6 @@ export function Activities({
         (await callTool("get_activity_audit", input)) as unknown as Awaited<
           ReturnType<ActivityHistoryTransport["changes"]>
         >,
-      communications: async (input) =>
-        (await callTool("get_communication_logs", input)) as unknown as Awaited<
-          ReturnType<ActivityHistoryTransport["communications"]>
-        >,
     }),
     [callTool],
   );

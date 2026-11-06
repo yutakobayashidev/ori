@@ -5,7 +5,7 @@ import { activityAudit, mcpEventOutbox, mcpEventSubscriptions } from "../storage
 import { createUserActivity, updateActivityUser } from "../activities/repository.server";
 import { deliverMcpEvents } from "../mcp-events/events.server";
 import { handleMcpRequest, registerResearchTools } from "./http.server";
-import { getCommunicationLogs } from "../activities/communication.server";
+import { communicationLogs } from "../storage/schema";
 
 vi.mock("./oauth.server", () => ({ authorizeMcpRequest: async () => null }));
 
@@ -67,6 +67,15 @@ async function rpc(method: string, params: Record<string, unknown> = {}, query =
   );
   return response.json();
 }
+it("exposes activity audit without the retired communication log tool", async () => {
+  const { result } = await rpc("tools/list");
+  const names = result.tools.map((tool: { name: string }) => tool.name);
+  expect(names).toContain("get_activity_audit");
+  expect(names).not.toContain("get_communication_logs");
+  const response = await rpc("tools/call", { name: "get_communication_logs", arguments: {} });
+  expect(response.error ?? response.result?.isError).toBeTruthy();
+});
+
 const subscription = {
   name: "beeper.message.received",
   arguments: { chatIds: ["chat-example"] },
@@ -242,7 +251,7 @@ it("keeps activity audit without storing MCP read or write communication", async
   };
   const args = { requestId: "logged-request", expectedRevision: 0, activities: [proposal] };
   await rpc("tools/call", { name: "get_activity_context", arguments: {} });
-  expect(getCommunicationLogs({}, database).entries).toHaveLength(0);
+  expect(database.select().from(communicationLogs).all()).toHaveLength(0);
   expect(await rpc("tools/call", { name: "publish_activities", arguments: args })).toMatchObject({
     result: { isError: false },
   });
@@ -252,7 +261,7 @@ it("keeps activity audit without storing MCP read or write communication", async
     arguments: { ...args, requestId: "stale" },
   });
   await rpc("tools/call", { name: "get_activity_context", arguments: {} });
-  expect(getCommunicationLogs({}, database).entries).toHaveLength(0);
+  expect(database.select().from(communicationLogs).all()).toHaveLength(0);
   expect(database.select().from(activityAudit).all()).toHaveLength(1);
 });
 
@@ -260,12 +269,12 @@ it("does not store subscription or callback communication", async () => {
   const created = await rpc("events/subscribe", subscription);
   expect(created.error).toBeUndefined();
   await rpc("events/unsubscribe", subscription);
-  expect(getCommunicationLogs({}, database).entries).toHaveLength(0);
+  expect(database.select().from(communicationLogs).all()).toHaveLength(0);
 });
 
 it("rejects invalid verification without storing callback communication", async () => {
   mocks.sender.mockResolvedValue({ status: 200, body: JSON.stringify({ challenge: "wrong" }) });
   const result = await rpc("events/subscribe", subscription);
   expect(result.error).toBeDefined();
-  expect(getCommunicationLogs({}, database).entries).toHaveLength(0);
+  expect(database.select().from(communicationLogs).all()).toHaveLength(0);
 });

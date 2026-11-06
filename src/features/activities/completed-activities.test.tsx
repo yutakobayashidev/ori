@@ -40,7 +40,6 @@ function History() {
     currentRevision: () => 1,
     history: {
       changes: vi.fn<ActivityStore["history"]["changes"]>(),
-      communications: vi.fn<ActivityStore["history"]["communications"]>(),
     },
     refresh: vi.fn<ActivityStore["refresh"]>(),
     change: async (...args) => {

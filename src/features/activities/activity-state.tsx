@@ -15,7 +15,6 @@ import {
   createHomeActivities,
   loadActivities,
   loadActivityAudit,
-  loadCommunicationLogs,
   markActivityRead,
 } from "./server-functions";
 import {
@@ -29,7 +28,6 @@ import type { ActivityHistoryTransport } from "./history-client";
 
 const history: ActivityHistoryTransport = {
   changes: (data) => loadActivityAudit({ data }),
-  communications: (data) => loadCommunicationLogs({ data }),
 };
 
 const messaging: ActivityMessagingTransport = {

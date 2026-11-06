@@ -51,8 +51,10 @@ collector's Prometheus exporter (for example,
 ## Database history
 
 New MCP requests and event deliveries no longer write `communication_logs`.
-Existing communication history remains readable through History and
-`get_communication_logs`, and stays in normal database backups. Activity mutations
+The MCP & events history tab and `get_communication_logs` tool have been removed.
+Existing communication data stays in the database and normal backups; its schema
+is retained to prevent a future generated migration from dropping it. No application
+reader or writer uses that table. Activity mutations
 still write their transactional before/after history to `activity_audit`, including
 changes made through MCP. No existing history is deleted or backfilled.
 

@@ -15,7 +15,7 @@ Implemented contract, updated for MCP telemetry on 2026-11-07:
 - Provide history within activity details and a workspace-wide history page.
 - Record MCP requests (reads and writes) and event delivery attempts through
   [OpenTelemetry](telemetry.md), without tool argument/result or callback payloads.
-  Preserve previously collected SQLite communication history as read-only data.
+  Keep previously collected SQLite communication data in place, without a UI or MCP reader.
 - Keep activity history atomic with its mutation. Retrying a committed request
   must not create another change entry.
 
@@ -38,7 +38,7 @@ browser owners and MCP/execution agents, not a verified external person's name.
 
 Previously collected communication records cover incoming MCP writes and subscription
 changes, outgoing verification/delivery attempts, and their sanitized responses.
-They are retained for historical access. New protocol diagnostics live in the
+They remain in the database and its backups; no application reader or writer uses them. Protocol diagnostics live in the
 telemetry backend; retention there is managed by its operator.
 
 Activity audit persistence failures roll back the activity transaction. Telemetry
@@ -48,6 +48,6 @@ external ledger. No history is backfilled from old receipts.
 ## Access
 
 The owner can open History from the sidebar, or expand History in a task/reply.
-`get_activity_audit` and `get_communication_logs` expose the same paginated data
+`get_activity_audit` exposes the same paginated activity changes
 through the existing private MCP trust boundary. The stored message content is
 untrusted data, never instructions. Normal database backups include these tables.

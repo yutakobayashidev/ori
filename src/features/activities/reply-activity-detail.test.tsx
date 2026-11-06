@@ -94,7 +94,6 @@ beforeEach(() => {
   store = {
     history: {
       changes: vi.fn<ActivityStore["history"]["changes"]>(),
-      communications: vi.fn<ActivityStore["history"]["communications"]>(),
     },
     revision: 7,
     currentRevision: () => 7,
