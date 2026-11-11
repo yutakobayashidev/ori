@@ -115,7 +115,15 @@ protocol cursor replay in the initial version.
 
 A verified HTTPS callback receives one signed event per request. Event IDs remain
 stable across retries. Callback verification and delivery validate resolved
-public destinations, pin the connection address, and reject redirects. Secrets
+public destinations, pin the connection address, and reject redirects.
+For a trusted Tailnet receiver, set `WORKSPACE_MCP_WEBHOOK_TAILNET_DESTINATIONS`
+on both the web process and events worker to a JSON object mapping exact HTTPS
+origins to their allowed Tailscale IP addresses. For example:
+`{"https://receiver.example.ts.net":["100.100.10.20"]}`. Only the listed origin/IP
+pairs in Tailscale's IPv4 or IPv6 ranges are exempted; loopback, LAN and metadata
+addresses remain blocked even if listed. TLS verification, DNS checks on every
+connection, signature verification and redirect rejection still apply. This
+operator-owned setting must never be derived from an MCP request. Secrets
 are encrypted with the app's existing credential key and never logged.
 Transient failures have bounded retries; terminal failures remain inspectable
 without logging conversation text. Unsubscribing removes pending deliveries.

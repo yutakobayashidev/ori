@@ -83,6 +83,27 @@ export function isPublicAddress(address: string) {
   }
   return false;
 }
+// Operator-owned exceptions for specific Tailnet receivers. Never trust caller-supplied
+// addresses, arbitrary private ranges, or a hostname alone: DNS must match the pinned IP.
+function trustedTailnetAddress(url: URL, address: string) {
+  const raw = process.env.WORKSPACE_MCP_WEBHOOK_TAILNET_DESTINATIONS;
+  if (!raw) return false;
+  let destinations: unknown;
+  try {
+    destinations = JSON.parse(raw);
+  } catch {
+    throw new CallbackEndpointError("invalid_destination_config");
+  }
+  if (!destinations || typeof destinations !== "object" || Array.isArray(destinations))
+    throw new CallbackEndpointError("invalid_destination_config");
+  const allowed = (destinations as Record<string, unknown>)[url.origin];
+  if (!Array.isArray(allowed) || !allowed.includes(address)) return false;
+  if (isIP(address) === 4) {
+    const [a, b] = address.split(".").map(Number);
+    return a === 100 && b !== undefined && b >= 64 && b <= 127;
+  }
+  return isIP(address) === 6 && address.toLowerCase().startsWith("fd7a:115c:a1e0:");
+}
 type WebhookResponse = { status: number; body: string };
 export type WebhookSender = (
   url: string,
@@ -103,7 +124,12 @@ export const sendWebhook: WebhookSender = async (value, body, headers) => {
           .then(resolve, reject)
           .finally(() => clearTimeout(timer));
       });
-  if (!addresses.length || addresses.some(({ address }) => !isPublicAddress(address)))
+  if (
+    !addresses.length ||
+    addresses.some(
+      ({ address }) => !isPublicAddress(address) && !trustedTailnetAddress(url, address),
+    )
+  )
     throw new CallbackEndpointError("invalid_address");
   const destination = addresses[0];
   if (!destination) throw new CallbackEndpointError("invalid_address");
